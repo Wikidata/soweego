@@ -104,3 +104,7 @@ ENV/
 Pipfile
 Pipfile.lock
 
+.DS_Store
+target_selection/targets/.DS_Store
+target_selection/.vscode/settings.json
+target_selection/targets/.DS_Store
