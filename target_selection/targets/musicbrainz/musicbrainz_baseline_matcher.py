@@ -6,6 +6,8 @@ import os
 import csv
 from ..common import matching_strategies
 
+# ATTENTION remember to download the dump by running the bash script in the same folder of this script
+
 # Utilities functions
 def get_musicbrainz_artists_from_dump(opened_file_dump, label_column_index, id_column_index, total_number_columns):
     """Given an opened musicbrainz(mb) dump, return a dictionary label - mbid"""
