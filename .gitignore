@@ -115,3 +115,11 @@ assets/temp/
 
 # DB credentials
 assets/db_credentials.json
+
+.DS_Store
+target_selection/targets/.DS_Store
+target_selection/.vscode/settings.json
+target_selection/targets/.DS_Store
+target_selection/targets/musicbrainz/musicbrainz_dump*
+target_selection/targets/musicbrainz/output/*
+
