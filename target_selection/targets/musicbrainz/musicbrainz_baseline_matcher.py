@@ -26,6 +26,10 @@ def get_musicbrainz_artists_from_dump(opened_file_dump):
 # Retrieves the current module directory path
 path = os.path.abspath(__file__)
 dir_path = os.path.dirname(path)
+output_dir_path = '%s/output' % dir_path
+
+if not os.path.exists(output_dir_path):
+    os.makedirs(output_dir_path)
 
 # Wikidata sample loading
 labels_qid = json.load(open('musicians_wikidata_sample.json'))
@@ -34,8 +38,8 @@ labels_qid = json.load(open('musicians_wikidata_sample.json'))
 artists = {}
 with open('%s/musicbrainz_dump_20180725-001823/mbdump/artist' % dir_path) as tsvfile:
     artists = get_musicbrainz_artists_from_dump(tsvfile)
-    json.dump(artists, open('%s/artists.json' % dir_path, 'w'), indent=2, ensure_ascii=False)
+    json.dump(artists, open('%s/artists.json' % output_dir_path, 'w'), indent=2, ensure_ascii=False)
 
 # Applies a matching strategy
 matches = matching_strategies.equal_strings_match((labels_qid, artists))
-json.dump(matches, open('%s/matches.json' % dir_path, 'w'), indent=2, ensure_ascii=False)
+json.dump(matches, open('%s/equal_strings_matches.json' % output_dir_path, 'w'), indent=2, ensure_ascii=False)
