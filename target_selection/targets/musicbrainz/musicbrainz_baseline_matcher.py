@@ -25,28 +25,41 @@ def get_musicbrainz_artists_from_dump(opened_file_dump, label_column_index, id_c
 
     return label_musicbrainz
 
-# Retrieves the current module directory path
-path = os.path.abspath(__file__)
-dir_path = os.path.dirname(path)
-output_dir_path = '%s/output' % dir_path
+def get_path():
+    """Return the path of the current module"""
+    path = os.path.abspath(__file__)
+    return os.path.dirname(path)
 
-if not os.path.exists(output_dir_path):
-    os.makedirs(output_dir_path)
+def get_output_path():
+    """Returns the path of the output files"""
+    output_dir_path = '%s/output' % get_path()
 
-# Wikidata sample loading
-labels_qid = json.load(open('musicians_wikidata_sample.json'))
+    if not os.path.exists(output_dir_path):
+        os.makedirs(output_dir_path)
 
-# Opens the latest artist dump and creates a dictionary name - id
-artists = {}
-with open('%s/musicbrainz_dump_20180725-001823/mbdump/artist' % dir_path) as tsvfile:
-    artists = get_musicbrainz_artists_from_dump(tsvfile, 2, 0, 20)
-    artists.update(get_musicbrainz_artists_from_dump(tsvfile, 3, 0, 20))
+    return output_dir_path
 
-with open('%s/musicbrainz_dump_20180725-001823/mbdump/artist_alias' % dir_path) as tsvfile:
-    artists.update(get_musicbrainz_artists_from_dump(tsvfile, 2, 1, 16))
-    artists.update(get_musicbrainz_artists_from_dump(tsvfile, 7, 1, 16))
+def get_label_musicbrainzid_dict():
+    """Returns the name-musicbrainzid dictionary. If it's not stored, creates a brand new file"""
+    filepath = '%s/artists.json' % get_output_path()
+    if os.path.isfile(filepath):
+        return json.load(open(filepath))
+    else:
+        artists = {}
+        with open('%s/musicbrainz_dump_20180725-001823/mbdump/artist' % get_path()) as tsvfile:
+            artists = get_musicbrainz_artists_from_dump(tsvfile, 2, 0, 20)
+            artists.update(get_musicbrainz_artists_from_dump(tsvfile, 3, 0, 20))
 
-json.dump(artists, open('%s/artists.json' % output_dir_path, 'w'), indent=2, ensure_ascii=False)
-# Applies a matching strategy
-matches = matching_strategies.equal_strings_match((labels_qid, artists))
-json.dump(matches, open('%s/equal_strings_matches.json' % output_dir_path, 'w'), indent=2, ensure_ascii=False)
+        with open('%s/musicbrainz_dump_20180725-001823/mbdump/artist_alias' % get_path()) as tsvfile:
+            artists.update(get_musicbrainz_artists_from_dump(tsvfile, 2, 1, 16))
+            artists.update(get_musicbrainz_artists_from_dump(tsvfile, 7, 1, 16))
+
+        json.dump(artists, open('%s/artists.json' % get_output_path(), 'w'), indent=2, ensure_ascii=False)
+        return artists
+
+def equal_strings_match():
+    """Creates the equal strings match output file"""
+    # Wikidata sample loading
+    labels_qid = json.load(open('musicians_wikidata_sample.json'))
+    matches = matching_strategies.equal_strings_match((labels_qid, get_label_musicbrainzid_dict()))
+    json.dump(matches, open('%s/equal_strings_matches.json' % get_output_path(), 'w'), indent=2, ensure_ascii=False)
