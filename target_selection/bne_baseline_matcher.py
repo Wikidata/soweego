@@ -95,3 +95,36 @@ for d in (site_qid, dbp):
         matched[k].append(v)        
 json.dump({v[0]: v[1] for v in matched.values() if len(v) > 1}, open('enwiki__matches.json', 'w'), indent=2, ensure_ascii=False)
 
+### Baseline matcher 4: name AND dates
+# Wikidata sample, dates
+dates_wd = {}
+wd_dates = csv.DictReader(open('dates_1_percent_sample.tsv'), delimiter='\t')
+for row in wd_dates:
+    qid = row['?person'].replace('<http://www.wikidata.org/entity/', '').replace('>', '')
+    for label in qid_labels[qid].keys():
+        name_and_date = label + '|' + row['?birth'][:4] + '-'
+        if row.get('?death'):
+            name_and_date += row['?death'][:4]
+        dates_wd[name_and_date] = qid
+
+# BNE, dates
+bne_dates = csv.DictReader(open(HOME + 'bne/dates_people'))
+dates_bne = {}
+bne_labels = defaultdict(list)
+for row in bne_names:
+    bne_labels[row['id'].replace('http://datos.bne.es/resource/', '')].append(row['name'].lower())
+for row in bne_dates:
+    ident = row['id'].replace('http://datos.bne.es/resource/', '')
+    for name in bne_labels[ident]:
+        date = row['date']
+        if date.find('-') == -1:
+            date += '-'
+        name_and_date = name + '|' + date
+        dates_bne[name_and_date] = ident
+
+matched = defaultdict(list)
+for d in (dates_wd, dates_bne):
+    for k,v in d.items():
+        matched[k].append(v)
+json.dump({v[0]: v[1] for v in matched.values() if len(v) > 1}, open('name_and_date_matches.json', 'w'), indent=2, ensure_ascii=False)
+
