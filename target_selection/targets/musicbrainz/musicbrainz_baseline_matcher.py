@@ -7,17 +7,17 @@ import csv
 from ..common import matching_strategies
 
 # Utilities functions
-def get_musicbrainz_artists_from_dump(opened_file_dump):
+def get_musicbrainz_artists_from_dump(opened_file_dump, label_column_index, id_column_index, total_number_columns):
     """Given an opened musicbrainz(mb) dump, return a dictionary label - mbid"""
     label_musicbrainz = {}
-    fieldnames = [i for i in range(0, 20)]
+    fieldnames = [i for i in range(0, total_number_columns)]
 
     musicbrainz_artists = csv.DictReader(opened_file_dump, dialect='excel-tab', fieldnames=fieldnames)
 
     for row in musicbrainz_artists:
         # Checks if it's a person
         if row[10] == '1' or '\\N':
-            label_musicbrainz[row[2].lower()] = row[0]
+            label_musicbrainz[row[label_column_index].lower()] = row[id_column_index]
         else:
             print(row[10])
 
@@ -37,7 +37,7 @@ labels_qid = json.load(open('musicians_wikidata_sample.json'))
 # Opens the latest artist dump and creates a dictionary name - id
 artists = {}
 with open('%s/musicbrainz_dump_20180725-001823/mbdump/artist' % dir_path) as tsvfile:
-    artists = get_musicbrainz_artists_from_dump(tsvfile)
+    artists = get_musicbrainz_artists_from_dump(tsvfile, 2, 0, 20)
     json.dump(artists, open('%s/artists.json' % output_dir_path, 'w'), indent=2, ensure_ascii=False)
 
 # Applies a matching strategy
