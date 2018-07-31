@@ -56,7 +56,7 @@ def get_label_musicbrainzid_dict():
             artists.update(get_musicbrainz_artists_from_dump(tsvfile, 2, 1, 16))
             artists.update(get_musicbrainz_artists_from_dump(tsvfile, 7, 1, 16))
 
-        json.dump(artists, open('%s/artists.json' % get_output_path(), 'w'), indent=2, ensure_ascii=False)
+        json.dump(artists, open(filepath, 'w'), indent=2, ensure_ascii=False)
         return artists
 
 def equal_strings_match():
@@ -72,7 +72,6 @@ def get_url_domains():
     fieldnames = [i for i in range(0, 5)]
     domain_regex = '^(?:https?:\/\/)?(?:[^@\/\n]+@)?(?:www\.)?([^:\/?\n]+)'
     domains = defaultdict(int)
-    artists = get_label_musicbrainzid_dict()
     with open('%s/musicbrainz_dump_20180725-001823/mbdump/url' % get_path(), "r") as tsvfile:
         urls = csv.DictReader(tsvfile, dialect='excel-tab', fieldnames=fieldnames)
         for url in urls:
@@ -80,3 +79,24 @@ def get_url_domains():
             domains[domain] += 1
     towrite = {domain:count for (domain, count) in domains.items() if count > 10000}
     json.dump(towrite, open('%s/urls.json' % get_output_path(), 'w'), indent=2, ensure_ascii=False)
+
+def get_users_urls():
+    urlid_id = defaultdict(str)
+    url_id = defaultdict(str)
+    
+    with open('%s/musicbrainz_dump_20180725-001823/mbdump/l_artist_url' % get_path(), "r") as tsvfile:
+        fieldnames = [i for i in range(0, 6)]
+        url_relationships = csv.DictReader(tsvfile, dialect='excel-tab', fieldnames=fieldnames)
+        for relationship in url_relationships:
+            # url id matched with its user id
+            urlid_id[relationship[3]] = relationship[2]
+
+    with open('%s/musicbrainz_dump_20180725-001823/mbdump/url' % get_path(), "r") as tsvfile:
+        fieldnames = [i for i in range(0, 5)]
+        urls = csv.DictReader(tsvfile, dialect='excel-tab', fieldnames=fieldnames)
+        for url in urls:
+            # Translates the url ids stored before in the respective urls
+            if url[0] in urlid_id:
+                url_id[url[2]] = urlid_id[url[0]]
+
+    json.dump(url_id, open('%s/url_artist.json' % get_output_path(), 'w'), indent=2, ensure_ascii=False)    
