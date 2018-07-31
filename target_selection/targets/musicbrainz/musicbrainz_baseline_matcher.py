@@ -81,6 +81,7 @@ def get_url_domains():
     json.dump(towrite, open('%s/urls.json' % get_output_path(), 'w'), indent=2, ensure_ascii=False)
 
 def get_users_urls():
+    """Creates the json containing url - artist id"""
     urlid_id = defaultdict(str)
     url_id = defaultdict(str)
     
