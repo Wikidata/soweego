@@ -4,6 +4,8 @@
 import json
 import os
 import csv
+import re
+from collections import defaultdict
 from ..common import matching_strategies
 
 # ATTENTION remember to download the dump by running the bash script in the same folder of this script
@@ -63,3 +65,18 @@ def equal_strings_match():
     labels_qid = json.load(open('musicians_wikidata_sample.json'))
     matches = matching_strategies.equal_strings_match((labels_qid, get_label_musicbrainzid_dict()))
     json.dump(matches, open('%s/equal_strings_matches.json' % get_output_path(), 'w'), indent=2, ensure_ascii=False)
+
+
+def get_url_domains():
+    """Finds all the domains to which the artists are connected"""
+    fieldnames = [i for i in range(0, 5)]
+    domain_regex = '^(?:https?:\/\/)?(?:[^@\/\n]+@)?(?:www\.)?([^:\/?\n]+)'
+    domains = defaultdict(int)
+    artists = get_label_musicbrainzid_dict()
+    with open('%s/musicbrainz_dump_20180725-001823/mbdump/url' % get_path(), "r") as tsvfile:
+        urls = csv.DictReader(tsvfile, dialect='excel-tab', fieldnames=fieldnames)
+        for url in urls:
+            domain = re.search(domain_regex, url[2]).group(1)
+            domains[domain] += 1
+    towrite = {domain:count for (domain, count) in domains.items() if count > 10000}
+    json.dump(towrite, open('%s/urls.json' % get_output_path(), 'w'), indent=2, ensure_ascii=False)
