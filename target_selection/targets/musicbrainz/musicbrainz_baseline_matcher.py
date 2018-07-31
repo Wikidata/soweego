@@ -38,6 +38,7 @@ labels_qid = json.load(open('musicians_wikidata_sample.json'))
 artists = {}
 with open('%s/musicbrainz_dump_20180725-001823/mbdump/artist' % dir_path) as tsvfile:
     artists = get_musicbrainz_artists_from_dump(tsvfile, 2, 0, 20)
+    artists.update(get_musicbrainz_artists_from_dump(tsvfile, 3, 0, 20))
     json.dump(artists, open('%s/artists.json' % output_dir_path, 'w'), indent=2, ensure_ascii=False)
 
 # Applies a matching strategy
