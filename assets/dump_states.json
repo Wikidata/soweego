@@ -1,0 +1,12 @@
+[
+    {
+        "base_uri": "http://data.bibsys.no/data/notrbib/authorityentry/", 
+        "extension": "nt", 
+        "file_name": "bibsys.nt", 
+        "last_modified": "Fri, 04 Feb 2011 12:31:07", 
+        "location": "http://data.bibsys.no/autreg/linked_data_auth_reg.nt", 
+        "name": "bibsys", 
+        "rdf_person": "http://xmlns.com/foaf/0.1/Person", 
+        "rdf_type": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+    }
+]
