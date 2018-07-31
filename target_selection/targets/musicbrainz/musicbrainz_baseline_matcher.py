@@ -66,7 +66,6 @@ def equal_strings_match():
     matches = matching_strategies.equal_strings_match((labels_qid, get_label_musicbrainzid_dict()))
     json.dump(matches, open('%s/equal_strings_matches.json' % get_output_path(), 'w'), indent=2, ensure_ascii=False)
 
-
 def get_url_domains():
     """Finds all the domains to which the artists are connected"""
     fieldnames = [i for i in range(0, 5)]
