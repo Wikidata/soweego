@@ -7,11 +7,12 @@ _soweego_ is an entity linking system that connects Wikidata items to trusted ex
 https://meta.wikimedia.org/wiki/Grants:Project/Hjfocs/soweego
 
 # Development Policy
-Contributors should follow the standard team development practices:
+Contributors should comply with these steps:
 1. branch out of `master`;
 2. follow the project structure;
 3. commit **frequently** with **clear** messages;
 4. make a pull request.
+_[pipenv](https://docs.python-guide.org/dev/virtualenvs/#installing-pipenv)_ is highly recommended.
 
 # Coding Style
 - Use _[pylint](https://www.pylint.org/)_ with default rules (for now), see `.pylintrc`;
