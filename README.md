@@ -14,7 +14,7 @@ Contributors should follow the standard team development practices:
 4. make a pull request.
 
 # Coding Style
-- Use _[pylint](https://www.pylint.org/)_ with default rules (for now), see `.pylint.rc`;
+- Use _[pylint](https://www.pylint.org/)_ with default rules (for now), see `.pylintrc`;
 - Use _4 spaces_ (soft tab) for indentation;
 - Naming conventions
   - use an _underscore_ as a word separator (files, variables, functions);
