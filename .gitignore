@@ -104,9 +104,13 @@ ENV/
 Pipfile
 Pipfile.lock
 
+# Mac OS
 .DS_Store
-target_selection/targets/.DS_Store
-target_selection/.vscode/settings.json
-target_selection/targets/.DS_Store
+
+# VS Code
+.vscode
+
+# soweego
 target_selection/targets/musicbrainz/musicbrainz_dump*
 target_selection/targets/musicbrainz/output/*
+
