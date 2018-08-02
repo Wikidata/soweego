@@ -12,6 +12,7 @@ Contributors should comply with these steps:
 2. follow the project structure;
 3. commit **frequently** with **clear** messages;
 4. make a pull request.
+
 _[pipenv](https://docs.python-guide.org/dev/virtualenvs/#installing-pipenv)_ is highly recommended.
 
 # Coding Style
