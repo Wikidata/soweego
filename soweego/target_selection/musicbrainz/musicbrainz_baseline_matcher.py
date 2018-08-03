@@ -5,6 +5,7 @@ import json
 import os
 import csv
 import re
+from common import *
 from collections import defaultdict
 from soweego.target_selection.common import matching_strategies
 
@@ -26,20 +27,6 @@ def get_musicbrainz_artists_from_dump(opened_file_dump, label_column_index, id_c
             print(row[10])
 
     return label_musicbrainz
-
-def get_path():
-    """Return the path of the current module"""
-    path = os.path.abspath(__file__)
-    return os.path.dirname(path)
-
-def get_output_path():
-    """Returns the path of the output files"""
-    output_dir_path = '%s/output' % get_path()
-
-    if not os.path.exists(output_dir_path):
-        os.makedirs(output_dir_path)
-
-    return output_dir_path
 
 def get_label_musicbrainzid_dict():
     """Returns the name-musicbrainzid dictionary. If it's not stored, creates a brand new file"""
