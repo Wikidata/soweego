@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
+import click
 import json
 import os
 import csv
@@ -59,6 +60,7 @@ def get_label_musicbrainzid_dict():
         json.dump(artists, open(filepath, 'w'), indent=2, ensure_ascii=False)
         return artists
 
+@click.command()
 def equal_strings_match():
     """Creates the equal strings match output file"""
     # Wikidata sample loading
