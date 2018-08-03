@@ -3,7 +3,6 @@
 
 # Launch point for all the subpackage scripts
 
-import targets.musicbrainz.musicbrainz_baseline_matcher as mb
+import soweego.target_selection.musicbrainz.musicbrainz_baseline_matcher as mb
 
 mb.equal_strings_match()
-

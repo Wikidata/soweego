@@ -79,9 +79,6 @@ celerybeat-schedule
 # SageMath parsed files
 *.sage.py
 
-# dotenv
-.env
-
 # virtualenv
 .venv
 venv/
@@ -99,10 +96,6 @@ ENV/
 
 # mypy
 .mypy_cache/
-
-# pipenv
-Pipfile
-Pipfile.lock
 
 # Mac OS
 .DS_Store

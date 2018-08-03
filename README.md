@@ -19,7 +19,7 @@ _[pipenv](https://docs.python-guide.org/dev/virtualenvs/#installing-pipenv)_ is 
 - Use _[pylint](https://www.pylint.org/)_ with default rules (for now), see `.pylintrc`;
 - Use _4 spaces_ (soft tab) for indentation;
 - Naming conventions
-  - use an _underscore_ as a word separator (files, variables, functions);
+  - use _snake-case_ style, i.e., _underscore_ as a word separator (files, variables, functions);
   - constants are _UPPERCASE_;
   - anything else is _lowercase_.
 - Use _2_ empty lines to separate functions;
