@@ -100,10 +100,6 @@ ENV/
 # mypy
 .mypy_cache/
 
-# pipenv
-Pipfile
-Pipfile.lock
-
 # Mac OS
 .DS_Store
 
