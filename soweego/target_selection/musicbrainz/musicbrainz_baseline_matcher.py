@@ -6,7 +6,7 @@ import os
 import csv
 import re
 from collections import defaultdict
-from common import matching_strategies
+from soweego.target_selection.common import matching_strategies
 
 # ATTENTION remember to download the dump by running the bash script in the same folder of this script
 

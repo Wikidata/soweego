@@ -1,2 +1,1 @@
-import musicbrainz_baseline_matcher.py
-
+import musicbrainz_baseline_matcher
