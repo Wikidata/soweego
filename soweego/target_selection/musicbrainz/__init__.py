@@ -1,1 +1,2 @@
-import musicbrainz_baseline_matcher
+from soweego.target_selection.musicbrainz import cli, musicbrainz_baseline_matcher
+
