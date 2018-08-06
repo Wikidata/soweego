@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
+import click
 import requests
 
 from sys import argv, exit
 
-
+@click.command()
 def main(items_path, sparql_condition, output_path):
     """Run a SPARQL query against the Wikidata endpoint using batches of 500 items"""
     entities = ['wd:%s' % l.rstrip() for l in open(items_path).readlines()]
