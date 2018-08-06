@@ -16,6 +16,13 @@ def query_info_for(qids_bucket):
     # do it foreach bucket
     #store everything in a file
 
+def query_wikipedia_articles_for(qids_bucket):
+    properties = json.load(open('resources/properties_mapping.json'))
+    query = "SELECT * WHERE{ VALUES ?id { %s } " % ' '.join(qids_bucket)
+    query += 'OPTIONAL { ?article schema:about ?id . }'
+    query += "}"
+    print(query)
+
 
 #TODO
 #buckets of a hundred ids
@@ -25,9 +32,4 @@ labels_qid = json.load(open('../../wikidata/resources/musicians_sample_labels.js
 entities = ["wd:%s"%v for k,v in labels_qid.items()]
 bucket_size = 100
 buckets = [set(entities[i*bucket_size:(i+1)*bucket_size]) for i in range(0, int((len(entities)/bucket_size+1)))]
-query_info_for(buckets[0])
-
-
-###
-# missing wikipedia and wikidata
-###
+query_wikipedia_articles_for(buckets[0])
