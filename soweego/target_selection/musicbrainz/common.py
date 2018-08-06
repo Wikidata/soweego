@@ -1,4 +1,5 @@
 import os
+import requests
 
 def get_path():
     """Return the path of the current module"""
@@ -13,3 +14,7 @@ def get_output_path():
         os.makedirs(output_dir_path)
 
     return output_dir_path
+
+def api_request_wikidata(query):
+    r = requests.get('https://query.wikidata.org/sparql', params={'query': query}, headers={'Accept': 'text/tab-separated-values'})
+    print(r.text)
