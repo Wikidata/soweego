@@ -79,9 +79,6 @@ celerybeat-schedule
 # SageMath parsed files
 *.sage.py
 
-# dotenv
-.env
-
 # virtualenv
 .venv
 venv/
@@ -126,3 +123,4 @@ target_selection/targets/musicbrainz/output/*
 # bibsys
 soweego/target_selection/bibsys/resources/temp/
 soweego/target_selection/bibsys/resources/wikidata_sample.json
+

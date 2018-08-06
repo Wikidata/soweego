@@ -1,2 +1,2 @@
-import target_selection
-import wikidata
+from soweego import wikidata, target_selection
+

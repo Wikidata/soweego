@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
+import click
 import json
 import os
 import csv
 import re
 from collections import defaultdict
-from common import matching_strategies
+from soweego.target_selection.common import matching_strategies
 
 # ATTENTION remember to download the dump by running the bash script in the same folder of this script
 
@@ -59,6 +60,7 @@ def get_label_musicbrainzid_dict():
         json.dump(artists, open(filepath, 'w'), indent=2, ensure_ascii=False)
         return artists
 
+@click.command()
 def equal_strings_match():
     """Creates the equal strings match output file"""
     # Wikidata sample loading

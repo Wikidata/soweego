@@ -23,7 +23,7 @@ json.dump(label_qid, open(HOME + 'wikidata/label2qid_1_percent_sample.json', 'w'
 label_bne = {}
 bne_names = csv.DictReader(open(HOME + 'bne/all_people_ids_and_names.csv'))
 for row in bne_names:
-    label_bne[row['name']].lower() = row['id'].replace('http://datos.bne.es/resource/', '')
+    label_bne[row['name'].lower()] = row['id'].replace('http://datos.bne.es/resource/', '')
 
 # BNE, 'also known as' labels
 aka_bne = {}
