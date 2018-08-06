@@ -24,6 +24,14 @@ def query_wikipedia_articles_for(qids_bucket):
     query += "}"
     return query
 
+def query_url_formatters_for_properties():
+    """Retrieves the url formatters for the properties listed in properties_mapping.json"""
+
+    properties = json.load(open('resources/properties_mapping.json'))
+    values = ['wd:%s'%v for _, v in properties.items()]
+    query = "SELECT * WHERE { VALUES ?id {%s} . ?id wdt:P1630 ?formatterUrl . }" % ' '.join(values)
+    return query
+
 labels_qid = json.load(open('../../wikidata/resources/musicians_sample_labels.json'))
 entities = ["wd:%s"%v for k,v in labels_qid.items()]
 BUCKET_SIZE = 100
