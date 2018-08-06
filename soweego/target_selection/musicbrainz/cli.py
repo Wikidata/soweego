@@ -6,7 +6,8 @@ from soweego.target_selection.musicbrainz import wikidata_sample_additional_info
 CLI_COMMANDS = {
     'baseline_matcher': musicbrainz_baseline_matcher.equal_strings_match,
     'get_sample_links': wikidata_sample_additional_info.get_wikidata_sample_links,
-    'get_users_urls': musicbrainz_baseline_matcher.get_users_urls
+    'get_users_urls': musicbrainz_baseline_matcher.get_users_urls,
+    'get_sitelinks_for_sample': wikidata_sample_additional_info.get_sitelinks_for_sample
 }
 
 
