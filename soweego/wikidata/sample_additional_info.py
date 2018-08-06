@@ -6,17 +6,13 @@ from collections import defaultdict
 import click
 from ..target_selection.musicbrainz import common
 
-PATH = common.get_output_path()
-PROP_MAP_PATH = os.path.join(common.get_path(), 'resources/properties_mapping.json')
-PROPERTIES = {'?%s' % re.sub(r'\W', '', k): v  for k, v in json.load(open(PROP_MAP_PATH)).items()}
-
 # Queries computing
 
-def query_info_for(qids_bucket):
+def query_info_for(qids_bucket, properties):
     """Given a list of wikidata entities returns a query for getting some external ids"""
 
     query = "SELECT * WHERE{ VALUES ?id { %s } " % ' '.join(qids_bucket)
-    for k, v in PROPERTIES.items():
+    for k, v in properties.items():
         query += 'OPTIONAL { ?id wdt:%s %s . } ' % (v, k)
     query += "}"
     return query
@@ -31,15 +27,15 @@ def query_wikipedia_articles_for(qids_bucket):
 
 #JSONs creation
 
-def get_url_formatters_for_properties():
-    """Retrieves the url formatters for the properties listed in properties_mapping.json"""
+def get_url_formatters_for_properties(properties):
+    """Retrieves the url formatters for the properties listed in the given dict"""
     filepath = os.path.join(common.get_output_path(), 'url_formatters.json')
 
     if os.path.isfile(filepath):
         return json.load(open(filepath))
     else:
         formatters = {}
-        for prop_name, prop_id in PROPERTIES.items():
+        for prop_name, prop_id in properties.items():
             query = "SELECT * WHERE { %s wdt:P1630 ?formatterUrl . }" % ('wd:%s' % prop_id)
             reader = csv.DictReader(common.api_request_wikidata(query), dialect='excel-tab')
             for r in reader:
@@ -66,11 +62,14 @@ def get_sample_buckets(sample_path):
 
 @click.command()
 @click.argument('sample_path', type=click.Path(exists=True))
+@click.argument('property_mapping_path', type=click.Path(exists=True))
 @click.option('--output', '-o', default=common.get_output_path(), type=click.Path(exists=True))
-def get_links_for_sample(sample_path, output):
+def get_links_for_sample(sample_path, property_mapping_path, output):
     '''Creates the JSON containing url - wikidata id'''
 
-    formatters_dict = get_url_formatters_for_properties()
+    properties = {'?%s' % re.sub(r'\W', '', k): v  for k, v in json.load(open(property_mapping_path)).items()}
+
+    formatters_dict = get_url_formatters_for_properties(properties)
 
     filepath = os.path.join(output, 'wikidata_musician_sample_links.json')
 
@@ -81,7 +80,7 @@ def get_links_for_sample(sample_path, output):
 
     for bucket in buckets:
         # Downloads the first bucket
-        response = common.api_request_wikidata(query_info_for(bucket))
+        response = common.api_request_wikidata(query_info_for(bucket, properties))
         ids_collection = csv.DictReader(response, dialect='excel-tab')
         for id_row in ids_collection:
             # Extracts the wikidata id from the URI
@@ -100,7 +99,7 @@ def get_links_for_sample(sample_path, output):
 def get_sitelinks_for_sample(sample_path, output):
     '''Given a sample of users, retrieves all the sitelinks'''
 
-    filepath = os.path.join([output, 'wikidata_musician_sample_sitelinks.json'])
+    filepath = os.path.join(output, 'wikidata_musician_sample_sitelinks.json')
 
     # Creates buckets for artist from the sample. Technique to fix quering issues
     buckets = get_sample_buckets(sample_path)
