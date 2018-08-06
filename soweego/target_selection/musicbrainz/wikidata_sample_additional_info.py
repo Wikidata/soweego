@@ -9,6 +9,9 @@ PATH = common.get_output_path()
 PROPERTIES_MAPPING_PATH = '%s/resources/properties_mapping.json' % common.get_path()
 properties = {'?%s' % re.sub(r'\W', '', k): v  for k, v in json.load(open(PROPERTIES_MAPPING_PATH)).items()}
 
+
+# Queries computing
+
 def query_info_for(qids_bucket):
     """Given a list of wikidata entities returns a query for getting some external ids"""
 
@@ -26,6 +29,8 @@ def query_wikipedia_articles_for(qids_bucket):
     query += 'OPTIONAL { ?article schema:about ?id . }'
     query += "}"
     return query
+
+#JSONs creation
 
 def get_url_formatters_for_properties():
     """Retrieves the url formatters for the properties listed in properties_mapping.json"""
@@ -46,6 +51,9 @@ def get_url_formatters_for_properties():
 
 @click.command()
 def get_wikidata_sample_links():
+    '''Creates the JSON containing url - wikidata id'''
+
+    # Creates buckets for artist from the sample. Technique to fix quering issues
     labels_qid = json.load(open('soweego/wikidata/resources/musicians_sample_labels.json'))
     entities = ["wd:%s"%v for k,v in labels_qid.items()]
     BUCKET_SIZE = 100
