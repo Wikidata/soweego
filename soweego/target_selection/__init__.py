@@ -1,3 +1,2 @@
-import common
-import bne
-import musicbrainz
+from soweego.target_selection import cli, common, bne, musicbrainz
+
