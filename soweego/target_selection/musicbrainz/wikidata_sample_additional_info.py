@@ -1,16 +1,14 @@
 import json
-import sys #debug
-import click
 import csv
 import os
 import re
-from . import common
 from collections import defaultdict
+import click
+from . import common
 
 PATH = common.get_output_path()
-PROPERTIES_MAPPING_PATH = '%s/resources/properties_mapping.json' % common.get_path()
-PROPERTIES = {'?%s' % re.sub(r'\W', '', k): v  for k, v in json.load(open(PROPERTIES_MAPPING_PATH)).items()}
-
+PROP_MAP_PATH = '%s/resources/properties_mapping.json' % common.get_path()
+PROPERTIES = {'?%s' % re.sub(r'\W', '', k): v  for k, v in json.load(open(PROP_MAP_PATH)).items()}
 
 # Queries computing
 
@@ -59,6 +57,12 @@ def stripe_first_last_characters(string):
     '''Given a string removes the first and the last characters'''
     return string[1:-1]
 
+def get_sample_buckets(sample_path):
+    '''Given a sample path, returns it divided in equal size buckets'''
+    size = 100
+    labels_qid = json.load(open(sample_path))
+    entities = ["wd:%s"%v for k,v in labels_qid.items()]
+    return [set(entities[i*size:(i+1)*size]) for i in range(0, int((len(entities)/size+1)))]
 
 @click.command()
 def get_wikidata_sample_links():
@@ -70,16 +74,14 @@ def get_wikidata_sample_links():
     filepath = '%s/wikidata_musician_sample_links.json' % common.get_output_path()
 
     # Creates buckets for artist from the sample. Technique to fix quering issues
-    labels_qid = json.load(open('soweego/wikidata/resources/musicians_sample_labels.json'))
-    entities = ["wd:%s"%v for k,v in labels_qid.items()]
-    BUCKET_SIZE = 100
-    buckets = [set(entities[i*BUCKET_SIZE:(i+1)*BUCKET_SIZE]) for i in range(0, int((len(entities)/BUCKET_SIZE+1)))]
+    buckets = get_sample_buckets('soweego/wikidata/resources/musicians_sample_labels.json')
 
     url_id = defaultdict(str)
 
     for bucket in buckets:
         # Downloads the first bucket
-        ids_collection = csv.DictReader(common.api_request_wikidata(query_info_for(bucket)), dialect='excel-tab')
+        response = common.api_request_wikidata(query_info_for(bucket))
+        ids_collection = csv.DictReader(response, dialect='excel-tab')
         for id_row in ids_collection:
             # Extracts the wikidata id from the URI
             entity_id = get_wikidata_id_from_uri(id_row['?id'])
@@ -98,22 +100,18 @@ def get_sitelinks_for_sample():
     #TODO sample as parameter    
     filepath = '%s/wikidata_musician_sample_sitelinks.json' % common.get_output_path()
 
-    # TODO refactor buckets in a function
     # Creates buckets for artist from the sample. Technique to fix quering issues
-    labels_qid = json.load(open('soweego/wikidata/resources/musicians_sample_labels.json'))
-    entities = ["wd:%s"%v for k,v in labels_qid.items()]
-    BUCKET_SIZE = 100
-    buckets = [set(entities[i*BUCKET_SIZE:(i+1)*BUCKET_SIZE]) for i in range(0, int((len(entities)/BUCKET_SIZE+1)))]
+    buckets = get_sample_buckets('soweego/wikidata/resources/musicians_sample_labels.json')
 
     url_id = defaultdict(str)
 
     for bucket in buckets:
         # Downloads the first bucket
-        articles_collection = csv.DictReader(common.api_request_wikidata(query_wikipedia_articles_for(bucket)), dialect='excel-tab')
+        response = common.api_request_wikidata(query_wikipedia_articles_for(bucket))
+        articles_collection = csv.DictReader(response, dialect='excel-tab')
         for article_row in articles_collection:
-            #TODO id extraction from wikidata uri asa a function
             site_url = stripe_first_last_characters(article_row['?article'])
             entity_id = get_wikidata_id_from_uri(article_row['?id'])
             url_id[site_url] = entity_id
-    
+
     json.dump(url_id, open(filepath, 'w'), indent=2, ensure_ascii=False)
