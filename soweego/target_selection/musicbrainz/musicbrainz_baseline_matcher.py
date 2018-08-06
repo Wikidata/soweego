@@ -6,7 +6,7 @@ import json
 import os
 import csv
 import re
-from common import *
+from . import common
 from collections import defaultdict
 from soweego.target_selection.common import matching_strategies
 
@@ -31,16 +31,16 @@ def get_musicbrainz_artists_from_dump(opened_file_dump, label_column_index, id_c
 
 def get_label_musicbrainzid_dict():
     """Returns the name-musicbrainzid dictionary. If it's not stored, creates a brand new file"""
-    filepath = '%s/artists.json' % get_output_path()
+    filepath = '%s/artists.json' % common.get_output_path()
     if os.path.isfile(filepath):
         return json.load(open(filepath))
     else:
         artists = {}
-        with open('%s/musicbrainz_dump_20180725-001823/mbdump/artist' % get_path()) as tsvfile:
+        with open('%s/musicbrainz_dump_20180725-001823/mbdump/artist' % common.get_output_path()) as tsvfile:
             artists = get_musicbrainz_artists_from_dump(tsvfile, 2, 0, 20)
             artists.update(get_musicbrainz_artists_from_dump(tsvfile, 3, 0, 20))
 
-        with open('%s/musicbrainz_dump_20180725-001823/mbdump/artist_alias' % get_path()) as tsvfile:
+        with open('%s/musicbrainz_dump_20180725-001823/mbdump/artist_alias' % common.get_output_path()) as tsvfile:
             artists.update(get_musicbrainz_artists_from_dump(tsvfile, 2, 1, 16))
             artists.update(get_musicbrainz_artists_from_dump(tsvfile, 7, 1, 16))
 
@@ -53,34 +53,35 @@ def equal_strings_match():
     # Wikidata sample loading
     labels_qid = json.load(open('musicians_wikidata_sample.json'))
     matches = matching_strategies.equal_strings_match((labels_qid, get_label_musicbrainzid_dict()))
-    json.dump(matches, open('%s/equal_strings_matches.json' % get_output_path(), 'w'), indent=2, ensure_ascii=False)
+    json.dump(matches, open('%s/equal_strings_matches.json' % common.get_output_path(), 'w'), indent=2, ensure_ascii=False)
 
 def get_url_domains():
     """Finds all the domains to which the artists are connected"""
     fieldnames = [i for i in range(0, 5)]
     domain_regex = '^(?:https?:\/\/)?(?:[^@\/\n]+@)?(?:www\.)?([^:\/?\n]+)'
     domains = defaultdict(int)
-    with open('%s/musicbrainz_dump_20180725-001823/mbdump/url' % get_path(), "r") as tsvfile:
+    with open('%s/musicbrainz_dump_20180725-001823/mbdump/url' % common.get_output_path(), "r") as tsvfile:
         urls = csv.DictReader(tsvfile, dialect='excel-tab', fieldnames=fieldnames)
         for url in urls:
             domain = re.search(domain_regex, url[2]).group(1)
             domains[domain] += 1
     towrite = {domain:count for (domain, count) in domains.items() if count > 10000}
-    json.dump(towrite, open('%s/urls.json' % get_output_path(), 'w'), indent=2, ensure_ascii=False)
+    json.dump(towrite, open('%s/urls.json' % common.get_output_path(), 'w'), indent=2, ensure_ascii=False)
 
+@click.command()
 def get_users_urls():
     """Creates the json containing url - artist id"""
     urlid_id = defaultdict(str)
     url_id = defaultdict(str)
     
-    with open('%s/musicbrainz_dump_20180725-001823/mbdump/l_artist_url' % get_path(), "r") as tsvfile:
+    with open('%s/musicbrainz_dump_20180725-001823/mbdump/l_artist_url' % common.get_output_path(), "r") as tsvfile:
         fieldnames = [i for i in range(0, 6)]
         url_relationships = csv.DictReader(tsvfile, dialect='excel-tab', fieldnames=fieldnames)
         for relationship in url_relationships:
             # url id matched with its user id
             urlid_id[relationship[3]] = relationship[2]
 
-    with open('%s/musicbrainz_dump_20180725-001823/mbdump/url' % get_path(), "r") as tsvfile:
+    with open('%s/musicbrainz_dump_20180725-001823/mbdump/url' % common.get_output_path(), "r") as tsvfile:
         fieldnames = [i for i in range(0, 5)]
         urls = csv.DictReader(tsvfile, dialect='excel-tab', fieldnames=fieldnames)
         for url in urls:
@@ -88,4 +89,4 @@ def get_users_urls():
             if url[0] in urlid_id:
                 url_id[url[2]] = urlid_id[url[0]]
 
-    json.dump(url_id, open('%s/url_artist.json' % get_output_path(), 'w'), indent=2, ensure_ascii=False)    
+    json.dump(url_id, open('%s/url_artist.json' % common.get_output_path(), 'w'), indent=2, ensure_ascii=False)    
