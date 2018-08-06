@@ -4,7 +4,7 @@ import os
 import re
 from collections import defaultdict
 import click
-from . import common
+from ..target_selection.musicbrainz import common
 
 PATH = common.get_output_path()
 PROP_MAP_PATH = os.path.join(common.get_path(), 'resources/properties_mapping.json')
@@ -65,16 +65,17 @@ def get_sample_buckets(sample_path):
     return [set(entities[i*size:(i+1)*size]) for i in range(0, int((len(entities)/size+1)))]
 
 @click.command()
-def get_wikidata_sample_links():
+@click.argument('sample_path', type=click.Path(exists=True))
+@click.option('--output', '-o', default=common.get_output_path(), type=click.Path(exists=True))
+def get_links_for_sample(sample_path, output):
     '''Creates the JSON containing url - wikidata id'''
 
     formatters_dict = get_url_formatters_for_properties()
 
-    # TODO parametro per sceglire sample
-    filepath = os.path.join(common.get_output_path(), 'wikidata_musician_sample_links.json')
+    filepath = os.path.join(output, 'wikidata_musician_sample_links.json')
 
     # Creates buckets for artist from the sample. Technique to fix quering issues
-    buckets = get_sample_buckets('soweego/wikidata/resources/musicians_sample_labels.json')
+    buckets = get_sample_buckets(sample_path)
 
     url_id = defaultdict(str)
 
@@ -94,14 +95,15 @@ def get_wikidata_sample_links():
     json.dump(url_id, open(filepath, 'w'), indent=2, ensure_ascii=False)
 
 @click.command()
-def get_sitelinks_for_sample():
+@click.argument('sample_path', type=click.Path(exists=True))
+@click.option('--output', '-o', default=common.get_output_path(), type=click.Path(exists=True))
+def get_sitelinks_for_sample(sample_path, output):
     '''Given a sample of users, retrieves all the sitelinks'''
 
-    #TODO sample as parameter
-    filepath = os.path.join([common.get_output_path(), 'wikidata_musician_sample_sitelinks.json'])
+    filepath = os.path.join([output, 'wikidata_musician_sample_sitelinks.json'])
 
     # Creates buckets for artist from the sample. Technique to fix quering issues
-    buckets = get_sample_buckets('soweego/wikidata/resources/musicians_sample_labels.json')
+    buckets = get_sample_buckets(sample_path)
 
     url_id = defaultdict(str)
 
