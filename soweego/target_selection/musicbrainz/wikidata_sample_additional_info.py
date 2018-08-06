@@ -7,7 +7,7 @@ import click
 from . import common
 
 PATH = common.get_output_path()
-PROP_MAP_PATH = os.path.join([common.get_path(), '/resources/properties_mapping.json'])
+PROP_MAP_PATH = os.path.join(common.get_path(), 'resources/properties_mapping.json')
 PROPERTIES = {'?%s' % re.sub(r'\W', '', k): v  for k, v in json.load(open(PROP_MAP_PATH)).items()}
 
 # Queries computing
@@ -33,7 +33,7 @@ def query_wikipedia_articles_for(qids_bucket):
 
 def get_url_formatters_for_properties():
     """Retrieves the url formatters for the properties listed in properties_mapping.json"""
-    filepath = os.path.join([common.get_output_path(), '/url_formatters.json'])
+    filepath = os.path.join(common.get_output_path(), 'url_formatters.json')
 
     if os.path.isfile(filepath):
         return json.load(open(filepath))
@@ -71,7 +71,7 @@ def get_wikidata_sample_links():
     formatters_dict = get_url_formatters_for_properties()
 
     # TODO parametro per sceglire sample
-    filepath = os.path.join([common.get_output_path(), '/wikidata_musician_sample_links.json'])
+    filepath = os.path.join(common.get_output_path(), 'wikidata_musician_sample_links.json')
 
     # Creates buckets for artist from the sample. Technique to fix quering issues
     buckets = get_sample_buckets('soweego/wikidata/resources/musicians_sample_labels.json')
@@ -98,7 +98,7 @@ def get_sitelinks_for_sample():
     '''Given a sample of users, retrieves all the sitelinks'''
 
     #TODO sample as parameter
-    filepath = os.path.join([common.get_output_path(), '/wikidata_musician_sample_sitelinks.json'])
+    filepath = os.path.join([common.get_output_path(), 'wikidata_musician_sample_sitelinks.json'])
 
     # Creates buckets for artist from the sample. Technique to fix quering issues
     buckets = get_sample_buckets('soweego/wikidata/resources/musicians_sample_labels.json')
