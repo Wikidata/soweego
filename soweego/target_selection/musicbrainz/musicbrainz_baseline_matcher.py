@@ -119,5 +119,4 @@ def links_match(dump_folder_path, links_qid_dictionary, sitelinks_qid_dictionary
     ids_matching = matching_strategies.equal_strings_match((url_mbid, link_qid))
 
     full_outputh_path = os.path.join(output, 'link_match.json')
-    print(full_outputh_path)
     json.dump(ids_matching, open(full_outputh_path, 'w'), indent=2, ensure_ascii=False)
