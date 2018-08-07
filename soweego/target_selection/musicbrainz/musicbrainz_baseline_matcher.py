@@ -73,23 +73,49 @@ def get_url_domains():
 @click.option('--output', '-o', default=common.get_output_path(), type=click.Path(exists=True))
 def get_users_urls(dump_folder_path, output):
     """Creates the json containing url - artist id"""
+    output_full_path = os.path.join(output, 'url_artist.json')
     urlid_id = defaultdict(str)
     url_id = defaultdict(str)
 
-    with open(os.path.join(dump_folder_path, 'mbdump/l_artist_url'), "r") as tsvfile:
-        fieldnames = [i for i in range(0, 6)]
-        url_relationships = csv.DictReader(tsvfile, dialect='excel-tab', fieldnames=fieldnames)
-        for relationship in url_relationships:
-            # url id matched with its user id
-            urlid_id[relationship[3]] = relationship[2]
+    if os.path.isfile(output_full_path):
+        return json.load(open(output_full_path))
+    else:
+        with open(os.path.join(dump_folder_path, 'mbdump/l_artist_url'), "r") as tsvfile:
+            fieldnames = [i for i in range(0, 6)]
+            url_relationships = csv.DictReader(tsvfile, dialect='excel-tab', fieldnames=fieldnames)
+            for relationship in url_relationships:
+                # url id matched with its user id
+                urlid_id[relationship[3]] = relationship[2]
 
-    with open(os.path.join(dump_folder_path, 'mbdump/url'), "r") as tsvfile:
-        fieldnames = [i for i in range(0, 5)]
-        urls = csv.DictReader(tsvfile, dialect='excel-tab', fieldnames=fieldnames)
-        for url in urls:
-            # Translates the url ids stored before in the respective urls
-            if url[0] in urlid_id:
-                url_id[url[2]] = urlid_id[url[0]]
+        with open(os.path.join(dump_folder_path, 'mbdump/url'), "r") as tsvfile:
+            fieldnames = [i for i in range(0, 5)]
+            urls = csv.DictReader(tsvfile, dialect='excel-tab', fieldnames=fieldnames)
+            for url in urls:
+                # Translates the url ids stored before in the respective urls
+                if url[0] in urlid_id:
+                    url_id[url[2]] = urlid_id[url[0]]
 
-    json.dump(url_id, open(os.path.join(output, 'url_artist.json'), 'w'), indent=2, ensure_ascii=False)
+        json.dump(url_id, open(output_full_path, 'w'), indent=2, ensure_ascii=False)
+        return url_id
 
+@click.command()
+@click.argument('dump_folder_path', type=click.Path(exists=True))
+@click.argument('links_qid_dictionary', type=click.Path(exists=True))
+@click.argument('sitelinks_qid_dictionary', type=click.Path(exists=True))
+@click.option('--output', '-o', default=common.get_output_path(), type=click.Path(exists=True))
+def links_match(dump_folder_path, links_qid_dictionary, sitelinks_qid_dictionary, output):
+    # Loads url-musicbrainz id 
+    url_mbid = get_users_urls(dump_folder_path, output)
+    # Loads link - wikidata id
+    link_qid = json.load(open(links_qid_dictionary))
+    # Loads sitelink - wikidata id
+    sitelink_qid = json.load(open(sitelinks_qid_dictionary))
+    # Equal strigs match among urls
+    wikidata_full = {}.update(link_qid)
+    wikidata_full.update(sitelink_qid)
+
+    ids_matching = matching_strategies.equal_strings_match(url_mbid, wikidata_full)
+
+    full_outputh_path = os.path.join(output, 'link_match.json')
+    print(full_outputh_path)
+    json.dump(ids_matching, open(full_outputh_path, 'w'), indent=2, ensure_ascii=False)
