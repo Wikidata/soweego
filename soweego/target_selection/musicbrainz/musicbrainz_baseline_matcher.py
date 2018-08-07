@@ -69,19 +69,21 @@ def get_url_domains():
     json.dump(towrite, open('%s/urls.json' % common.get_output_path(), 'w'), indent=2, ensure_ascii=False)
 
 @click.command()
-def get_users_urls():
+@click.argument('dump_folder_path', type=click.Path(exists=True))
+@click.option('--output', '-o', default=common.get_output_path(), type=click.Path(exists=True))
+def get_users_urls(dump_folder_path, output):
     """Creates the json containing url - artist id"""
     urlid_id = defaultdict(str)
     url_id = defaultdict(str)
-    
-    with open('%s/musicbrainz_dump_20180725-001823/mbdump/l_artist_url' % common.get_output_path(), "r") as tsvfile:
+
+    with open(os.path.join(dump_folder_path, 'mbdump/l_artist_url'), "r") as tsvfile:
         fieldnames = [i for i in range(0, 6)]
         url_relationships = csv.DictReader(tsvfile, dialect='excel-tab', fieldnames=fieldnames)
         for relationship in url_relationships:
             # url id matched with its user id
             urlid_id[relationship[3]] = relationship[2]
 
-    with open('%s/musicbrainz_dump_20180725-001823/mbdump/url' % common.get_output_path(), "r") as tsvfile:
+    with open(os.path.join(dump_folder_path, 'mbdump/url'), "r") as tsvfile:
         fieldnames = [i for i in range(0, 5)]
         urls = csv.DictReader(tsvfile, dialect='excel-tab', fieldnames=fieldnames)
         for url in urls:
@@ -89,4 +91,5 @@ def get_users_urls():
             if url[0] in urlid_id:
                 url_id[url[2]] = urlid_id[url[0]]
 
-    json.dump(url_id, open('%s/url_artist.json' % common.get_output_path(), 'w'), indent=2, ensure_ascii=False)    
+    json.dump(url_id, open(os.path.join(output, 'url_artist.json'), 'w'), indent=2, ensure_ascii=False)
+
