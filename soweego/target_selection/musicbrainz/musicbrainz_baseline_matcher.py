@@ -6,6 +6,7 @@ import json
 import os
 import csv
 import re
+from . import common
 from collections import defaultdict
 from soweego.target_selection.common import matching_strategies
 
@@ -28,32 +29,18 @@ def get_musicbrainz_artists_from_dump(opened_file_dump, label_column_index, id_c
 
     return label_musicbrainz
 
-def get_path():
-    """Return the path of the current module"""
-    path = os.path.abspath(__file__)
-    return os.path.dirname(path)
-
-def get_output_path():
-    """Returns the path of the output files"""
-    output_dir_path = '%s/output' % get_path()
-
-    if not os.path.exists(output_dir_path):
-        os.makedirs(output_dir_path)
-
-    return output_dir_path
-
 def get_label_musicbrainzid_dict():
     """Returns the name-musicbrainzid dictionary. If it's not stored, creates a brand new file"""
-    filepath = '%s/artists.json' % get_output_path()
+    filepath = '%s/artists.json' % common.get_output_path()
     if os.path.isfile(filepath):
         return json.load(open(filepath))
     else:
         artists = {}
-        with open('%s/musicbrainz_dump_20180725-001823/mbdump/artist' % get_path()) as tsvfile:
+        with open('%s/musicbrainz_dump_20180725-001823/mbdump/artist' % common.get_output_path()) as tsvfile:
             artists = get_musicbrainz_artists_from_dump(tsvfile, 2, 0, 20)
             artists.update(get_musicbrainz_artists_from_dump(tsvfile, 3, 0, 20))
 
-        with open('%s/musicbrainz_dump_20180725-001823/mbdump/artist_alias' % get_path()) as tsvfile:
+        with open('%s/musicbrainz_dump_20180725-001823/mbdump/artist_alias' % common.get_output_path()) as tsvfile:
             artists.update(get_musicbrainz_artists_from_dump(tsvfile, 2, 1, 16))
             artists.update(get_musicbrainz_artists_from_dump(tsvfile, 7, 1, 16))
 
@@ -66,39 +53,70 @@ def equal_strings_match():
     # Wikidata sample loading
     labels_qid = json.load(open('musicians_wikidata_sample.json'))
     matches = matching_strategies.equal_strings_match((labels_qid, get_label_musicbrainzid_dict()))
-    json.dump(matches, open('%s/equal_strings_matches.json' % get_output_path(), 'w'), indent=2, ensure_ascii=False)
+    json.dump(matches, open('%s/equal_strings_matches.json' % common.get_output_path(), 'w'), indent=2, ensure_ascii=False)
 
 def get_url_domains():
     """Finds all the domains to which the artists are connected"""
     fieldnames = [i for i in range(0, 5)]
     domain_regex = '^(?:https?:\/\/)?(?:[^@\/\n]+@)?(?:www\.)?([^:\/?\n]+)'
     domains = defaultdict(int)
-    with open('%s/musicbrainz_dump_20180725-001823/mbdump/url' % get_path(), "r") as tsvfile:
+    with open('%s/musicbrainz_dump_20180725-001823/mbdump/url' % common.get_output_path(), "r") as tsvfile:
         urls = csv.DictReader(tsvfile, dialect='excel-tab', fieldnames=fieldnames)
         for url in urls:
             domain = re.search(domain_regex, url[2]).group(1)
             domains[domain] += 1
     towrite = {domain:count for (domain, count) in domains.items() if count > 10000}
-    json.dump(towrite, open('%s/urls.json' % get_output_path(), 'w'), indent=2, ensure_ascii=False)
+    json.dump(towrite, open('%s/urls.json' % common.get_output_path(), 'w'), indent=2, ensure_ascii=False)
 
-def get_users_urls():
-    """Creates the json containing url - artist id"""
+def _get_users_urls(dump_folder_path, output):
+    output_full_path = os.path.join(output, 'url_artist.json')
     urlid_id = defaultdict(str)
     url_id = defaultdict(str)
-    
-    with open('%s/musicbrainz_dump_20180725-001823/mbdump/l_artist_url' % get_path(), "r") as tsvfile:
-        fieldnames = [i for i in range(0, 6)]
-        url_relationships = csv.DictReader(tsvfile, dialect='excel-tab', fieldnames=fieldnames)
-        for relationship in url_relationships:
-            # url id matched with its user id
-            urlid_id[relationship[3]] = relationship[2]
 
-    with open('%s/musicbrainz_dump_20180725-001823/mbdump/url' % get_path(), "r") as tsvfile:
-        fieldnames = [i for i in range(0, 5)]
-        urls = csv.DictReader(tsvfile, dialect='excel-tab', fieldnames=fieldnames)
-        for url in urls:
-            # Translates the url ids stored before in the respective urls
-            if url[0] in urlid_id:
-                url_id[url[2]] = urlid_id[url[0]]
+    if os.path.isfile(output_full_path):
+        return json.load(open(output_full_path))
+    else:
+        with open(os.path.join(dump_folder_path, 'mbdump/l_artist_url'), "r") as tsvfile:
+            fieldnames = [i for i in range(0, 6)]
+            url_relationships = csv.DictReader(tsvfile, dialect='excel-tab', fieldnames=fieldnames)
+            for relationship in url_relationships:
+                # url id matched with its user id
+                urlid_id[relationship[3]] = relationship[2]
 
-    json.dump(url_id, open('%s/url_artist.json' % get_output_path(), 'w'), indent=2, ensure_ascii=False)    
+        with open(os.path.join(dump_folder_path, 'mbdump/url'), "r") as tsvfile:
+            fieldnames = [i for i in range(0, 5)]
+            urls = csv.DictReader(tsvfile, dialect='excel-tab', fieldnames=fieldnames)
+            for url in urls:
+                # Translates the url ids stored before in the respective urls
+                if url[0] in urlid_id:
+                    url_id[url[2]] = urlid_id[url[0]]
+
+        json.dump(url_id, open(output_full_path, 'w'), indent=2, ensure_ascii=False)
+        return url_id
+
+@click.command()
+@click.argument('dump_folder_path', type=click.Path(exists=True))
+@click.option('--output', '-o', default=common.get_output_path(), type=click.Path(exists=True))
+def get_users_urls(dump_folder_path, output):
+    """Creates the json containing url - artist id"""
+    _get_users_urls(dump_folder_path, output)
+
+@click.command()
+@click.argument('dump_folder_path', type=click.Path(exists=True))
+@click.argument('links_qid_dictionary', type=click.Path(exists=True))
+@click.argument('sitelinks_qid_dictionary', type=click.Path(exists=True))
+@click.option('--output', '-o', default=common.get_output_path(), type=click.Path(exists=True))
+def links_match(dump_folder_path, links_qid_dictionary, sitelinks_qid_dictionary, output):
+    # Loads url-musicbrainz id 
+    url_mbid = _get_users_urls(dump_folder_path, output)
+    # Loads link - wikidata id
+    link_qid = json.load(open(links_qid_dictionary))
+    # Loads sitelink - wikidata id
+    sitelink_qid = json.load(open(sitelinks_qid_dictionary))
+    # Equal strigs match among urls
+    link_qid.update(sitelink_qid)
+
+    ids_matching = matching_strategies.equal_strings_match((url_mbid, link_qid))
+
+    full_outputh_path = os.path.join(output, 'link_match.json')
+    json.dump(ids_matching, open(full_outputh_path, 'w'), indent=2, ensure_ascii=False)
