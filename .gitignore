@@ -104,6 +104,5 @@ ENV/
 .vscode
 
 # soweego
-target_selection/targets/musicbrainz/musicbrainz_dump*
-target_selection/targets/musicbrainz/output/*
-
+soweego/target_selection/musicbrainz/musicbrainz_dump*
+soweego/target_selection/musicbrainz/output/*
