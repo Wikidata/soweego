@@ -25,6 +25,15 @@ def query_wikipedia_articles_for(qids_bucket):
     query += "}"
     return query
 
+def query_birth_death(qids_bucket):
+    """Given a list of wikidata entities returns a query for getting their birth and death dates"""
+
+    query = "SELECT ?birth ?b_precision ?death ?d_precision WHERE{ VALUES ?id { %s } " % ' '.join(qids_bucket)
+    query += '?id p:P569 ?b. ?b psv:P569 ?t1 . ?t1 wikibase:timePrecision ?b_precision . ?t1 wikibase:timeValue ?birth . OPTIONAL { ?id p:P570 ?d . ?d psv:P570 ?t2 . ?t2 wikibase:timePrecision ?d_precision . ?t2 wikibase:timeValue ?death . }'
+    query += "}"
+
+    return query
+
 #JSONs creation
 
 def get_url_formatters_for_properties(properties):
