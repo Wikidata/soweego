@@ -8,6 +8,7 @@ from ..target_selection.musicbrainz import common
 
 # Queries computing
 
+
 def query_info_for(qids_bucket, properties):
     """Given a list of wikidata entities returns a query for getting some external ids"""
 
@@ -17,6 +18,7 @@ def query_info_for(qids_bucket, properties):
     query += "}"
     return query
 
+
 def query_wikipedia_articles_for(qids_bucket):
     """Given a list of wikidata entities returns a query for getting wikidata articles"""
 
@@ -25,7 +27,8 @@ def query_wikipedia_articles_for(qids_bucket):
     query += "}"
     return query
 
-#JSONs creation
+# JSONs creation
+
 
 def get_url_formatters_for_properties(properties):
     """Retrieves the url formatters for the properties listed in the given dict"""
@@ -36,29 +39,37 @@ def get_url_formatters_for_properties(properties):
     else:
         formatters = {}
         for prop_name, prop_id in properties.items():
-            query = "SELECT * WHERE { %s wdt:P1630 ?formatterUrl . }" % ('wd:%s' % prop_id)
-            reader = csv.DictReader(common.api_request_wikidata(query), dialect='excel-tab')
+            query = "SELECT * WHERE { %s wdt:P1630 ?formatterUrl . }" % (
+                'wd:%s' % prop_id)
+            reader = csv.DictReader(
+                common.api_request_wikidata(query), dialect='excel-tab')
             for r in reader:
                 formatters[prop_name] = r['?formatterUrl']
 
-        json.dump(formatters, open(filepath, 'w'), indent=2, ensure_ascii=False)
+        json.dump(formatters, open(filepath, 'w'),
+                  indent=2, ensure_ascii=False)
         return formatters
 
 # Utils
+
+
 def get_wikidata_id_from_uri(uri):
     '''Given a wikidata entity uri, returns only the id'''
     return re.search(r'\/(\w+)>', uri).group(1)
+
 
 def stripe_first_last_characters(string):
     '''Given a string removes the first and the last characters'''
     return string[1:-1]
 
+
 def get_sample_buckets(sample_path):
     '''Given a sample path, returns it divided in equal size buckets'''
     size = 100
     labels_qid = json.load(open(sample_path))
-    entities = ["wd:%s"%v for k,v in labels_qid.items()]
+    entities = ["wd:%s" % v for k, v in labels_qid.items()]
     return [set(entities[i*size:(i+1)*size]) for i in range(0, int((len(entities)/size+1)))]
+
 
 @click.command()
 @click.argument('sample_path', type=click.Path(exists=True))
@@ -67,7 +78,8 @@ def get_sample_buckets(sample_path):
 def get_links_for_sample(sample_path, property_mapping_path, output):
     '''Creates the JSON containing url - wikidata id'''
 
-    properties = {'?%s' % re.sub(r'\W', '', k): v  for k, v in json.load(open(property_mapping_path)).items()}
+    properties = {'?%s' % re.sub(r'\W', '', k): v for k, v in json.load(
+        open(property_mapping_path)).items()}
 
     formatters_dict = get_url_formatters_for_properties(properties)
 
@@ -80,7 +92,8 @@ def get_links_for_sample(sample_path, property_mapping_path, output):
 
     for bucket in buckets:
         # Downloads the first bucket
-        response = common.api_request_wikidata(query_info_for(bucket, properties))
+        response = common.api_request_wikidata(
+            query_info_for(bucket, properties))
         ids_collection = csv.DictReader(response, dialect='excel-tab')
         for id_row in ids_collection:
             # Extracts the wikidata id from the URI
@@ -89,9 +102,11 @@ def get_links_for_sample(sample_path, property_mapping_path, output):
             # Foreach id in the response, creates the full url and adds it to the dict
             for col in ids_collection.fieldnames:
                 if col != '?id' and id_row[col]:
-                    url_id[formatters_dict[col].replace('$1', id_row[col])] = entity_id
+                    url_id[formatters_dict[col].replace(
+                        '$1', id_row[col])] = entity_id
 
     json.dump(url_id, open(filepath, 'w'), indent=2, ensure_ascii=False)
+
 
 @click.command()
 @click.argument('sample_path', type=click.Path(exists=True))
@@ -108,7 +123,8 @@ def get_sitelinks_for_sample(sample_path, output):
 
     for bucket in buckets:
         # Downloads the first bucket
-        response = common.api_request_wikidata(query_wikipedia_articles_for(bucket))
+        response = common.api_request_wikidata(
+            query_wikipedia_articles_for(bucket))
         articles_collection = csv.DictReader(response, dialect='excel-tab')
         for article_row in articles_collection:
             site_url = stripe_first_last_characters(article_row['?article'])
