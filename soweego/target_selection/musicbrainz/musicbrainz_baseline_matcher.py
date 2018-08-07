@@ -68,11 +68,7 @@ def get_url_domains():
     towrite = {domain:count for (domain, count) in domains.items() if count > 10000}
     json.dump(towrite, open('%s/urls.json' % common.get_output_path(), 'w'), indent=2, ensure_ascii=False)
 
-@click.command()
-@click.argument('dump_folder_path', type=click.Path(exists=True))
-@click.option('--output', '-o', default=common.get_output_path(), type=click.Path(exists=True))
-def get_users_urls(dump_folder_path, output):
-    """Creates the json containing url - artist id"""
+def _get_users_urls(dump_folder_path, output):
     output_full_path = os.path.join(output, 'url_artist.json')
     urlid_id = defaultdict(str)
     url_id = defaultdict(str)
@@ -100,21 +96,27 @@ def get_users_urls(dump_folder_path, output):
 
 @click.command()
 @click.argument('dump_folder_path', type=click.Path(exists=True))
+@click.option('--output', '-o', default=common.get_output_path(), type=click.Path(exists=True))
+def get_users_urls(dump_folder_path, output):
+    """Creates the json containing url - artist id"""
+    _get_users_urls(dump_folder_path, output)
+
+@click.command()
+@click.argument('dump_folder_path', type=click.Path(exists=True))
 @click.argument('links_qid_dictionary', type=click.Path(exists=True))
 @click.argument('sitelinks_qid_dictionary', type=click.Path(exists=True))
 @click.option('--output', '-o', default=common.get_output_path(), type=click.Path(exists=True))
 def links_match(dump_folder_path, links_qid_dictionary, sitelinks_qid_dictionary, output):
     # Loads url-musicbrainz id 
-    url_mbid = get_users_urls(dump_folder_path, output)
+    url_mbid = _get_users_urls(dump_folder_path, output)
     # Loads link - wikidata id
     link_qid = json.load(open(links_qid_dictionary))
     # Loads sitelink - wikidata id
     sitelink_qid = json.load(open(sitelinks_qid_dictionary))
     # Equal strigs match among urls
-    wikidata_full = {}.update(link_qid)
-    wikidata_full.update(sitelink_qid)
+    link_qid.update(sitelink_qid)
 
-    ids_matching = matching_strategies.equal_strings_match(url_mbid, wikidata_full)
+    ids_matching = matching_strategies.equal_strings_match((url_mbid, link_qid))
 
     full_outputh_path = os.path.join(output, 'link_match.json')
     print(full_outputh_path)
