@@ -80,7 +80,7 @@ def get_links_for_sample(sample_path, property_mapping_path, output):
 
     formatters_dict = get_url_formatters_for_properties(properties)
 
-    filepath = os.path.join(output, 'wikidata_musician_sample_links.json')
+    filepath = os.path.join(output, 'sample_links.json')
 
     # Creates buckets for artist from the sample. Technique to fix quering issues
     buckets = get_sample_buckets(sample_path)
@@ -98,7 +98,10 @@ def get_links_for_sample(sample_path, property_mapping_path, output):
             # Foreach id in the response, creates the full url and adds it to the dict
             for col in ids_collection.fieldnames:
                 if col != '?id' and id_row[col]:
-                    url_id[formatters_dict[col].replace('$1', id_row[col])] = entity_id
+                    if formatters_dict.get(col):
+                        url_id[formatters_dict[col].replace('$1', id_row[col])] = entity_id
+                    else:
+                        print('%s does not have an entry in the formatters file' % col)
 
     json.dump(url_id, open(filepath, 'w'), indent=2, ensure_ascii=False)
 
@@ -108,7 +111,7 @@ def get_links_for_sample(sample_path, property_mapping_path, output):
 def get_sitelinks_for_sample(sample_path, output):
     '''Given a sample of users, retrieves all the sitelinks'''
 
-    filepath = os.path.join(output, 'wikidata_musician_sample_sitelinks.json')
+    filepath = os.path.join(output, 'sample_sitelinks.json')
 
     # Creates buckets for artist from the sample. Technique to fix quering issues
     buckets = get_sample_buckets(sample_path)
