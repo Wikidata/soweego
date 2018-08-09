@@ -3,6 +3,7 @@
 
 import gzip
 import json
+import logging
 import os
 import sys
 import xml.etree.ElementTree as et
@@ -14,6 +15,7 @@ import click
 
 from soweego.target_selection.common import matching_strategies
 
+LOGGER = logging.getLogger(__name__)
 # Wikidata musicians samples
 SAMPLES_LOCATION = 'soweego.wikidata.resources'
 LABELS_SAMPLE = 'musicians_sample_labels.json'
@@ -51,14 +53,12 @@ def extract_data_from_dump(dump_file_path):
                 if name:
                     names[name] = identifier
                 else:
-                    # TODO log a warning
-                    print('No <name>')
+                    LOGGER.warning('No <name>')
                 real_name = element.findtext('realname')
                 if real_name:
                     names[real_name] = identifier
                 # else:
-                    # TODO log
-                    # print('No <realname>')
+                    LOGGER.debug('No <realname>')
                 variations = element.find('namevariations')
                 if variations:
                     for variation_element in variations.iterfind('name'):
@@ -66,7 +66,7 @@ def extract_data_from_dump(dump_file_path):
                         if variation:
                             names[variation] = identifier
                         else:
-                            print('empty variation <name>')
+                            LOGGER.debug('empty variation <name>')
                 # Links & Wiki links
                 urls = element.find('urls')
                 if urls:
@@ -80,9 +80,9 @@ def extract_data_from_dump(dump_file_path):
                                 else:
                                     links[url] = identifier
                             except ValueError as value_error:
-                                print(value_error, url)
+                                LOGGER.warning(value_error, url)
                         else:
-                            print('empty <url>')
+                            LOGGER.debug('empty <url>')
     return names, links, wikilinks
 
 

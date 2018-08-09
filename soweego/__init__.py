@@ -1,2 +1,1 @@
-from soweego import wikidata, target_selection
-
+from soweego import commons, wikidata, target_selection
