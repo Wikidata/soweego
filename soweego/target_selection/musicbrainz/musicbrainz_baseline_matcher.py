@@ -52,7 +52,7 @@ def equal_strings_match():
     """Creates the equal strings match output file"""
     # Wikidata sample loading
     labels_qid = json.load(open('musicians_wikidata_sample.json'))
-    matches = matching_strategies.equal_strings_match((labels_qid, get_label_musicbrainzid_dict()))
+    matches = matching_strategies.perfect_string_match((labels_qid, get_label_musicbrainzid_dict()))
     json.dump(matches, open('%s/equal_strings_matches.json' % common.get_output_path(), 'w'), indent=2, ensure_ascii=False)
 
 def get_url_domains():
@@ -116,7 +116,7 @@ def links_match(dump_folder_path, links_qid_dictionary, sitelinks_qid_dictionary
     # Equal strigs match among urls
     link_qid.update(sitelink_qid)
 
-    ids_matching = matching_strategies.equal_strings_match((url_mbid, link_qid))
+    ids_matching = matching_strategies.perfect_string_match((url_mbid, link_qid))
 
     full_outputh_path = os.path.join(output, 'link_match.json')
     json.dump(ids_matching, open(full_outputh_path, 'w'), indent=2, ensure_ascii=False)
