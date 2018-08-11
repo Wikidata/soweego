@@ -90,21 +90,31 @@ def perfect_match(names, links, wikilinks, output_path):
     """Baseline matching strategy #1: treat everything as perfect string matches.
     Dump 3 JSON files with names, links, and wikilinks matches."""
     wikidata_names = json.loads(get_data(SAMPLES_LOCATION, LABELS_SAMPLE))
-    name_matches = matching_strategies.equal_strings_match(
+    name_matches = matching_strategies.perfect_string_match(
         (wikidata_names, names))
     json.dump(name_matches, open(os.path.join(
         output_path, 'musicians_labels_perfect_matches.json'), 'w'), indent=2, ensure_ascii=False)
     wikidata_links = json.loads(get_data(SAMPLES_LOCATION, LINKS_SAMPLE))
-    link_matches = matching_strategies.equal_strings_match(
+    link_matches = matching_strategies.perfect_string_match(
         (wikidata_links, links))
     json.dump(link_matches, open(os.path.join(
         output_path, 'musicians_links_perfect_matches.json'), 'w'), indent=2, ensure_ascii=False)
     wikidata_site_links = json.loads(
         get_data(SAMPLES_LOCATION, SITELINKS_SAMPLE))
-    wikilink_matches = matching_strategies.equal_strings_match(
+    wikilink_matches = matching_strategies.perfect_string_match(
         (wikidata_site_links, wikilinks))
     json.dump(wikilink_matches, open(os.path.join(
         output_path, 'musicians_wikilinks_perfect_matches.json'), 'w'), indent=2, ensure_ascii=False)
+
+
+def link_match(links, output_path):
+    """Baseline matching strategy #2: match similar links.
+    Dump a JSON file with link matches.
+    """
+    wikidata_links = json.loads(get_data(SAMPLES_LOCATION, LINKS_SAMPLE))
+    matches = matching_strategies.similar_link_match(wikidata_links, links)
+    json.dump(matches, open(os.path.join(
+        output_path, 'musicians_links_similar_matches.json'), 'w'), indent=2, ensure_ascii=False)
 
 
 def get_data_dictionaries(data_dir, dump_file_path):
@@ -131,7 +141,7 @@ def dump_url_domains(links, output_dir):
         if domain:
             domains.append(domain)
         else:
-            print('No domain in', link)
+            LOGGER.debug('No domain in %s', link)
     domains_by_frequency = OrderedDict(
         sorted(Counter(domains).items(), key=lambda x: x[1], reverse=True))
     json.dump(domains_by_frequency, open(os.path.join(
@@ -146,4 +156,5 @@ def main(dump_file, outdir):
     names, links, wiki_links = get_data_dictionaries(outdir, dump_file)
     dump_url_domains(links, outdir)
     perfect_match(names, links, wiki_links, outdir)
+    link_match(links, outdir)
     sys.exit(0)
