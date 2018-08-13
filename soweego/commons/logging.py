@@ -37,7 +37,7 @@ DEFAULT_CONFIG = {
         'console': {
             'formatter': 'soweego',
             'class': 'logging.StreamHandler',
-            'level': 'DEBUG'
+            'level': 'INFO'
         },
         'debug_file_handler': {
             'formatter': 'soweego',

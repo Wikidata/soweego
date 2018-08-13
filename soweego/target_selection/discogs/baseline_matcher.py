@@ -18,7 +18,7 @@ from soweego.target_selection.common import matching_strategies
 LOGGER = logging.getLogger(__name__)
 # Wikidata musicians samples
 SAMPLES_LOCATION = 'soweego.wikidata.resources'
-LABELS_SAMPLE = 'musicians_sample_labels.json'
+NAMES_SAMPLE = 'musicians_sample_labels.json'
 LINKS_SAMPLE = 'musicians_sample_links.json'
 SITELINKS_SAMPLE = 'musicians_sample_sitelinks.json'
 # From https://wikimediafoundation.org/our-work/wikimedia-projects/
@@ -89,7 +89,7 @@ def extract_data_from_dump(dump_file_path):
 def perfect_match(names, links, wikilinks, output_path):
     """Baseline matching strategy #1: treat everything as perfect string matches.
     Dump 3 JSON files with names, links, and wikilinks matches."""
-    wikidata_names = json.loads(get_data(SAMPLES_LOCATION, LABELS_SAMPLE))
+    wikidata_names = json.loads(get_data(SAMPLES_LOCATION, NAMES_SAMPLE))
     name_matches = matching_strategies.perfect_string_match(
         (wikidata_names, names))
     json.dump(name_matches, open(os.path.join(
@@ -115,6 +115,16 @@ def link_match(links, output_path):
     matches = matching_strategies.similar_link_match(wikidata_links, links)
     json.dump(matches, open(os.path.join(
         output_path, 'musicians_links_similar_matches.json'), 'w'), indent=2, ensure_ascii=False)
+
+
+def name_match(names, output_path):
+    """Baseline matching strategy #3: match similar names.
+    Dump a JSON file with names matches
+    """
+    wikidata_names = json.loads(get_data(SAMPLES_LOCATION, NAMES_SAMPLE))
+    matches = matching_strategies.similar_name_match(wikidata_names, names)
+    json.dump(matches, open(os.path.join(
+        output_path, 'musicians_names_similar_matches.json'), 'w'), indent=2, ensure_ascii=False)
 
 
 def get_data_dictionaries(data_dir, dump_file_path):
@@ -152,9 +162,10 @@ def dump_url_domains(links, output_dir):
 @click.argument('dump_file', type=click.Path(exists=True, dir_okay=False))
 @click.option('-o', '--outdir', type=click.Path(file_okay=False), default='output')
 def main(dump_file, outdir):
-    """Run perfect string matching over names, links and wikilinks."""
+    """Run baseline matchers over names, links and wikilinks."""
     names, links, wiki_links = get_data_dictionaries(outdir, dump_file)
     dump_url_domains(links, outdir)
     perfect_match(names, links, wiki_links, outdir)
     link_match(links, outdir)
+    name_match(names, outdir)
     sys.exit(0)
