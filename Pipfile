@@ -16,3 +16,4 @@ click = "*"
 
 rope = "*"
 "autopep8" = "*"
+ipython = "*"
