@@ -35,6 +35,9 @@ WIKI_PROJECTS = [
     'wikivoyage',
     'meta.wikimedia'
 ]
+MATCHING_STRATEGIES = [
+    'perfect', 'links', 'names', 'jaro', 'levenshtein', 'damerau', 'all'
+]
 
 
 def extract_data_from_dump(dump_file_path):
@@ -127,6 +130,17 @@ def name_match(names, output_path):
         output_path, 'musicians_names_similar_matches.json'), 'w'), indent=2, ensure_ascii=False)
 
 
+def jaro_winkler_name_match(names, threshold, output_path):
+    """Baseline matching strategy #4: match names based on Jaro-Winkler distance.
+    Dump a JSON file with name matches.
+    """
+    wikidata_names = json.loads(get_data(SAMPLES_LOCATION, NAMES_SAMPLE))
+    matches = matching_strategies.jaro_winkler_match(
+        wikidata_names, names, threshold)
+    json.dump(matches, open(os.path.join(
+        output_path, 'musicians_names_jaro_winkler_matches.json'), 'w'), indent=2, ensure_ascii=False)
+
+
 def get_data_dictionaries(data_dir, dump_file_path):
     """Hit or set the cache of the dictionaries ``{name|link|wikilink: identifier}`` and return them."""
     names_path = os.path.join(data_dir, 'names_id.json')
@@ -160,12 +174,36 @@ def dump_url_domains(links, output_dir):
 
 @click.command()
 @click.argument('dump_file', type=click.Path(exists=True, dir_okay=False))
-@click.option('-o', '--outdir', type=click.Path(file_okay=False), default='output')
-def main(dump_file, outdir):
+@click.option('-o', '--output-dir', type=click.Path(file_okay=False), default='output')
+@click.option('-s', '--strategy', type=click.Choice(MATCHING_STRATEGIES), default='all')
+@click.option('-j', '--jaro-winkler-threshold', type=float, default=0.8)
+@click.option('-l', '--levenshtein-threshold', type=int, default=2)
+@click.option('-d', '--damerau-threshold', type=int, default=2)
+@click.option('--dump-domains', is_flag=True)
+def main(dump_file, output_dir, strategy, jaro_winkler_threshold,
+         levenshtein_threshold, damerau_threshold, dump_domains):
     """Run baseline matchers over names, links and wikilinks."""
-    names, links, wiki_links = get_data_dictionaries(outdir, dump_file)
-    dump_url_domains(links, outdir)
-    perfect_match(names, links, wiki_links, outdir)
-    link_match(links, outdir)
-    name_match(names, outdir)
+    names, links, wiki_links = get_data_dictionaries(output_dir, dump_file)
+    if dump_domains:
+        dump_url_domains(links, output_dir)
+    # 'perfect', 'links', 'names', 'jaro', 'levenshtein', 'damerau', 'all'
+    if strategy == 'perfect':
+        perfect_match(names, links, wiki_links, output_dir)
+    elif strategy == 'links':
+        link_match(links, output_dir)
+    elif strategy == 'names':
+        name_match(names, output_dir)
+    elif strategy == 'jaro':
+        jaro_winkler_name_match(names, jaro_winkler_threshold, output_dir)
+    elif strategy == 'levenshtein':
+        # TODO
+        pass
+    elif strategy == 'damerau':
+        # TODO
+        pass
+    elif strategy == 'all':
+        perfect_match(names, links, wiki_links, output_dir)
+        link_match(links, output_dir)
+        name_match(names, output_dir)
+        jaro_winkler_name_match(names, jaro_winkler_threshold, output_dir)
     sys.exit(0)
