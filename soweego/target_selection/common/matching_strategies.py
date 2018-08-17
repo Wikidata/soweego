@@ -112,24 +112,19 @@ def similar_name_match(source, target) -> dict:
     return perfect_string_match((_process_names(source), _process_names(target)))
 
 
-def jaro_winkler_match(source, target, threshold) -> dict:
+def edit_distance_match(source, target, metric, threshold) -> dict:
     """Given 2 dictionaries ``{string: identifier}``,
-    match strings having `Jaro-Winkler <https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance>`_
-    distance above the given threshold.
+    match strings having the given edit distance ``metric``
+    above the given ``threshold`` and return a dictionary
+    ``{source_id__target_id: distance_score}``.
 
-    This strategy applies to any object that can be
-    treated as a string: names, links, etc.
-    """
-    return _compute_edit_distance(source, target, 'jw', threshold)
+    Compute the distance for each ``(source, target)`` entity pair.
+    ``distance_type`` can be one of:
 
+    - ``jw``, `Jaro-Winkler <https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance>`_;
+    - ``l``, `Levenshtein`_<https://en.wikipedia.org/wiki/Levenshtein_distance>;
+    - ``dl``, `Damerau-Levenshtein`_<https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance>.
 
-def _compute_edit_distance(source, target, distance_type, threshold) -> dict:
-    """Compute the given edit distance for each ``(source, target)`` entity pair
-    and return a dictionary ``{source_id__target_id: distance_score}``.
-
-    ``distance_type`` can be one of ``jw`` (Jaro-Winkler), ``l`` (Levenshtein)
-    or ``dl`` (Damerau-Levenshtein).
-    Only keep pairs with distance above the given threshold.
     Return ``None`` if the given edit distance is not valid.
     """
     scores = {}
@@ -138,19 +133,27 @@ def _compute_edit_distance(source, target, distance_type, threshold) -> dict:
         'l': jellyfish.levenshtein_distance,
         'dl': jellyfish.damerau_levenshtein_distance
     }
-    distance_function = distances.get(distance_type)
+    distance_function = distances.get(metric)
     if not distance_function:
         LOGGER.error(
             'Invalid distance_type parameter: "%s". ' +
             'Please pick one of "jw" (Jaro-Winkler), "l" (Levenshtein) ' +
-            'or "dl" (Damerau-Levenshtein)', distance_type)
+            'or "dl" (Damerau-Levenshtein)', metric)
         return None
     LOGGER.info('Using %s edit distance', distance_function.__name__)
     for source_string, source_id in source.items():
         source_normalized, source_ascii = _normalize(source_string)
         for target_string, target_id in target.items():
             target_normalized, target_ascii = _normalize(target_string)
-            distance = distance_function(source_normalized, target_normalized)
+            try:
+                distance = distance_function(
+                    source_normalized, target_normalized)
+            # Damerau-Levenshtein does not support some Unicode code points
+            except ValueError:
+                LOGGER.warning(
+                    'Skipping unsupported string in pair: "%s", "%s"',
+                    source_normalized, target_normalized)
+                continue
             LOGGER.debug('Source: %s > %s > %s - Target: %s > %s > %s - Distance: %f',
                          source_string, source_ascii, source_normalized,
                          target_string, target_ascii, target_normalized,
