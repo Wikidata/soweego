@@ -14,6 +14,8 @@ import re
 from collections import defaultdict
 from urllib.parse import urlsplit
 
+import jellyfish
+
 LOGGER = logging.getLogger(__name__)
 # URLs stopwords
 TOP_LEVEL_DOMAINS = set(['com', 'org', 'net', 'info', 'fm'])
@@ -24,6 +26,7 @@ NAMES_STOPWORDS = set(
      'dr', 'mme', 'mlle', 'baron', 'baronet', 'bt', 'graf', 'gräfin', 'de',
      'of', 'von', 'the']
 )
+# Latin alphabet diacritics and Russian
 ASCII_TRANSLATION_TABLE = str.maketrans({
     'á': 'a', 'Á': 'A', 'à': 'a', 'À': 'A', 'ă': 'a', 'Ă': 'A', 'â': 'a',
     'Â': 'A', 'å': 'a', 'Å': 'A', 'ã': 'a', 'Ã': 'A', 'ą': 'a', 'Ą': 'A',
@@ -69,8 +72,8 @@ ASCII_TRANSLATION_TABLE = str.maketrans({
 
 
 def perfect_string_match(datasets) -> dict:
-    """Given an iterable of dictionaries `{string: identifier}`,
-    match perfect strings and return a dictionary `{id: id}`.
+    """Given an iterable of dictionaries ``{string: identifier}``,
+    match perfect strings and return a dictionary ``{id: id}``.
 
     This strategy applies to any object that can be
     treated as a string: names, links, etc.
@@ -89,8 +92,8 @@ def perfect_string_match(datasets) -> dict:
 
 
 def similar_link_match(source, target) -> dict:
-    """Given 2 dictionaries `{link: identifier}`,
-    match similar links and return a dictionary `{source_id: target_id}`.
+    """Given 2 dictionaries ``{link: identifier}``,
+    match similar links and return a dictionary ``{source_id: target_id}``.
 
     We treat links as natural language:
     similarity means that a pair of links share a set of keywords.
@@ -101,12 +104,63 @@ def similar_link_match(source, target) -> dict:
 
 
 def similar_name_match(source, target) -> dict:
-    """Given 2 dictionaries `{person_name: identifier}`,
-    match similar names and return a dictionary `{source_id: target_id}`.
+    """Given 2 dictionaries ``{person_name: identifier}``,
+    match similar names and return a dictionary ``{source_id: target_id}``.
 
     This strategy only applies to people names.
     """
     return perfect_string_match((_process_names(source), _process_names(target)))
+
+
+def edit_distance_match(source, target, metric, threshold) -> dict:
+    """Given 2 dictionaries ``{string: identifier}``,
+    match strings having the given edit distance ``metric``
+    above the given ``threshold`` and return a dictionary
+    ``{source_id__target_id: distance_score}``.
+
+    Compute the distance for each ``(source, target)`` entity pair.
+    ``distance_type`` can be one of:
+
+    - ``jw``, `Jaro-Winkler <https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance>`_;
+    - ``l``, `Levenshtein`_<https://en.wikipedia.org/wiki/Levenshtein_distance>;
+    - ``dl``, `Damerau-Levenshtein`_<https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance>.
+
+    Return ``None`` if the given edit distance is not valid.
+    """
+    scores = {}
+    distances = {
+        'jw': jellyfish.jaro_winkler,
+        'l': jellyfish.levenshtein_distance,
+        'dl': jellyfish.damerau_levenshtein_distance
+    }
+    distance_function = distances.get(metric)
+    if not distance_function:
+        LOGGER.error(
+            'Invalid distance_type parameter: "%s". ' +
+            'Please pick one of "jw" (Jaro-Winkler), "l" (Levenshtein) ' +
+            'or "dl" (Damerau-Levenshtein)', metric)
+        return None
+    LOGGER.info('Using %s edit distance', distance_function.__name__)
+    for source_string, source_id in source.items():
+        source_normalized, source_ascii = _normalize(source_string)
+        for target_string, target_id in target.items():
+            target_normalized, target_ascii = _normalize(target_string)
+            try:
+                distance = distance_function(
+                    source_normalized, target_normalized)
+            # Damerau-Levenshtein does not support some Unicode code points
+            except ValueError:
+                LOGGER.warning(
+                    'Skipping unsupported string in pair: "%s", "%s"',
+                    source_normalized, target_normalized)
+                continue
+            LOGGER.debug('Source: %s > %s > %s - Target: %s > %s > %s - Distance: %f',
+                         source_string, source_ascii, source_normalized,
+                         target_string, target_ascii, target_normalized,
+                         distance)
+            if distance > threshold:
+                scores['%s__%s' % (source_id, target_id)] = distance
+    return scores
 
 
 def _process_names(dataset) -> dict:
@@ -119,10 +173,10 @@ def _process_names(dataset) -> dict:
     processed = {}
     for name, identifier in dataset.items():
         LOGGER.debug('Identifier [%s]: processing name "%s"', identifier, name)
-        ascii_name = name.translate(ASCII_TRANSLATION_TABLE)
-        lowercased = ascii_name.lower()
-        split = re.split(r'\W+', lowercased)
-        LOGGER.debug('%s > %s > %s > %s', name, ascii_name, lowercased, split)
+        ascii_lowercased, ascii_name = _normalize(name)
+        split = re.split(r'\W+', ascii_lowercased)
+        LOGGER.debug('%s > %s > %s > %s',
+                     name, ascii_name, ascii_lowercased, split)
         filtered = filter(lambda token: len(token) > 1, split)
         for token in filtered:
             if token and token not in NAMES_STOPWORDS:
@@ -131,6 +185,13 @@ def _process_names(dataset) -> dict:
         LOGGER.debug('Identifier [%s]: tokens = %s', identifier, tokens)
         processed['|'.join(tokens)] = identifier
     return processed
+
+
+def _normalize(name):
+    """Convert to ASCII and lowercase a name."""
+    ascii_name = name.translate(ASCII_TRANSLATION_TABLE)
+    lowercased = ascii_name.lower()
+    return lowercased, ascii_name
 
 
 def _process_links(dataset) -> dict:

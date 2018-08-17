@@ -35,6 +35,9 @@ WIKI_PROJECTS = [
     'wikivoyage',
     'meta.wikimedia'
 ]
+MATCHING_STRATEGIES = [
+    'perfect', 'links', 'names', 'jw', 'l', 'dl', 'all'
+]
 
 
 def extract_data_from_dump(dump_file_path):
@@ -127,6 +130,17 @@ def name_match(names, output_path):
         output_path, 'musicians_names_similar_matches.json'), 'w'), indent=2, ensure_ascii=False)
 
 
+def edit_distance_name_match(names, metric, threshold, output_path):
+    """Baseline matching strategy #4: match names based on Jaro-Winkler distance.
+    Dump a JSON file with name matches.
+    """
+    wikidata_names = json.loads(get_data(SAMPLES_LOCATION, NAMES_SAMPLE))
+    matches = matching_strategies.edit_distance_match(
+        wikidata_names, names, metric, threshold)
+    json.dump(matches, open(os.path.join(
+        output_path, 'musicians_names_%s_matches.json' % metric), 'w'), indent=2, ensure_ascii=False)
+
+
 def get_data_dictionaries(data_dir, dump_file_path):
     """Hit or set the cache of the dictionaries ``{name|link|wikilink: identifier}`` and return them."""
     names_path = os.path.join(data_dir, 'names_id.json')
@@ -160,12 +174,52 @@ def dump_url_domains(links, output_dir):
 
 @click.command()
 @click.argument('dump_file', type=click.Path(exists=True, dir_okay=False))
-@click.option('-o', '--outdir', type=click.Path(file_okay=False), default='output')
-def main(dump_file, outdir):
-    """Run baseline matchers over names, links and wikilinks."""
-    names, links, wiki_links = get_data_dictionaries(outdir, dump_file)
-    dump_url_domains(links, outdir)
-    perfect_match(names, links, wiki_links, outdir)
-    link_match(links, outdir)
-    name_match(names, outdir)
+@click.option('-o', '--output-dir', type=click.Path(file_okay=False), default='output',
+              help="default: 'output'")
+@click.option('-s', '--strategy', type=click.Choice(MATCHING_STRATEGIES), default='all',
+              help="'perfect': perfect string, " +
+              "'links': similar links, 'names': similar names, " +
+              "'jw': Jaro-Winkler on names, 'l': Levenshtein on names, " +
+              "'dl': Damerau-Levenshtein on names, or 'all' (default).")
+@click.option('-j', '--jaro-winkler-threshold', type=float, default=0.8,
+              help='default: 0.8')
+@click.option('-l', '--levenshtein-threshold', type=int, default=2,
+              help='default: 2')
+@click.option('-d', '--damerau-threshold', type=int, default=2,
+              help='default: 2')
+@click.option('--dump-domains', is_flag=True,
+              help='Write a JSON with frequency counts of URL domains.')
+def main(dump_file, output_dir, strategy, jaro_winkler_threshold,
+         levenshtein_threshold, damerau_threshold, dump_domains):
+    """Run baseline matching strategies over names, links and wikilinks
+    of a given Discogs database dump.
+
+    Downloads available at https://data.discogs.com/
+    """
+    names, links, wiki_links = get_data_dictionaries(output_dir, dump_file)
+    if dump_domains:
+        dump_url_domains(links, output_dir)
+    if strategy == 'perfect':
+        perfect_match(names, links, wiki_links, output_dir)
+    elif strategy == 'links':
+        link_match(links, output_dir)
+    elif strategy == 'names':
+        name_match(names, output_dir)
+    elif strategy == 'jw':
+        edit_distance_name_match(
+            names, strategy, jaro_winkler_threshold, output_dir)
+    elif strategy == 'l':
+        edit_distance_name_match(
+            names, strategy, levenshtein_threshold, output_dir)
+    elif strategy == 'dl':
+        edit_distance_name_match(
+            names, strategy, damerau_threshold, output_dir)
+    elif strategy == 'all':
+        perfect_match(names, links, wiki_links, output_dir)
+        link_match(links, output_dir)
+        name_match(names, output_dir)
+        edit_distance_name_match(
+            names, 'jw', jaro_winkler_threshold, output_dir)
+        edit_distance_name_match(names, 'l', levenshtein_threshold, output_dir)
+        edit_distance_name_match(names, 'dl', damerau_threshold, output_dir)
     sys.exit(0)

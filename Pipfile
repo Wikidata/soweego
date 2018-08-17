@@ -8,12 +8,13 @@ name = "pypi"
 [packages]
 
 requests = "*"
-pylint = "*"
 click = "*"
+jellyfish = "*"
 
 
 [dev-packages]
 
 rope = "*"
-"autopep8" = "*"
 ipython = "*"
+pylint = "*"
+"autopep8" = "*"
