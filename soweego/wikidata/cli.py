@@ -1,9 +1,12 @@
 import click
 
 from soweego.wikidata import query_on_values
+from soweego.wikidata import sample_additional_info
 
 CLI_COMMANDS = {
     'query_on_values': query_on_values.main,
+    'get_sitelinks_for_sample': sample_additional_info.get_sitelinks_for_sample,
+    'get_links_for_sample': sample_additional_info.get_links_for_sample
 }
 
 
