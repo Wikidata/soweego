@@ -3,6 +3,7 @@ import json
 import os
 import re
 from collections import defaultdict
+from urllib.parse import urlparse
 
 import click
 from soweego.target_selection.common import matching_strategies
@@ -72,21 +73,28 @@ def labels_equal_strings_match(labels_qid_sample, output):
               indent=2, ensure_ascii=False)
 
 
-def get_url_domains():
+@click.command()
+@click.argument('musicbrainz_dump_folder', type=click.Path(exists=True))
+@click.option('--threshold', '-t', default=10000, type=int)
+@click.option('--output', '-o', default='output', type=click.Path(exists=True))
+def get_url_domains(musicbrainz_dump_folder, threshold, output):
     """Finds all the domains to which the artists are connected"""
+
     fieldnames = [i for i in range(0, 5)]
-    domain_regex = r'^(?:https?:\/\/)?(?:[^@\/\n]+@)?(?:www\.)?([^:\/?\n]+)'
     domains = defaultdict(int)
-    with open('%s/musicbrainz_dump_20180725-001823/mbdump/url' % common.get_output_path(), "r") as tsvfile:
+    url_table_path = os.path.join(musicbrainz_dump_folder, 'mbdump', 'url')
+
+    with open(url_table_path, "r") as tsvfile:
         urls = csv.DictReader(
             tsvfile, dialect='excel-tab', fieldnames=fieldnames)
         for url in urls:
-            domain = re.search(domain_regex, url[2]).group(1)
+            domain = urlparse(url[2]).netloc
             domains[domain] += 1
     towrite = {domain: count for (domain, count)
-               in domains.items() if count > 10000}
-    json.dump(towrite, open('%s/urls.json' %
-                            common.get_output_path(), 'w'), indent=2, ensure_ascii=False)
+               in domains.items() if count > threshold}
+
+    output_path = os.path.join(output, 'urls.json')
+    json.dump(towrite, open(output_path, 'w'), indent=2, ensure_ascii=False)
 
 
 def _get_users_urls(dump_folder_path, output):
