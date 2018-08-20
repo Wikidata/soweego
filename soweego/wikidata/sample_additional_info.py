@@ -1,10 +1,12 @@
-import json
 import csv
+import json
 import os
 import re
-import iso8601
 from collections import defaultdict
+
 import click
+import iso8601
+
 from ..target_selection.musicbrainz import common
 
 # Queries computing
@@ -28,17 +30,20 @@ def query_wikipedia_articles_for(qids_bucket):
     query += "}"
     return query
 
+
 def query_birth_death(qids_bucket):
     """Given a list of wikidata entities returns a query for getting their birth and death dates"""
 
-    query = "SELECT ?id ?birth ?b_precision ?death ?d_precision WHERE{ VALUES ?id { %s } " % ' '.join(qids_bucket)
+    query = "SELECT ?id ?birth ?b_precision ?death ?d_precision WHERE{ VALUES ?id { %s } " % ' '.join(
+        qids_bucket)
     query += '?id p:P569 ?b. ?b psv:P569 ?t1 . ?t1 wikibase:timePrecision ?b_precision . ?t1 wikibase:timeValue ?birth . OPTIONAL { ?id p:P570 ?d . ?d psv:P570 ?t2 . ?t2 wikibase:timePrecision ?d_precision . ?t2 wikibase:timeValue ?death . }'
     query += "}"
 
     return query
 
-#JSONs creation
-#TODO convert to command using click
+# JSONs creation
+# TODO convert to command using click
+
 
 def get_url_formatters_for_properties(properties):
     """Retrieves the url formatters for the properties listed in the given dict"""
@@ -80,6 +85,7 @@ def get_sample_buckets(sample_path):
     entities = ["wd:%s" % v for k, v in labels_qid.items()]
     return [set(entities[i*size:(i+1)*size]) for i in range(0, int((len(entities)/size+1)))]
 
+
 def get_date_strings(timestamp, precision):
     """Given a timestamp and a wikidata date precision, returns a combination of strings"""
     if timestamp:
@@ -95,6 +101,7 @@ def get_date_strings(timestamp, precision):
             return [str(date.year)]
     else:
         return []
+
 
 @click.command()
 @click.argument('sample_path', type=click.Path(exists=True))
@@ -128,9 +135,11 @@ def get_links_for_sample(sample_path, property_mapping_path, output):
             for col in ids_collection.fieldnames:
                 if col != '?id' and id_row[col]:
                     if formatters_dict.get(col):
-                        url_id[formatters_dict[col].replace('$1', id_row[col])] = entity_id
+                        url_id[formatters_dict[col].replace(
+                            '$1', id_row[col])] = entity_id
                     else:
-                        print('%s does not have an entry in the formatters file' % col)
+                        print(
+                            '%s does not have an entry in the formatters file' % col)
 
     json.dump(url_id, open(filepath, 'w'), indent=2, ensure_ascii=False)
 
@@ -160,6 +169,7 @@ def get_sitelinks_for_sample(sample_path, output):
 
     json.dump(url_id, open(filepath, 'w'), indent=2, ensure_ascii=False)
 
+
 @click.command()
 @click.argument('sample_path', type=click.Path(exists=True))
 @click.option('--output', '-o', default='output', type=click.Path(exists=True))
@@ -181,7 +191,8 @@ def get_birth_death_dates_for_sample(sample_path, output):
                 for b in get_date_strings(date_row['?birth'], date_row['?b_precision']):
                     if date_row['?death']:
                         for d in get_date_strings(date_row['?death'], date_row['?d_precision']):
-                            labeldate_qid['%s|%s-%s' % (qid_labels[qid], b, d)] = qid
+                            labeldate_qid['%s|%s-%s' %
+                                          (qid_labels[qid], b, d)] = qid
                     else:
                         labeldate_qid['%s|%s' % (qid_labels[qid], b)] = qid
             else:
