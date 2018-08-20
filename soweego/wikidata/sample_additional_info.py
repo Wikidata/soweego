@@ -14,29 +14,29 @@ from soweego.commons.api import api_request_wikidata
 def query_info_for(qids_bucket, properties):
     """Given a list of wikidata entities returns a query for getting some external ids"""
 
-    query = "SELECT * WHERE{ VALUES ?id { %s } " % ' '.join(qids_bucket)
+    query = """SELECT * WHERE{ VALUES ?id { %s } """ % ' '.join(qids_bucket)
     for i in properties:
-        query += 'OPTIONAL { ?id wdt:%s ?%s . } ' % (i, i)
-    query += "}"
+        query += """OPTIONAL { ?id wdt:%s ?%s . } """ % (i, i)
+    query += """}"""
     return query
 
 
 def query_wikipedia_articles_for(qids_bucket):
     """Given a list of wikidata entities returns a query for getting wikidata articles"""
 
-    query = "SELECT * WHERE{ VALUES ?id { %s } " % ' '.join(qids_bucket)
-    query += 'OPTIONAL { ?article schema:about ?id . }'
-    query += "}"
+    query = """SELECT * WHERE{ VALUES ?id { %s } """ % ' '.join(qids_bucket)
+    query += """OPTIONAL { ?article schema:about ?id . }"""
+    query += """}"""
     return query
 
 
 def query_birth_death(qids_bucket):
     """Given a list of wikidata entities returns a query for getting their birth and death dates"""
 
-    query = "SELECT ?id ?birth ?b_precision ?death ?d_precision WHERE{ VALUES ?id { %s } " % ' '.join(
+    query = """SELECT ?id ?birth ?b_precision ?death ?d_precision WHERE{ VALUES ?id { %s } """ % ' '.join(
         qids_bucket)
-    query += '?id p:P569 ?b. ?b psv:P569 ?t1 . ?t1 wikibase:timePrecision ?b_precision . ?t1 wikibase:timeValue ?birth . OPTIONAL { ?id p:P570 ?d . ?d psv:P570 ?t2 . ?t2 wikibase:timePrecision ?d_precision . ?t2 wikibase:timeValue ?death . }'
-    query += "}"
+    query += """?id p:P569 ?b. ?b psv:P569 ?t1 . ?t1 wikibase:timePrecision ?b_precision . ?t1 wikibase:timeValue ?birth . OPTIONAL { ?id p:P570 ?d . ?d psv:P570 ?t2 . ?t2 wikibase:timePrecision ?d_precision . ?t2 wikibase:timeValue ?death . }"""
+    query += """}"""
 
     return query
 
@@ -187,7 +187,7 @@ def get_url_formatters_for_properties(property_mapping_path, output):
 
     formatters = {}
     for _, prop_id in properties.items():
-        query = "SELECT * WHERE { wd:%s wdt:P1630 ?formatterUrl . }" % prop_id
+        query = """SELECT * WHERE { wd:%s wdt:P1630 ?formatterUrl . }""" % prop_id
         reader = csv.DictReader(
             api_request_wikidata(query), dialect='excel-tab')
         for r in reader:
