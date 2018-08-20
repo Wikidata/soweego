@@ -35,42 +35,32 @@ def get_musicbrainz_artists_from_dump(opened_file_dump,
     return label_musicbrainz
 
 
-def get_label_musicbrainzid_dict():
-    """Returns the name-musicbrainzid dictionary.
-    If it's not stored, creates a brand new file"""
-
-    filepath = '%s/artists.json' % common.get_output_path()
-    if os.path.isfile(filepath):
-        return json.load(open(filepath))
-    else:
-        artists = {}
-        with open('%s/musicbrainz_dump_20180725-001823/mbdump/artist' % common.get_output_path()) as tsvfile:
-            artists = get_musicbrainz_artists_from_dump(tsvfile, 2, 0, 20)
-            artists.update(
-                get_musicbrainz_artists_from_dump(tsvfile, 3, 0, 20))
-
-        with open('%s/musicbrainz_dump_20180725-001823/mbdump/artist_alias' % common.get_output_path()) as tsvfile:
-            artists.update(
-                get_musicbrainz_artists_from_dump(tsvfile, 2, 1, 16))
-            artists.update(
-                get_musicbrainz_artists_from_dump(tsvfile, 7, 1, 16))
-
-        json.dump(artists, open(filepath, 'w'), indent=2, ensure_ascii=False)
-        return artists
-
-
 @click.command()
-@click.argument('labels_qid_sample', type=click.Path(exists=True))
+@click.argument('musicbrainz_dump_folder', type=click.Path(exists=True))
 @click.option('--output', '-o', default='output', type=click.Path(exists=True))
-def labels_equal_strings_match(labels_qid_sample, output):
-    """Creates the equal strings match output file"""
-    # Wikidata sample loading
-    labels_qid = json.load(open(labels_qid_sample))
-    matches = matching_strategies.perfect_string_match(
-        (labels_qid, get_label_musicbrainzid_dict()))
-    output_full_path = os.path.join(output, 'labels_equal_strings_match.json')
-    json.dump(matches, open(output_full_path, 'w'),
-              indent=2, ensure_ascii=False)
+def get_label_musicbrainzid_dict(musicbrainz_dump_folder, output):
+    """Creates the JSON name-musicbrainzid."""
+
+    artist_table_path = os.path.join(
+        musicbrainz_dump_folder, 'mbdump', 'artist')
+    artist_alias_table_path = os.path.join(
+        musicbrainz_dump_folder, 'mbdump', 'artist_alias')
+
+    filepath = os.path.join(output, 'artists.json')
+
+    artists = {}
+    with open(artist_table_path) as tsvfile:
+        artists = get_musicbrainz_artists_from_dump(tsvfile, 2, 0, 20)
+        artists.update(
+            get_musicbrainz_artists_from_dump(tsvfile, 3, 0, 20))
+
+    with open(artist_alias_table_path) as tsvfile:
+        artists.update(
+            get_musicbrainz_artists_from_dump(tsvfile, 2, 1, 16))
+        artists.update(
+            get_musicbrainz_artists_from_dump(tsvfile, 7, 1, 16))
+
+    json.dump(artists, open(filepath, 'w'), indent=2, ensure_ascii=False)
 
 
 @click.command()
