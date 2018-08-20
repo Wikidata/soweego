@@ -23,7 +23,7 @@ LOGGER = logging.getLogger(__name__)
 TEST_DB = 's53821__test_index'
 PROD_DB = 's51434__mixnmatch_large_catalogs'
 HOST = 'tools.db.svc.eqiad.wmflabs'
-INDEX_TABLE = 'index'
+INDEX_TABLE = 'names_index'
 INDEX_COLUMN = 'name'
 CREATE_TABLE_COMMAND = 'CREATE TABLE %s(%s TEXT,FULLTEXT(%s)) ENGINE=InnoDB;' % (
     INDEX_TABLE, INDEX_COLUMN, INDEX_COLUMN)
@@ -54,15 +54,15 @@ def build_index(dataset_file, database):
     # https://mariadb.com/kb/en/library/server-system-variables/#ft_min_word_len
     # https://mariadb.com/kb/en/library/server-system-variables/#ft_stopword_file
     # https://mariadb.com/kb/en/library/full-text-index-stopwords/
+    command = INSERT_VALUES_COMMAND
     for name in dataset.keys():
-        INSERT_VALUES_COMMAND += '("%s"), ' % name.replace('(',
+        command += '("%s"), ' % name.replace('(',
                                                            '\\(').replace(')', '\\)').replace('"', '\\"')
-    INSERT_VALUES_COMMAND = INSERT_VALUES_COMMAND.rstrip(', ')
-    INSERT_VALUES_COMMAND += ';'
+    command = command.rstrip(', ') + ';'
     # See https://pymysql.readthedocs.io/en/latest/user/examples.html
     try:
         with connection.cursor() as cursor:
-            cursor.execute(INSERT_VALUES_COMMAND)
+            cursor.execute(command)
         connection.commit()
     finally:
         connection.close()
