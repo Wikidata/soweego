@@ -6,8 +6,7 @@ from collections import defaultdict
 
 import click
 import iso8601
-
-from ..target_selection.musicbrainz import common
+from soweego.commons.api import api_request_wikidata
 
 # Queries computing
 
@@ -16,8 +15,8 @@ def query_info_for(qids_bucket, properties):
     """Given a list of wikidata entities returns a query for getting some external ids"""
 
     query = "SELECT * WHERE{ VALUES ?id { %s } " % ' '.join(qids_bucket)
-    for k, v in properties.items():
-        query += 'OPTIONAL { ?id wdt:%s %s . } ' % (v, k)
+    for i in properties:
+        query += 'OPTIONAL { ?id wdt:%s ?%s . } ' % (i, i)
     query += "}"
     return query
 
@@ -41,29 +40,6 @@ def query_birth_death(qids_bucket):
 
     return query
 
-# JSONs creation
-# TODO convert to command using click
-
-
-def get_url_formatters_for_properties(properties):
-    """Retrieves the url formatters for the properties listed in the given dict"""
-    filepath = os.path.join(common.get_output_path(), 'url_formatters.json')
-
-    if os.path.isfile(filepath):
-        return json.load(open(filepath))
-    else:
-        formatters = {}
-        for prop_name, prop_id in properties.items():
-            query = "SELECT * WHERE { %s wdt:P1630 ?formatterUrl . }" % (
-                'wd:%s' % prop_id)
-            reader = csv.DictReader(
-                common.api_request_wikidata(query), dialect='excel-tab')
-            for r in reader:
-                formatters[prop_name] = r['?formatterUrl']
-
-        json.dump(formatters, open(filepath, 'w'),
-                  indent=2, ensure_ascii=False)
-        return formatters
 
 # Utils
 
@@ -105,15 +81,12 @@ def get_date_strings(timestamp, precision):
 
 @click.command()
 @click.argument('sample_path', type=click.Path(exists=True))
-@click.argument('property_mapping_path', type=click.Path(exists=True))
-@click.option('--output', '-o', default=common.get_output_path(), type=click.Path(exists=True))
-def get_links_for_sample(sample_path, property_mapping_path, output):
+@click.argument('url_formatters', type=click.Path(exists=True))
+@click.option('--output', '-o', default='output', type=click.Path(exists=True))
+def get_links_for_sample(sample_path, url_formatters, output):
     '''Creates the JSON containing url - wikidata id'''
 
-    properties = {'?%s' % re.sub(r'\W', '', k): v for k, v in json.load(
-        open(property_mapping_path)).items()}
-
-    formatters_dict = get_url_formatters_for_properties(properties)
+    formatters_dict = json.load(open(url_formatters))
 
     filepath = os.path.join(output, 'sample_links.json')
 
@@ -124,8 +97,8 @@ def get_links_for_sample(sample_path, property_mapping_path, output):
 
     for bucket in buckets:
         # Downloads the first bucket
-        response = common.api_request_wikidata(
-            query_info_for(bucket, properties))
+        response = api_request_wikidata(
+            query_info_for(bucket, [k for k, v in formatters_dict.items()]))
         ids_collection = csv.DictReader(response, dialect='excel-tab')
         for id_row in ids_collection:
             # Extracts the wikidata id from the URI
@@ -133,9 +106,10 @@ def get_links_for_sample(sample_path, property_mapping_path, output):
             url_id[stripe_first_last_characters(id_row['?id'])] = entity_id
             # Foreach id in the response, creates the full url and adds it to the dict
             for col in ids_collection.fieldnames:
+                prop_id = col[1:]
                 if col != '?id' and id_row[col]:
-                    if formatters_dict.get(col):
-                        url_id[formatters_dict[col].replace(
+                    if formatters_dict.get(prop_id):
+                        url_id[formatters_dict[prop_id].replace(
                             '$1', id_row[col])] = entity_id
                     else:
                         print(
@@ -146,7 +120,7 @@ def get_links_for_sample(sample_path, property_mapping_path, output):
 
 @click.command()
 @click.argument('sample_path', type=click.Path(exists=True))
-@click.option('--output', '-o', default=common.get_output_path(), type=click.Path(exists=True))
+@click.option('--output', '-o', default='output', type=click.Path(exists=True))
 def get_sitelinks_for_sample(sample_path, output):
     '''Given a sample of users, retrieves all the sitelinks'''
 
@@ -159,7 +133,7 @@ def get_sitelinks_for_sample(sample_path, output):
 
     for bucket in buckets:
         # Downloads the first bucket
-        response = common.api_request_wikidata(
+        response = api_request_wikidata(
             query_wikipedia_articles_for(bucket))
         articles_collection = csv.DictReader(response, dialect='excel-tab')
         for article_row in articles_collection:
@@ -182,7 +156,7 @@ def get_birth_death_dates_for_sample(sample_path, output):
     filepath = os.path.join(output, 'sample_dates.json')
 
     for bucket in buckets:
-        response = common.api_request_wikidata(query_birth_death(bucket))
+        response = api_request_wikidata(query_birth_death(bucket))
         dates_collection = csv.DictReader(response, dialect='excel-tab')
         for date_row in dates_collection:
             qid = get_wikidata_id_from_uri(date_row['?id'])
@@ -200,3 +174,24 @@ def get_birth_death_dates_for_sample(sample_path, output):
                     labeldate_qid['%s|-%s' % (qid_labels[qid], d)] = qid
 
     json.dump(labeldate_qid, open(filepath, 'w'), indent=2, ensure_ascii=False)
+
+
+@click.command()
+@click.argument('property_mapping_path', type=click.Path(exists=True))
+@click.option('--output', '-o', default='output', type=click.Path(exists=True))
+def get_url_formatters_for_properties(property_mapping_path, output):
+    """Retrieves the url formatters for the properties listed in the given dict"""
+    filepath = os.path.join(output, 'url_formatters.json')
+
+    properties = json.load(open(property_mapping_path))
+
+    formatters = {}
+    for _, prop_id in properties.items():
+        query = "SELECT * WHERE { wd:%s wdt:P1630 ?formatterUrl . }" % prop_id
+        reader = csv.DictReader(
+            api_request_wikidata(query), dialect='excel-tab')
+        for r in reader:
+            formatters[prop_id] = r['?formatterUrl']
+
+    json.dump(formatters, open(filepath, 'w'),
+              indent=2, ensure_ascii=False)
