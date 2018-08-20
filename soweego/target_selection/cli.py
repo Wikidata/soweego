@@ -1,9 +1,10 @@
 import click
 
-from soweego.target_selection import musicbrainz
+from soweego.target_selection import musicbrainz, discogs
 
 CLI_COMMANDS = {
-    'musicbrainz': musicbrainz.cli.cli
+    'musicbrainz': musicbrainz.cli.cli,
+    'discogs': discogs.cli.cli,
 }
 
 @click.group(commands=CLI_COMMANDS)

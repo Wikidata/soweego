@@ -16,11 +16,12 @@ Contributors should comply with these steps:
 _[pipenv](https://docs.python-guide.org/dev/virtualenvs/#installing-pipenv)_ is highly recommended.
 
 # Coding Style
-- Use _[pylint](https://www.pylint.org/)_ with default rules (for now), see `.pylintrc`;
-- Use _4 spaces_ (soft tab) for indentation;
-- Naming conventions
+- Comply with **[PEP 8](https://www.python.org/dev/peps/pep-0008/)** and **[Wikimedia](https://www.mediawiki.org/wiki/Manual:Coding_conventions/Python)** conventions;
+- use _[pylint](https://www.pylint.org/)_ with default rules (for now), see `.pylintrc`;
+- use _4 spaces_ (soft tab) for indentation;
+- naming conventions
   - use _snake-case_ style, i.e., _underscore_ as a word separator (files, variables, functions);
   - constants are _UPPERCASE_;
   - anything else is _lowercase_.
-- Use _2_ empty lines to separate functions;
-- Write docstrings according to _[PEP 287](https://www.python.org/dev/peps/pep-0287/)_, with a special attention to [field lists](http://sphinx-doc.org/domains.html#info-field-lists).
+- use _2_ empty lines to separate functions;
+- write docstrings according to _[PEP 287](https://www.python.org/dev/peps/pep-0287/)_, with a special attention to [field lists](http://sphinx-doc.org/domains.html#info-field-lists).
