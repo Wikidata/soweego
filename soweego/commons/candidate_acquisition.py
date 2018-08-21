@@ -15,7 +15,7 @@ import json
 import logging
 
 import click
-from pymysql import OperationalError
+from pymysql import OperationalError, ProgrammingError
 from pymysql.cursors import DictCursor
 from toolforge import connect
 
@@ -80,7 +80,9 @@ def build_index(dataset_file, database):
         return
     LOGGER.info("Created index column '%s' in table '%s' on database '%s' at %s",
                 INDEX_COLUMN, INDEX_TABLE, connection.db, connection.host)
+    LOGGER.info("Loading dataset '%s'", dataset_file.name)
     dataset = json.load(dataset_file)
+    LOGGER.info("Dataset '%s' loaded", dataset_file.name)
     # TODO fuzzy analyzer
     # Default index analyzer behavior:
     # https://mariadb.com/kb/en/library/full-text-index-overview/#excluded-results
@@ -89,24 +91,27 @@ def build_index(dataset_file, database):
     # https://mariadb.com/kb/en/library/full-text-index-stopwords/#innodb-stopwords
     loaded = 0
     bucket_size = 10000
-    buckets = make_buckets(dataset.keys(), bucket_size=bucket_size)
+    buckets = make_buckets(list(dataset.keys()), bucket_size=bucket_size)
+    LOGGER.info('Starting dataset ingestion')
     for i, bucket in enumerate(buckets):
         insert_command = INSERT_VALUES_COMMAND
         for name in bucket:
             insert_command += '("%s"), ' % name.replace('(',
                                                         '\\(').replace(')', '\\)').replace('"', '\\"')
-            insert_command = insert_command.rstrip(', ') + ';'
-            try:
-                with connection.cursor() as cursor:
-                    cursor.execute(insert_command)
-                connection.commit()
-            except OperationalError as op_error:
-                LOGGER.error(
-                    'Something went wrong while adding values bucket #%d. Skipping it. Reason: %s', i, op_error)
-                continue
-            loaded += bucket_size
-            LOGGER.info('%d percent added', loaded/len(dataset))
+        insert_command = insert_command.rstrip(', ') + ';'
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(insert_command)
+            connection.commit()
+        except (OperationalError, ProgrammingError) as error:
+            # TODO find a way to handle strings with invalid characters
+            LOGGER.error(
+                'Something went wrong while adding values bucket #%d. Skipping it. Reason: %s', i, error)
+            continue
+        loaded += bucket_size
+        LOGGER.info('%f percent ingested', (loaded/len(dataset)*100))
     connection.close()
+    LOGGER.info('Dataset ingestion finished!')
 
 
 def _create_connection(database_name):
