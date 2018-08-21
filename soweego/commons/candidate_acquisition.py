@@ -19,6 +19,8 @@ from pymysql import OperationalError
 from pymysql.cursors import DictCursor
 from toolforge import connect
 
+from soweego.commons.utils import make_buckets
+
 LOGGER = logging.getLogger(__name__)
 TEST_DB = 's53821__test_index'
 PROD_DB = 's51434__mixnmatch_large_catalogs'
@@ -45,12 +47,16 @@ def drop_index(database):
         with connection.cursor() as cursor:
             cursor.execute(DROP_INDEX_COMMAND)
         connection.commit()
+    except OperationalError as op_error:
+        LOGGER.error(op_error)
+        return
     finally:
         connection.close()
     LOGGER.info("Dropped index table '%s' on database '%s' at %s",
                 INDEX_TABLE, connection.db, connection.host)
 
 
+# TODO create text table first, then create the index
 @click.command()
 @click.argument('dataset_file', type=click.File())
 @click.option('-d', '--database', type=click.Choice([TEST_DB, PROD_DB]), default=TEST_DB)
@@ -65,27 +71,42 @@ def build_index(dataset_file, database):
     connection = _create_connection(database)
     if not connection:
         return
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(CREATE_INDEX_COMMAND)
+        connection.commit()
+    except OperationalError as op_error:
+        LOGGER.error(op_error)
+        return
+    LOGGER.info("Created index column '%s' in table '%s' on database '%s' at %s",
+                INDEX_COLUMN, INDEX_TABLE, connection.db, connection.host)
     dataset = json.load(dataset_file)
+    # TODO fuzzy analyzer
     # Default index analyzer behavior:
     # https://mariadb.com/kb/en/library/full-text-index-overview/#excluded-results
     # https://mariadb.com/kb/en/library/xtradbinnodb-server-system-variables/#innodb_ft_min_token_size
     # https://mariadb.com/kb/en/library/xtradbinnodb-server-system-variables/#innodb_ft_max_token_size
     # https://mariadb.com/kb/en/library/full-text-index-stopwords/#innodb-stopwords
-    # TODO fuzzy analyzer
-    insert_command = INSERT_VALUES_COMMAND
-    for name in dataset.keys():
-        insert_command += '("%s"), ' % name.replace('(',
-                                                    '\\(').replace(')', '\\)').replace('"', '\\"')
-    insert_command = insert_command.rstrip(', ') + ';'
-    try:
-        with connection.cursor() as cursor:
-            cursor.execute(CREATE_INDEX_COMMAND)
-            cursor.execute(insert_command)
-        connection.commit()
-    finally:
-        connection.close()
-    LOGGER.info("Created index column '%s' with %s values in table '%s' on database '%s' at %s",
-                INDEX_COLUMN, len(dataset), INDEX_TABLE, connection.db, connection.host)
+    loaded = 0
+    bucket_size = 10000
+    buckets = make_buckets(dataset.keys(), bucket_size=bucket_size)
+    for i, bucket in enumerate(buckets):
+        insert_command = INSERT_VALUES_COMMAND
+        for name in bucket:
+            insert_command += '("%s"), ' % name.replace('(',
+                                                        '\\(').replace(')', '\\)').replace('"', '\\"')
+            insert_command = insert_command.rstrip(', ') + ';'
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute(insert_command)
+                connection.commit()
+            except OperationalError as op_error:
+                LOGGER.error(
+                    'Something went wrong while adding values bucket #%d. Skipping it. Reason: %s', i, op_error)
+                continue
+            loaded += bucket_size
+            LOGGER.info('%d percent added', loaded/len(dataset))
+    connection.close()
 
 
 def _create_connection(database_name):
