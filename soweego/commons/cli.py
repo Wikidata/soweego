@@ -15,6 +15,7 @@ from soweego.commons import candidate_acquisition
 
 CLI_COMMANDS = {
     'build_index': candidate_acquisition.build_index,
+    'drop_index': candidate_acquisition.drop_index,
     'query_index': candidate_acquisition.query_index
 }
 
