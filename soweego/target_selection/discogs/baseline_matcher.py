@@ -13,6 +13,7 @@ from urllib.parse import urlsplit
 
 import click
 
+from soweego.commons.candidate_acquisition import PROD_DB, TEST_DB
 from soweego.target_selection.common import matching_strategies
 
 LOGGER = logging.getLogger(__name__)
@@ -130,13 +131,13 @@ def name_match(names, output_path):
         output_path, 'musicians_names_similar_matches.json'), 'w'), indent=2, ensure_ascii=False)
 
 
-def edit_distance_name_match(names, metric, threshold, output_path):
+def edit_distance_name_match(names, target_database, target_search_type, metric, threshold, output_path):
     """Baseline matching strategy #4: match names based on Jaro-Winkler distance.
     Dump a JSON file with name matches.
     """
     wikidata_names = json.loads(get_data(SAMPLES_LOCATION, NAMES_SAMPLE))
     matches = matching_strategies.edit_distance_match(
-        wikidata_names, names, metric, threshold)
+        wikidata_names, names, target_database, target_search_type, metric, threshold)
     json.dump(matches, open(os.path.join(
         output_path, 'musicians_names_%s_matches.json' % metric), 'w'), indent=2, ensure_ascii=False)
 
@@ -189,8 +190,12 @@ def dump_url_domains(links, output_dir):
               help='default: 2')
 @click.option('--dump-domains', is_flag=True,
               help='Write a JSON with frequency counts of URL domains.')
+@click.option('--target-database', type=click.Choice([TEST_DB, PROD_DB]), default=TEST_DB)
+@click.option('--search-type', type=click.Choice(
+    ['natural_language', 'boolean', 'expansion']), default='natural_language')
 def main(dump_file, output_dir, strategy, jaro_winkler_threshold,
-         levenshtein_threshold, damerau_threshold, dump_domains):
+         levenshtein_threshold, damerau_threshold, dump_domains,
+         target_database, search_type):
     """Run baseline matching strategies over names, links and wikilinks
     of a given Discogs database dump.
 
@@ -207,19 +212,21 @@ def main(dump_file, output_dir, strategy, jaro_winkler_threshold,
         name_match(names, output_dir)
     elif strategy == 'jw':
         edit_distance_name_match(
-            names, strategy, jaro_winkler_threshold, output_dir)
+            names, target_database, search_type, strategy, jaro_winkler_threshold, output_dir)
     elif strategy == 'l':
         edit_distance_name_match(
-            names, strategy, levenshtein_threshold, output_dir)
+            names, target_database, search_type, strategy, levenshtein_threshold, output_dir)
     elif strategy == 'dl':
         edit_distance_name_match(
-            names, strategy, damerau_threshold, output_dir)
+            names, target_database, search_type, strategy, damerau_threshold, output_dir)
     elif strategy == 'all':
         perfect_match(names, links, wiki_links, output_dir)
         link_match(links, output_dir)
         name_match(names, output_dir)
         edit_distance_name_match(
-            names, 'jw', jaro_winkler_threshold, output_dir)
-        edit_distance_name_match(names, 'l', levenshtein_threshold, output_dir)
-        edit_distance_name_match(names, 'dl', damerau_threshold, output_dir)
+            names, target_database, search_type, 'jw', jaro_winkler_threshold, output_dir)
+        edit_distance_name_match(
+            names, target_database, search_type, 'l', levenshtein_threshold, output_dir)
+        edit_distance_name_match(
+            names, target_database, search_type, 'dl', damerau_threshold, output_dir)
     sys.exit(0)
