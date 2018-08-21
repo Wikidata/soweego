@@ -25,15 +25,48 @@ LOGGER = logging.getLogger(__name__)
 TEST_DB = 's53821__test_index'
 PROD_DB = 's51434__mixnmatch_large_catalogs'
 HOST = 'tools.db.svc.eqiad.wmflabs'
-INDEX_TABLE = 'names_index'
-INDEX_COLUMN = 'name'
-CREATE_INDEX_COMMAND = 'CREATE TABLE %s(%s TEXT,FULLTEXT(%s)) ENGINE=InnoDB;' % (
-    INDEX_TABLE, INDEX_COLUMN, INDEX_COLUMN)
-INSERT_VALUES_COMMAND = 'INSERT INTO %s(%s) VALUES ' % (
-    INDEX_TABLE, INDEX_COLUMN)
-DROP_INDEX_COMMAND = 'DROP TABLE %s' % INDEX_TABLE
+# TODO the full table name will be a variable depending on the target catalog
+TABLE_NAME = 'names_index'
+INDEXED_COLUMN = 'name'
+IDENTIFIER_COLUMN = 'ext_id'
+# TODO create full table as per prod DB
+CREATE_TABLE_COMMAND = """
+CREATE TABLE %s (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `ext_id` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(250) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `desc` varchar(250) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `born` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `died` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `gender` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `place_born` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `place_died` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `family_name` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `given_name` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `viaf` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `q` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `ext_id` (`ext_id`),
+  KEY `name` (`name`),
+  KEY `viaf` (`viaf`),
+  KEY `q` (`q`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+"""
+# FIXME add identifier field:
+# %s varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL,
+CREATE_INDEX_COMMAND = """
+CREATE TABLE %s (
+    id int(11) unsigned NOT NULL AUTO_INCREMENT,
+    %s TEXT COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+    FULLTEXT(%s)
+)
+ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+""" % (TABLE_NAME, INDEXED_COLUMN, INDEXED_COLUMN)
+INSERT_VALUES_COMMAND = 'INSERT INTO %s(%s,%s) VALUES ' % (
+    TABLE_NAME, INDEXED_COLUMN, IDENTIFIER_COLUMN)
+DROP_INDEX_COMMAND = 'DROP TABLE IF EXISTS %s' % TABLE_NAME
 QUERY_COMMAND = "SELECT %s,MATCH(%s) AGAINST('{}'{}) AS relevance FROM %s WHERE MATCH(%s) AGAINST('{}'{});" % (
-    INDEX_COLUMN, INDEX_COLUMN, INDEX_TABLE, INDEX_COLUMN)
+    INDEXED_COLUMN, INDEXED_COLUMN, TABLE_NAME, INDEXED_COLUMN)
 
 
 @click.command()
@@ -53,7 +86,7 @@ def drop_index(database):
     finally:
         connection.close()
     LOGGER.info("Dropped index table '%s' on database '%s' at %s",
-                INDEX_TABLE, connection.db, connection.host)
+                TABLE_NAME, connection.db, connection.host)
 
 
 # TODO create text table first, then create the index
@@ -78,8 +111,8 @@ def build_index(dataset_file, database):
     except OperationalError as op_error:
         LOGGER.error(op_error)
         return
-    LOGGER.info("Created index column '%s' in table '%s' on database '%s' at %s",
-                INDEX_COLUMN, INDEX_TABLE, connection.db, connection.host)
+    LOGGER.info("Created table '%s' with indexed column '%s' on database '%s' at %s",
+                INDEXED_COLUMN, TABLE_NAME, connection.db, connection.host)
     LOGGER.info("Loading dataset '%s'", dataset_file.name)
     dataset = json.load(dataset_file)
     LOGGER.info("Dataset '%s' loaded", dataset_file.name)
