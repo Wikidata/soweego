@@ -158,11 +158,12 @@ def _create_connection(database_name):
     return connection
 
 
-#@click.command()
-#@click.argument('query')
-#@click.option('-s', '--search-type', type=click.Choice(
+# FIXME wrapper function
+# @click.command()
+# @click.argument('query')
+# @click.option('-s', '--search-type', type=click.Choice(
 #    ['natural_language', 'boolean', 'expansion']), default='natural_language')
-#@click.option('-d', '--database', type=click.Choice([TEST_DB, PROD_DB]), default=TEST_DB)
+# @click.option('-d', '--database', type=click.Choice([TEST_DB, PROD_DB]), default=TEST_DB)
 def query_index(query, search_type, database):
     """Query the index table located on a MariaDB user database in Toolforge.
 
@@ -185,13 +186,12 @@ def query_index(query, search_type, database):
         expansion_mode = ' WITH QUERY EXPANSION'
         command = QUERY_COMMAND.format(
             query, expansion_mode, query, expansion_mode)
-    LOGGER.debug("About to run query: %s", command)
+    LOGGER.debug("About to run query command: %s", command)
     try:
         with connection.cursor() as cursor:
             result_count = cursor.execute(command)
             results = cursor.fetchall()
     finally:
         connection.close()
-    LOGGER.info('Got %s results: %s', result_count,
-                json.dumps(results, indent=2, ensure_ascii=False))
+    LOGGER.debug('Query returned %s results', result_count)
     return results
