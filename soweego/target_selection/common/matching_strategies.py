@@ -114,7 +114,7 @@ def similar_name_match(source, target) -> dict:
     return perfect_string_match((_process_names(source), _process_names(target)))
 
 
-def edit_distance_match(source, target, target_database, target_search_type, metric, threshold) -> dict:
+def edit_distance_match(source, target, target_table, target_database, target_search_type, metric, threshold) -> dict:
     """Given a source dataset ``{identifier: {string: [languages]}}``,
     match strings having the given edit distance ``metric``
     above the given ``threshold`` and return a dataset
@@ -153,9 +153,12 @@ def edit_distance_match(source, target, target_database, target_search_type, met
             source_strings)
         LOGGER.debug('Query: %s', query)
         target_candidates = query_index(
-            query, target_search_type, target_database)
-        if not target_candidates:
-            LOGGER.warning('Skipping query that went wrong')
+            query, target_search_type, target_table, target_database)
+        if target_candidates is None:
+            LOGGER.warning('Skipping query that went wrong: %s', query)
+            continue
+        if target_candidates == {}:
+            LOGGER.info('Skipping query with no results: %s', query)
             continue
         # This should be a very small loop, just 1 iteration most of the time
         for source_string in most_frequent_source_strings:
