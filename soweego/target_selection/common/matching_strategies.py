@@ -16,7 +16,7 @@ from urllib.parse import urlsplit
 
 import jellyfish
 
-from soweego.commons.candidate_acquisition import query_index
+from soweego.commons.candidate_acquisition import INDEXED_COLUMN, query_index
 
 LOGGER = logging.getLogger(__name__)
 # URLs stopwords
@@ -115,14 +115,15 @@ def similar_name_match(source, target) -> dict:
 
 
 def edit_distance_match(source, target, target_database, target_search_type, metric, threshold) -> dict:
-    """Given a source dataset ``{string: identifier}``,
+    """Given a source dataset ``{identifier: {string: [languages]}}``,
     match strings having the given edit distance ``metric``
     above the given ``threshold`` and return a dataset
     ``{source_id__target_id: distance_score}``.
 
     Compute the distance for each ``(source, target)`` entity pair.
     Target candidates are acquired as follows:
-    - build a query upon the source entity string;
+    - build a query upon the most frequent source entity strings;
+    - exact strings are joined in an OR query, e.g., ``"string1" "string2"``;
     - run the query against a database table containing indexed of target entities.
 
     ``distance_type`` can be one of:
@@ -147,34 +148,49 @@ def edit_distance_match(source, target, target_database, target_search_type, met
             'or "dl" (Damerau-Levenshtein)', metric)
         return None
     LOGGER.info('Using %s edit distance', distance_function.__name__)
-    for source_string, source_id in source.items():
-        source_normalized, source_ascii = _normalize(source_string)
-        # Perfect match query
-        # TODO experiment with different strategies
+    for source_id, source_strings in source.items():
+        query, most_frequent_source_strings = _build_index_query(
+            source_strings)
+        LOGGER.debug('Query: %s', query)
         target_candidates = query_index(
-            '"%s"' % source_normalized, target_search_type, target_database)
-        for result in target_candidates:
-            target_string = result['name']
-            target_normalized, target_ascii = _normalize(target_string)
-            try:
-                distance = distance_function(
-                    source_normalized, target_normalized)
-            # Damerau-Levenshtein does not support some Unicode code points
-            except ValueError:
-                LOGGER.warning(
-                    'Skipping unsupported string in pair: "%s", "%s"',
-                    source_normalized, target_normalized)
-                continue
-            LOGGER.debug('Source: %s > %s > %s - Target: %s > %s > %s - Distance: %f',
-                         source_string, source_ascii, source_normalized,
-                         target_string, target_ascii, target_normalized,
-                         distance)
-            # FIXME inverse condition between Jaro and Levenshtein
-            # if distance > threshold:
-            # FIXME target IDs must be in the DB
-            scores['%s__%s' %
-                    (source_id, target.get(target_string, 'NOT FOUND'))] = distance
+            query, target_search_type, target_database)
+        # This should be a very small loop, just 1 iteration most of the time
+        for source_string in most_frequent_source_strings:
+            source_normalized, source_ascii = _normalize(source_string)
+            for result in target_candidates:
+                target_string = result[INDEXED_COLUMN]
+                target_normalized, target_ascii = _normalize(target_string)
+                try:
+                    distance = distance_function(
+                        source_normalized, target_normalized)
+                # Damerau-Levenshtein does not support some Unicode code points
+                except ValueError:
+                    LOGGER.warning(
+                        'Skipping unsupported string in pair: "%s", "%s"',
+                        source_normalized, target_normalized)
+                    continue
+                LOGGER.debug('Source: %s > %s > %s - Target: %s > %s > %s - Distance: %f',
+                             source_string, source_ascii, source_normalized,
+                             target_string, target_ascii, target_normalized,
+                             distance)
+                # FIXME inverse condition between Jaro and Levenshtein
+                # if distance > threshold:
+                # FIXME target IDs must be in the DB
+                scores['%s__%s' %
+                       (source_id, target.get(target_string, 'NOT FOUND'))] = distance
     return scores
+
+
+def _build_index_query(source_strings):
+    query = ''
+    frequencies = defaultdict(list)
+    for label, languages in source_strings.items():
+        frequencies[len(languages)].append(label)
+    most_frequent = frequencies[max(frequencies.keys())]
+    for label in most_frequent:
+        # TODO experiment with different strategies
+        query += '"%s" ' % label
+    return query.rstrip(), most_frequent
 
 
 def _process_names(dataset) -> dict:

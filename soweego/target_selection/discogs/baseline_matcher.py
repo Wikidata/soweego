@@ -19,6 +19,7 @@ from soweego.target_selection.common import matching_strategies
 LOGGER = logging.getLogger(__name__)
 # Wikidata musicians samples
 SAMPLES_LOCATION = 'soweego.wikidata.resources'
+QID_NAMES_LANGUAGES_SAMPLE = 'musicians_sample_qid_labels_languages.json'
 NAMES_SAMPLE = 'musicians_sample_labels.json'
 LINKS_SAMPLE = 'musicians_sample_links.json'
 SITELINKS_SAMPLE = 'musicians_sample_sitelinks.json'
@@ -136,8 +137,9 @@ def edit_distance_name_match(names, target_database, target_search_type, metric,
     Dump a JSON file with name matches.
     """
     # FIXME this breaks with Python 3.4
-    #wikidata_names = json.loads(get_data(SAMPLES_LOCATION, NAMES_SAMPLE))
-    wikidata_names = json.load(open('/data/project/soweego/soweego/soweego/wikidata/resources/musicians_sample_labels.json'))
+    # wikidata_names = json.loads(get_data(SAMPLES_LOCATION, QID_NAMES_LANGUAGES_SAMPLE))
+    wikidata_names = json.load(open(
+        '/data/project/soweego/soweego/soweego/wikidata/resources/musicians_sample_qid_labels_languages.json'))
     matches = matching_strategies.edit_distance_match(
         wikidata_names, names, target_database, target_search_type, metric, threshold)
     json.dump(matches, open(os.path.join(
