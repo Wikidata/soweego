@@ -135,7 +135,9 @@ def edit_distance_name_match(names, target_database, target_search_type, metric,
     """Baseline matching strategy #4: match names based on Jaro-Winkler distance.
     Dump a JSON file with name matches.
     """
-    wikidata_names = json.loads(get_data(SAMPLES_LOCATION, NAMES_SAMPLE))
+    # FIXME this breaks with Python 3.4
+    #wikidata_names = json.loads(get_data(SAMPLES_LOCATION, NAMES_SAMPLE))
+    wikidata_names = json.load(open('/data/project/soweego/soweego/soweego/wikidata/resources/musicians_sample_labels.json'))
     matches = matching_strategies.edit_distance_match(
         wikidata_names, names, target_database, target_search_type, metric, threshold)
     json.dump(matches, open(os.path.join(

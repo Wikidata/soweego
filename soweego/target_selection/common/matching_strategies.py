@@ -153,7 +153,8 @@ def edit_distance_match(source, target, target_database, target_search_type, met
         # TODO experiment with different strategies
         target_candidates = query_index(
             '"%s"' % source_normalized, target_search_type, target_database)
-        for target_string in target_candidates:
+        for result in target_candidates:
+            target_string = result['name']
             target_normalized, target_ascii = _normalize(target_string)
             try:
                 distance = distance_function(
@@ -168,10 +169,11 @@ def edit_distance_match(source, target, target_database, target_search_type, met
                          source_string, source_ascii, source_normalized,
                          target_string, target_ascii, target_normalized,
                          distance)
-            if distance > threshold:
-                # FIXME target IDs must be in the DB
-                scores['%s__%s' %
-                       (source_id, target.get(target_string, 'NOT FOUND'))] = distance
+            # FIXME inverse condition between Jaro and Levenshtein
+            # if distance > threshold:
+            # FIXME target IDs must be in the DB
+            scores['%s__%s' %
+                    (source_id, target.get(target_string, 'NOT FOUND'))] = distance
     return scores
 
 
