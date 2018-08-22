@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-import requests
 import json
 import re
-
 from collections import defaultdict
+
+import requests
 
 WD = '/Users/focs/wikidata/'
 SAMPLE = 'musicians_1_percent_sample'
@@ -34,7 +34,7 @@ for b in buckets:
     print('Call to API success: ', r.get('success'))
     for qid in r['entities']:
         entity = r['entities'][qid]
-        #print(entity)
+        # print(entity)
         if entity.get('labels'):
             for language in entity['labels'].keys():
                 ids_labels[qid][language] = entity['labels'][language]['value']
@@ -50,6 +50,8 @@ for qid in ids_labels:
     for lang in ids_labels[qid]:
         v[ids_labels[qid][lang]].append(lang)
     qid_labels[qid] = v
+json.dump(qid_labels, open(WD + SAMPLE + '_qid_labels.json', 'w'),
+          indent=2, ensure_ascii=False)
 
 # Wikidata sample, labels
 label_qid = {}
@@ -59,5 +61,5 @@ for qid in qid_labels.keys():
         for l in labels:
             label_qid[l.lower()] = qid
 # Better sample with labels as keys
-json.dump(label_qid, open(WD + SAMPLE + '_labels.json', 'w'), indent=2, ensure_ascii=False)
-
+json.dump(label_qid, open(WD + SAMPLE + '_labels.json', 'w'),
+          indent=2, ensure_ascii=False)
