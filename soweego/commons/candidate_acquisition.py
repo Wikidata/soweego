@@ -158,11 +158,11 @@ def _create_connection(database_name):
     return connection
 
 
-@click.command()
-@click.argument('query')
-@click.option('-s', '--search-type', type=click.Choice(
-    ['natural_language', 'boolean', 'expansion']), default='natural_language')
-@click.option('-d', '--database', type=click.Choice([TEST_DB, PROD_DB]), default=TEST_DB)
+#@click.command()
+#@click.argument('query')
+#@click.option('-s', '--search-type', type=click.Choice(
+#    ['natural_language', 'boolean', 'expansion']), default='natural_language')
+#@click.option('-d', '--database', type=click.Choice([TEST_DB, PROD_DB]), default=TEST_DB)
 def query_index(query, search_type, database):
     """Query the index table located on a MariaDB user database in Toolforge.
 
