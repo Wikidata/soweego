@@ -154,6 +154,9 @@ def edit_distance_match(source, target, target_database, target_search_type, met
         LOGGER.debug('Query: %s', query)
         target_candidates = query_index(
             query, target_search_type, target_database)
+        if not target_candidates:
+            LOGGER.warning('Skipping query that went wrong')
+            continue
         # This should be a very small loop, just 1 iteration most of the time
         for source_string in most_frequent_source_strings:
             source_normalized, source_ascii = _normalize(source_string)
@@ -189,7 +192,7 @@ def _build_index_query(source_strings):
     most_frequent = frequencies[max(frequencies.keys())]
     for label in most_frequent:
         # TODO experiment with different strategies
-        query += '"%s" ' % label
+        query += '"%s" ' % label.replace("'", "\\'")
     return query.rstrip(), most_frequent
 
 
