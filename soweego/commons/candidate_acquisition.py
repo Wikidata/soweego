@@ -138,7 +138,7 @@ def build_index(dataset_file, database):
             connection.commit()
         except (OperationalError, ProgrammingError) as error:
             # TODO find a way to handle strings with invalid characters
-            LOGGER.error(
+            LOGGER.warning(
                 'Something went wrong while adding values bucket #%d. Skipping it. Reason: %s', i, error)
             continue
         loaded += bucket_size
@@ -164,7 +164,7 @@ def _create_connection(database_name):
 # @click.option('-s', '--search-type', type=click.Choice(
 #    ['natural_language', 'boolean', 'expansion']), default='natural_language')
 # @click.option('-d', '--database', type=click.Choice([TEST_DB, PROD_DB]), default=TEST_DB)
-def query_index(query, search_type, database):
+def query_index(query, search_type, database) -> dict:
     """Query the index table located on a MariaDB user database in Toolforge.
 
     The index contains a set of target catalog entities and can be queried
@@ -175,7 +175,7 @@ def query_index(query, search_type, database):
     """
     connection = _create_connection(database)
     if not connection:
-        return
+        return {}
     if search_type == 'natural_language':
         command = QUERY_COMMAND.format(query, '', query, '')
     elif search_type == 'boolean':
@@ -191,6 +191,9 @@ def query_index(query, search_type, database):
         with connection.cursor() as cursor:
             result_count = cursor.execute(command)
             results = cursor.fetchall()
+    except ProgrammingError as error:
+        LOGGER.warning('Malformed query command. Reason: %s', error)
+        return {}
     finally:
         connection.close()
     LOGGER.debug('Query returned %s results', result_count)
