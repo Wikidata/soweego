@@ -172,6 +172,7 @@ def query_index(query, search_type, table, database) -> dict:
     for more details on Toolforge user databases.
     """
     connection = _create_connection(database)
+    query = escape_string(query)
     if not connection:
         return {}
     if search_type == 'natural_language':

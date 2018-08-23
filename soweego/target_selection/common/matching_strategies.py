@@ -190,15 +190,15 @@ def edit_distance_match(source, target_table, target_database, target_search_typ
 
 
 def _build_index_query(source_strings):
-    query = ''
+    query_builder = []
     frequencies = defaultdict(list)
     for label, languages in source_strings.items():
         frequencies[len(languages)].append(label)
     most_frequent = frequencies[max(frequencies.keys())]
     for label in most_frequent:
         # TODO experiment with different strategies
-        query += '"%s" ' % label.replace("'", "\\'")
-    return query.rstrip(), most_frequent
+        query_builder.append('"%s"' % label)
+    return ' '.join(query_builder), most_frequent
 
 
 def _process_names(dataset) -> dict:
