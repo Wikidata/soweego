@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-import os, json, datetime, codecs
-import domain.localizations as loc 
+import os
+import json
+import datetime
+import codecs
 from shutil import copyfile
 from collections import namedtuple
+
+from .. import constants as const
 
 def json_deserialize(serialized_json):
     return json.loads(serialized_json, object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
@@ -41,3 +45,24 @@ def export(file, obj, mode = 'w'):
 
 def get_iso_time(time = datetime.datetime.now()):
     return '{0}Z/14'.format(time.replace(microsecond=0).isoformat())
+
+def get_path(file):
+    """Returns the path of the current resource folder"""
+    path = os.path.abspath(file)
+    return os.path.dirname(path)
+
+def get_resource_path(file):
+    """Returns the path of the current resource folder"""
+    return get_folder_path(file, const.resource_folder)
+
+def get_output_path(file):
+    """Returns the path of the current output files"""
+    return get_folder_path(file, const.output_folder)
+
+def get_folder_path(file, folder):
+    dir_path = '{0}/{1}'.format(get_path(file), folder)
+
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+
+    return dir_path

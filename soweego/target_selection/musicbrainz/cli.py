@@ -14,4 +14,3 @@ CLI_COMMANDS = {
 def cli(ctx):
     """Operations over this target"""
     pass
-

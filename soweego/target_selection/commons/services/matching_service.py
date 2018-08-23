@@ -1,14 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-import threading
-import domain.localizations as loc
-import business.utils.file_utils as file_utils
-import business.utils.http_client as client
-import business.services.import_handlers as Handlers 
-from domain.models.dump_state import DumpState
-
-class ImportService(object):
+class MatchingService(object):
     __dumps = []
 
     def __init__(self):

@@ -124,3 +124,4 @@ target_selection/targets/musicbrainz/output/*
 soweego/target_selection/bibsys/resources/temp/
 soweego/target_selection/bibsys/resources/wikidata_sample.json
 
+soweego/target_selection/bibsys/resources/

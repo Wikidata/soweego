@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-import rdflib, datetime, re
-import business.utils.file_utils as file_utils
-import domain.localizations as loc
-from domain.models.bibsys_model import Bibsys
+import datetime
+import re
 
-def bibsys_handler(dump):
-    file_path = '{0}/{1}'.format(loc.temporary_directory, dump.file_name)
+from ..utils import file_utils
+from ...domain.models.bibsys_model import Bibsys
+
+def bibsys_handler(file_path: str, output_dir: str):
     if not file_utils.exists(file_path):
         raise Exception("file: {0} not found".format(file_path))
     with open(file_path) as file:
@@ -19,7 +19,9 @@ def bibsys_handler(dump):
         # assume that every id has a fixed length of 8 digits
         dictionary = {}
 
-        print ('{0} \t Start import'.format(datetime.datetime.now()))
+        # TODO log
+        # print ('{0} \t Start import'.format(datetime.datetime.now()))
+        
         counter = 0
         for row in rows:
             counter+=1
@@ -68,7 +70,8 @@ def bibsys_handler(dump):
                         dictionary[current_id] = Bibsys(identifier = current_id, same_as = [same_as])
 
             except : 
-                file_utils.log_error("Error at row: {0}".format(row))
+                pass # TODO log
+                # file_utils.log_error("Error at row: {0}".format(row))
 
     print ('{0} \t End import'.format(datetime.datetime.now()))
     file_utils.export(loc.bibsys_dict, dictionary)
