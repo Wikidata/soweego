@@ -29,6 +29,11 @@ NAMES_STOPWORDS = set(
      'dr', 'mme', 'mlle', 'baron', 'baronet', 'bt', 'graf', 'gräfin', 'de',
      'of', 'von', 'the']
 )
+EDIT_DISTANCES = {
+    'jw': jellyfish.jaro_winkler,
+    'l': jellyfish.levenshtein_distance,
+    'dl': jellyfish.damerau_levenshtein_distance
+}
 # Latin alphabet diacritics and Russian
 ASCII_TRANSLATION_TABLE = str.maketrans({
     'á': 'a', 'Á': 'A', 'à': 'a', 'À': 'A', 'ă': 'a', 'Ă': 'A', 'â': 'a',
@@ -136,12 +141,7 @@ def edit_distance_match(source, target_table, target_database, target_search_typ
     Return ``None`` if the given edit distance is not valid.
     """
     scores = {}
-    distances = {
-        'jw': jellyfish.jaro_winkler,
-        'l': jellyfish.levenshtein_distance,
-        'dl': jellyfish.damerau_levenshtein_distance
-    }
-    distance_function = distances.get(metric)
+    distance_function = EDIT_DISTANCES.get(metric)
     if not distance_function:
         LOGGER.error(
             'Invalid distance_type parameter: "%s". ' +
@@ -181,11 +181,13 @@ def edit_distance_match(source, target_table, target_database, target_search_typ
                              source_string, source_ascii, source_normalized,
                              target_string, target_ascii, target_normalized,
                              distance)
-                # FIXME inverse condition between Jaro and Levenshtein
-                # if distance > threshold:
-                scores['%s__%s' %
-                       (source_id, target_id)] = distance
-                LOGGER.debug('Matched %s with %s', source_id, target_id)
+                if (metric in ('l', 'dl') and distance <= threshold) or (metric == 'jw' and distance >= threshold):
+                    scores['%s__%s' % (source_id, target_id)] = distance
+                    LOGGER.debug("It's a match! %s -> %s",
+                                 source_id, target_id)
+                else:
+                    LOGGER.debug('Skipping potential match due to the threshold: %s -> %s - Threshold: %f - Distance: %f',
+                                 source_id, target_id, threshold, distance)
     return scores
 
 
