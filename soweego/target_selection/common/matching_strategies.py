@@ -166,6 +166,7 @@ def edit_distance_match(source, target_table, target_database, target_search_typ
             source_normalized, source_ascii = _normalize(source_string)
             for result in target_candidates:
                 target_string = result[INDEXED_COLUMN]
+                target_id = result[IDENTIFIER_COLUMN]
                 target_normalized, target_ascii = _normalize(target_string)
                 try:
                     distance = distance_function(
@@ -183,7 +184,8 @@ def edit_distance_match(source, target_table, target_database, target_search_typ
                 # FIXME inverse condition between Jaro and Levenshtein
                 # if distance > threshold:
                 scores['%s__%s' %
-                       (source_id, result[IDENTIFIER_COLUMN])] = distance
+                       (source_id, target_id)] = distance
+                LOGGER.debug('Matched %s with %s', source_id, target_id)
     return scores
 
 
