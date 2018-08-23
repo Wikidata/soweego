@@ -16,7 +16,8 @@ from urllib.parse import urlsplit
 
 import jellyfish
 
-from soweego.commons.candidate_acquisition import INDEXED_COLUMN, query_index
+from soweego.commons.candidate_acquisition import (IDENTIFIER_COLUMN,
+                                                   INDEXED_COLUMN, query_index)
 
 LOGGER = logging.getLogger(__name__)
 # URLs stopwords
@@ -114,7 +115,7 @@ def similar_name_match(source, target) -> dict:
     return perfect_string_match((_process_names(source), _process_names(target)))
 
 
-def edit_distance_match(source, target, target_table, target_database, target_search_type, metric, threshold) -> dict:
+def edit_distance_match(source, target_table, target_database, target_search_type, metric, threshold) -> dict:
     """Given a source dataset ``{identifier: {string: [languages]}}``,
     match strings having the given edit distance ``metric``
     above the given ``threshold`` and return a dataset
@@ -181,9 +182,8 @@ def edit_distance_match(source, target, target_table, target_database, target_se
                              distance)
                 # FIXME inverse condition between Jaro and Levenshtein
                 # if distance > threshold:
-                # FIXME target IDs must be in the DB
                 scores['%s__%s' %
-                       (source_id, target.get(target_string, 'NOT FOUND'))] = distance
+                       (source_id, result[IDENTIFIER_COLUMN])] = distance
     return scores
 
 
