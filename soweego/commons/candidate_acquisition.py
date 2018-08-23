@@ -127,12 +127,16 @@ def build_index(dataset_file, target_table, database):
     bucket_size = 10000
     buckets = make_buckets(list(dataset.keys()), bucket_size=bucket_size)
     LOGGER.info('Starting dataset ingestion')
+    command_builder = []
     for i, bucket in enumerate(buckets):
-        insert_command = INSERT_VALUES_COMMAND.format(target_table)
         for name in bucket:
-            insert_command += '("%s", "%s"), ' % (escape_string(name),
-                                                  escape_string(dataset[name]))
-        insert_command = insert_command.rstrip(', ') + ';'
+            command_builder.append('("%s", "%s")' % (
+                escape_string(name), dataset[name]))
+        insert_command = '%s%s%s' % (
+            INSERT_VALUES_COMMAND.format(target_table),
+            ', '.join(command_builder),
+            ';'
+        )
         try:
             with connection.cursor() as cursor:
                 cursor.execute(insert_command)
