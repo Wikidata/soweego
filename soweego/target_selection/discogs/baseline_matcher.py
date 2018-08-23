@@ -133,7 +133,7 @@ def name_match(names, output_path):
         output_path, 'musicians_names_similar_matches.json'), 'w'), indent=2, ensure_ascii=False)
 
 
-def edit_distance_name_match(names, target_table, target_database, target_search_type, metric, threshold, output_path):
+def edit_distance_name_match(target_table, target_database, target_search_type, metric, threshold, output_path):
     """Baseline matching strategy #4: match names based on Jaro-Winkler distance.
     Dump a JSON file with name matches.
     """
@@ -142,7 +142,7 @@ def edit_distance_name_match(names, target_table, target_database, target_search
     wikidata_names = json.load(open(
         '/data/project/soweego/soweego/soweego/wikidata/resources/musicians_sample_qid_labels_languages.json'))
     matches = matching_strategies.edit_distance_match(
-        wikidata_names, names, target_table, target_database, target_search_type, metric, threshold)
+        wikidata_names, target_table, target_database, target_search_type, metric, threshold)
     json.dump(matches, open(os.path.join(
         output_path, 'musicians_names_%s_matches.json' % metric), 'w'), indent=2, ensure_ascii=False)
 
@@ -217,21 +217,21 @@ def main(dump_file, output_dir, strategy, jaro_winkler_threshold,
         name_match(names, output_dir)
     elif strategy == 'jw':
         edit_distance_name_match(
-            names, TOOLFORGE_DB_TABLE, target_database, search_type, strategy, jaro_winkler_threshold, output_dir)
+            TOOLFORGE_DB_TABLE, target_database, search_type, strategy, jaro_winkler_threshold, output_dir)
     elif strategy == 'l':
         edit_distance_name_match(
-            names, TOOLFORGE_DB_TABLE, target_database, search_type, strategy, levenshtein_threshold, output_dir)
+            TOOLFORGE_DB_TABLE, target_database, search_type, strategy, levenshtein_threshold, output_dir)
     elif strategy == 'dl':
         edit_distance_name_match(
-            names, TOOLFORGE_DB_TABLE, target_database, search_type, strategy, damerau_threshold, output_dir)
+            TOOLFORGE_DB_TABLE, target_database, search_type, strategy, damerau_threshold, output_dir)
     elif strategy == 'all':
         perfect_match(names, links, wiki_links, output_dir)
         link_match(links, output_dir)
         name_match(names, output_dir)
-        edit_distance_name_match(names, TOOLFORGE_DB_TABLE, target_database,
+        edit_distance_name_match(TOOLFORGE_DB_TABLE, target_database,
                                  search_type, 'jw', jaro_winkler_threshold, output_dir)
-        edit_distance_name_match(names, TOOLFORGE_DB_TABLE, target_database,
+        edit_distance_name_match(TOOLFORGE_DB_TABLE, target_database,
                                  search_type, 'l', levenshtein_threshold, output_dir)
-        edit_distance_name_match(names, TOOLFORGE_DB_TABLE, target_database,
+        edit_distance_name_match(TOOLFORGE_DB_TABLE, target_database,
                                  search_type, 'dl', damerau_threshold, output_dir)
     sys.exit(0)
