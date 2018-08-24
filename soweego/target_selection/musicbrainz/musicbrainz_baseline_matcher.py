@@ -8,7 +8,30 @@ from urllib.parse import urlparse
 import click
 from soweego.target_selection.common import matching_strategies
 
+
 # Utilities functions
+def get_dates_strings_combinations(date_items):
+    if len(date_items) > 0:
+        date_items = [d if d != '\\N' else '' for d in date_items]
+        combinations = []
+        birth_strings = [str(date_items[0]),
+                         '%s%s' % (date_items[0], date_items[1]),
+                         '%s%s%s' % (date_items[0], date_items[1], date_items[2])]
+        death_strings = [str(date_items[3]),
+                         '%s%s' % (date_items[3], date_items[4]),
+                         '%s%s%s' % (date_items[3], date_items[4], date_items[5])]
+
+        for b in birth_strings:
+            for d in death_strings:
+                combinations.append('%s-%s' % (b, d))
+
+        return list(set(combinations))
+    else:
+        return []
+
+
+def check_row_dump_describes_person(row):
+    return row[10] == '1' or row[10] == '\\N'
 
 
 def get_musicbrainz_artists_from_dump(opened_file_dump,
@@ -26,11 +49,9 @@ def get_musicbrainz_artists_from_dump(opened_file_dump,
 
     for row in musicbrainz_artists:
         # Checks if it's a person
-        if row[10] == '1' or '\\N':
+        if check_row_dump_describes_person(row):
             lowered_label = row[label_column_index].lower()
             label_musicbrainz[lowered_label] = row[id_column_index]
-        else:
-            print(row[10])
 
     return label_musicbrainz
 
@@ -145,4 +166,43 @@ def links_match(dump_folder_path, links_qid_dictionary, sitelinks_qid_dictionary
 
     full_outputh_path = os.path.join(output, 'link_match.json')
     json.dump(ids_matching, open(full_outputh_path, 'w'),
+              indent=2, ensure_ascii=False)
+
+
+@click.command()
+@click.argument('dump_folder_path', type=click.Path(exists=True))
+@click.argument('label_mbid_dict', type=click.Path(exists=True))
+@click.option('--output', '-o', default='output', type=click.Path(exists=True))
+def get_users_label_dates_dictionary(dump_folder_path, label_mbid_dict, output):
+
+    mbid_dateelements = defaultdict(list)
+    labeldate_mbid = {}
+
+    artist_table_path = os.path.join(
+        dump_folder_path, 'mbdump', 'artist')
+
+    with open(artist_table_path, mode='r') as tsvfile:
+        fieldnames = [i for i in range(0, 20)]
+
+        musicbrainz_artists = csv.DictReader(tsvfile,
+                                             dialect='excel-tab',
+                                             fieldnames=fieldnames)
+        # Dates extraction from the dump
+        for row in musicbrainz_artists:
+            if check_row_dump_describes_person(row):
+                date_items = [
+                    row[4], row[5], row[6], row[7], row[8], row[9]]
+                # Avoids to add people with no dates in the dictionary
+                if len(set(date_items)) > 1:
+                    mbid_dateelements[row[0]] = date_items
+
+    label_mbid = json.load(open(label_mbid_dict, 'r'))
+
+    for label, mbid in label_mbid.items():
+        # gets the dates for each mbid with label
+        for c in get_dates_strings_combinations(mbid_dateelements[mbid]):
+            labeldate_mbid['%s|%s' % (label, c)] = mbid
+
+    full_outputh_path = os.path.join(output, 'labeldates_mbid.json')
+    json.dump(labeldate_mbid, open(full_outputh_path, 'w'),
               indent=2, ensure_ascii=False)
