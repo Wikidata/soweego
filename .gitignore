@@ -103,6 +103,9 @@ ENV/
 # VS Code
 .vscode
 
+# VI
+*.swp
+
 # soweego
 output
 soweego/target_selection/musicbrainz/musicbrainz_dump*
