@@ -1,2 +1,2 @@
-from soweego.target_selection import cli, common, bne, musicbrainz, bibsys
+from soweego.target_selection import cli, commons, bne, musicbrainz, bibsys
 

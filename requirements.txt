@@ -1,6 +1,9 @@
 click>=6.2
 requests>=2.9.1
 jellyfish
+pymysql
+toolforge
+iso8601
 # rdflib
 # progressbar2>=3.6.0
 # regex>=2016.1.10

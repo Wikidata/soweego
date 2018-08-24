@@ -20,15 +20,16 @@ class ImportService(object):
         self.__cursor = mariadb_connection.cursor()
 
     def create_table(self, name, schema):
+        """TODO docstring"""
         query = 'CREATE TABLE {0}'.format(name)
-
         for field in schema :
-            
-        self.execute_query(query)
+            self.execute_query(query)
 
     def create_db(self):
+        """TODO docstring"""
         self.execute_query('CREATE DATABASE {0}'.format(loc.db_name))
 
     def execute_query(self, query):
+        """TODO docstring"""
         # TODO prevent sql injection!
         self.__cursor.execute(query)

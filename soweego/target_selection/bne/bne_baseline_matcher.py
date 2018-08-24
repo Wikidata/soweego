@@ -9,7 +9,7 @@ from collections import defaultdict
 HOME = '/Users/focs/'
 
 # TODO resolve Click issues 
-def twmpWrapper():
+def temporary_wrapper():
     # Wikidata sample, labels
     qid_labels = json.load(open(HOME + 'wikidata/final_1_percent_sample.json'))
     label_qid = {}

@@ -121,7 +121,6 @@ target_selection/targets/musicbrainz/musicbrainz_dump*
 target_selection/targets/musicbrainz/output/*
 
 # bibsys
-soweego/target_selection/bibsys/resources/temp/
-soweego/target_selection/bibsys/resources/wikidata_sample.json
-
 soweego/target_selection/bibsys/resources/
+soweego/target_selection/bibsys/output/
+debugger.py

@@ -1,14 +1,14 @@
 import click
 
-from soweego.target_selection.bibsys import bibsys_baseline_matcher
+from soweego.target_selection.bibsys import baseline_matcher
 
 CLI_COMMANDS = {
-    'baseline_matcher': bibsys_baseline_matcher.equal_strings_match,
-    'get_dump': bibsys_baseline_matcher.get_dump
+    'baseline_matcher': baseline_matcher.equal_strings_match,
+    'get_dump': baseline_matcher.refresh_dump
 }
 
 @click.group(name='bibsys', commands=CLI_COMMANDS)
 @click.pass_context
 def cli(ctx):
-    """Operations over this target"""
+    """Operations over bibsys target"""
     pass

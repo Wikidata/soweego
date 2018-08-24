@@ -3,11 +3,15 @@
 
 import datetime
 import re
+import logging
 
-from ..utils import file_utils
-from ...domain.models.bibsys_model import Bibsys
+from soweego.target_selection.commons.utils import file_utils
+from soweego.target_selection.commons import constants
+from .models.bibsys_metadata import BibsysMetadata
 
-def bibsys_handler(file_path: str, output_dir: str):
+LOGGER = logging.getLogger(__name__)
+
+def bibsys_handler(file_path: str, output: str):
     if not file_utils.exists(file_path):
         raise Exception("file: {0} not found".format(file_path))
     with open(file_path) as file:
@@ -19,8 +23,7 @@ def bibsys_handler(file_path: str, output_dir: str):
         # assume that every id has a fixed length of 8 digits
         dictionary = {}
 
-        # TODO log
-        # print ('{0} \t Start import'.format(datetime.datetime.now()))
+        LOGGER.info('{0} \t Start bibsys import'.format(datetime.datetime.now()))
         
         counter = 0
         for row in rows:
@@ -35,7 +38,7 @@ def bibsys_handler(file_path: str, output_dir: str):
                     if current_id in dictionary:
                         dictionary[current_id].is_person = True 
                     else :
-                        dictionary[current_id] = Bibsys(identifier = current_id, is_person = True)
+                        dictionary[current_id] = BibsysMetadata(identifier = current_id, is_person = True)
 
                 if row.find('name') != -1:
                     regex = re.compile('".*"')
@@ -43,7 +46,7 @@ def bibsys_handler(file_path: str, output_dir: str):
                     if current_id in dictionary:
                         dictionary[current_id].name = name 
                     else :
-                        dictionary[current_id] = Bibsys(identifier = current_id, name = name)
+                        dictionary[current_id] = BibsysMetadata(identifier = current_id, name = name)
 
                 if row.find('since') != -1:
                     regex = re.compile('".*"')
@@ -51,7 +54,7 @@ def bibsys_handler(file_path: str, output_dir: str):
                     if current_id in dictionary:
                         dictionary[current_id].since = since  
                     else :
-                        dictionary[current_id] = Bibsys(identifier = current_id, since = since)
+                        dictionary[current_id] = BibsysMetadata(identifier = current_id, since = since)
 
                 if row.find('until') != -1:
                     regex = re.compile('".*"')
@@ -59,7 +62,7 @@ def bibsys_handler(file_path: str, output_dir: str):
                     if current_id in dictionary:
                         dictionary[current_id].until = until  
                     else :
-                        dictionary[current_id] = Bibsys(identifier = current_id, until = until)
+                        dictionary[current_id] = BibsysMetadata(identifier = current_id, until = until)
 
                 if row.find('sameAs') != -1:
                     regex = re.compile('<.*>')
@@ -67,14 +70,12 @@ def bibsys_handler(file_path: str, output_dir: str):
                     if current_id in dictionary:
                         dictionary[current_id].same_as.append(same_as)  
                     else :
-                        dictionary[current_id] = Bibsys(identifier = current_id, same_as = [same_as])
+                        dictionary[current_id] = BibsysMetadata(identifier = current_id, same_as = [same_as])
 
             except : 
-                pass # TODO log
-                # file_utils.log_error("Error at row: {0}".format(row))
-
-    print ('{0} \t End import'.format(datetime.datetime.now()))
-    file_utils.export(loc.bibsys_dict, dictionary)
+                LOGGER.warinig('Error at row: {0}'.format(row))
+    LOGGER.info('{0} \t End bibsys import'.format(datetime.datetime.now()))
+    file_utils.export('{0}\\{1}'.format(output, constants.bibsys_dictionary), dictionary)
 
 def decode_name(name:str) -> str :
     return name.encode('ascii').decode('unicode-escape') 

@@ -3,7 +3,7 @@
 
 import datetime
 
-class Bibsys(object):
+class BibsysMetadata(object):
     identifier : int
     name: str
     since : int 

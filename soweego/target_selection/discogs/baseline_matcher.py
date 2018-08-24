@@ -13,7 +13,7 @@ from urllib.parse import urlsplit
 
 import click
 
-from soweego.target_selection.common import matching_strategies
+from soweego.target_selection.commons import matching_strategies
 
 LOGGER = logging.getLogger(__name__)
 # Wikidata musicians samples
