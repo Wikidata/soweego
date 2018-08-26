@@ -2,6 +2,7 @@
 # coding: utf-8
 
 import os
+import sys
 import json
 import datetime
 import codecs
@@ -67,6 +68,8 @@ def get_folder_path(file: str, folder: str) -> str:
 
     return dir_path
 
+def get_module_path() -> str:
+    return os.path.dirname(sys.modules['__main__'].__file__)
 
 def is_empty(folder: str) -> bool:
     return len(os.listdir(folder)) == 0

@@ -4,6 +4,9 @@
 import urllib.request
 import urllib.parse
 import requests
+import logging
+
+LOGGER = logging.getLogger(__name__)
 
 def http_call(base_url, method = 'GET', parameters = None, headers = list()):
     """Makes a generic HTTP call, returns the response"""
@@ -26,5 +29,4 @@ def download_file(url, filePath):
                 if chunk: 
                     f.write(chunk)
     except :
-        pass # log
-        # file_utils.log_error('Unable to download {0}'.format(url))
+        LOGGER.warning('Unable to download {0}'.format(url))

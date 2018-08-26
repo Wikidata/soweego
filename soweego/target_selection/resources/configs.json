@@ -1,0 +1,5 @@
+{
+    "ENVIRONMENT": "DEVELOPMENT",
+    "CREATE_DB_SCHEMA": true,
+    "SEED_DB": false
+}

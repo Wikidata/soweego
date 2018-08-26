@@ -1,35 +1,37 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-import mysql.connector as mariadb
-import business.utils.file_utils as file_utils
-import domain.localizations as loc
+from sqlalchemy import create_engine
+import logging
 
-class ImportService(object):
-    __user = None
-    __password = None 
-    __database = None
-    __cursor = None
+from .. import constants as const
+from .. import localizations as loc
+from ..utils import file_utils
+
+LOGGER = logging.getLogger(__name__)
+
+class DBManager(object):
+
+    __engine: object
 
     def __init__(self, credentials_path):
-        configs = file_utils.load_json(credentials_path)
-        self.__user = configs['user']
-        self.__password = configs['password']
-        self.__database = configs['database']
-        mariadb_connection = mariadb.connect(user = self.__user, password = self.__password, database = self.__database)
-        self.__cursor = mariadb_connection.cursor()
+        # Base = declarative_base()
+        try:
+            credentials = file_utils.load_json(const.db_credentials)
+            environment = file_utils.load_json(const.cofigs_path)[const.environment_key]
+        except:
+            LOGGER.warning(loc.missing_credentials)
+            raise Exception(loc.missing_credentials)
 
-    def create_table(self, name, schema):
-        """TODO docstring"""
-        query = 'CREATE TABLE {0}'.format(name)
-        for field in schema :
-            self.execute_query(query)
+        db_engine = credentials[const.db_engine_key] 
+        db_name = credentials[const.prod_db_key]
+        user = credentials[const.user_key]
+        password = credentials[const.password_key]
+        host = credentials[const.host_key]
 
-    def create_db(self):
-        """TODO docstring"""
-        self.execute_query('CREATE DATABASE {0}'.format(loc.db_name))
+        if environment == const.development:
+            db_name = credentials[const.test_db_key]   
 
-    def execute_query(self, query):
-        """TODO docstring"""
-        # TODO prevent sql injection!
-        self.__cursor.execute(query)
+        self.__engine = create_engine(
+            '{0}://{1}:{2}@{3}/{4}'.format(db_engine, user, password, host, db_name), 
+            echo=True)

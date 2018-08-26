@@ -114,7 +114,7 @@ target_selection/.vscode/
 .pyc
 
 # DB credentials
-soweego/target_selection/bibsys/resources/db_credentials.json
+replica.my.cnf
 
 # musicbrainz
 target_selection/targets/musicbrainz/musicbrainz_dump*
