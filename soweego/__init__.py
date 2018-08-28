@@ -1,1 +1,1 @@
-from soweego import commons, wikidata, target_selection
+from soweego import commons, target_selection, validator, wikidata

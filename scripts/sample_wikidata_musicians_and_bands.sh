@@ -13,9 +13,9 @@ paging=$(($bands/1000+1))
 for i in $(seq 0 $paging); do curl -G -H 'Accept:text/tab-separated-values' --data-urlencode "query=SELECT DISTINCT ?item WHERE { ?item wdt:P31/wdt:P279* wd:Q215380 . } OFFSET ""$((i*1000))"" LIMIT 1000" https://query.wikidata.org/sparql | cut -f2 | grep -oP 'Q\d+' >> bands; done
 
 musicians_sample=$(($musicians/100))
-echo 'Musicians sample size:' $musicians_sample
+echo 'Dumping musicians sample, size:' $musicians_sample
 shuf -n $musicians_sample musicians >> musicians_and_bands_1_percent_sample
 bands_sample=$(($bands/100))
-echo 'Bands sample size:' $bands_sample
+echo 'Dumping bands sample, size:' $bands_sample
 shuf -n $bands_sample bands >> musicians_and_bands_1_percent_sample
 
