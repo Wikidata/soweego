@@ -2,9 +2,7 @@
 # coding: utf-8
 
 import unittest
-import business.utils.file_utils as file_utils
-import domain.localizations as loc
-from business.services.import_service import ImportService
+
 
 class ImportTest(unittest.TestCase):
 
@@ -19,9 +17,3 @@ class ImportTest(unittest.TestCase):
 
         # Assert
         self.assertTrue(file_utils.exists(loc.dump_states)) 
-
-    def test_refresh(self):
-        # Arrange
-        # Act
-        # Assert
-        self.assertTrue(True) 

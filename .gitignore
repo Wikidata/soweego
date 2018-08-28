@@ -116,11 +116,17 @@ target_selection/.vscode/
 # DB credentials
 replica.my.cnf
 
-# musicbrainz
-target_selection/targets/musicbrainz/musicbrainz_dump*
-target_selection/targets/musicbrainz/output/*
+# VI
+*.swp
 
-# bibsys
+# soweego
+output
+
+## musicbrainz
+soweego/target_selection/musicbrainz/musicbrainz_dump*
+soweego/target_selection/musicbrainz/output/*
+
+## bibsys
 soweego/target_selection/bibsys/resources/
 soweego/target_selection/bibsys/output/
 debugger.py

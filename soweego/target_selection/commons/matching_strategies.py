@@ -17,6 +17,9 @@ from urllib.parse import urlsplit
 
 import jellyfish
 
+from soweego.commons.candidate_acquisition import (IDENTIFIER_COLUMN,
+                                                   INDEXED_COLUMN, query_index)
+
 LOGGER = logging.getLogger(__name__)
 # URLs stopwords
 TOP_LEVEL_DOMAINS = set(['com', 'org', 'net', 'info', 'fm'])
@@ -27,6 +30,11 @@ NAMES_STOPWORDS = set(
      'dr', 'mme', 'mlle', 'baron', 'baronet', 'bt', 'graf', 'gräfin', 'de',
      'of', 'von', 'the']
 )
+EDIT_DISTANCES = {
+    'jw': jellyfish.jaro_winkler,
+    'l': jellyfish.levenshtein_distance,
+    'dl': jellyfish.damerau_levenshtein_distance
+}
 # Latin alphabet diacritics and Russian
 ASCII_TRANSLATION_TABLE = str.maketrans({
     'á': 'a', 'Á': 'A', 'à': 'a', 'À': 'A', 'ă': 'a', 'Ă': 'A', 'â': 'a',
@@ -84,7 +92,7 @@ def perfect_string_match_wrapper(first_sample: str, second_sample: str, output: 
 
 def perfect_string_match(datasets) -> dict:
     """Given an iterable of dictionaries ``{string: identifier}``,
-    match perfect strings and return a dictionary ``{id: id}``.
+    match perfect strings and return a dataset ``{id: id}``.
 
     This strategy applies to any object that can be
     treated as a string: names, links, etc.
@@ -104,7 +112,7 @@ def perfect_string_match(datasets) -> dict:
 
 def similar_link_match(source, target) -> dict:
     """Given 2 dictionaries ``{link: identifier}``,
-    match similar links and return a dictionary ``{source_id: target_id}``.
+    match similar links and return a dataset ``{source_id: target_id}``.
 
     We treat links as natural language:
     similarity means that a pair of links share a set of keywords.
@@ -116,35 +124,35 @@ def similar_link_match(source, target) -> dict:
 
 def similar_name_match(source, target) -> dict:
     """Given 2 dictionaries ``{person_name: identifier}``,
-    match similar names and return a dictionary ``{source_id: target_id}``.
+    match similar names and return a dataset ``{source_id: target_id}``.
 
     This strategy only applies to people names.
     """
     return perfect_string_match((_process_names(source), _process_names(target)))
 
 
-def edit_distance_match(source, target, metric, threshold) -> dict:
-    """Given 2 dictionaries ``{string: identifier}``,
+def edit_distance_match(source, target_table, target_database, target_search_type, metric, threshold) -> dict:
+    """Given a source dataset ``{identifier: {string: [languages]}}``,
     match strings having the given edit distance ``metric``
-    above the given ``threshold`` and return a dictionary
+    above the given ``threshold`` and return a dataset
     ``{source_id__target_id: distance_score}``.
 
     Compute the distance for each ``(source, target)`` entity pair.
+    Target candidates are acquired as follows:
+    - build a query upon the most frequent source entity strings;
+    - exact strings are joined in an OR query, e.g., ``"string1" "string2"``;
+    - run the query against a database table containing indexed of target entities.
+
     ``distance_type`` can be one of:
 
     - ``jw``, `Jaro-Winkler <https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance>`_;
-    - ``l``, `Levenshtein`_<https://en.wikipedia.org/wiki/Levenshtein_distance>;
-    - ``dl``, `Damerau-Levenshtein`_<https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance>.
+    - ``l``, `Levenshtein<https://en.wikipedia.org/wiki/Levenshtein_distance>`_;
+    - ``dl``, `Damerau-Levenshtein<https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance>`_.
 
     Return ``None`` if the given edit distance is not valid.
     """
     scores = {}
-    distances = {
-        'jw': jellyfish.jaro_winkler,
-        'l': jellyfish.levenshtein_distance,
-        'dl': jellyfish.damerau_levenshtein_distance
-    }
-    distance_function = distances.get(metric)
+    distance_function = EDIT_DISTANCES.get(metric)
     if not distance_function:
         LOGGER.error(
             'Invalid distance_type parameter: "%s". ' +
@@ -152,30 +160,62 @@ def edit_distance_match(source, target, metric, threshold) -> dict:
             'or "dl" (Damerau-Levenshtein)', metric)
         return None
     LOGGER.info('Using %s edit distance', distance_function.__name__)
-    for source_string, source_id in source.items():
-        source_normalized, source_ascii = _normalize(source_string)
-        for target_string, target_id in target.items():
-            target_normalized, target_ascii = _normalize(target_string)
-            try:
-                distance = distance_function(
-                    source_normalized, target_normalized)
-            # Damerau-Levenshtein does not support some Unicode code points
-            except ValueError:
-                LOGGER.warning(
-                    'Skipping unsupported string in pair: "%s", "%s"',
-                    source_normalized, target_normalized)
-                continue
-            LOGGER.debug('Source: %s > %s > %s - Target: %s > %s > %s - Distance: %f',
-                         source_string, source_ascii, source_normalized,
-                         target_string, target_ascii, target_normalized,
-                         distance)
-            if distance > threshold:
-                scores['%s__%s' % (source_id, target_id)] = distance
+    for source_id, source_strings in source.items():
+        query, most_frequent_source_strings = _build_index_query(
+            source_strings)
+        LOGGER.debug('Query: %s', query)
+        target_candidates = query_index(
+            query, target_search_type, target_table, target_database)
+        if target_candidates is None:
+            LOGGER.warning('Skipping query that went wrong: %s', query)
+            continue
+        if target_candidates == {}:
+            LOGGER.info('Skipping query with no results: %s', query)
+            continue
+        # This should be a very small loop, just 1 iteration most of the time
+        for source_string in most_frequent_source_strings:
+            source_normalized, source_ascii = _normalize(source_string)
+            for result in target_candidates:
+                target_string = result[INDEXED_COLUMN]
+                target_id = result[IDENTIFIER_COLUMN]
+                target_normalized, target_ascii = _normalize(target_string)
+                try:
+                    distance = distance_function(
+                        source_normalized, target_normalized)
+                # Damerau-Levenshtein does not support some Unicode code points
+                except ValueError:
+                    LOGGER.warning(
+                        'Skipping unsupported string in pair: "%s", "%s"',
+                        source_normalized, target_normalized)
+                    continue
+                LOGGER.debug('Source: %s > %s > %s - Target: %s > %s > %s - Distance: %f',
+                             source_string, source_ascii, source_normalized,
+                             target_string, target_ascii, target_normalized,
+                             distance)
+                if (metric in ('l', 'dl') and distance <= threshold) or (metric == 'jw' and distance >= threshold):
+                    scores['%s__%s' % (source_id, target_id)] = distance
+                    LOGGER.debug("It's a match! %s -> %s",
+                                 source_id, target_id)
+                else:
+                    LOGGER.debug('Skipping potential match due to the threshold: %s -> %s - Threshold: %f - Distance: %f',
+                                 source_id, target_id, threshold, distance)
     return scores
 
 
+def _build_index_query(source_strings):
+    query_builder = []
+    frequencies = defaultdict(list)
+    for label, languages in source_strings.items():
+        frequencies[len(languages)].append(label)
+    most_frequent = frequencies[max(frequencies.keys())]
+    for label in most_frequent:
+        # TODO experiment with different strategies
+        query_builder.append('"%s"' % label)
+    return ' '.join(query_builder), most_frequent
+
+
 def _process_names(dataset) -> dict:
-    """Convert a dictionary `{person_name: identifier}`
+    """Convert a dataset `{person_name: identifier}`
     into a `{person_tokens: identifier}` one.
 
     Name tokens are grouped by identifier and joined to treat them as a string.
@@ -206,7 +246,7 @@ def _normalize(name):
 
 
 def _process_links(dataset) -> dict:
-    """Convert a dictionary `{link: identifier}`
+    """Convert a dataset `{link: identifier}`
     into a `{link_tokens: identifier}` one.
 
     Link tokens are joined to treat them as a string.
