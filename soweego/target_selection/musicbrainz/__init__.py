@@ -1,2 +1,2 @@
-from soweego.target_selection.musicbrainz import cli, musicbrainz_baseline_matcher, common
-
+from soweego.target_selection.musicbrainz import (cli,
+                                                  musicbrainz_baseline_matcher)

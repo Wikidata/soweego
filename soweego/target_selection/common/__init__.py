@@ -1,1 +1,2 @@
-from soweego.target_selection.common import matching_strategies
+from soweego.target_selection.common import (cli, matching_strategies,
+                                             matching_strategies_wrapper)
