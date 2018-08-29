@@ -1,1 +1,1 @@
-from soweego.commons import candidate_acquisition, cli, logging
+from soweego.commons import api, candidate_acquisition, cli, logging
