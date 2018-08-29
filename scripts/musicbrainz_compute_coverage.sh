@@ -51,7 +51,7 @@ mkdir "$tmp_path"
 )
 # Result evaluation
 (
-    pipenv run python3 -m soweego wikidata query_on_values "$sample" "?person wdt:P434 ?id" -o "$tmp_path/already_linked_sample"
+    pipenv run python3 -m soweego wikidata values_query "$sample" "?item wdt:P434 ?id" -o "$tmp_path/already_linked_sample"
     cd "$tmp_path"
     count=$(wc -l label_matches.json link_match.json dates_matches.json | grep total | cut -d ' ' -f5)
     count=$(($count - 5))
