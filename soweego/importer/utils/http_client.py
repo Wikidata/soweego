@@ -22,11 +22,11 @@ def http_call(base_url, method = 'GET', parameters = None, headers = list()):
 
 def download_file(url, filePath):
     """Downloads a web content and saves it in a custom filePath"""
-    try :
+    try:
         stream = requests.get(url, stream=True)
         with open(filePath, 'wb') as f:
             for chunk in stream.iter_content(chunk_size=1024): 
                 if chunk: 
                     f.write(chunk)
-    except :
+    except:
         LOGGER.warning('Unable to download {0}'.format(url))

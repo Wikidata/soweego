@@ -12,7 +12,8 @@ click = "*"
 jellyfish = "*"
 toolforge = "*"
 "iso8601" = "*"
-
+"pymysql" = "*"
+"sqlalchemy" = "*"
 
 [dev-packages]
 

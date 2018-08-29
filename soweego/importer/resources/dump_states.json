@@ -1,0 +1,67 @@
+[
+    {
+        "dump":
+        {
+            "name": "bibsys",
+            "extension": "nt",
+            "base_uri": "http://data.bibsys.no/data/notrbib/authorityentry/",
+            "file_name": "bibsys.nt",
+            "last_modified": "Fri, 04 Feb 2011 12:31:07 GMT",
+            "location": "http://data.bibsys.no/autreg/linked_data_auth_reg.nt",
+            "rdf_person": "http://xmlns.com/foaf/0.1/Person",
+            "rdf_type": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+        },
+        "mappings":
+        [
+            {
+                "id": {
+                    "unique" : true,
+                    "source_name": "http://purl.org/dc/terms/identifier",
+                    "index": true,
+                    "type": 1,
+                    "index_type": 1,
+                    "cardinality": 1
+                }
+            },
+            {
+                "name": {
+                    "unique" : false,
+                    "source_name": "http://xmlns.com/foaf/0.1/name",
+                    "index": false,
+                    "index_type": 0,
+                    "cardinality": 1
+                }
+            }
+        ]
+    },
+    {
+        "dump":
+        {
+            "name": "musicbrainz",
+            "extension": "",
+            "base_uri": "",
+            "file_name": "",
+            "last_modified": "",
+            "location": "",
+            "rdf_person": "",
+            "rdf_type": ""
+        },
+        "mappings":
+        [ ]
+    },
+    {
+        "dump":
+        {
+            "name": "discogs",
+            "extension": "",
+            "base_uri": "",
+            "file_name": "",
+            "last_modified": "",
+            "location": "",
+            "rdf_person": "",
+            "rdf_type": ""
+        },
+        "mappings":
+        [ ]
+    }
+]
