@@ -11,17 +11,17 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import click
 
-from soweego.target_selection import common, discogs, musicbrainz
+from soweego.commons import candidate_acquisition
 
 CLI_COMMANDS = {
-    'musicbrainz': musicbrainz.cli.cli,
-    'discogs': discogs.cli.cli,
-    'common': common.cli.cli
+    'build_index': candidate_acquisition.build_index,
+    'drop_index': candidate_acquisition.drop_index,
+    'query_index': candidate_acquisition.query_index
 }
 
 
-@click.group(name='target_selection', commands=CLI_COMMANDS)
+@click.group(name='commons', commands=CLI_COMMANDS)
 @click.pass_context
 def cli(ctx):
-    """Investigation on candidate targets."""
+    """Common utilities."""
     pass

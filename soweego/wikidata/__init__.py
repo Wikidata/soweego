@@ -1,2 +1,1 @@
-from soweego.wikidata import cli, query_on_values
-
+from soweego.wikidata import cli, sparql_queries
