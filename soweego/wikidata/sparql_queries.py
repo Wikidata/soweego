@@ -162,22 +162,3 @@ def _make_request(query):
             'The GET to the Wikidata SPARQL endpoint went wrong. Reason: %d %s - Query: %s',
             request.status_code, request.reason, query)
         return None
-
-
-def qid_id_by_pid(pid):
-    """Given a Property ID, generates {qid: targetID}"""
-    page_number = 0
-    limit = 0
-    while limit == 0:
-        query = """SELECT ?human ?id
-                WHERE { ?human wdt:P31 wd:Q5 . ?human wdt:%s ?id . } 
-                ORDER BY(?human) LIMIT 1000 OFFSET %s""" % (pid, page_number * 1000)
-        limit = 1000
-        result = _make_request(query)
-
-        for row in result:
-            qid = row['?human'][1:-1].split('/')[-1]
-            limit -= 1
-            yield {qid: row['?id']}
-
-        page_number += 1
