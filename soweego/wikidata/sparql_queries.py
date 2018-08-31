@@ -32,7 +32,7 @@ VALUES_QUERY_TEMPLATE = 'SELECT * WHERE { VALUES ?item { %s } . ?item %s }'
 @click.argument('identifier_property')
 @click.option('-p', '--results-per-page', default=1000, help='default: 1000')
 @click.option('-o', '--outdir', type=click.Path(), default='output', help="default: 'output'")
-def class_based_identifier_query(ontology_class, identifier_property, results_per_page, outdir):
+def instance_based_identifier_query_cli(ontology_class, identifier_property, results_per_page, outdir):
     """Run a paged SPARQL query against the Wikidata endpoint to get items and external catalog
     identifiers. Dump the result into a JSONlines file.
 
@@ -42,6 +42,11 @@ def class_based_identifier_query(ontology_class, identifier_property, results_pe
 
     Use '-p 0' to switch paging off.
     """
+    instance_based_identifier_query(
+        ontology_class, identifier_property, results_per_page, outdir)
+
+
+def instance_based_identifier_query(ontology_class, identifier_property, results_per_page, outdir):
     query = CLASS_BASED_IDENTIFIER_QUERY_TEMPLATE % (
         ontology_class, identifier_property)
     with open(os.path.join(outdir, 'class_based_identifier_query_result.jsonl'), 'w', 1) as outfile:
@@ -78,7 +83,7 @@ def _run_identifier_query(result_per_page, query, outfile):
 @click.argument('occupation_class')
 @click.option('-p', '--results-per-page', default=1000, help='default: 1000')
 @click.option('-o', '--outdir', type=click.Path(), default='output', help="default: 'output'")
-def occupation_based_identifier_query(identifier_property, occupation_class, results_per_page, outdir):
+def occupation_based_identifier_query_cli(identifier_property, occupation_class, results_per_page, outdir):
     """Run a paged SPARQL query against the Wikidata endpoint to get items and external catalog
     identifiers. Dump the result into a JSONlines file.
 
@@ -88,6 +93,11 @@ def occupation_based_identifier_query(identifier_property, occupation_class, res
 
     Use '-p 0' to switch paging off.
     """
+    occupation_based_identifier_query(
+        occupation_class, identifier_property, results_per_page, outdir)
+
+
+def occupation_based_identifier_query(occupation_class, identifier_property, results_per_page, outdir):
     query = OCCUPATION_BASED_IDENTIFIER_QUERY_TEMPLATE % (
         occupation_class, identifier_property)
     with open(os.path.join(outdir, 'occupation_based_identifier_query_result.jsonl'), 'w', 1) as outfile:
