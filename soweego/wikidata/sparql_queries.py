@@ -40,17 +40,20 @@ def instance_based_identifier_query_cli(ontology_class, identifier_property, res
 
     Use '-p 0' to switch paging off.
     """
-    instance_based_identifier_query(
-        ontology_class, identifier_property, results_per_page, outdir)
+    with open(os.path.join(outdir, 'class_based_identifier_query_result.jsonl'), 'w', 1) as outfile:
+        _dump_result(instance_based_identifier_query(
+            ontology_class, identifier_property, results_per_page), outfile)
+        LOGGER.info(
+            "Class-based identifier query result dumped as JSON lines to '%s'", outfile.name)
 
 
-def instance_based_identifier_query(ontology_class, identifier_property, results_per_page, outdir):
+def instance_based_identifier_query(ontology_class, identifier_property, results_per_page):
     query = CLASS_BASED_IDENTIFIER_QUERY_TEMPLATE % (
         ontology_class, identifier_property)
-    with open(os.path.join(outdir, 'class_based_identifier_query_result.jsonl'), 'w', 1) as outfile:
-        _run_identifier_query(results_per_page, query, outfile)
-    LOGGER.info(
-        "Class-based identifier query result dumped as JSON lines to '%s'", outfile.name)
+
+    for result in _run_identifier_query(results_per_page, query):
+        qid = result['?item'][1:-1].split('/')[-1]
+        yield {qid: result['?identifier']}
 
 
 def _run_identifier_query(result_per_page, query):
