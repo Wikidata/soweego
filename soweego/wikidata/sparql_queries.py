@@ -56,22 +56,38 @@ def values_query(items_file, condition_pattern, bucket_size, output_dir):
         for b in buckets:
             query = 'select * where { values ?item { %s } . %s }' % (
                 ' '.join(b), condition_pattern)
-            _make_request(query, o)
+            o.write(json.dumps(_make_request(query)))
     return 0
 
 
-def _make_request(query, outfile):
+def _make_request(query):
     request = get(WIKIDATA_SPARQL_ENDPOINT, params={
         'query': query}, headers={'Accept': 'text/tab-separated-values'})
     if request.ok:
         LOGGER.debug(
             'Correct HTTP request to the Wikidata SPARQL endpoint. Status code: %d - Query: %s', request.status_code, query)
-        return DictReader(request.text, separator='\t')
-        outfile.write(json.dumps(parsed + '\n', ensure_ascii=False))
-        LOGGER.info(
-            "SPARQL query results dumped as JSON lines to '%s'", outfile.name)
+        return DictReader(request.text.splitlines(), delimiter='\t')
     else:
         LOGGER.warning(
             'Will not dump results: the HTTP request to the Wikidata SPARQL endpoint went wrong. Reason: %d %s - Query: %s',
             request.status_code, request.reason, query)
         return
+
+
+def qid_id_by_pid(pid):
+    """Given a Property ID, generates {qid: targetID}"""
+    page_number = 0
+    limit = 0
+    while limit == 0:
+        query = """SELECT ?human ?id
+                WHERE { ?human wdt:P31 wd:Q5 . ?human wdt:%s ?id . } 
+                ORDER BY(?human) LIMIT 1000 OFFSET %s""" % (pid, page_number * 1000)
+        limit = 1000
+        result = _make_request(query)
+
+        for row in result:
+            qid = row['?human'][1:-1].split('/')[-1]
+            limit -= 1
+            yield {qid: row['?id']}
+
+        page_number += 1
