@@ -16,7 +16,6 @@ from csv import DictReader
 
 import click
 from requests import get
-
 from soweego.commons.logging import log_request_data
 
 LOGGER = logging.getLogger(__name__)
@@ -55,10 +54,10 @@ def instance_based_identifier_query(ontology_class, identifier_property, results
         "Class-based identifier query result dumped as JSON lines to '%s'", outfile.name)
 
 
-def _run_identifier_query(result_per_page, query, outfile):
+def _run_identifier_query(result_per_page, query):
     if result_per_page == 0:
         LOGGER.info('Running query without paging: %s', query)
-        _dump_result(_make_request(query), outfile)
+        return _make_request(query)
     else:
         LOGGER.info('Running paged query: %s', query)
         pages = 0
@@ -74,7 +73,7 @@ def _run_identifier_query(result_per_page, query, outfile):
             if result_set == 'empty':
                 LOGGER.info('Paging finished. Total pages: %d', pages)
                 break
-            _dump_result(result_set, outfile)
+            yield result_set
             pages += 1
 
 
