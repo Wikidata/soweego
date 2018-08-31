@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
+"""TODO docstring"""
 
 import datetime
 import re
@@ -8,6 +9,8 @@ import logging
 import os
 
 from soweego.importer.utils import json_utils
+from soweego.importer.handlers.nt_handler import handle
+from soweego.importer.models.orm.bibsys_entity import BibsysEntity
 from soweego.target_selection.commons import constants
 from .models.bibsys_metadata import BibsysMetadata
 
@@ -15,7 +18,14 @@ from .models.bibsys_metadata import BibsysMetadata
 LOGGER = logging.getLogger(__name__)
 
 
-def bibsys_handler(file_path: str, output: str):
+def bibsys_handler(file_path: str):
+    mappings = { '<http://purl.org/dc/terms/identifier>': 'key',
+                 '<http://xmlns.com/foaf/0.1/name>': 'name' }
+    
+    handle(file_path, mappings, BibsysEntity)
+
+
+def bibsys_scraper(file_path: str, output: str):
     if not os.path.isfile(file_path):
         raise Exception("file: {0} not found".format(file_path))
     with open(file_path) as file:

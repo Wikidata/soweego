@@ -11,8 +11,8 @@ CLI_COMMANDS = {
     'import': importer.refresh_dumps,
 }
 
-@click.group(name='target_selection', commands=CLI_COMMANDS)
+@click.group(name='importer', commands=CLI_COMMANDS)
 @click.pass_context
 def cli(ctx):
-    """Investigation on candidate targets."""
+    """Imports dumps into the DB."""
     pass

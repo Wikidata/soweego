@@ -11,4 +11,4 @@ from soweego.importer.services.import_service import ImportService
 @click.option('--output', '-o', default='TODO output path', type=click.Path(exists=True))
 def refresh_dumps(dump_states: str, output: str) -> None:
     """Checks if there is an updated dump in the output path; if not downloads the bibsys dump"""
-    ImportService().refresh_dumps(dump_states, output)
+    ImportService().refresh_dump(dump_states, output)

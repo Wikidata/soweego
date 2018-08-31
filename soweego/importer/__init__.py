@@ -1,0 +1,1 @@
+from soweego.validator import cli

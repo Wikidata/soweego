@@ -14,9 +14,10 @@ LOGGER = logging.getLogger(__name__)
 
 def deserialize(serialized_json: str) -> object:
     """json.loads wrapper, converts the result dictionary into an object"""
-    return json.loads(
-        serialized_json, 
-        object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
+    with open(serialized_json) as file:
+        return json.loads(
+            file.read(), 
+            object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
 
 
 def load(source_file: str) -> object:

@@ -1,22 +1,35 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-class DumpState(object):
-    name = None 
-    location = None 
-    extension = None 
-    last_modified = None 
-    file_name = None
-    base_uri = None
-    rdf_type = None
-    rdf_person = None
+"""TODO docstring"""
 
-    def __init__(self, name, location, extension, base_uri, rdf_type, rdf_person, last_modified = None):
-        self.name = name
-        self.location = location
-        self.extension = extension
+
+class DumpState(object):
+    output_path: str 
+    download_url: str
+    last_modified: str
+
+
+    def __init__(self, output_path, download_url, last_modified = None):
+        self.output_path = output_path
+        self.download_url = download_url
         self.last_modified = last_modified
-        self.base_uri = base_uri
-        self.file_name = '{0}.{1}'.format(self.name, self.extension)
-        self.rdf_person = rdf_person
-        self.rdf_type = rdf_type
+
+
+class Mappings(object):
+    table_name: str
+    source_name: str
+
+    def __init__(self, table_name, source_name):
+        self.table_name = table_name
+        self.source_name = source_name
+
+
+#class Dumps(object):
+#    dump: DumpState
+#    mappings: [] 
+
+
+#    def __init__(self, dump, mappings):
+#        self.dump = dump
+#        self.mappings = mappings
