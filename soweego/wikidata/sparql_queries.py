@@ -20,7 +20,6 @@ from soweego.commons.logging import log_request_data
 
 LOGGER = logging.getLogger(__name__)
 WIKIDATA_SPARQL_ENDPOINT = 'https://query.wikidata.org/sparql'
-WIKIDATA_ITEM_PREFIX = '<http://www.wikidata.org/entity/'
 CLASS_BASED_IDENTIFIER_QUERY_TEMPLATE = 'SELECT DISTINCT ?item ?identifier WHERE { ?item wdt:P31/wdt:P279* wd:%s ; wdt:%s ?identifier . }'
 OCCUPATION_BASED_IDENTIFIER_QUERY_TEMPLATE = 'SELECT DISTINCT ?item ?identifier WHERE { ?item wdt:P106/wdt:P279* wd:%s ; wdt:%s ?identifier . }'
 VALUES_QUERY_TEMPLATE = 'SELECT * WHERE { VALUES ?item { %s } . ?item %s }'
@@ -57,7 +56,8 @@ def instance_based_identifier_query(ontology_class, identifier_property, results
 def _run_identifier_query(result_per_page, query):
     if result_per_page == 0:
         LOGGER.info('Running query without paging: %s', query)
-        return _make_request(query)
+        for result in _make_request(query):
+            yield result
     else:
         LOGGER.info('Running paged query: %s', query)
         pages = 0
@@ -73,7 +73,8 @@ def _run_identifier_query(result_per_page, query):
             if result_set == 'empty':
                 LOGGER.info('Paging finished. Total pages: %d', pages)
                 break
-            yield result_set
+            for result in result_set:
+                yield result
             pages += 1
 
 
@@ -92,17 +93,20 @@ def occupation_based_identifier_query_cli(identifier_property, occupation_class,
 
     Use '-p 0' to switch paging off.
     """
-    occupation_based_identifier_query(
-        occupation_class, identifier_property, results_per_page, outdir)
+
+    with open(os.path.join(outdir, 'occupation_based_identifier_query_result.jsonl'), 'w', 1) as outfile:
+        _dump_result(occupation_based_identifier_query(
+            occupation_class, identifier_property, results_per_page), outfile)
+        LOGGER.info(
+            "Occupation-based identifier query result dumped as JSON lines to '%s'", outfile.name)
 
 
-def occupation_based_identifier_query(occupation_class, identifier_property, results_per_page, outdir):
+def occupation_based_identifier_query(occupation_class, identifier_property, results_per_page):
     query = OCCUPATION_BASED_IDENTIFIER_QUERY_TEMPLATE % (
         occupation_class, identifier_property)
-    with open(os.path.join(outdir, 'occupation_based_identifier_query_result.jsonl'), 'w', 1) as outfile:
-        _run_identifier_query(results_per_page, query, outdir)
-    LOGGER.info(
-        "Occupation-based identifier query result dumped as JSON lines to '%s'", outfile.name)
+    for result in _run_identifier_query(results_per_page, query):
+        qid = result['?item'][1:-1].split('/')[-1]
+        yield {qid: result['?identifier']}
 
 
 @click.command()
@@ -138,9 +142,6 @@ def values_query(items_file, constraint, bucket_size, outdir):
 
 def _dump_result(result_set, outfile):
     for row in result_set:
-        if row.get('?item'):
-            row['?item'] = row['?item'].replace(
-                WIKIDATA_ITEM_PREFIX, '').rstrip('>')
         outfile.write(json.dumps(row, ensure_ascii=False) + '\n')
 
 
