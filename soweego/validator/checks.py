@@ -47,4 +47,4 @@ def check_existence(wikidata_query_type, class_qid, catalog_pid, target_identifi
         set(i.rstrip() for i in target_identifiers))
     for identifier in nonexistent_identifiers:
         invalid[identifier].append(qids_to_ids[identifier])
-    json.dump(invalid, outdir, indent=2)
+    json.dump(invalid, open(outdir, 'w'), indent=2)
