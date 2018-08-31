@@ -15,7 +15,7 @@ Base = declarative_base()
 
 
 class BaseEntity(Base):
-    __tablename__ = "base_entity"
+    __tablename__ = 'base_entity'
     internal_id = Column(Integer(11), unique=True,
                          primary_key=True, autoincrement=True)
 
@@ -31,10 +31,6 @@ class BaseEntity(Base):
     died = Column(Date)
     # Date of death precision
     died_precision = Column(Integer(2))
-    # Wikimedia sister project link
-    site_link = Column(String)
-    # Third-party link (should come from a whitelist)
-    link = Column(String)
     # Full-text index over the 'name' column
     Index('name_index', name, mysql_prefix='FULLTEXT')
 
