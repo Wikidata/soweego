@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-"""TODO docstring"""
+"""DB manager based on sqlalchemy engine"""
 
 from sqlalchemy.engine import Engine
 from sqlalchemy import create_engine
@@ -9,19 +9,18 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import Session
 import logging
 
-from .. import constants as const
-from .. import localizations as loc
-from ..utils import json_utils
-
+from soweego.commons import json_utils
+from soweego.commons import localizations as loc
+from soweego.commons import constants as const
 
 LOGGER = logging.getLogger(__name__)
 
 
 class DBManager(object):
-    """TODO docstring"""
     
-
-    engine: object
+    """Class that exposes some primiteves for the DB access"""
+ 
+    __engine: object
 
 
     def __init__(self, credentials_path='TODO default credentials path'):
@@ -37,7 +36,7 @@ class DBManager(object):
         password = credentials[const.PASSWORD_KEY]
         host = credentials[const.HOST_KEY]
         try:
-            self.engine = create_engine(
+            self.__engine = create_engine(
                 '{0}://{1}:{2}@{3}/{4}'.format(db_engine, user, password, host, db_name), 
                 echo=True)
         except:  
@@ -45,12 +44,12 @@ class DBManager(object):
 
 
     def get_engine(self) -> Engine:
-        """TODO docstring"""
-        return self.engine
+        """returns the current SqlAlchemy-Engine instance"""
+        return self.__engine
 
 
     def new_session(self) -> object:
-        """TODO docstring"""
-        Session = sessionmaker(bind=self.engine)
+        """Creates a new DB session"""
+        Session = sessionmaker(bind=self.__engine)
         session = Session()
         return session

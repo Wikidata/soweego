@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""utility for .json file management"""
+"""Utility for .json file management"""
 
 import logging
 import json
@@ -30,7 +30,7 @@ def load(source_file: str) -> object:
                        source_file, str(exception)) 
 
 def export(file_path: str, obj: object, mode = 'w') -> None:
-    """serializes an object and exports it to a file"""
+    """Serializes an object and exports it to a file"""
     serialized_object = json.dumps(obj, default=lambda o: o.__dict__, sort_keys=True, indent=4)
     with codecs.open(file_path, mode, 'utf-8') as file:
         file.write('%s\n', serialized_object)

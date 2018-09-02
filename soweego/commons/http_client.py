@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
+"""Utility for http calls/connections management"""
+
 import urllib.request
 import urllib.parse
 import requests
 import logging
 
 LOGGER = logging.getLogger(__name__)
+
 
 def http_call(base_url, method = 'GET', parameters = None, headers = list()):
     """Makes a generic HTTP call, returns the response"""
@@ -19,6 +22,7 @@ def http_call(base_url, method = 'GET', parameters = None, headers = list()):
     req = urllib.request.Request(base_url, method=method)
 
     return urllib.request.urlopen(req)
+
 
 def download_file(url, filePath):
     """Downloads a web content and saves it in a custom filePath"""

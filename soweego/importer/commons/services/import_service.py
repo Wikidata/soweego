@@ -7,13 +7,13 @@ import logging
 import os
 import json
 
-from soweego.importer import localizations as loc  
-from soweego.importer import constants as const
-from soweego.importer.utils import json_utils
-from soweego.importer.utils import http_client as client
-from soweego.importer.models.dump_state import DumpState
-from soweego.importer.handlers import csv_handler as csv_handler
-from soweego.importer.handlers import nt_handler as nt_handler
+from soweego.commons import localizations as loc  
+from soweego.commons import constants as const
+from soweego.commons import json_utils
+from soweego.commons import http_client as client
+from soweego.importer.commons.models.dump_state import DumpState
+from soweego.importer.commons.handlers import csv_handler as csv_handler
+from soweego.importer.commons.handlers import nt_handler as nt_handler
 
 
 LOGGER = logging.getLogger(__name__)
@@ -34,11 +34,11 @@ class ImportService(object):
                 self.__update_dump(dump_state, last_modified)
             except Exception as e:
                 LOGGER.warning("%s\n%s", loc.FAIL_DOWNLOAD, str(e))
-            else:
-                try:
-                    handler(dump_state.output_path)
-                except Exception as e:
-                    LOGGER.warning("%s\n%s", loc.FAIL_HANDLER, str(e))
+
+        try:
+            handler(dump_state.output_path)
+        except Exception as e:
+            LOGGER.warning("%s\n%s", loc.FAIL_HANDLER, str(e))
          
 
     def __update_dump(self, dump: DumpState, last_modified: str) -> None:

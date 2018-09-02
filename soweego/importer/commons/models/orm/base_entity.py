@@ -16,21 +16,21 @@ Base = declarative_base()
 
 class BaseEntity(Base):
     __tablename__ = 'base_entity'
-    internal_id = Column(Integer(11), unique=True,
+    internal_id = Column(Integer, unique=True,
                          primary_key=True, autoincrement=True)
 
     # Catalog identifier, indexed
     catalog_id = Column(String(32), nullable=False, index=True)
     # Full name (<name> <surname>)
-    name = Column(String, nullable=False)
+    name = Column(String(255), nullable=False)
     # Date of birth
     born = Column(Date)
     # Date of birth precision
-    born_precision = Column(Integer(2))
+    born_precision = Column(Integer)
     # Date of death
     died = Column(Date)
     # Date of death precision
-    died_precision = Column(Integer(2))
+    died_precision = Column(Integer)
     # Full-text index over the 'name' column
     Index('name_index', name, mysql_prefix='FULLTEXT')
 

@@ -1,0 +1,5 @@
+{
+    "http://purl.org/dc/terms/identifier": "catalog_id",
+    "http://xmlns.com/foaf/0.1/name": "name",
+    "http://www.w3.org/2002/07/owl#sameAs": "url"
+}

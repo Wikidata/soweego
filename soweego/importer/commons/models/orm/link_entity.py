@@ -14,6 +14,8 @@ from sqlalchemy import Column, ForeignKey, Index, Integer, String
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.declarative import declarative_base
 
+from soweego.importer.commons.models.orm.bibsys_entity import BibsysEntity
+
 Base = declarative_base()
 
 
@@ -22,14 +24,15 @@ class LinkEntity(Base):
     def __init__(self, table_name):
         self.__tablename__ = table_name
 
-    internal_id = Column(Integer(11), unique=True,
+    __tablename__ = 'bibsys_linker'
+
+    internal_id = Column(Integer, unique=True,
                          primary_key=True, autoincrement=True)
-    catalog_id = Column(String, ForeignKey(
-        'base_entity.catalog_id'), index=True)
+    catalog_id = Column(String(32), ForeignKey(BibsysEntity.catalog_id), index=True)
     # Full URL
-    url = Column(String)
+    url = Column(String(255))
     # Tokenized URL
-    tokens = Column(String)
+    tokens = Column(String(255))
     # Full-text index over the 'tokens' column
     Index('tokens_index', tokens, mysql_prefix='FULLTEXT')
 
@@ -38,3 +41,6 @@ class LinkEntity(Base):
 
     def drop(self, engine: Engine) -> None:
         self.__table__.drop(engine)
+
+    def create(self, engine: Engine) -> None:
+        Base.metadata.create_all(engine)
