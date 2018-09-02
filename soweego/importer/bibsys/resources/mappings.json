@@ -1,5 +1,13 @@
 {
     "http://purl.org/dc/terms/identifier": "catalog_id",
     "http://xmlns.com/foaf/0.1/name": "name",
-    "http://www.w3.org/2002/07/owl#sameAs": "url"
+    "http://www.w3.org/2002/07/owl#sameAs": "url",
+    "http://www.kanzaki.com/ns/whois#until": "died",
+    "http://www.kanzaki.com/ns/whois#since": "born",
+    "http://def.bibsys.no/xmlns/radatana/1.0#catalogueName": "catalogue_name",
+    "http://www.w3.org/2000/01/rdf-schema#label": "label",
+    "http://www.w3.org/2004/02/skos/core#altLabel": "alt_label",
+    "http://purl.org/dc/terms/modified": "modified",
+    "http://www.w3.org/1999/02/22-rdf-syntax-ns#type": "type",
+    "http://www.w3.org/2004/02/skos/core#note": "note"
 }

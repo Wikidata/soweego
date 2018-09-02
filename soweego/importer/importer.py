@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
+"""Click-command definitions for the importer"""
+
+__author__ = 'Edoardo Lenzi'
+__email__ = 'edoardolenzi9@gmail.com'
+__version__ = '1.0'
+__license__ = 'GPL-3.0'
+__copyright__ = 'Copyleft 2018, lenzi.edoardo'
+
 import click
 
 from soweego.importer.commons.services.import_service import ImportService

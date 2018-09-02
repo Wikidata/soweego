@@ -8,8 +8,7 @@ import re
 import logging
 import os
 
-from soweego.importer.utils import json_utils
-from soweego.importer.handlers.nt_handler import handle
+from soweego.commons.json_utils import export
 from soweego.target_selection.commons import constants
 from .models.bibsys_metadata import BibsysMetadata
 
@@ -81,8 +80,7 @@ def bibsys_scraper(file_path: str, output: str):
             except Exception as exception: 
                 LOGGER.warning('Error at row: %s. \n %s', row, str(exception))
     LOGGER.info('%s \t End bibsys import', datetime.datetime.now())
-    json_utils.export(('%s\\%s' % output, constants.BIBSYS_DICTIONARY), 
-                      dictionary)
+    export(('%s\\%s' % output, constants.BIBSYS_DICTIONARY), dictionary)
 
 
 def decode_name(name: str) -> str:

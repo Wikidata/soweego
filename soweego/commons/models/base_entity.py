@@ -1,21 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+"""Base orm entity"""
+
 __author__ = 'Edoardo Lenzi'
 __email__ = 'edoardolenzi9@gmail.com'
 __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, lenzi.edoardo'
 
-from sqlalchemy import Column, Date, Index, Integer, String
+from sqlalchemy import Column, Index
+from sqlalchemy import Integer, String, Date
 from sqlalchemy.engine import Engine
-from sqlalchemy.ext.declarative import declarative_base
 
-Base = declarative_base()
-
-
-class BaseEntity(Base):
-    __tablename__ = 'base_entity'
+class BaseEntity(object):
     internal_id = Column(Integer, unique=True,
                          primary_key=True, autoincrement=True)
 
@@ -36,6 +34,3 @@ class BaseEntity(Base):
 
     def __repr__(self) -> str:
         return "<BaseEntity(catalog_id='{0}', name='{1}')>".format(self.catalog_id, self.name)
-
-    def drop(self, engine: Engine) -> None:
-        self.__table__.drop(engine)

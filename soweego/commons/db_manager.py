@@ -3,16 +3,24 @@
 
 """DB manager based on sqlalchemy engine"""
 
+__author__ = 'Edoardo Lenzi'
+__email__ = 'edoardolenzi9@gmail.com'
+__version__ = '1.0'
+__license__ = 'GPL-3.0'
+__copyright__ = 'Copyleft 2018, lenzi.edoardo'
+
 from sqlalchemy.engine import Engine
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.declarative import declarative_base
 import logging
 
 from soweego.commons import json_utils
 from soweego.commons import localizations as loc
 from soweego.commons import constants as const
 
+
+DECLARATIVE_BASE = declarative_base()
 LOGGER = logging.getLogger(__name__)
 
 
@@ -53,3 +61,15 @@ class DBManager(object):
         Session = sessionmaker(bind=self.__engine)
         session = Session()
         return session
+
+
+    def create(self, table) -> None:
+        """Creates the schema of the table (table can be an instance or a type)"""
+        DECLARATIVE_BASE.metadata.create_all(self.__engine, 
+                                             tables=[table.__table__])
+
+
+    def drop(self, table) -> None:
+        """Drops the table (table can be an instance or a type)"""
+        DECLARATIVE_BASE.metadata.drop_all(self.__engine, 
+                                           tables=[table.__table__])

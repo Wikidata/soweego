@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""TODO module docstring"""
+"""Click-command descriptions for the importer"""
 
 import click
 
 from soweego.importer import importer as importer
 
 CLI_COMMANDS = {
-    'import': importer.refresh_dumps,
+    'import_bibsys': importer.import_bibsys,
 }
 
 @click.group(name='importer', commands=CLI_COMMANDS)
