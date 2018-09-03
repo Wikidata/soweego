@@ -118,7 +118,7 @@ def occupation_based_identifier_query(occupation_class, identifier_property, res
 @click.option('-b', '--bucket-size', default=500, help="default: 500")
 @click.option('-o', '--outdir', type=click.Path(), default='output',
               help="default: 'output'")
-def values_query(items_file, constraint, bucket_size, outdir):
+def values_query(items_file, condition_pattern, bucket_size, outdir):
     """Run a SPARQL query against the Wikidata endpoint using buckets of item values
     and dump the result into a JSONlines file.
 
@@ -130,7 +130,7 @@ def values_query(items_file, constraint, bucket_size, outdir):
     with open(os.path.join(outdir, 'values_query_result.jsonl'), 'w', 1) as outfile:
         for bucket in buckets:
             query = VALUES_QUERY_TEMPLATE % (
-                ' '.join(bucket), constraint)
+                ' '.join(bucket), condition_pattern)
             result_set = _make_request(query)
             if not result_set:
                 LOGGER.warning('Skipping bucket that went wrong')

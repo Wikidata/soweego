@@ -51,14 +51,15 @@ mkdir "$tmp_path"
 )
 # Result evaluation
 (
-    pipenv run python3 -m soweego wikidata values_query "$sample" "?item wdt:P434 ?id" -o "$tmp_path/already_linked_sample"
+    cd "$1"
+    pipenv run python3 -m soweego wikidata values_query "$sample" "wdt:P434 ?id" -o "$tmp_path/"
     cd "$tmp_path"
     count=$(wc -l label_matches.json link_match.json dates_matches.json | grep total | cut -d ' ' -f5)
     count=$(($count - 5))
     echo "Total matches = $count"
     unique=$(jq keys label_matches.json link_match.json dates_matches.json | egrep -v '\[|\]' | sort -u | wc -l | cut -d ' ' -f5)
     echo "Unique matches = $unique"
-    linked=$(wc -l already_linked_sample | cut -d ' ' -f6)
+    linked=$(wc -l values_query_result.jsonl | cut -d ' ' -f6)
     sample_lenght=$(wc -l "$sample" | cut -d ' ' -f5)
     not_linked=$(($sample_lenght-$linked))
     coverage=$(echo "$unique / $sample_lenght" | bc -l)
