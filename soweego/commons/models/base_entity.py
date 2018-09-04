@@ -14,6 +14,7 @@ from sqlalchemy.engine import Engine
 
 
 class BaseEntity(object):
+    __table_args__ = {'mysql_charset': 'utf8mb4'}
     internal_id = Column(Integer, unique=True,
                          primary_key=True, autoincrement=True)
 
