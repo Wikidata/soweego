@@ -10,7 +10,6 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, lenzi.edoardo'
 
 import click
-
 from soweego.commons.file_utils import get_path
 from soweego.commons.json_utils import load
 from soweego.importer.bibsys.bibsys_handler import handle as bibsys_handler
@@ -19,7 +18,7 @@ from soweego.importer.commons.services.import_service import ImportService
 
 
 @click.command()
-@click.argument('catalogs', type=click.Choice(['bibsys', 'bne', 'discogs', 'musicbrainz'], multiple=True))
+@click.argument('catalogs', type=click.Choice(['bibsys', 'bne', 'discogs', 'musicbrainz']))
 @click.argument('dump_state_path', default=get_path("soweego.importer.bibsys.resources", "dump_state.json"), type=click.Path(exists=True))
 @click.option('--output', '-o', default=get_path("soweego.importer.bibsys.output", "bibsys.nt"), type=click.Path(exists=True))
 def import_bibsys(dump_state_path: str, output: str) -> None:
@@ -35,6 +34,7 @@ def import_bibsys(dump_state_path: str, output: str) -> None:
             import_service.refresh_dump(
                 dump_state, handlers.nt_handler.handle())
         elif catalog == 'bne':
+            print('To implement')
         elif catalog == 'discogs':
             import_service.refresh_dump(
                 dump_state, handlers.xml_handler.handle())

@@ -1,1 +1,1 @@
-from soweego.validator import cli
+from soweego.importer import cli
