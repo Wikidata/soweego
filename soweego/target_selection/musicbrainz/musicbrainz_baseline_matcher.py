@@ -4,9 +4,9 @@ import os
 import re
 from collections import defaultdict
 from urllib.parse import urlparse
-
 import click
-from soweego.target_selection.common import matching_strategies
+
+from soweego.target_selection.commons import matching_strategies
 
 
 # Utilities functions
