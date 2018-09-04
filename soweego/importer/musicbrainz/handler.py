@@ -24,7 +24,6 @@ def handler(dump_path):
         get_path('soweego.importer.resources', 'db_credentials.json'))
     db_manager.drop(MusicbrainzEntity)
     db_manager.create(MusicbrainzEntity)
-    session = db_manager.new_session()
 
     artist_alias_path = os.path.join(dump_path, 'mbdump', 'artist_alias')
     artist_path = os.path.join(dump_path, 'mbdump', 'artist')
@@ -39,6 +38,7 @@ def handler(dump_path):
 
     with open(artist_path, 'r') as artistfile:
         for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day', 'd_year', 'd_month', 'd_day', 'type_id']):
+            session = db_manager.new_session()
             if _check_person(artist['type_id']):
                 current_entity = MusicbrainzEntity()
                 current_entity.catalog_id = artist['gid']
@@ -71,7 +71,7 @@ def handler(dump_path):
                     alias_entity.name = alias_label
                     session.add(alias_entity)
 
-    session.commit()
+            session.commit()
 
 # TODO handle links
 
