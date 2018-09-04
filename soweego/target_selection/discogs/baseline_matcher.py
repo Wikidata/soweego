@@ -9,9 +9,7 @@ from pkgutil import get_data
 from urllib.parse import urlsplit
 
 import click
-
 from soweego.commons.candidate_acquisition import PROD_DB, TEST_DB
-from soweego.importer.handlers.xml_handler import extract_data_from_dump
 from soweego.target_selection.commons import matching_strategies
 
 LOGGER = logging.getLogger(__name__)
