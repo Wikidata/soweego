@@ -23,6 +23,7 @@ def handler(dump_path):
     db_manager = DBManager(
         get_path('soweego.importer.resources', 'db_credentials.json'))
     db_manager.drop(MusicbrainzEntity)
+    db_manager.create(MusicbrainzEntity)
     session = db_manager.new_session()
 
     artist_alias_path = os.path.join(dump_path, 'mbdump', 'artist_alias')
@@ -70,7 +71,6 @@ def handler(dump_path):
                     alias_entity.name = alias_label
                     session.add(alias_entity)
 
-    db_manager.create(MusicbrainzEntity)
     session.commit()
 
 # TODO handle links
