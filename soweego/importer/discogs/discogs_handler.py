@@ -13,14 +13,18 @@ import gzip
 import logging
 import xml.etree.ElementTree as et
 
-from soweego.importer.models.orm.discogs_musician_entity import \
+from soweego.commons.models.discogs_musician_entity import \
     DiscogsMusicianEntity
-from soweego.importer.services.db_manager import DBManager
+from soweego.commons.db_manager import DBManager
 
 LOGGER = logging.getLogger(__name__)
 
 
-def handle(file_path: str, mappings: dict, orm_model: DiscogsMusicianEntity):
+def handle(file_path: str):
+    #TODO import/define mappings
+    mappings: dict
+    orm_model: DiscogsMusicianEntity
+    
     db_manager = DBManager('db_credential_path')
     session = db_manager.new_session()
     # TODO improve extract_data_from_dump

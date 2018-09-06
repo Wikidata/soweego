@@ -14,7 +14,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from soweego.commons.models.base_entity import BaseEntity
 from soweego.commons.models.base_link_entity import BaseLinkEntity
-from soweego.importer.models.orm.discogs_musician_entity import \
+from soweego.commons.models.discogs_musician_entity import \
     DiscogsMusicianEntity
 
 Base = declarative_base()

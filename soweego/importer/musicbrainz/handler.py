@@ -18,7 +18,7 @@ from soweego.commons.models.musicbrainz_entity import MusicbrainzEntity
 LOGGER = logging.getLogger(__name__)
 
 
-def handler(dump_path):
+def handler(dump_path: str):
     # TODO is this get_path the right way to do it?
     db_manager = DBManager(
         get_path('soweego.importer.resources', 'db_credentials.json'))
