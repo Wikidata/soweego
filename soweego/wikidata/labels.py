@@ -7,8 +7,8 @@ from collections import defaultdict
 
 import requests
 
-WD = '/Users/focs/wikidata/'
-SAMPLE = 'musicians_1_percent_sample'
+WD = '/Users/focs/soweego/scripts/'
+SAMPLE = 'P434_musicians_sample'
 
 ids_labels = defaultdict(dict)
 f = open(WD + SAMPLE)
@@ -32,6 +32,9 @@ for b in buckets:
     dati['ids'] = '|'.join(b)
     r = requests.get("https://www.wikidata.org/w/api.php", params=dati).json()
     print('Call to API success: ', r.get('success'))
+    if not r.get('entities'):
+        print (r)
+        continue
     for qid in r['entities']:
         entity = r['entities'][qid]
         # print(entity)

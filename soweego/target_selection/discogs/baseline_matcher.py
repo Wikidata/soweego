@@ -1,21 +1,16 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-import gzip
 import json
 import logging
 import os
-import sys
-import xml.etree.ElementTree as et
 from collections import Counter, OrderedDict
 from pkgutil import get_data
 from urllib.parse import urlsplit
 
 import click
-
 from soweego.commons.candidate_acquisition import PROD_DB, TEST_DB
 from soweego.target_selection.commons import matching_strategies
-
 
 LOGGER = logging.getLogger(__name__)
 # Wikidata musicians samples
@@ -42,66 +37,6 @@ WIKI_PROJECTS = [
 MATCHING_STRATEGIES = [
     'perfect', 'links', 'names', 'jw', 'l', 'dl', 'all'
 ]
-
-
-def extract_data_from_dump(dump_file_path):
-    """Extract the set of identifiers and 3 dictionaries ``{name|link|wikilink: identifier}``
-    from a Discogs dump file path.
-
-    Dumps available at https://data.discogs.com/
-    """
-    ids = set()
-    names = {}
-    links = {}
-    wikilinks = {}
-    with gzip.open(dump_file_path, 'rt') as dump:
-        for event, element in et.iterparse(dump):
-            if element.tag == 'artist':
-                identifier = element.findtext('id')
-                ids.add(identifier)
-                # Names
-                name = element.findtext('name')
-                if name:
-                    names[name] = identifier
-                else:
-                    LOGGER.warning(
-                        'Skipping extraction for identifier with no name: %s', identifier)
-                    continue
-                real_name = element.findtext('realname')
-                if real_name:
-                    names[real_name] = identifier
-                else:
-                    LOGGER.debug('Artist %s has an empty <realname> tag', identifier)
-                variations = element.find('namevariations')
-                if variations:
-                    for variation_element in variations.iterfind('name'):
-                        variation = variation_element.text
-                        if variation:
-                            names[variation] = identifier
-                        else:
-                            LOGGER.debug(
-                                'Artist %s has an empty <namevariations> tag', identifier)
-                # Links & Wiki links
-                urls = element.find('urls')
-                if urls:
-                    for url_element in urls.iterfind('url'):
-                        url = url_element.text
-                        if url:
-                            try:
-                                domain = urlsplit(url).netloc
-                                if any(wiki_project in domain for wiki_project in WIKI_PROJECTS):
-                                    wikilinks[url] = identifier
-                                else:
-                                    links[url] = identifier
-                            except ValueError as value_error:
-                                LOGGER.warning(
-                                    "Skipping %s: '%s'", value_error, url)
-                                continue
-                        else:
-                            LOGGER.debug(
-                                'Artist %s: skipping empty <url> tag', identifier)
-                            continue
-    return ids, names, links, wikilinks
 
 
 def perfect_match(names, links, wikilinks, output_path):
