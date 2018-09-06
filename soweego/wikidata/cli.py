@@ -15,7 +15,9 @@ import click
 from soweego.wikidata import sample_additional_info, sparql_queries
 
 CLI_COMMANDS = {
-    'sparql_queries': sparql_queries.values_query,
+    'class_based_identifier_query': sparql_queries.instance_based_identifier_query_cli,
+    'occupation_based_identifier_query': sparql_queries.occupation_based_identifier_query_cli,
+    'values_query': sparql_queries.values_query,
     'get_sitelinks_for_sample': sample_additional_info.get_sitelinks_for_sample,
     'get_links_for_sample': sample_additional_info.get_links_for_sample,
     'get_birth_death_dates_for_sample':
