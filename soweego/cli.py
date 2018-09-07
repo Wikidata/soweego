@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""TODO module docstring"""
+"""The command line interface entry point."""
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -13,13 +13,14 @@ import logging
 
 import click
 
-from soweego import commons, target_selection, validator, wikidata
+from soweego import commons, ingestor, target_selection, validator, wikidata
 
 CLI_COMMANDS = {
     'commons': commons.cli.cli,
-    'validator': validator.cli.cli,
-    'wikidata': wikidata.cli.cli,
+    'ingestor': ingestor.cli.cli,
     'target_selection': target_selection.cli.cli,
+    'validator': validator.cli.cli,
+    'wikidata': wikidata.cli.cli
 }
 
 # Avoid verbose requests logging
