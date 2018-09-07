@@ -13,10 +13,11 @@ import logging
 
 import click
 
-from soweego import commons, ingestor, target_selection, validator, wikidata
+from soweego import commons, importer, ingestor, target_selection, validator, wikidata
 
 CLI_COMMANDS = {
     'commons': commons.cli.cli,
+    'importer': importer.cli.cli,
     'ingestor': ingestor.cli.cli,
     'target_selection': target_selection.cli.cli,
     'validator': validator.cli.cli,

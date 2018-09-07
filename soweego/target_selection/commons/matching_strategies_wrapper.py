@@ -2,7 +2,7 @@ import json
 import os
 
 import click
-import matching_strategies
+from . import matching_strategies #TODO revert
 
 
 @click.command()
