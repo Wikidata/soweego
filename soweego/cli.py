@@ -13,13 +13,14 @@ import logging
 
 import click
 
-from soweego import commons, target_selection, validator, wikidata
+from soweego import commons, target_selection, validator, wikidata, importer
 
 CLI_COMMANDS = {
     'commons': commons.cli.cli,
     'validator': validator.cli.cli,
     'wikidata': wikidata.cli.cli,
     'target_selection': target_selection.cli.cli,
+    'importer': importer.cli.cli,
 }
 
 # Avoid verbose requests logging

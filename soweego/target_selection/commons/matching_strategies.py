@@ -11,6 +11,7 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import logging
 import re
+import json
 from collections import defaultdict
 from urllib.parse import urlsplit
 
@@ -77,6 +78,16 @@ ASCII_TRANSLATION_TABLE = str.maketrans({
     'ь': '', 'Ь': '', 'э': 'e', 'Э': 'e', 'ю': 'ju', 'Ю': 'ju', 'я': 'ja',
     'Я': 'ja'
 })
+
+
+def perfect_string_match_wrapper(first_sample: str, second_sample: str, output: str) -> None:
+    """Is a wrapper of perfect_string_match, 
+    loads two samples (from .json files) and saves the string match output
+    (in a .json file).
+    """
+    matches = perfect_string_match([json.load(open(first_sample)), 
+                                    json.load(open(second_sample))])
+    json.dump(matches, open(output, 'w'), indent=2, ensure_ascii=False)
 
 
 def perfect_string_match(datasets) -> dict:

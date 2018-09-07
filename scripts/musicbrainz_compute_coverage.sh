@@ -18,12 +18,24 @@ if [ -z "$3" ]
   then    
     echo 'Missing argument: url formatters'
     echo 'Run the following command to retrieve them.'
-    echo '\npipenv run python3 -m soweego wikidata get_url_formatters_for_properties\n'
+    echo 'pipenv run python3 -m soweego wikidata get_url_formatters_for_properties'
     exit 1
 fi
 
-sample_labels="$1/soweego/wikidata/resources/musicians_sample_labels.json"
-sample="$1/soweego/wikidata/resources/musicians_sample_qids"
+if [ -z "$4" ]
+  then    
+    echo 'Missing argument: QID sample'
+    exit 1
+fi
+
+if [ -z "$5" ]
+  then    
+    echo 'Missing argument: names sample'
+    exit 1
+fi
+
+sample=$4
+sample_labels=$5
 
 # Creates a temp folder for auxiliary storage
 tmp_path="$(pwd)/tmp_coverage_computation"
@@ -52,14 +64,17 @@ mkdir "$tmp_path"
 # Result evaluation
 (
     cd "$tmp_path"
-    count=$(wc -l label_matches.json link_match.json dates_matches.json | grep total | cut -d ' ' -f5)
-    count=$(($count - 5))
+    count=$(wc -l label_matches.json link_match.json | grep total | grep -oP '\d+') 
+    count=$(($count - 3))
     echo "Total matches = $count"
-    unique=$(jq keys label_matches.json link_match.json dates_matches.json | egrep -v '\[|\]' | sort -u | wc -l | cut -d ' ' -f5)
+    unique=$(jq keys label_matches.json link_match.json | egrep -v '\[|\]' | sort -u | wc -l | grep -oP '\d+')
     echo "Unique matches = $unique"
-    sample_lenght=$(wc -l "$sample" | cut -d ' ' -f5)
-    coverage=$(echo "$unique / $sample_lenght" | bc -l)
-    echo "Coverage is $coverage"
+	  not_linked=$(wc -l ~/soweego/scripts/P434_musicians_sample | cut -d ' ' -f1)
+	  echo "WD items without MusicBrainz link = $not_linked"
+    coverage_total=$(echo "$count / $not_linked" | bc -l)
+    coverage_unique=$(echo "$unique / $not_linked" | bc -l)
+    echo "Coverage estimation over total matches = $coverage_total"
+    echo "Coverage estimation over unique matches = $coverage_unique"
 )
 
 
