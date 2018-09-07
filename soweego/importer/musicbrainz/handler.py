@@ -6,19 +6,27 @@
 
 import logging
 import os
+import tarfile
 from collections import defaultdict
 from csv import DictReader
 from datetime import date
 
+import requests
 import sqlalchemy
 from soweego.commons.db_manager import DBManager
 from soweego.commons.file_utils import get_path
 from soweego.commons.models.musicbrainz_entity import MusicbrainzEntity
+from soweego.importer.commons.models.dump_state import DumpState
 
 LOGGER = logging.getLogger(__name__)
 
 
-def handler(dump_path):
+def handler(tar_dump_path):
+    dump_path = os.path.join(os.path.dirname(
+        os.path.abspath(tar_dump_path)), 'dump')
+    with tarfile.open(tar_dump_path, "r:bz2") as tar:
+        tar.extractall(dump_path)
+
     # TODO is this get_path the right way to do it?
     db_manager = DBManager(
         get_path('soweego.importer.resources', 'db_credentials.json'))
@@ -74,6 +82,13 @@ def handler(dump_path):
             session.commit()
 
 # TODO handle links
+
+
+def dump_state(output, last_modified):
+    latest_version = requests.get(
+        'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/LATEST').text.rstrip()
+    download_url = 'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/%s/mbdump.tar.bz2' % latest_version
+    return DumpState(output, download_url, last_modified)
 
 
 def _get_date_and_precision(year, month, day):
