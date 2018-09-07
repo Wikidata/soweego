@@ -12,6 +12,7 @@ click = "*"
 jellyfish = "*"
 toolforge = "*"
 "iso8601" = "*"
+pywikibot = "*"
 
 
 [dev-packages]
