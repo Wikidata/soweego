@@ -79,5 +79,5 @@ def log_request_data(http_response, logger):
         'headers': http_response.request.headers,
         'decoded_body': unquote_plus(repr(http_response.request.body))
     }
-    logger.debug("Request sent: %s" % sent_request)
+    logger.debug("Request sent: %s", sent_request)
     return 0
