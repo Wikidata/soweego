@@ -119,6 +119,11 @@ replica.my.cnf
 # VI
 *.swp
 
+# pywikibot
+apicache-py3/
+pywikibot.lwp
+throttle.ctrl
+
 # soweego
 output
 
