@@ -1,6 +1,8 @@
 version: '3'
 services:
   soweego:
+    stdin_open: true
+    tty: true
     build:
       context: .
       dockerfile: Dockerfile

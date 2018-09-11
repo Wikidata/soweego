@@ -1,4 +1,4 @@
 #! /bin/bash
 
-docker-compose -f "docker-compose.dev.yml" build soweego
-docker-compose -f "docker-compose.dev.yml" run --rm soweego
+docker-compose -f "docker-compose.dev.yml" up -d --build
+docker-compose -f "docker-compose.dev.yml" exec soweego /bin/bash
