@@ -25,7 +25,7 @@ LOGGER = logging.getLogger(__name__)
 
 class DBManager(object):
 
-    """Class that exposes some primiteves for the DB access"""
+    """Class that exposes some primitives for the DB access"""
 
     __engine: object
 
