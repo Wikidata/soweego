@@ -4,12 +4,12 @@
 """Click-command descriptions for the importer"""
 
 import click
-
-from soweego.importer import importer as importer
+from soweego.importer import importer
 
 CLI_COMMANDS = {
-    'import_bibsys': importer.import_bibsys,
+    'import_catalog': importer.import_catalog,
 }
+
 
 @click.group(name='importer', commands=CLI_COMMANDS)
 @click.pass_context
