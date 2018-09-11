@@ -27,7 +27,7 @@ def handler(tar_dump_path):
     with tarfile.open(tar_dump_path, "r:bz2") as tar:
         tar.extractall(dump_path)
 
-    # TODO is this get_path the right way to do it?
+    # TODO from pkgutil import get_data
     db_manager = DBManager(
         get_path('soweego.importer.resources', 'db_credentials.json'))
     db_manager.drop(MusicbrainzEntity)
