@@ -1,0 +1,15 @@
+version: '3'
+services:
+  soweego:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+  db:
+    image: mariadb:10.0.36-xenial
+    environment:
+      - MYSQL_ROOT_PASSWORD=dba
+      - MYSQL_DATABASE=soweego
+    ports:
+      - "3306:3306"
