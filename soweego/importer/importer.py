@@ -35,13 +35,13 @@ def import_catalog(catalog, dump_state_path: str, output: str) -> None:
     if catalog == 'bibsys':
         # import_service.refresh_dump(
         #     ds, handlers.nt_handler.handle())
-        print('To implement')
+        raise NotImplementedError
     elif catalog == 'bne':
-        print('To implement')
+        raise NotImplementedError
     elif catalog == 'discogs':
         # import_service.refresh_dump(
         #     ds, handlers.xml_handler.handle())
-        print('To implement')
+        raise NotImplementedError
     elif catalog == 'musicbrainz':
         ds = dump_state(output, dump_state_dict['last_modified'])
         ds_path = os.path.join(os.path.dirname(
