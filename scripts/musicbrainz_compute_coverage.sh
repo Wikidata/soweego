@@ -69,8 +69,8 @@ mkdir "$tmp_path"
     echo "Total matches = $count"
     unique=$(jq keys label_matches.json link_match.json | egrep -v '\[|\]' | sort -u | wc -l | grep -oP '\d+')
     echo "Unique matches = $unique"
-	not_linked=$(wc -l ~/soweego/scripts/P434_musicians_sample | cut -d ' ' -f1)
-	echo "WD items without MusicBrainz link = $not_linked"
+	  not_linked=$(wc -l ~/soweego/scripts/P434_musicians_sample | cut -d ' ' -f1)
+	  echo "WD items without MusicBrainz link = $not_linked"
     coverage_total=$(echo "$count / $not_linked" | bc -l)
     coverage_unique=$(echo "$unique / $not_linked" | bc -l)
     echo "Coverage estimation over total matches = $coverage_total"
