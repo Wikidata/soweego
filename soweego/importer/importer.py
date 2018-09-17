@@ -12,9 +12,9 @@ __copyright__ = 'Copyleft 2018, lenzi.edoardo'
 import os
 
 import click
+
 from soweego.commons.file_utils import get_path
 from soweego.commons.json_utils import load
-from soweego.importer.bibsys.bibsys_handler import handle as bibsys_handler
 from soweego.importer.commons.models.dump_state import DumpState
 from soweego.importer.commons.services.import_service import ImportService
 from soweego.importer.musicbrainz.handler import dump_state, handler
