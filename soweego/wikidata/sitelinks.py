@@ -7,10 +7,11 @@ import re
 
 from collections import defaultdict
 
-WD = '/Users/focs/wikidata/'
+WD = '/Users/focs/soweego/soweego/wikidata/resources/'
+SAMPLE = 'imdb_unlinked_producers_sample'
 
 site_qid = defaultdict(dict)
-f = open(WD + 'musicians_1_percent_sample')
+f = open(WD + SAMPLE)
 lines = f.readlines()
 all_ids = [re.search('Q\d+', l).group() for l in lines]
 buckets = []
@@ -36,5 +37,5 @@ for b in buckets:
         if entity.get('sitelinks'):
             site_qid[entity['sitelinks']['enwiki']['title'].replace(' ', '_')] = qid
 
-json.dump(site_qid, open(WD + 'test_site2qid_1_percent_sample.json', 'w'), indent=2, ensure_ascii=False)
+json.dump(site_qid, open(WD + SAMPLE + '_sitelinks.json', 'w'), indent=2, ensure_ascii=False)
 

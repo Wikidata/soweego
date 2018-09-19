@@ -8,7 +8,7 @@ from collections import defaultdict
 import requests
 
 WD = '/Users/focs/soweego/soweego/wikidata/resources/'
-SAMPLE = 'bibsys_unlinked_teachers_sample'
+SAMPLE = 'imdb_unlinked_producers_sample'
 
 ids_labels = defaultdict(dict)
 f = open(WD + SAMPLE)

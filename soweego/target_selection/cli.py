@@ -11,13 +11,13 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import click
 
-from soweego.target_selection import commons, discogs, musicbrainz, bibsys
+from soweego.target_selection import bibsys, commons, discogs, musicbrainz
 
 CLI_COMMANDS = {
-    'musicbrainz': musicbrainz.cli.cli,
-    'discogs': discogs.cli.cli,
     'bibsys': bibsys.cli.cli,
-    'common': commons.cli.cli
+    'commons': commons.cli.cli,
+    'discogs': discogs.cli.cli,
+    'musicbrainz': musicbrainz.cli.cli
 }
 
 

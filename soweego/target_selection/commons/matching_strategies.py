@@ -9,12 +9,13 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+import json
 import logging
 import re
-import json
 from collections import defaultdict
 from urllib.parse import urlsplit
 
+import click
 import jellyfish
 
 from soweego.commons.candidate_acquisition import (IDENTIFIER_COLUMN,
@@ -81,13 +82,28 @@ ASCII_TRANSLATION_TABLE = str.maketrans({
 
 
 def perfect_string_match_wrapper(first_sample: str, second_sample: str, output: str) -> None:
-    """Is a wrapper of perfect_string_match, 
+    """Is a wrapper of perfect_string_match,
     loads two samples (from .json files) and saves the string match output
     (in a .json file).
     """
-    matches = perfect_string_match([json.load(open(first_sample)), 
+    matches = perfect_string_match([json.load(open(first_sample)),
                                     json.load(open(second_sample))])
     json.dump(matches, open(output, 'w'), indent=2, ensure_ascii=False)
+
+
+@click.command()
+@click.argument('source', type=click.File())
+@click.argument('target', type=click.File())
+@click.option('-o', '--output', type=click.File('w'), default='output/perfect_string_matches.json')
+def perfect_string_match_cli(source, target, output):
+    """Match perfect strings between a source and a target dataset.
+
+    SOURCE and TARGET must be {string: identifier} JSON files.
+    """
+    LOGGER.info('Starting perfect string match')
+    matches = perfect_string_match((json.load(source), json.load(target)))
+    json.dump(matches, output, indent=2, ensure_ascii=False)
+    LOGGER.info("Matches dumped to '%s'", output.name)
 
 
 def perfect_string_match(datasets) -> dict:
