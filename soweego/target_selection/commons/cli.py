@@ -14,7 +14,7 @@ import click
 from soweego.target_selection.commons import matching_strategies
 
 CLI_COMMANDS = {
-    'perfect_strings_match': matching_strategies.perfect_string_match_cli
+    'baseline_match': matching_strategies.baseline
 }
 
 
