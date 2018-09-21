@@ -41,28 +41,28 @@ RETRIEVED_REFERENCE.setTarget(TIMESTAMP)
 
 
 @click.command()
-@click.argument('mapping', type=click.File())
-@click.argument('catalog_name', type=click.Choice(['bibsys', 'discogs', 'musicbrainz', 'twitter']))
+@click.argument('catalog_name', type=click.Choice(['discogs', 'imdb', 'musicbrainz', 'twitter']))
+@click.argument('matches', type=click.File())
 @click.option('-s', '--sandbox', is_flag=True, help='Perform all edits in the Wikidata sandbox item')
-def add_identifiers_cli(mapping, catalog_name, sandbox):
+def add_identifiers_cli(catalog_name, matches, sandbox):
     """Bot add identifiers to existing Wikidata items.
     """
     if sandbox:
         LOGGER.info('Running on the Wikidata sandbox item')
-    add_identifiers(json.load(mapping), catalog_name, sandbox)
+    add_identifiers(json.load(matches), catalog_name, sandbox)
 
 
-def add_identifiers(mapping: dict, catalog_name: str, sandbox: bool):
+def add_identifiers(matches: dict, catalog_name: str, sandbox: bool):
     """Add identifier statements to existing Wikidata items.
 
-    :param mapping: a ``{QID: catalog_identifier}`` dictionary
-    :type mapping: dict
+    :param matches: a ``{QID: catalog_identifier}`` dictionary
+    :type matches: dict
     :param catalog_name: the name of the target catalog, e.g., ``musicbrainz``
     :type catalog_name: str
     :param sandbox: whether to perform edits on the Wikidata sandbox item
     :type sandbox: bool
     """
-    for qid, catalog_id in mapping.items():
+    for qid, catalog_id in matches.items():
         LOGGER.info('Processing %s match: %s -> %s',
                     catalog_name, qid, catalog_id)
         if not sandbox:
