@@ -92,7 +92,14 @@ def _parse_identifier_query_result(result_set):
 def _run_identifier_query(result_per_page, query):
     if result_per_page == 0:
         LOGGER.info('Running query without paging: %s', query)
-        for result in _make_request(query):
+        result_set = _make_request(query)
+        if not result_set:
+            LOGGER.error('The query went wrong')
+            yield {}
+        if result_set == 'empty':
+            LOGGER.warning('Empty result')
+            yield {}
+        for result in result_set:
             yield result
     else:
         LOGGER.info('Running paged query: %s', query)
