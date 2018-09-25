@@ -54,14 +54,14 @@ def add_identifiers_cli(catalog_name, matches, sandbox):
 
 @click.command()
 @click.argument('catalog_name', type=click.Choice(['discogs', 'imdb', 'musicbrainz', 'twitter']))
-@click.argument('invalid', type=click.File())
+@click.argument('invalid_identifiers', type=click.File())
 @click.option('-s', '--sandbox', is_flag=True, help='Perform all edits in a random Wikidata sandbox item')
-def delete_identifiers_cli(catalog_name, invalid, sandbox):
-    """Bot delete identifiers to existing Wikidata items.
+def delete_identifiers_cli(catalog_name, invalid_identifiers, sandbox):
+    """Bot delete invalid identifiers from existing Wikidata items.
     """
     if sandbox:
         LOGGER.info('Running on the Wikidata sandbox item')
-    delete_identifiers(json.load(invalid), catalog_name, sandbox)
+    delete_identifiers(json.load(invalid_identifiers), catalog_name, sandbox)
 
 
 def add_identifiers(matches: dict, catalog_name: str, sandbox: bool) -> None:
@@ -98,15 +98,15 @@ def delete_identifiers(invalid: dict, catalog_name: str, sandbox: bool) -> None:
     Identifiers that should be deleted come from the first validation check
     as per :func:`soweego.validator.checks.check_existence`.
 
-    :param invalid: a ``{QID: [invalid_catalog_identifiers]}`` dictionary
+    :param invalid: a ``{invalid_catalog_identifier: [list of QIDs]}`` dictionary
     :type invalid: dict
     :param catalog_name: the name of the target catalog, e.g., ``discogs``
     :type catalog_name: str
     :param sandbox: whether to perform edits on the Wikidata sandbox item
     :type sandbox: bool
     """
-    for qid, catalog_ids in invalid.items():
-        for catalog_id in catalog_ids:
+    for catalog_id, qids in invalid.items():
+        for qid in qids:
             LOGGER.info('Deleting %s identifier: %s -> %s',
                         catalog_name, qid, catalog_id)
             if sandbox:
@@ -152,6 +152,6 @@ def _delete_identifier(qid: str, catalog_id: str, catalog_name: str) -> None:
         return
     for claim in identifier_claims:
         if claim.getTarget() == catalog_id:
-            item.removeClaims([claim])
+            item.removeClaims([claim], summary='Invalid identifier')
             LOGGER.debug('Deleted claim: %s', claim.toJSON())
     LOGGER.info('Deleted %s identifier statement from %s', catalog_name, qid)
