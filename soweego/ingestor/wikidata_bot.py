@@ -54,14 +54,14 @@ def add_identifiers_cli(catalog_name, matches, sandbox):
 
 @click.command()
 @click.argument('catalog_name', type=click.Choice(['discogs', 'imdb', 'musicbrainz', 'twitter']))
-@click.argument('nonexistent', type=click.File())
+@click.argument('invalid', type=click.File())
 @click.option('-s', '--sandbox', is_flag=True, help='Perform all edits in a random Wikidata sandbox item')
-def delete_identifiers_cli(catalog_name, nonexistent, sandbox):
+def delete_identifiers_cli(catalog_name, invalid, sandbox):
     """Bot delete identifiers to existing Wikidata items.
     """
     if sandbox:
         LOGGER.info('Running on the Wikidata sandbox item')
-    delete_identifiers(json.load(nonexistent), catalog_name, sandbox)
+    delete_identifiers(json.load(invalid), catalog_name, sandbox)
 
 
 def add_identifiers(matches: dict, catalog_name: str, sandbox: bool) -> None:
@@ -92,19 +92,20 @@ def _add_or_delete(action, qid, catalog_id, catalog_name):
     actions[action](qid, catalog_id, catalog_name)
 
 
-def delete_identifiers(nonexistent: dict, catalog_name: str, sandbox: bool) -> None:
-    """Delete nonexistent identifier statements from existing Wikidata items.
+def delete_identifiers(invalid: dict, catalog_name: str, sandbox: bool) -> None:
+    """Delete invalid identifier statements from existing Wikidata items.
 
-    Nonexistent identifiers can be computed by :func:`soweego.validator.checks.check_existence`.
+    Identifiers that should be deleted come from the first validation check
+    as per :func:`soweego.validator.checks.check_existence`.
 
-    :param nonexistent: a ``{QID: [nonexistent_catalog_identifiers]}`` dictionary
-    :type nonexistent: dict
+    :param invalid: a ``{QID: [invalid_catalog_identifiers]}`` dictionary
+    :type invalid: dict
     :param catalog_name: the name of the target catalog, e.g., ``discogs``
     :type catalog_name: str
     :param sandbox: whether to perform edits on the Wikidata sandbox item
     :type sandbox: bool
     """
-    for qid, catalog_ids in nonexistent.items():
+    for qid, catalog_ids in invalid.items():
         for catalog_id in catalog_ids:
             LOGGER.info('Deleting %s identifier: %s -> %s',
                         catalog_name, qid, catalog_id)
