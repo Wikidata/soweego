@@ -30,7 +30,7 @@ LOGGER = logging.getLogger(__name__)
 def check_existence_cli(wikidata_query_type, class_qid, catalog_pid, target_identifiers, outfile):
     """Check the existence of identifier statements.
 
-    Dump a JSON file of nonexistent ones ``{identifier: QID}``
+    Dump a JSON file of invalid ones ``{identifier: QID}``
     """
     invalid = check_existence(wikidata_query_type, class_qid,
                               catalog_pid, target_identifiers)
@@ -44,13 +44,16 @@ def check_existence(wikidata_query_type, class_qid, catalog_pid, target_identifi
     elif wikidata_query_type == 'occupation':
         query_function = occupation_based_identifier_query
 
-    qids_to_ids = {}
+    target_ids_set = set(target_id.rstrip()
+                         for target_id in target_identifiers)
     invalid = defaultdict(list)
+    count = 0
     for row in query_function(class_qid, catalog_pid, 1000):
-        qids_to_ids.update(row)
-
-    nonexistent_identifiers = set(qids_to_ids.keys()).difference(
-        set(i.rstrip() for i in target_identifiers))
-    for identifier in nonexistent_identifiers:
-        invalid[identifier].append(qids_to_ids[identifier])
+        for qid, target_id in row.items():
+            if target_id not in target_ids_set:
+                LOGGER.warning(
+                    '%s identifier %s is invalid', qid, target_id)
+                invalid[target_id].append(qid)
+                count += 1
+    LOGGER.info('Total invalid identifiers = %d', count)
     return invalid
