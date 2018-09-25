@@ -46,14 +46,15 @@ def check_existence(wikidata_query_type, class_qid, catalog_pid, target_identifi
 
     target_ids_set = set(target_id.rstrip()
                          for target_id in target_identifiers)
-    invalid = defaultdict(list)
+    invalid = defaultdict(set)
     count = 0
     for row in query_function(class_qid, catalog_pid, 1000):
         for qid, target_id in row.items():
             if target_id not in target_ids_set:
                 LOGGER.warning(
                     '%s identifier %s is invalid', qid, target_id)
-                invalid[target_id].append(qid)
+                invalid[target_id].add(qid)
                 count += 1
     LOGGER.info('Total invalid identifiers = %d', count)
-    return invalid
+    # Sets are not serializable to JSON, so cast them to lists
+    return {target_id: list(qids) for target_id, qids in invalid.items()}
