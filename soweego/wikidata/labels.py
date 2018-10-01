@@ -7,8 +7,8 @@ from collections import defaultdict
 
 import requests
 
-WD = '/Users/focs/soweego/scripts/'
-SAMPLE = 'P434_musicians_sample'
+WD = '/Users/focs/soweego/soweego/wikidata/resources/'
+SAMPLE = 'imdb_unlinked_producers_sample'
 
 ids_labels = defaultdict(dict)
 f = open(WD + SAMPLE)

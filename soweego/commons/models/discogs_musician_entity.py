@@ -14,8 +14,6 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from soweego.commons.models.base_entity import BaseEntity
 from soweego.commons.models.base_link_entity import BaseLinkEntity
-from soweego.importer.models.orm.discogs_group_entity import \
-    DiscogsMusicianEntity
 
 Base = declarative_base()
 
@@ -29,7 +27,7 @@ class DiscogsMusicianEntity(BaseEntity, Base):
                          primary_key=True, autoincrement=True)
     # Discogs identifier of a group the musician belongs to
     group_id = Column(String, ForeignKey(
-        DiscogsMusicianEntity.catalog_id), index=True)
+        '%s.catalog_id' % DISCOGS_MUSICIAN_TABLE_NAME), index=True) #TODO find a better way 
     # Name in real life
     real_name = Column(String)
     # Other art names

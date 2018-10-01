@@ -1,1 +1,1 @@
-from soweego.target_selection.bibsys import cli, baseline_matcher
+from soweego.target_selection.bibsys import cli, bibsys_baseline_matcher

@@ -13,6 +13,7 @@ from datetime import date
 
 import requests
 import sqlalchemy
+
 from soweego.commons.db_manager import DBManager
 from soweego.commons.file_utils import get_path
 from soweego.commons.models.musicbrainz_entity import MusicbrainzEntity

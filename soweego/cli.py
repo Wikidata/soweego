@@ -13,7 +13,8 @@ import logging
 
 import click
 
-from soweego import commons, importer, ingestor, target_selection, validator, wikidata
+from soweego import (commons, importer, ingestor, target_selection, validator,
+                     wikidata)
 
 CLI_COMMANDS = {
     'commons': commons.cli.cli,
@@ -29,7 +30,7 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 
 
 @click.group(commands=CLI_COMMANDS)
-@click.option('--log-level',
+@click.option('-l', '--log-level',
               type=(str, click.Choice(commons.logging.LEVELS)),
               multiple=True,
               help='Module name followed by one of [DEBUG, INFO, WARNING, ERROR, CRITICAL].')

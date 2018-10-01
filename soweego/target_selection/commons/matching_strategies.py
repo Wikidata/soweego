@@ -9,12 +9,14 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+import json
 import logging
 import re
-import json
 from collections import defaultdict
+from os import path
 from urllib.parse import urlsplit
 
+import click
 import jellyfish
 
 from soweego.commons.candidate_acquisition import (IDENTIFIER_COLUMN,
@@ -80,14 +82,64 @@ ASCII_TRANSLATION_TABLE = str.maketrans({
 })
 
 
-def perfect_string_match_wrapper(first_sample: str, second_sample: str, output: str) -> None:
-    """Is a wrapper of perfect_string_match, 
-    loads two samples (from .json files) and saves the string match output
-    (in a .json file).
+@click.command()
+@click.argument('source', type=click.File())
+@click.argument('target', type=click.File())
+@click.option('-s', '--strategy', type=click.Choice(['perfect', 'links', 'names', 'all']), default='all')
+@click.option('-o', '--output-dir', type=click.Path(file_okay=False), default='output',
+              help="default: 'output'")
+def baseline(source, target, strategy, output_dir):
+    """Rule-based matching strategies.
+
+    SOURCE and TARGET must be {string: identifier} JSON files.
+
+    Available strategies are:
+    'perfect' = perfect strings;
+    'links' = similar links;
+    'names' = similar names.
+
+    Run all of them by default.
     """
-    matches = perfect_string_match([json.load(open(first_sample)), 
-                                    json.load(open(second_sample))])
-    json.dump(matches, open(output, 'w'), indent=2, ensure_ascii=False)
+    source_dataset = json.load(source)
+    LOGGER.info("Loaded source dataset '%s'", source.name)
+    target_dataset = json.load(target)
+    LOGGER.info("Loaded target dataset '%s'", target.name)
+    if strategy == 'perfect':
+        _perfect_string_wrapper(source_dataset, target_dataset, output_dir)
+    elif strategy == 'links':
+        _similar_links_wrapper(source_dataset, target_dataset, output_dir)
+    elif strategy == 'names':
+        _similar_names_wrapper(source_dataset, target_dataset, output_dir)
+    elif strategy == 'all':
+        LOGGER.info('Will run all the baseline strategies')
+        _perfect_string_wrapper(source_dataset, target_dataset, output_dir)
+        _similar_links_wrapper(source_dataset, target_dataset, output_dir)
+        _similar_names_wrapper(source_dataset, target_dataset, output_dir)
+
+
+def _similar_names_wrapper(source_dataset, target_dataset, output_dir):
+    LOGGER.info('Starting similar name match')
+    matches = similar_name_match(source_dataset, target_dataset)
+    with open(path.join(output_dir, 'similar_name_matches.json'), 'w') as output_file:
+        json.dump(matches, output_file, indent=2, ensure_ascii=False)
+        LOGGER.info("Matches dumped to '%s'", output_file.name)
+
+
+def _similar_links_wrapper(source_dataset, target_dataset, output_dir):
+    LOGGER.info('Starting similar link match')
+    matches = similar_link_match(source_dataset, target_dataset)
+    with open(path.join(output_dir, 'similar_link_matches.json'), 'w') as output_file:
+        json.dump(matches, output_file, indent=2, ensure_ascii=False)
+        LOGGER.info("Matches dumped to '%s'", output_file.name)
+    return matches
+
+
+def _perfect_string_wrapper(source_dataset, target_dataset, output_dir):
+    LOGGER.info('Starting perfect string match')
+    matches = perfect_string_match((source_dataset, target_dataset))
+    with open(path.join(output_dir, 'perfect_string_matches.json'), 'w') as output_file:
+        json.dump(matches, output_file, indent=2, ensure_ascii=False)
+        LOGGER.info("Matches dumped to '%s'", output_file.name)
 
 
 def perfect_string_match(datasets) -> dict:
