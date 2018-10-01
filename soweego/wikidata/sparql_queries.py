@@ -13,16 +13,30 @@ import json
 import logging
 import os
 from csv import DictReader
+from re import search
 
 import click
 from requests import get
+
 from soweego.commons.logging import log_request_data
 
 LOGGER = logging.getLogger(__name__)
+
+ITEM_REGEX = r'Q\d+'
+
 WIKIDATA_SPARQL_ENDPOINT = 'https://query.wikidata.org/sparql'
-CLASS_BASED_IDENTIFIER_QUERY_TEMPLATE = 'SELECT DISTINCT ?item ?identifier WHERE { ?item wdt:P31/wdt:P279* wd:%s ; wdt:%s ?identifier . }'
-OCCUPATION_BASED_IDENTIFIER_QUERY_TEMPLATE = 'SELECT DISTINCT ?item ?identifier WHERE { ?item wdt:P106/wdt:P279* wd:%s ; wdt:%s ?identifier . }'
-VALUES_QUERY_TEMPLATE = 'SELECT * WHERE { VALUES ?item { %s } . ?item %s }'
+
+ITEM_BINDING = '?item'
+IDENTIFIER_BINDING = '?identifier'
+
+CLASS_BASED_IDENTIFIER_QUERY_TEMPLATE = 'SELECT DISTINCT ' + ITEM_BINDING + ' ' + IDENTIFIER_BINDING + \
+    ' WHERE { ' + ITEM_BINDING + \
+    ' wdt:P31/wdt:P279* wd:%s ; wdt:%s ' + IDENTIFIER_BINDING + ' . }'
+OCCUPATION_BASED_IDENTIFIER_QUERY_TEMPLATE = 'SELECT DISTINCT ' + ITEM_BINDING + ' ' + IDENTIFIER_BINDING + \
+    ' WHERE { ' + ITEM_BINDING + \
+    ' wdt:P106/wdt:P279* wd:%s ; wdt:%s ' + IDENTIFIER_BINDING + ' . }'
+VALUES_QUERY_TEMPLATE = 'SELECT * WHERE { VALUES ' + \
+    ITEM_BINDING + ' { %s } . ' + ITEM_BINDING + ' %s }'
 
 
 @click.command()
@@ -50,16 +64,42 @@ def instance_based_identifier_query_cli(ontology_class, identifier_property, res
 def instance_based_identifier_query(ontology_class, identifier_property, results_per_page):
     query = CLASS_BASED_IDENTIFIER_QUERY_TEMPLATE % (
         ontology_class, identifier_property)
+    return _parse_identifier_query_result(_run_identifier_query(results_per_page, query))
 
-    for result in _run_identifier_query(results_per_page, query):
-        qid = result['?item'][1:-1].split('/')[-1]
-        yield {qid: result['?identifier']}
+
+def _parse_identifier_query_result(result_set):
+    # Paranoid checks for malformed results:
+    # it should never happen, but sometimes it does
+    for result in result_set:
+        item_uri = result.get(ITEM_BINDING)
+        if not item_uri:
+            LOGGER.error(
+                'Skipping malformed query result: no Wikidata item in %s', result)
+            continue
+        identifier = result.get(IDENTIFIER_BINDING)
+        if not identifier:
+            LOGGER.error(
+                'Skipping malformed query result: no external identifier in %s', result)
+            continue
+        qid = search(ITEM_REGEX, item_uri)
+        if not qid:
+            LOGGER.error(
+                'Skipping malformed query result: invalid Wikidata item URI %s in %s', item_uri, result)
+            continue
+        yield {qid.group(): identifier}
 
 
 def _run_identifier_query(result_per_page, query):
     if result_per_page == 0:
         LOGGER.info('Running query without paging: %s', query)
-        for result in _make_request(query):
+        result_set = _make_request(query)
+        if not result_set:
+            LOGGER.error('The query went wrong')
+            yield {}
+        if result_set == 'empty':
+            LOGGER.warning('Empty result')
+            yield {}
+        for result in result_set:
             yield result
     else:
         LOGGER.info('Running paged query: %s', query)
@@ -96,7 +136,6 @@ def occupation_based_identifier_query_cli(identifier_property, occupation_class,
 
     Use '-p 0' to switch paging off.
     """
-
     with open(os.path.join(outdir, 'occupation_based_identifier_query_result.jsonl'), 'w', 1) as outfile:
         _dump_result(occupation_based_identifier_query(
             occupation_class, identifier_property, results_per_page), outfile)
@@ -107,9 +146,7 @@ def occupation_based_identifier_query_cli(identifier_property, occupation_class,
 def occupation_based_identifier_query(occupation_class, identifier_property, results_per_page):
     query = OCCUPATION_BASED_IDENTIFIER_QUERY_TEMPLATE % (
         occupation_class, identifier_property)
-    for result in _run_identifier_query(results_per_page, query):
-        qid = result['?item'][1:-1].split('/')[-1]
-        yield {qid: result['?identifier']}
+    return _parse_identifier_query_result(_run_identifier_query(results_per_page, query))
 
 
 @click.command()
