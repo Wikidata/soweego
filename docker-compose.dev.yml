@@ -10,7 +10,7 @@ services:
       - db
     volumes:
       - type: bind
-        source: "${DUMP_FOLDER}"
+        source: ${DUMP_FOLDER}
         target: /app/dump
   db:
     image: mariadb:10.0.36-xenial
