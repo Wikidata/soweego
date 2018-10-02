@@ -1,3 +1,3 @@
 #! /bin/bash
 
-docker-compose -f "docker-compose.prod.yml" run --rm soweego
+docker run -it --name soweego  --env-file .env maxfrax/soweego:latest /bin/bash
