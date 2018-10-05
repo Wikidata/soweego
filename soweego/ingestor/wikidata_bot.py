@@ -108,7 +108,7 @@ def delete_or_deprecate_identifiers(action: str, invalid: dict, catalog_name: st
     :func:`soweego.validator.checks.check_metadata`.
 
     :param action: either ``delete`` or ``deprecate``
-    :type action: str 
+    :type action: str
     :param invalid: a ``{invalid_catalog_identifier: [list of QIDs]}`` dictionary
     :type invalid: dict
     :param catalog_name: the name of the target catalog, e.g., ``discogs``

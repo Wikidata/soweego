@@ -14,7 +14,9 @@ import click
 from soweego.validator import checks
 
 CLI_COMMANDS = {
-    'check_existence': checks.check_existence_cli
+    'check_existence': checks.check_existence_cli,
+    'check_links': checks.check_links_cli,
+    'check_metadata': checks.check_metadata_cli
 }
 
 
