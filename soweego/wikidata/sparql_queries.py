@@ -137,7 +137,7 @@ def external_id_pids_and_urls_query():
     for result in result_set:
         formatter_url = result.get(FORMATTER_URL_BINDING)
         if not formatter_url:
-            LOGGER.error(
+            LOGGER.warning(
                 'Skipping malformed query result: no formatter URL in %s', result)
             continue
         valid_pid = _get_valid_pid(result)
@@ -149,12 +149,12 @@ def external_id_pids_and_urls_query():
 def _get_valid_pid(result):
     pid_uri = result.get(PROPERTY_BINDING)
     if not pid_uri:
-        LOGGER.error(
+        LOGGER.warning(
             'Skipping malformed query result: no Wikidata property in %s', result)
         return None
     pid = search(PID_REGEX, pid_uri)
     if not pid:
-        LOGGER.error(
+        LOGGER.warning(
             'Skipping malformed query result: invalid Wikidata property URI %s in %s', pid_uri, result)
         return None
     return pid
@@ -172,7 +172,7 @@ def _parse_query_result(query_type, result_set):
     for result in result_set:
         item_uri = result.get(ITEM_BINDING)
         if not item_uri:
-            LOGGER.error(
+            LOGGER.warning(
                 'Skipping malformed query result: no Wikidata item in %s', result)
             continue
         if query_type == 'identifier':
@@ -182,12 +182,12 @@ def _parse_query_result(query_type, result_set):
             identifier_or_link = result.get(LINK_BINDING)
             to_be_logged = 'third-party URL'
         if not identifier_or_link:
-            LOGGER.error(
+            LOGGER.warning(
                 'Skipping malformed query result: no %s in %s', to_be_logged, result)
             continue
         qid = search(ITEM_REGEX, item_uri)
         if not qid:
-            LOGGER.error(
+            LOGGER.warning(
                 'Skipping malformed query result: invalid Wikidata item URI %s in %s', item_uri, result)
             continue
         yield {qid.group(): identifier_or_link}
