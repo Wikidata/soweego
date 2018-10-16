@@ -13,11 +13,9 @@ from datetime import date
 
 import requests
 import sqlalchemy
-
 from soweego.commons.db_manager import DBManager
 from soweego.commons.file_utils import get_path
 from soweego.commons.models.musicbrainz_entity import MusicbrainzEntity
-from soweego.importer.commons.models.dump_state import DumpState
 
 LOGGER = logging.getLogger(__name__)
 
@@ -85,11 +83,10 @@ def handler(tar_dump_path):
 # TODO handle links
 
 
-def dump_state(output, last_modified):
+def dump_download_path():
     latest_version = requests.get(
         'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/LATEST').text.rstrip()
-    download_url = 'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/%s/mbdump.tar.bz2' % latest_version
-    return DumpState(output, download_url, last_modified)
+    return 'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/%s/mbdump.tar.bz2' % latest_version
 
 
 def _get_date_and_precision(year, month, day):

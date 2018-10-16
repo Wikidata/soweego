@@ -12,23 +12,20 @@ __copyright__ = 'Copyleft 2018, lenzi.edoardo'
 import os
 
 import click
-
 from soweego.commons.file_utils import get_path
 from soweego.commons.json_utils import load
-from soweego.importer.commons.models.dump_state import DumpState
 from soweego.importer.commons.services.import_service import ImportService
-from soweego.importer.musicbrainz.handler import dump_state, handler
+from soweego.importer.musicbrainz.handler import dump_download_path, handler
 
 
 @click.command()
 @click.argument('catalog', type=click.Choice(['bne', 'discogs', 'musicbrainz']))
 @click.option('--output', '-o', default='output', type=click.Path())
-def import_catalog(catalog, dump_state_path: str, output: str) -> None:
+def import_catalog(catalog, output: str) -> None:
     """Checks if there is an updated dump in the output path;
        if not downloads the dump"""
 
     import_service = ImportService()
-    dump_state_dict = load(dump_state_path)
 
     # TODO set proper handle parameters
     if catalog == 'bne':
@@ -38,10 +35,10 @@ def import_catalog(catalog, dump_state_path: str, output: str) -> None:
         #     ds, handlers.xml_handler.handle())
         raise NotImplementedError
     elif catalog == 'musicbrainz':
-        ds = dump_state(output, dump_state_dict['last_modified'])
-        ds_path = os.path.join(os.path.dirname(
-            os.path.abspath(output)), 'dump_state.json')
-        import_service.refresh_dump(ds_path, ds, handler)
+        import_service.refresh_dump(
+            output, dump_download_path(), 'tar.bz2', handler)
+
+
 # Se nome dump calcolato esiste già, non fare nulla a meno di opzione -f
 # Scarico un dump da SITO CALCOLATO su base di NOME DB FORNITO
 # lo metto in POSTO SPECIFICATO con nome CATALOGO_DATAULTIMAMODIFICAINSECONDIDAL1970.ESTENSIONEFONRITA
