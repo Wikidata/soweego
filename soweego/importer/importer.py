@@ -21,8 +21,7 @@ from soweego.importer.musicbrainz.handler import dump_state, handler
 
 
 @click.command()
-@click.argument('catalog', type=click.Choice(['bibsys', 'bne', 'discogs', 'musicbrainz']))
-@click.argument('dump_state_path', type=click.Path())
+@click.argument('catalog', type=click.Choice(['bne', 'discogs', 'musicbrainz']))
 @click.option('--output', '-o', default='output', type=click.Path())
 def import_catalog(catalog, dump_state_path: str, output: str) -> None:
     """Checks if there is an updated dump in the output path;
@@ -32,11 +31,7 @@ def import_catalog(catalog, dump_state_path: str, output: str) -> None:
     dump_state_dict = load(dump_state_path)
 
     # TODO set proper handle parameters
-    if catalog == 'bibsys':
-        # import_service.refresh_dump(
-        #     ds, handlers.nt_handler.handle())
-        raise NotImplementedError
-    elif catalog == 'bne':
+    if catalog == 'bne':
         raise NotImplementedError
     elif catalog == 'discogs':
         # import_service.refresh_dump(
@@ -47,3 +42,6 @@ def import_catalog(catalog, dump_state_path: str, output: str) -> None:
         ds_path = os.path.join(os.path.dirname(
             os.path.abspath(output)), 'dump_state.json')
         import_service.refresh_dump(ds_path, ds, handler)
+# Se nome dump calcolato esiste già, non fare nulla a meno di opzione -f
+# Scarico un dump da SITO CALCOLATO su base di NOME DB FORNITO
+# lo metto in POSTO SPECIFICATO con nome CATALOGO_DATAULTIMAMODIFICAINSECONDIDAL1970.ESTENSIONEFONRITA
