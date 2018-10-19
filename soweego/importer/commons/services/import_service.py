@@ -17,23 +17,34 @@ from soweego.commons import constants as const
 from soweego.commons import http_client as client
 from soweego.commons import localizations as loc
 from soweego.commons.json_utils import export
+from soweego.importer.commons.models.base_dump_download_helper import \
+    BaseDumpDownloadHelper
 
 LOGGER = logging.getLogger(__name__)
 
 
 class ImportService(object):
 
-    def refresh_dump(self, output_folder, download_url: str, extension: str, handler):
+    def refresh_dump(self, output_folder: str, download_url: str, helper: BaseDumpDownloadHelper):
         """Downloads the dump, if necessary, 
         and calls the handler over the dump file"""
 
-        last_modified = client.http_call(download_url,
-                                         'HEAD').headers[const.LAST_MODIFIED_KEY]
+
+        try:
+            last_modified = client.http_call(download_url,
+                                             'HEAD').headers[const.LAST_MODIFIED_KEY]
+
+        except ValueError:
+            last_modified = client.http_call(helper.dump_download_uri(),
+                                             'HEAD').headers[const.LAST_MODIFIED_KEY]
+            download_url = helper.dump_download_uri()
 
         last_modified = datetime.datetime.strptime(
             last_modified, '%a, %d %b %Y %H:%M:%S GMT').strftime('%Y%m%d_%H%M%S')
 
-        file_name = "%s.%s" % (last_modified, extension)
+        extensions = download_url.split('/')[-1].split('.')[1:]
+
+        file_name = "%s.%s" % (last_modified, '.'.join(extensions))
 
         file_full_path = os.path.join(output_folder, file_name)
 
@@ -42,7 +53,7 @@ class ImportService(object):
             try:
                 self.__update_dump(download_url, file_full_path)
                 try:
-                    handler(file_full_path)
+                    helper.import_from_dump(file_full_path)
                 except Exception as e:
                     LOGGER.warning("%s\n%s", loc.FAIL_HANDLER, str(e))
             except Exception as e:

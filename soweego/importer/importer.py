@@ -14,29 +14,34 @@ import os
 import click
 from soweego.commons.file_utils import get_path
 from soweego.commons.json_utils import load
+from soweego.importer.commons.models.base_dump_download_helper import \
+    BaseDumpDownloadHelper
 from soweego.importer.commons.services.import_service import ImportService
-from soweego.importer.musicbrainz.handler import dump_download_path, handler
+from soweego.importer.musicbrainz.muscbrainz_dump_download_helper import \
+    MusicbrainzDumpDownloadHelper
 
 
 @click.command()
 @click.argument('catalog', type=click.Choice(['bne', 'discogs', 'musicbrainz']))
 @click.option('--output', '-o', default='output', type=click.Path())
-def import_catalog(catalog, output: str) -> None:
+@click.option('--download-uri', '-dp', default=None)
+def import_catalog(catalog, output: str, download_uri: str) -> None:
     """Checks if there is an updated dump in the output path;
        if not downloads the dump"""
 
     import_service = ImportService()
+    download_helper = BaseDumpDownloadHelper()
 
     # TODO set proper handle parameters
     if catalog == 'bne':
         raise NotImplementedError
     elif catalog == 'discogs':
-        # import_service.refresh_dump(
-        #     ds, handlers.xml_handler.handle())
-        raise NotImplementedError
+        download_helper = BaseDumpDownloadHelper()
     elif catalog == 'musicbrainz':
-        import_service.refresh_dump(
-            output, dump_download_path(), 'tar.bz2', handler)
+        download_helper = MusicbrainzDumpDownloadHelper()
+
+    import_service.refresh_dump(
+        output, download_uri, download_helper)
 
 
 # Se nome dump calcolato esiste già, non fare nulla a meno di opzione -f
