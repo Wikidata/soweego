@@ -2,6 +2,8 @@
 
 old_credentials="soweego/importer/resources/db_credentials.json.old"
 
+source .env
+
 # Checks if the arguments are given
 if [ -z "$1" ]
   then
@@ -11,7 +13,7 @@ if [ -z "$1" ]
         mv soweego/importer/resources/db_credentials.json.old soweego/importer/resources/db_credentials.json
     fi
     docker build --rm -f "Dockerfile" -t maxfrax/soweego:latest .
-    docker run -it --rm --name soweego  --env-file .env maxfrax/soweego:latest /bin/bash
+    docker run -it --rm --name soweego --env-file .env --volume "${DUMP_FOLDER}":"/app/dump" maxfrax/soweego:latest /bin/bash
     exit 0
 fi
 
@@ -22,4 +24,4 @@ then
 fi
 cp $1 soweego/importer/resources/db_credentials.json
 docker build --rm -f "Dockerfile" -t maxfrax/soweego:latest .
-docker run -it --rm --name soweego  --env-file .env maxfrax/soweego:latest /bin/bash
+docker run -it --rm --name soweego --env-file .env --volume "${DUMP_FOLDER}":"/app/dump" maxfrax/soweego:latest /bin/bash
