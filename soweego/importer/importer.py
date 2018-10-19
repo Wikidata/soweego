@@ -32,10 +32,10 @@ def import_catalog(catalog, output: str, download_uri: str) -> None:
     import_service = ImportService()
     download_helper = BaseDumpDownloadHelper()
 
-    # TODO set proper handle parameters
     if catalog == 'bne':
         raise NotImplementedError
     elif catalog == 'discogs':
+        # TODO implement a DownloadHelper for Discogs. There's already an old style handler written
         download_helper = BaseDumpDownloadHelper()
     elif catalog == 'musicbrainz':
         download_helper = MusicbrainzDumpDownloadHelper()
