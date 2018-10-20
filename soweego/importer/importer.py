@@ -24,7 +24,7 @@ from soweego.importer.musicbrainz.muscbrainz_dump_download_helper import \
 @click.command()
 @click.argument('catalog', type=click.Choice(['bne', 'discogs', 'musicbrainz']))
 @click.option('--output', '-o', default='output', type=click.Path())
-@click.option('--download-uri', '-dp', default=None)
+@click.option('--download-uri', '-du', default=None)
 def import_catalog(catalog, output: str, download_uri: str) -> None:
     """Checks if there is an updated dump in the output path;
        if not downloads the dump"""
