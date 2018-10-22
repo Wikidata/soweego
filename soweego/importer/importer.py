@@ -42,8 +42,3 @@ def import_catalog(catalog, output: str, download_uri: str) -> None:
 
     import_service.refresh_dump(
         output, download_uri, download_helper)
-
-
-# Se nome dump calcolato esiste già, non fare nulla a meno di opzione -f
-# Scarico un dump da SITO CALCOLATO su base di NOME DB FORNITO
-# lo metto in POSTO SPECIFICATO con nome CATALOGO_DATAULTIMAMODIFICAINSECONDIDAL1970.ESTENSIONEFONRITA
