@@ -126,12 +126,3 @@ throttle.ctrl
 
 # soweego
 output
-
-## musicbrainz
-soweego/target_selection/musicbrainz/musicbrainz_dump*
-soweego/target_selection/musicbrainz/output/*
-
-## bibsys
-soweego/target_selection/bibsys/resources/
-soweego/target_selection/bibsys/output/
-debugger.py

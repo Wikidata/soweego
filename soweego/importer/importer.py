@@ -12,38 +12,33 @@ __copyright__ = 'Copyleft 2018, lenzi.edoardo'
 import os
 
 import click
-
 from soweego.commons.file_utils import get_path
 from soweego.commons.json_utils import load
-from soweego.importer.commons.models.dump_state import DumpState
+from soweego.importer.commons.models.base_dump_download_helper import \
+    BaseDumpDownloadHelper
 from soweego.importer.commons.services.import_service import ImportService
-from soweego.importer.musicbrainz.handler import dump_state, handler
+from soweego.importer.musicbrainz.muscbrainz_dump_download_helper import \
+    MusicbrainzDumpDownloadHelper
 
 
 @click.command()
-@click.argument('catalog', type=click.Choice(['bibsys', 'bne', 'discogs', 'musicbrainz']))
-@click.argument('dump_state_path', type=click.Path())
+@click.argument('catalog', type=click.Choice(['bne', 'discogs', 'musicbrainz']))
 @click.option('--output', '-o', default='output', type=click.Path())
-def import_catalog(catalog, dump_state_path: str, output: str) -> None:
+@click.option('--download-uri', '-du', default=None)
+def import_catalog(catalog, output: str, download_uri: str) -> None:
     """Checks if there is an updated dump in the output path;
        if not downloads the dump"""
 
     import_service = ImportService()
-    dump_state_dict = load(dump_state_path)
+    download_helper = BaseDumpDownloadHelper()
 
-    # TODO set proper handle parameters
-    if catalog == 'bibsys':
-        # import_service.refresh_dump(
-        #     ds, handlers.nt_handler.handle())
-        raise NotImplementedError
-    elif catalog == 'bne':
+    if catalog == 'bne':
         raise NotImplementedError
     elif catalog == 'discogs':
-        # import_service.refresh_dump(
-        #     ds, handlers.xml_handler.handle())
-        raise NotImplementedError
+        # TODO implement a DownloadHelper for Discogs. There's already an old style handler written
+        download_helper = BaseDumpDownloadHelper()
     elif catalog == 'musicbrainz':
-        ds = dump_state(output, dump_state_dict['last_modified'])
-        ds_path = os.path.join(os.path.dirname(
-            os.path.abspath(output)), 'dump_state.json')
-        import_service.refresh_dump(ds_path, ds, handler)
+        download_helper = MusicbrainzDumpDownloadHelper()
+
+    import_service.refresh_dump(
+        output, download_uri, download_helper)

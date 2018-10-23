@@ -10,11 +10,9 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import click
-
-from soweego.target_selection import bibsys, commons, discogs, musicbrainz
+from soweego.target_selection import commons, discogs, musicbrainz
 
 CLI_COMMANDS = {
-    'bibsys': bibsys.cli.cli,
     'commons': commons.cli.cli,
     'discogs': discogs.cli.cli,
     'musicbrainz': musicbrainz.cli.cli

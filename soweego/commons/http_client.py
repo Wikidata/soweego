@@ -10,6 +10,7 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, lenzi.edoardo'
 
 import logging
+import ssl
 import urllib.parse
 import urllib.request
 
@@ -25,7 +26,7 @@ def http_call(base_url, method='GET', parameters=None, headers=list()):
         base_url = '{0}?{1}'.format(base_url, params)
 
     # TODO headers implementation
-
+    ssl._create_default_https_context = ssl._create_unverified_context
     req = urllib.request.Request(base_url, method=method)
     return urllib.request.urlopen(req)
 
@@ -33,7 +34,7 @@ def http_call(base_url, method='GET', parameters=None, headers=list()):
 def download_file(url, filePath):
     """Downloads a web content and saves it in a custom filePath"""
     try:
-        stream = requests.get(url, stream=True)
+        stream = requests.get(url, stream=True, verify=False)
         with open(filePath, 'wb') as f:
             for chunk in stream.iter_content(chunk_size=1024):
                 if chunk:
