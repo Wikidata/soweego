@@ -43,13 +43,31 @@ RETRIEVED_REFERENCE.setTarget(TIMESTAMP)
 @click.command()
 @click.argument('catalog_name', type=click.Choice(['discogs', 'imdb', 'musicbrainz', 'twitter']))
 @click.argument('matches', type=click.File())
-@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits in the Wikidata sandbox item')
+@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits in the Wikidata sandbox item Q4115189')
 def add_identifiers_cli(catalog_name, matches, sandbox):
     """Bot add identifiers to existing Wikidata items.
     """
     if sandbox:
         LOGGER.info('Running on the Wikidata sandbox item')
     add_identifiers(json.load(matches), catalog_name, sandbox)
+
+
+@click.command()
+@click.argument('catalog_name', type=click.Choice(['discogs', 'imdb', 'musicbrainz', 'twitter']))
+@click.argument('statements', type=click.File())
+@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits in the Wikidata sandbox item Q4115189')
+def add_statements_cli(catalog_name, statements, sandbox):
+    """Bot add statements to existing Wikidata items.
+    """
+    stated_in = vocabulary.CATALOG_MAPPING.get(catalog_name)['qid']
+    if sandbox:
+        LOGGER.info('Running on the Wikidata sandbox item')
+    for statement in statements:
+        subject, predicate, value = statement.rstrip().split('\t')
+        if sandbox:
+            _add(vocabulary.SANDBOX_1_QID, predicate, value, stated_in)
+        else:
+            _add(subject, predicate, value, stated_in)
 
 
 @click.command()
@@ -85,16 +103,40 @@ def add_identifiers(matches: dict, catalog_name: str, sandbox: bool) -> None:
     :type matches: dict
     :param catalog_name: the name of the target catalog, e.g., ``musicbrainz``
     :type catalog_name: str
-    :param sandbox: whether to perform edits on the Wikidata sandbox item
+    :param sandbox: whether to perform edits on the Wikidata sandbox item Q4115189
     :type sandbox: bool
     """
+    catalog_terms = vocabulary.CATALOG_MAPPING.get(catalog_name)
     for qid, catalog_id in matches.items():
         LOGGER.info('Processing %s match: %s -> %s',
                     catalog_name, qid, catalog_id)
         if sandbox:
-            _add(vocabulary.SANDBOX_1_QID, catalog_id, catalog_name)
+            _add(vocabulary.SANDBOX_1_QID,
+                 catalog_terms['pid'], catalog_id, catalog_terms['qid'])
         else:
-            _add(qid, catalog_id, catalog_name)
+            _add(qid, catalog_terms['pid'], catalog_id, catalog_terms['qid'])
+
+
+def add_statements(statements: list, stated_in: str, sandbox: bool) -> None:
+    """Add generic statements to existing Wikidata items.
+
+    Addition candidates typically come from validation criteria 2 or 3
+    as per :func:`soweego.validator.checks.check_links` and
+    :func:`soweego.validator.checks.check_metadata`.
+
+    :param statements: list of (subject, predicate, value) triples
+    :type statements: list
+    :param stated_in: QID of the target catalog where statements come from
+    :type stated_in: str
+    :param sandbox: whether to perform edits on the Wikidata sandbox item Q4115189
+    :type sandbox: bool
+    """
+    for subject, predicate, value in statements:
+        LOGGER.info('Processing (%s, %s, %s) statement')
+        if sandbox:
+            _add(vocabulary.SANDBOX_1_QID, predicate, value, stated_in)
+        else:
+            _add(subject, predicate, value, stated_in)
 
 
 def delete_or_deprecate_identifiers(action: str, invalid: dict, catalog_name: str, sandbox: bool) -> None:
@@ -113,7 +155,7 @@ def delete_or_deprecate_identifiers(action: str, invalid: dict, catalog_name: st
     :type invalid: dict
     :param catalog_name: the name of the target catalog, e.g., ``discogs``
     :type catalog_name: str
-    :param sandbox: whether to perform edits on the Wikidata sandbox item
+    :param sandbox: whether to perform edits on the Wikidata sandbox item Q4115189
     :type sandbox: bool
     """
     for catalog_id, qids in invalid.items():
@@ -127,19 +169,19 @@ def delete_or_deprecate_identifiers(action: str, invalid: dict, catalog_name: st
                 _delete_or_deprecate(action, qid, catalog_id, catalog_name)
 
 
-def _add(qid: str, catalog_id: str, catalog_name: str) -> None:
-    subject = pywikibot.ItemPage(REPO, qid)
-    catalog_terms = vocabulary.CATALOG_MAPPING.get(catalog_name)
-    claim = pywikibot.Claim(REPO, catalog_terms['pid'])
+def _add(subject_qid: str, catalog_pid: str, catalog_id: str, stated_in_qid: str) -> None:
+    subject = pywikibot.ItemPage(REPO, subject_qid)
+    claim = pywikibot.Claim(REPO, catalog_pid)
     claim.setTarget(catalog_id)
     subject.addClaim(claim)
     LOGGER.debug('Added claim: %s', claim.toJSON())
     STATED_IN_REFERENCE.setTarget(
-        pywikibot.ItemPage(REPO, catalog_terms['qid']))
+        pywikibot.ItemPage(REPO, stated_in_qid))
     claim.addSources([STATED_IN_REFERENCE, RETRIEVED_REFERENCE])
     LOGGER.debug('Added reference node: %s, %s',
                  STATED_IN_REFERENCE.toJSON(), RETRIEVED_REFERENCE.toJSON())
-    LOGGER.info('Added %s identifier statement to %s', catalog_name, qid)
+    LOGGER.info('Added (%s, %s, %s) statement',
+                subject_qid, catalog_pid, catalog_id)
 
 
 def _delete_or_deprecate(action: str, qid: str, catalog_id: str, catalog_name: str) -> None:

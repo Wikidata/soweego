@@ -16,7 +16,8 @@ from soweego.ingestor import wikidata_bot
 CLI_COMMANDS = {
     'add_identifiers': wikidata_bot.add_identifiers_cli,
     'delete_identifiers': wikidata_bot.delete_identifiers_cli,
-    'deprecate_identifiers': wikidata_bot.deprecate_identifiers_cli
+    'deprecate_identifiers': wikidata_bot.deprecate_identifiers_cli,
+    'add_statements': wikidata_bot.add_statements_cli
 }
 
 
