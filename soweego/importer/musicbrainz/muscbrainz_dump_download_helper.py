@@ -42,6 +42,8 @@ class MusicbrainzDumpDownloadHelper(BaseDumpDownloadHelper):
             get_path('soweego.importer.resources', 'db_credentials.json'))
         db_manager.drop(MusicbrainzPersonEntity)
         db_manager.create(MusicbrainzPersonEntity)
+        db_manager.drop(MusicbrainzBandEntity)
+        db_manager.create(MusicbrainzBandEntity)
 
         artist_alias_path = os.path.join(dump_path, 'mbdump', 'artist_alias')
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
@@ -57,8 +59,23 @@ class MusicbrainzDumpDownloadHelper(BaseDumpDownloadHelper):
         with open(artist_path, 'r') as artistfile:
             for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day', 'd_year', 'd_month', 'd_day', 'type_id']):
                 session = db_manager.new_session()
-                if self._check_person(artist['type_id']) or self._check_band(artist['type_id']):
+                if self._check_person(artist['type_id']):
                     current_entity = MusicbrainzPersonEntity()
+
+                    try:
+                        self._fill_entity(current_entity, artist)
+                    except ValueError:
+                        LOGGER.error('Wrong date: %s' % artist)
+                        continue
+
+                    session.add(current_entity)
+
+                    # Creates an entity foreach available alias
+                    session.add_all(self._alias_entities(
+                        current_entity, MusicbrainzPersonEntity, aliases[artist['id']]))
+
+                if self._check_band(artist['type_id']):
+                    current_entity = MusicbrainzBandEntity()
 
                     try:
                         self._fill_entity(current_entity, artist)
