@@ -34,6 +34,9 @@ IMDB_PID = 'P345'
 MUSICBRAINZ_ARTIST_PID = 'P434'
 TWITTER_USERNAME_PID = 'P2002'
 
+# Widely used generic property to hold URLs
+DESCRIBED_AT_URL_PID = 'P973'
+
 # Target catalogs helper dictionary
 CATALOG_MAPPING = {
     'discogs': {
