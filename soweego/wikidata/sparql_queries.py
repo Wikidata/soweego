@@ -15,6 +15,7 @@ import json
 import logging
 import os
 from csv import DictReader
+from functools import lru_cache
 from re import search
 from typing import Iterator
 
@@ -30,12 +31,15 @@ ITEM_REGEX = r'Q\d+'
 PID_REGEX = r'P\d+'
 
 WIKIDATA_SPARQL_ENDPOINT = 'https://query.wikidata.org/sparql'
+DEFAULT_RESPONSE_FORMAT = 'text/tab-separated-values'
+JSON_RESPONSE_FORMAT = 'application/json'
 
 ITEM_BINDING = '?item'
 IDENTIFIER_BINDING = '?identifier'
 PROPERTY_BINDING = '?property'
 LINK_BINDING = '?link'
 FORMATTER_URL_BINDING = '?formatter_url'
+FORMATTER_REGEX_BINDING = '?formatter_regex'
 
 URL_PID_TERMS = ' '.join(['wdt:%s' % pid for pid in vocabulary.URL_PIDS])
 
@@ -58,11 +62,15 @@ LINKS_CLASS_BASED_QUERY_TEMPLATE = 'SELECT DISTINCT ' + ITEM_BINDING + ' ' + LIN
 LINKS_OCCUPATION_BASED_QUERY_TEMPLATE = 'SELECT DISTINCT ' + ITEM_BINDING + ' ' + LINK_BINDING + \
     ' WHERE { VALUES ' + PROPERTY_BINDING + ' { ' + URL_PID_TERMS + ' } . ' + ITEM_BINDING + ' wdt:' + vocabulary.OCCUPATION_PID + '/wdt:P279* wd:%s ; wdt:%s ' + IDENTIFIER_BINDING + \
     ' ; ' + PROPERTY_BINDING + ' ' + LINK_BINDING + ' . }'
+CATALOG_QID_QUERY_TEMPLATE = 'SELECT ' + ITEM_BINDING + \
+    ' WHERE { wd:%s wdt:P1629 ' + ITEM_BINDING + ' . }'
 
 URL_PIDS_QUERY = 'SELECT ?property WHERE { ?property a wikibase:Property ; wikibase:propertyType wikibase:Url . }'
 EXT_ID_PIDS_AND_URLS_QUERY = 'SELECT * WHERE { ' + PROPERTY_BINDING + \
     ' a wikibase:Property ; wikibase:propertyType wikibase:ExternalId ; wdt:P1630 ' + \
-    FORMATTER_URL_BINDING + ' . }'
+    FORMATTER_URL_BINDING + \
+    ' . OPTIONAL { ' + PROPERTY_BINDING + ' wdt:P1793 ' + \
+    FORMATTER_REGEX_BINDING + ' . } . }'
 
 
 @click.command()
@@ -87,6 +95,7 @@ def identifier_class_based_query_cli(ontology_class, identifier_property, result
             "Class-based identifier query result dumped as JSON lines to '%s'", outfile.name)
 
 
+@lru_cache()
 def run_identifier_or_links_query(query_type: tuple, class_qid: str, catalog_pid: str, result_per_page: int) -> Iterator[dict]:
     """Run a filled SPARQL query template against the Wikidata endpoint with eventual paging.
 
@@ -120,6 +129,17 @@ def run_identifier_or_links_query(query_type: tuple, class_qid: str, catalog_pid
         raise NotImplementedError
 
 
+def catalog_qid_query(catalog_pid):
+    LOGGER.info('Retrieving the catalog QID from PID %s', catalog_pid)
+    result_set = _make_request(CATALOG_QID_QUERY_TEMPLATE % catalog_pid)
+    for result in result_set:
+        valid_qid = _get_valid_qid(result)
+        if not valid_qid:
+            continue
+        yield valid_qid.group()
+
+
+@lru_cache()
 def url_pids_query():
     LOGGER.info('Retrieving PIDs with URL values')
     result_set = _make_request(URL_PIDS_QUERY)
@@ -130,20 +150,50 @@ def url_pids_query():
         yield valid_pid.group()
 
 
+@lru_cache()
 def external_id_pids_and_urls_query():
     LOGGER.info(
-        'Retrieving PIDs with external ID values and their formatter URLs')
-    result_set = _make_request(EXT_ID_PIDS_AND_URLS_QUERY)
-    for result in result_set:
-        formatter_url = result.get(FORMATTER_URL_BINDING)
+        'Retrieving PIDs with external ID values, their formatter URLs and regexps')
+    result_set = _make_request(
+        EXT_ID_PIDS_AND_URLS_QUERY, response_format=JSON_RESPONSE_FORMAT)
+    for result in result_set['results']['bindings']:
+        formatter_url_dict = result.get(FORMATTER_URL_BINDING.lstrip('?'))
+        if not formatter_url_dict:
+            LOGGER.warning(
+                'Skipping malformed query result: no formatter URL binding in %s', result)
+            continue
+        formatter_url = formatter_url_dict.get('value')
         if not formatter_url:
             LOGGER.warning(
-                'Skipping malformed query result: no formatter URL in %s', result)
+                'Skipping malformed query result: no formatter URL in %s', formatter_url_dict)
             continue
-        valid_pid = _get_valid_pid(result)
-        if not valid_pid:
+        formatter_regex_dict = result.get(FORMATTER_REGEX_BINDING.lstrip('?'))
+        if formatter_regex_dict:
+            formatter_regex = formatter_regex_dict.get('value')
+            if not formatter_regex:
+                LOGGER.warning(
+                    'Skipping malformed query result: no formatter regex in %s', formatter_regex_dict)
+                continue
+        else:
+            formatter_regex = None
+            LOGGER.debug(
+                'No formatter regex in %s', result)
+        pid_uri_dict = result.get(PROPERTY_BINDING.lstrip('?'))
+        if not pid_uri_dict:
+            LOGGER.warning(
+                'Skipping malformed query result: no Wikidata property binding in %s', result)
             continue
-        yield {valid_pid.group(): formatter_url}
+        pid_uri = pid_uri_dict.get('value')
+        if not pid_uri:
+            LOGGER.warning(
+                'Skipping malformed query result: no Wikidata property in %s', pid_uri_dict)
+            continue
+        pid = search(PID_REGEX, pid_uri)
+        if not pid:
+            LOGGER.warning(
+                'Skipping malformed query result: invalid Wikidata property URI %s in %s', pid_uri, result)
+            continue
+        yield {pid.group(): {formatter_url: formatter_regex}}
 
 
 def _get_valid_pid(result):
@@ -170,11 +220,6 @@ def _parse_query_result(query_type, result_set):
     # Paranoid checks for malformed results:
     # it should never happen, but it actually does
     for result in result_set:
-        item_uri = result.get(ITEM_BINDING)
-        if not item_uri:
-            LOGGER.warning(
-                'Skipping malformed query result: no Wikidata item in %s', result)
-            continue
         if query_type == 'identifier':
             identifier_or_link = result.get(IDENTIFIER_BINDING)
             to_be_logged = 'external identifier'
@@ -185,12 +230,24 @@ def _parse_query_result(query_type, result_set):
             LOGGER.warning(
                 'Skipping malformed query result: no %s in %s', to_be_logged, result)
             continue
-        qid = search(ITEM_REGEX, item_uri)
-        if not qid:
-            LOGGER.warning(
-                'Skipping malformed query result: invalid Wikidata item URI %s in %s', item_uri, result)
+        valid_qid = _get_valid_qid(result)
+        if not valid_qid:
             continue
-        yield {qid.group(): identifier_or_link}
+        yield {valid_qid.group(): identifier_or_link}
+
+
+def _get_valid_qid(result):
+    item_uri = result.get(ITEM_BINDING)
+    if not item_uri:
+        LOGGER.warning(
+            'Skipping malformed query result: no Wikidata item in %s', result)
+        return None
+    qid = search(ITEM_REGEX, item_uri)
+    if not qid:
+        LOGGER.warning(
+            'Skipping malformed query result: invalid Wikidata item URI %s in %s', item_uri, result)
+        return None
+    return qid
 
 
 def _run_paged_query(result_per_page, query):
@@ -289,14 +346,17 @@ def _dump_result(result_set, outfile):
         outfile.write(json.dumps(row, ensure_ascii=False) + '\n')
 
 
-def _make_request(query):
-    request = get(WIKIDATA_SPARQL_ENDPOINT, params={
-        'query': query}, headers={'Accept': 'text/tab-separated-values'})
-    log_request_data(request, LOGGER)
-    if request.ok:
+def _make_request(query, response_format=DEFAULT_RESPONSE_FORMAT):
+    response = get(WIKIDATA_SPARQL_ENDPOINT, params={
+        'query': query}, headers={'Accept': response_format})
+    log_request_data(response, LOGGER)
+    if response.ok:
         LOGGER.debug(
-            'Successful GET to the Wikidata SPARQL endpoint. Status code: %d', request.status_code)
-        response_body = request.text.splitlines()
+            'Successful GET to the Wikidata SPARQL endpoint. Status code: %d', response.status_code)
+        if response_format == JSON_RESPONSE_FORMAT:
+            LOGGER.debug('Returning JSON results')
+            return response.json()
+        response_body = response.text.splitlines()
         if len(response_body) == 1:
             LOGGER.debug('Got an empty result set from query: %s', query)
             return 'empty'
@@ -304,5 +364,5 @@ def _make_request(query):
         return DictReader(response_body, delimiter='\t')
     LOGGER.warning(
         'The GET to the Wikidata SPARQL endpoint went wrong. Reason: %d %s - Query: %s',
-        request.status_code, request.reason, query)
+        response.status_code, response.reason, query)
     return None
