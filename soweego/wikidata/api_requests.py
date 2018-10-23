@@ -36,7 +36,7 @@ def get_links(qids: set, url_pids: set, ext_id_pids_to_urls: dict) -> Iterator[d
     :type qids: set
     :param url_pids: set of Wikidata PIDs having a URL as expected value
     :type url_pids: set
-    :param ext_id_pids_to_urls: a dictionary ``{external_ID_PID: [formatter_URLs]}``
+    :param ext_id_pids_to_urls: a dictionary ``{external_ID_PID: {formatter_URL: formatter_regex}}``
     :type ext_id_pids_to_urls: dict
     :return: a generator yielding ``{QID: URL}``
     :rtype: Iterator[dict]
@@ -59,7 +59,7 @@ def get_links(qids: set, url_pids: set, ext_id_pids_to_urls: dict) -> Iterator[d
                 log_request_data(response, LOGGER)
             except ChunkedEncodingError:
                 LOGGER.error(
-                    'Connection broken, will retry the request to the Wikidata API.')
+                    'Connection broken, retrying the request to the Wikidata API')
                 connection_is_ok = False
             else:
                 connection_is_ok = True
@@ -129,27 +129,33 @@ def _extract_value_from_claim(pid_claim, pid, qid):
     LOGGER.debug('Processing (%s, %s) claim: %s', qid, pid, pid_claim)
     main_snak = pid_claim.get('mainsnak')
     if not main_snak:
-        LOGGER.error(
-            'Skipping malformed (%s, %s) claim with no main snak: %s', qid, pid, pid_claim)
+        LOGGER.warning(
+            'Skipping malformed (%s, %s) claim with no main snak', qid, pid)
+        LOGGER.debug('Malformed claim: %s', pid_claim)
         return None
     snak_type = main_snak.get('snaktype')
     if not snak_type:
-        LOGGER.error(
-            'Skipping malformed (%s, %s) claim with no snak type: %s', qid, pid, pid_claim)
+        LOGGER.warning(
+            'Skipping malformed (%s, %s) claim with no snak type', qid, pid)
+        LOGGER.debug('Malformed claim: %s', pid_claim)
         return None
     if snak_type == 'novalue':
-        LOGGER.error(
-            'Skipping malformed (%s, %s) claim with no value: %s', qid, pid, pid_claim)
+        LOGGER.warning(
+            "Skipping unexpected (%s, %s) claim with 'novalue' snak type", qid, pid)
+        LOGGER.debug(
+            "Unexpected claim with 'novalue' snak type: %s", pid_claim)
         return None
     data_value = main_snak.get('datavalue')
     if not data_value:
-        LOGGER.error(
-            'Skipping malformed (%s, %s) claim with no datavalue: %s', qid, pid, pid_claim)
+        LOGGER.warning(
+            "Skipping unexpected (%s, %s) claim with no 'datavalue'", qid, pid)
+        LOGGER.debug("Unexpected claim with no 'datavalue': %s", pid_claim)
         return None
     value = data_value.get('value')
     if not value:
-        LOGGER.error(
-            'Skipping malformed (%s, %s) claim with no value: %s', qid, pid, pid_claim)
+        LOGGER.warning(
+            'Skipping malformed (%s, %s) claim with no value', qid, pid)
+        LOGGER.debug('Malformed claim: %s', pid_claim)
         return None
     LOGGER.debug(
         'QID: %s - PID: %s - Value: %s', qid, pid, value)
