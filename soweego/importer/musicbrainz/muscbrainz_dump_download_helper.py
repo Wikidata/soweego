@@ -16,7 +16,8 @@ import sqlalchemy
 from soweego.commons.db_manager import DBManager
 from soweego.commons.file_utils import get_path
 from soweego.commons.models.base_entity import BaseEntity
-from soweego.commons.models.musicbrainz_entity import MusicbrainzPersonEntity
+from soweego.commons.models.musicbrainz_entity import (MusicbrainzBandEntity,
+                                                       MusicbrainzPersonEntity)
 from soweego.importer.commons.models.base_dump_download_helper import \
     BaseDumpDownloadHelper
 
