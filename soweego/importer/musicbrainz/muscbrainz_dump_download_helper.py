@@ -100,6 +100,10 @@ class MusicbrainzDumpDownloadHelper(BaseDumpDownloadHelper):
             precision = 11
 
         date_list = ['0001' if i == '\\N' else i for i in date_list]
+
+        if precision == -1:
+            return (None, None)
+
         return (date(int(date_list[0]), int(date_list[1]), int(date_list[2])), precision)
 
     def _check_person(self, type_code):
