@@ -13,8 +13,10 @@ jellyfish = "*"
 toolforge = "*"
 "iso8601" = "*"
 pywikibot = "*"
-"pymysql" = "*"
-"sqlalchemy" = "*"
+pymysql = "*"
+sqlalchemy = "*"
+regex = "*"
+
 
 [dev-packages]
 
