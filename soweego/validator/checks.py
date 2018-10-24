@@ -255,9 +255,9 @@ def _resolve(url):
             'SSL certificate verification failed, will retry without verification. Original URL: <%s> - Reason: %s', url, ssl_error)
         try:
             response = get(url, headers=browser_ua, stream=True, verify=False)
-        except requests.exceptions.SSLError as ssl_unexpected_error:
+        except Exception as unexpected_error:
             LOGGER.warning(
-                'Dropping URL with SSL connection that terminated abruptly: <%s> - Reason: %s', url, ssl_unexpected_error)
+                'Dropping URL that led to an unexpected error: <%s> - Reason: %s', url, unexpected_error)
             return None
     except requests.exceptions.ConnectionError as connection_error:
         LOGGER.info(
@@ -266,7 +266,7 @@ def _resolve(url):
     except requests.exceptions.TooManyRedirects as too_many_redirects:
         LOGGER.info(
             'Dropping URL because of too many redirects: <%s> - %s', url, too_many_redirects)
-    except requests.exceptions.RequestException as unexpected_error:
+    except Exception as unexpected_error:
         LOGGER.warning(
             'Dropping URL that led to an unexpected error: <%s> - Reason: %s', url, unexpected_error)
         return None
