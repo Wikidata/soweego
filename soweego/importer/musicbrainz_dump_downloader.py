@@ -21,7 +21,8 @@ import requests
 from soweego.commons.db_manager import DBManager
 from soweego.commons.file_utils import get_path
 from soweego.importer.base_dump_downloader import BaseDumpDownloader
-from soweego.importer.models.musicbrainz_entity import MusicBrainzEntity
+from soweego.importer.models.musicbrainz_entity import (MusicbrainzBandEntity,
+                                                        MusicbrainzPersonEntity)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -43,8 +44,10 @@ class MusicBrainzDumpDownloader(BaseDumpDownloader):
         # TODO from pkgutil import get_data
         db_manager = DBManager(
             get_path('soweego.importer.resources', 'db_credentials.json'))
-        db_manager.drop(MusicBrainzEntity)
-        db_manager.create(MusicBrainzEntity)
+        db_manager.drop(MusicbrainzPersonEntity)
+        db_manager.create(MusicbrainzPersonEntity)
+        db_manager.drop(MusicbrainzBandEntity)
+        db_manager.create(MusicbrainzBandEntity)
 
         artist_alias_path = os.path.join(dump_path, 'mbdump', 'artist_alias')
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
@@ -61,19 +64,10 @@ class MusicBrainzDumpDownloader(BaseDumpDownloader):
             for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day', 'd_year', 'd_month', 'd_day', 'type_id']):
                 session = db_manager.new_session()
                 if self._check_person(artist['type_id']):
-                    current_entity = MusicBrainzEntity()
-                    current_entity.catalog_id = artist['gid']
-                    current_entity.name = artist['label']
+                    current_entity = MusicbrainzPersonEntity()
 
                     try:
-                        birth_date = self._get_date_and_precision(
-                            artist['b_year'], artist['b_month'], artist['b_day'])
-                        death_date = self._get_date_and_precision(
-                            artist['d_year'], artist['d_month'], artist['d_day'])
-                        current_entity.born = birth_date[0]
-                        current_entity.born_precision = birth_date[1]
-                        current_entity.died = death_date[0]
-                        current_entity.died_precision = death_date[1]
+                        self._fill_entity(current_entity, artist)
                     except ValueError:
                         LOGGER.error('Wrong date: %s', artist)
                         continue
@@ -81,18 +75,49 @@ class MusicBrainzDumpDownloader(BaseDumpDownloader):
                     session.add(current_entity)
 
                     # Creates an entity foreach available alias
-                    for alias_label in aliases[current_entity.catalog_id]:
-                        alias_entity = MusicBrainzEntity()
-                        alias_entity.catalog_id = current_entity.catalog_id
-                        alias_entity.born = current_entity.born
-                        alias_entity.born_precision = current_entity.born_precision
-                        alias_entity.died = current_entity.died
-                        alias_entity.died_precision = current_entity.died_precision
+                    session.add_all(self._alias_entities(
+                        current_entity, MusicbrainzPersonEntity, aliases[artist['id']]))
 
-                        alias_entity.name = alias_label
-                        session.add(alias_entity)
+                if self._check_band(artist['type_id']):
+                    current_entity = MusicbrainzBandEntity()
+
+                    try:
+                        self._fill_entity(current_entity, artist)
+                    except ValueError:
+                        LOGGER.error('Wrong date: %s' % artist)
+                        continue
+
+                    session.add(current_entity)
+
+                    # Creates an entity foreach available alias
+                    session.add_all(self._alias_entities(
+                        current_entity, MusicbrainzPersonEntity, aliases[artist['id']]))
 
                 session.commit()
+
+    def _fill_entity(self, entity: BaseEntity, info):
+        entity.catalog_id = info['gid']
+        entity.name = info['label']
+        birth_date = self._get_date_and_precision(
+            info['b_year'], info['b_month'], info['b_day'])
+        death_date = self._get_date_and_precision(
+            info['d_year'], info['d_month'], info['d_day'])
+        entity.born = birth_date[0]
+        entity.born_precision = birth_date[1]
+        entity.died = death_date[0]
+        entity.died_precision = death_date[1]
+
+    def _alias_entities(self, entity: BaseEntity, aliases_class, aliases: []):
+        for alias_label in aliases:
+            alias_entity = aliases_class()
+            alias_entity.catalog_id = entity.catalog_id
+            alias_entity.born = entity.born
+            alias_entity.born_precision = entity.born_precision
+            alias_entity.died = entity.died
+            alias_entity.died_precision = entity.died_precision
+
+            alias_entity.name = alias_label
+            yield alias_entity
 
     def _get_date_and_precision(self, year, month, day):
         date_list = [year, month, day]
@@ -104,7 +129,14 @@ class MusicBrainzDumpDownloader(BaseDumpDownloader):
             precision = 11
 
         date_list = ['0001' if i == '\\N' else i for i in date_list]
+
+        if precision == -1:
+            return (None, None)
+
         return (date(int(date_list[0]), int(date_list[1]), int(date_list[2])), precision)
 
     def _check_person(self, type_code):
-        return type_code == '1' or type_code == '\\N'
+        return type_code in ['1', '4', '3', '\\N']
+
+    def _check_band(self, type_code):
+        return type_code in ['2', '5', '6', '3', '\\N']

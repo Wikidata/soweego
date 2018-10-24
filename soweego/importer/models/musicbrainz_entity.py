@@ -18,14 +18,23 @@ from soweego.importer.models.base_link_entity import BaseLinkEntity
 BASE = declarative_base()
 
 
-class MusicBrainzEntity(BaseEntity, BASE):
-    __tablename__ = "musicbrainz"
-
+class MusicbrainzPersonEntity(BaseEntity, BASE):
+    __tablename__ = "musicbrainz_person"
     # TODO define missing non-standard fields
 
 
-class MusicBrainzLinkEntity(BaseLinkEntity, BASE):
-    __tablename__ = "musicbrainz_link"
+class MusicbrainzBandEntity(BaseEntity, BASE):
+    __tablename__ = "musicbrainz_band"
+    # TODO define missing non-standard fields
 
-    catalog_id = Column(String(32), ForeignKey(MusicBrainzEntity.catalog_id),
+
+class MusicbrainzPersonLinkEntity(BaseLinkEntity, BASE):
+    __tablename__ = "musicbrainz_person_link"
+    catalog_id = Column(String(32), ForeignKey(MusicbrainzPersonEntity.catalog_id),
+                        index=True)
+
+
+class MusicbrainzBandLinkEntity(BaseLinkEntity, BASE):
+    __tablename__ = "musicbrainz_band_link"
+    catalog_id = Column(String(32), ForeignKey(MusicbrainzBandEntity.catalog_id),
                         index=True)
