@@ -29,12 +29,7 @@ class DBManager(object):
 
     __engine: object
 
-    def __init__(self, credentials_path='TODO default credentials path'):
-        try:
-            credentials = json_utils.load(credentials_path)
-        except:
-            LOGGER.warning(loc.MISSING_CREDENTIALS)
-            raise Exception(loc.MISSING_CREDENTIALS)
+    def __init__(self, credentials):
 
         db_engine = credentials[const.DB_ENGINE_KEY]
         db_name = credentials[const.PROD_DB_KEY]

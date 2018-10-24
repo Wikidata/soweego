@@ -14,7 +14,6 @@ import logging
 import os
 
 import click
-
 from soweego.commons import constants as const
 from soweego.commons import http_client as client
 from soweego.commons import localizations as loc

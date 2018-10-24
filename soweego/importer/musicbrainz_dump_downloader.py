@@ -9,21 +9,22 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, MaxFrax96'
 
+import json
 import logging
 import os
 import tarfile
 from collections import defaultdict
 from csv import DictReader
 from datetime import date
+from pkgutil import get_data
 
 import requests
-
 from soweego.commons.db_manager import DBManager
-from soweego.commons.file_utils import get_path
-from soweego.importer.base_dump_downloader import BaseDumpDownloader
-from soweego.importer.models.base_entity import BaseEntity
-from soweego.importer.models.musicbrainz_entity import (MusicbrainzBandEntity,
-                                                        MusicbrainzPersonEntity)
+from soweego.commons.models.base_entity import BaseEntity
+from soweego.commons.models.musicbrainz_entity import (MusicbrainzBandEntity,
+                                                       MusicbrainzPersonEntity)
+from soweego.importer.commons.models.base_dump_download_helper import \
+    BaseDumpDownloadHelper
 
 LOGGER = logging.getLogger(__name__)
 
@@ -42,9 +43,10 @@ class MusicBrainzDumpDownloader(BaseDumpDownloader):
         with tarfile.open(dump_file_path, "r:bz2") as tar:
             tar.extractall(dump_path)
 
-        # TODO from pkgutil import get_data
-        db_manager = DBManager(
-            get_path('soweego.importer.resources', 'db_credentials.json'))
+        credentials = json.loads(
+            get_data('soweego.importer.resources', 'db_credentials.json'))
+
+        db_manager = DBManager(credentials)
         db_manager.drop(MusicbrainzPersonEntity)
         db_manager.create(MusicbrainzPersonEntity)
         db_manager.drop(MusicbrainzBandEntity)
