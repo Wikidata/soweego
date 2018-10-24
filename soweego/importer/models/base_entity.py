@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Base orm entity"""
+"""Base SQL Alchemy ORM entity"""
 
 __author__ = 'Edoardo Lenzi'
 __email__ = 'edoardolenzi9@gmail.com'
@@ -10,10 +10,9 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, lenzi.edoardo'
 
 from sqlalchemy import Column, Date, Index, Integer, String
-from sqlalchemy.engine import Engine
 
 
-class BaseEntity(object):
+class BaseEntity():
     __table_args__ = {'mysql_charset': 'utf8mb4'}
     internal_id = Column(Integer, unique=True,
                          primary_key=True, autoincrement=True)
