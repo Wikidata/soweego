@@ -21,6 +21,7 @@ import requests
 from soweego.commons.db_manager import DBManager
 from soweego.commons.file_utils import get_path
 from soweego.importer.base_dump_downloader import BaseDumpDownloader
+from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.musicbrainz_entity import (MusicbrainzBandEntity,
                                                         MusicbrainzPersonEntity)
 
@@ -84,7 +85,7 @@ class MusicBrainzDumpDownloader(BaseDumpDownloader):
                     try:
                         self._fill_entity(current_entity, artist)
                     except ValueError:
-                        LOGGER.error('Wrong date: %s' % artist)
+                        LOGGER.error('Wrong date: %s', artist)
                         continue
 
                     session.add(current_entity)
