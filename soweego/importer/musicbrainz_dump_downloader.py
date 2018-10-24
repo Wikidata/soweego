@@ -1,8 +1,13 @@
-
 #!/usr/bin/env python3
-# coding: utf-8
+# -*- coding: utf-8 -*-
 
-"""TODO docstring"""
+"""MusicBrainz dump downloader"""
+
+__author__ = 'Massimo Frasson'
+__email__ = 'maxfrax@gmail.com'
+__version__ = '1.0'
+__license__ = 'GPL-3.0'
+__copyright__ = 'Copyleft 2018, MaxFrax96'
 
 import logging
 import os
@@ -12,35 +17,34 @@ from csv import DictReader
 from datetime import date
 
 import requests
-import sqlalchemy
+
 from soweego.commons.db_manager import DBManager
 from soweego.commons.file_utils import get_path
-from soweego.commons.models.musicbrainz_entity import MusicbrainzEntity
-from soweego.importer.commons.models.base_dump_download_helper import \
-    BaseDumpDownloadHelper
+from soweego.importer.base_dump_downloader import BaseDumpDownloader
+from soweego.importer.models.musicbrainz_entity import MusicBrainzEntity
 
 LOGGER = logging.getLogger(__name__)
 
 
-class MusicbrainzDumpDownloadHelper(BaseDumpDownloadHelper):
+class MusicBrainzDumpDownloader(BaseDumpDownloader):
 
-    def dump_download_uri(self) -> str:
+    def dump_download_url(self) -> str:
         latest_version = requests.get(
             'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/LATEST').text.rstrip()
         return 'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/%s/mbdump.tar.bz2' % latest_version
 
-    def import_from_dump(self, tar_dump_path):
+    def import_from_dump(self, dump_file_path):
         # TODO improve dump folder name
         dump_path = os.path.join(os.path.dirname(
-            os.path.abspath(tar_dump_path)), 'dump')
-        with tarfile.open(tar_dump_path, "r:bz2") as tar:
+            os.path.abspath(dump_file_path)), 'dump')
+        with tarfile.open(dump_file_path, "r:bz2") as tar:
             tar.extractall(dump_path)
 
         # TODO from pkgutil import get_data
         db_manager = DBManager(
             get_path('soweego.importer.resources', 'db_credentials.json'))
-        db_manager.drop(MusicbrainzEntity)
-        db_manager.create(MusicbrainzEntity)
+        db_manager.drop(MusicBrainzEntity)
+        db_manager.create(MusicBrainzEntity)
 
         artist_alias_path = os.path.join(dump_path, 'mbdump', 'artist_alias')
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
@@ -57,7 +61,7 @@ class MusicbrainzDumpDownloadHelper(BaseDumpDownloadHelper):
             for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day', 'd_year', 'd_month', 'd_day', 'type_id']):
                 session = db_manager.new_session()
                 if self._check_person(artist['type_id']):
-                    current_entity = MusicbrainzEntity()
+                    current_entity = MusicBrainzEntity()
                     current_entity.catalog_id = artist['gid']
                     current_entity.name = artist['label']
 
@@ -71,14 +75,14 @@ class MusicbrainzDumpDownloadHelper(BaseDumpDownloadHelper):
                         current_entity.died = death_date[0]
                         current_entity.died_precision = death_date[1]
                     except ValueError:
-                        LOGGER.error('Wrong date: %s' % artist)
+                        LOGGER.error('Wrong date: %s', artist)
                         continue
 
                     session.add(current_entity)
 
                     # Creates an entity foreach available alias
                     for alias_label in aliases[current_entity.catalog_id]:
-                        alias_entity = MusicbrainzEntity()
+                        alias_entity = MusicBrainzEntity()
                         alias_entity.catalog_id = current_entity.catalog_id
                         alias_entity.born = current_entity.born
                         alias_entity.born_precision = current_entity.born_precision
