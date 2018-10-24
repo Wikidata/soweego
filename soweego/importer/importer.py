@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-# coding: utf-8
+# -*- coding: utf-8 -*-
 
-"""Click-command definitions for the importer"""
+"""Generic service for dump updating/importing"""
 
 __author__ = 'Edoardo Lenzi'
 __email__ = 'edoardolenzi9@gmail.com'
@@ -9,36 +9,77 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, lenzi.edoardo'
 
+import datetime
+import logging
 import os
 
 import click
-from soweego.commons.file_utils import get_path
-from soweego.commons.json_utils import load
-from soweego.importer.commons.models.base_dump_download_helper import \
-    BaseDumpDownloadHelper
-from soweego.importer.commons.services.import_service import ImportService
-from soweego.importer.musicbrainz.muscbrainz_dump_download_helper import \
-    MusicbrainzDumpDownloadHelper
+
+from soweego.commons import constants as const
+from soweego.commons import http_client as client
+from soweego.commons import localizations as loc
+from soweego.importer.base_dump_downloader import BaseDumpDownloader
+from soweego.importer.discogs_dump_downloader import DiscogsDumpDownloader
+from soweego.importer.musicbrainz_dump_downloader import \
+    MusicBrainzDumpDownloader
+
+LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
-@click.argument('catalog', type=click.Choice(['bne', 'discogs', 'musicbrainz']))
+@click.argument('catalog', type=click.Choice(['discogs', 'musicbrainz']))
+@click.option('--download-url', '-du', default=None)
 @click.option('--output', '-o', default='output', type=click.Path())
-@click.option('--download-uri', '-du', default=None)
-def import_catalog(catalog, output: str, download_uri: str) -> None:
-    """Checks if there is an updated dump in the output path;
-       if not downloads the dump"""
+def import_cli(catalog: str, download_url: str, output: str) -> None:
+    """Check if there is an updated dump in the output path;
+       if not, download the dump"""
+    importer = Importer()
+    downloader = BaseDumpDownloader()
 
-    import_service = ImportService()
-    download_helper = BaseDumpDownloadHelper()
-
-    if catalog == 'bne':
-        raise NotImplementedError
-    elif catalog == 'discogs':
-        # TODO implement a DownloadHelper for Discogs. There's already an old style handler written
-        download_helper = BaseDumpDownloadHelper()
+    if catalog == 'discogs':
+        downloader = DiscogsDumpDownloader()
     elif catalog == 'musicbrainz':
-        download_helper = MusicbrainzDumpDownloadHelper()
+        downloader = MusicBrainzDumpDownloader()
 
-    import_service.refresh_dump(
-        output, download_uri, download_helper)
+    importer.refresh_dump(
+        output, download_url, downloader)
+
+
+class Importer():
+
+    def refresh_dump(self, output_folder: str, download_url: str, downloader: BaseDumpDownloader):
+        """Downloads the dump, if necessary, 
+        and calls the handler over the dump file"""
+
+        try:
+            last_modified = client.http_call(download_url,
+                                             'HEAD').headers[const.LAST_MODIFIED_KEY]
+
+        except ValueError:
+            last_modified = client.http_call(downloader.dump_download_url(),
+                                             'HEAD').headers[const.LAST_MODIFIED_KEY]
+            download_url = downloader.dump_download_url()
+
+        last_modified = datetime.datetime.strptime(
+            last_modified, '%a, %d %b %Y %H:%M:%S GMT').strftime('%Y%m%d_%H%M%S')
+
+        extensions = download_url.split('/')[-1].split('.')[1:]
+
+        file_name = "%s.%s" % (last_modified, '.'.join(extensions))
+
+        file_full_path = os.path.join(output_folder, file_name)
+
+        # checks if the current dump is up-to-date
+        if not os.path.isfile(file_full_path):
+            try:
+                self._update_dump(download_url, file_full_path)
+                try:
+                    downloader.import_from_dump(file_full_path)
+                except Exception as e:
+                    LOGGER.warning("%s\n%s", loc.FAIL_HANDLER, str(e))
+            except Exception as e:
+                LOGGER.warning("%s\n%s", loc.FAIL_DOWNLOAD, str(e))
+
+    def _update_dump(self, dump_url: str, file_output_path: str) -> None:
+        """Download the dump"""
+        client.download_file(dump_url, file_output_path)
