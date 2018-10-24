@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Discogs ORM model for groups"""
+"""Discogs SQL Alchemy ORM model for groups (bands)"""
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -12,18 +12,17 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 from sqlalchemy import Column, ForeignKey, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
 
-from soweego.commons.models.base_entity import BaseEntity
-from soweego.commons.models.base_link_entity import BaseLinkEntity
-from soweego.commons.models.discogs_musician_entity import \
+from soweego.importer.models.base_entity import BaseEntity
+from soweego.importer.models.base_link_entity import BaseLinkEntity
+from soweego.importer.models.discogs_musician_entity import \
     DiscogsMusicianEntity
 
-Base = declarative_base()
-
+BASE = declarative_base()
 DISCOGS_GROUP_TABLE_NAME = 'discogs_group'
 DISCOGS_GROUP_LINK_TABLE_NAME = 'discogs_group_link'
 
 
-class DiscogsGroupEntity(BaseEntity, Base):
+class DiscogsGroupEntity(BaseEntity, BASE):
     __tablename__ = DISCOGS_GROUP_TABLE_NAME
     internal_id = Column(Integer, ForeignKey(BaseEntity.internal_id),
                          primary_key=True, autoincrement=True)
@@ -42,7 +41,7 @@ class DiscogsGroupEntity(BaseEntity, Base):
     data_quality = Column(String)
 
 
-class DiscogsGroupLinkEntity(BaseLinkEntity, Base):
+class DiscogsGroupLinkEntity(BaseLinkEntity, BASE):
     __tablename__ = DISCOGS_GROUP_LINK_TABLE_NAME
     catalog_id = Column(String(32), ForeignKey(DiscogsGroupEntity.catalog_id),
                         index=True)

@@ -9,17 +9,13 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, lenzi.edoardo'
 
+import logging
 import os
 import re
-import datetime
-import logging
-from sqlalchemy import Column
-from sqlalchemy import String
 
-from soweego.commons.file_utils import get_path
-from soweego.commons.db_manager import DBManager
 from soweego.commons import localizations as loc
-from soweego.importer.commons.models.dump_state import DumpState
+from soweego.commons.db_manager import DBManager
+from soweego.commons.file_utils import get_path
 
 LOGGER = logging.getLogger(__name__)
 
@@ -28,7 +24,8 @@ def handle(file_path: str, mappings: dict, entity_type, link_type):
     """Generic .nt file dump handler for the dump import into the DB.
     Assumptions: each entity must be represented in a compact block of ''adjacent'' lines
     """
-    db_manager = DBManager(get_path('soweego.importer.resources', 'db_credentials.json'))
+    db_manager = DBManager(
+        get_path('soweego.importer.resources', 'db_credentials.json'))
     db_manager.drop(link_type)
     db_manager.drop(entity_type)
     session = db_manager.new_session()
@@ -58,7 +55,7 @@ def handle(file_path: str, mappings: dict, entity_type, link_type):
                 if current_field == 'url':
                     link = link_type()
                     link.url = row_chunks[2]
-                    link.tokens = row_chunks[2].replace("/", " ") #TODO
+                    link.tokens = row_chunks[2].replace("/", " ")  # TODO
                     link.catalog_id = current_entity.catalog_id
                     session.add(link)
 
@@ -70,13 +67,13 @@ def handle(file_path: str, mappings: dict, entity_type, link_type):
                 current_value = row_chunks[2]
 
                 setattr(current_entity, current_field, current_value)
-                
-            except Exception as e: 
+
+            except Exception as e:
                 LOGGER.warning('Error at row %s \n %s', row, str(e))
         session.add(current_entity)
     try:
         db_manager.create(entity_type)
         db_manager.create(link_type)
         session.commit()
-    except Exception as e: 
+    except Exception as e:
         LOGGER.warning(loc.WRONG_MAPPINGS, str(e))

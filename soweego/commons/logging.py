@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
-# coding: utf-8
+# -*- coding: utf-8 -*-
 # Adapted from https://github.com/Wikidata/StrepHit/blob/master/strephit/commons/logging.py
+
+"""Logging facility"""
+
+__author__ = 'Marco Fossati'
+__email__ = 'fossati@spaziodati.eu'
+__version__ = '1.0'
+__license__ = 'GPL-3.0'
+__copyright__ = 'Copyleft 2018, Hjfocs'
 
 import logging
 import logging.config

@@ -1,41 +1,40 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""BNE orm model"""
+"""MusicBrainz SQL Alchemy ORM model"""
 
-__author__ = ''
-__email__ = ''
+__author__ = 'Massimo Frasson'
+__email__ = 'maxfrax@gmail.com'
 __version__ = '1.0'
 __license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2018, '
+__copyright__ = 'Copyleft 2018, MaxFrax96'
 
 from sqlalchemy import Column, ForeignKey, String
-from sqlalchemy.engine import Engine
 from sqlalchemy.ext.declarative import declarative_base
 
-from .base_entity import BaseEntity
-from .base_link_entity import BaseLinkEntity
+from soweego.importer.models.base_entity import BaseEntity
+from soweego.importer.models.base_link_entity import BaseLinkEntity
 
-Base = declarative_base()
+BASE = declarative_base()
 
 
-class MusicbrainzPersonEntity(BaseEntity, Base):
+class MusicbrainzPersonEntity(BaseEntity, BASE):
     __tablename__ = "musicbrainz_person"
     # TODO define missing non-standard fields
 
 
-class MusicbrainzBandEntity(BaseEntity, Base):
+class MusicbrainzBandEntity(BaseEntity, BASE):
     __tablename__ = "musicbrainz_band"
     # TODO define missing non-standard fields
 
 
-class MusicbrainzPersonLinkEntity(BaseLinkEntity, Base):
+class MusicbrainzPersonLinkEntity(BaseLinkEntity, BASE):
     __tablename__ = "musicbrainz_person_link"
     catalog_id = Column(String(32), ForeignKey(MusicbrainzPersonEntity.catalog_id),
                         index=True)
 
 
-class MusicbrainzBandLinkEntity(BaseLinkEntity, Base):
+class MusicbrainzBandLinkEntity(BaseLinkEntity, BASE):
     __tablename__ = "musicbrainz_band_link"
     catalog_id = Column(String(32), ForeignKey(MusicbrainzBandEntity.catalog_id),
                         index=True)
