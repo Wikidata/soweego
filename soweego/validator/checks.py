@@ -67,6 +67,7 @@ def check_existence(class_or_occupation_query, class_qid, catalog_pid, entity: B
                     '%s identifier %s is invalid', qid, target_id)
                 invalid[target_id].add(qid)
                 count += 1
+
     LOGGER.info('Total invalid identifiers = %d', count)
     # Sets are not serializable to JSON, so cast them to lists
     return {target_id: list(qids) for target_id, qids in invalid.items()}
