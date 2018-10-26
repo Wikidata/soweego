@@ -14,7 +14,6 @@ import logging
 import re
 from collections import defaultdict
 from functools import lru_cache
-from pkgutil import get_data
 
 import click
 from soweego.commons.db_manager import DBManager

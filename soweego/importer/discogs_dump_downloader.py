@@ -12,7 +12,6 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import gzip
 import logging
 import xml.etree.ElementTree as et
-from pkgutil import get_data
 from urllib.parse import urlsplit
 
 from soweego.commons.db_manager import DBManager

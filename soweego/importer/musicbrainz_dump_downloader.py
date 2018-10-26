@@ -16,7 +16,6 @@ import tarfile
 from collections import defaultdict
 from csv import DictReader
 from datetime import date
-from pkgutil import get_data
 
 import requests
 from soweego.commons.db_manager import DBManager
