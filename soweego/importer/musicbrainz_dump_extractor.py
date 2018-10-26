@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""MusicBrainz dump downloader"""
+"""MusicBrainz dump extractor"""
 
 __author__ = 'Massimo Frasson'
 __email__ = 'maxfrax@gmail.com'
@@ -20,7 +20,7 @@ import requests
 
 from soweego.commons.db_manager import DBManager
 from soweego.commons.file_utils import get_path
-from soweego.importer.base_dump_downloader import BaseDumpDownloader
+from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.musicbrainz_entity import (MusicbrainzBandEntity,
                                                         MusicbrainzPersonEntity)
@@ -28,14 +28,14 @@ from soweego.importer.models.musicbrainz_entity import (MusicbrainzBandEntity,
 LOGGER = logging.getLogger(__name__)
 
 
-class MusicBrainzDumpDownloader(BaseDumpDownloader):
+class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
-    def dump_download_url(self) -> str:
+    def get_dump_download_url(self) -> str:
         latest_version = requests.get(
             'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/LATEST').text.rstrip()
         return 'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/%s/mbdump.tar.bz2' % latest_version
 
-    def import_from_dump(self, dump_file_path):
+    def extract_and_populate(self, dump_file_path):
         # TODO improve dump folder name
         dump_path = os.path.join(os.path.dirname(
             os.path.abspath(dump_file_path)), 'dump')
