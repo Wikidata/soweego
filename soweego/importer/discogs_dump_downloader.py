@@ -12,10 +12,10 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import gzip
 import logging
 import xml.etree.ElementTree as et
+from pkgutil import get_data
 from urllib.parse import urlsplit
 
 from soweego.commons.db_manager import DBManager
-from soweego.commons.file_utils import get_path
 from soweego.importer.base_dump_downloader import BaseDumpDownloader
 from soweego.importer.models.discogs_musician_entity import \
     DiscogsMusicianEntity
@@ -49,8 +49,10 @@ class DiscogsDumpDownloader(BaseDumpDownloader):
         mappings: dict
         orm_model: DiscogsMusicianEntity
 
-        db_manager = DBManager(
-            get_path('soweego.importer.resources', 'db_credentials.json'))
+        credentials = json.loads(
+            get_data('soweego.importer.resources', 'db_credentials.json'))
+
+        db_manager = DBManager(credentials)
         db_manager.drop(DiscogsMusicianEntity)
         db_manager.create(DiscogsMusicianEntity)
 

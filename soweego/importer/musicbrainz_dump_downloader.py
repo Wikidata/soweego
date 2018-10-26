@@ -20,11 +20,10 @@ from pkgutil import get_data
 
 import requests
 from soweego.commons.db_manager import DBManager
-from soweego.commons.models.base_entity import BaseEntity
-from soweego.commons.models.musicbrainz_entity import (MusicbrainzBandEntity,
-                                                       MusicbrainzPersonEntity)
-from soweego.importer.commons.models.base_dump_download_helper import \
-    BaseDumpDownloadHelper
+from soweego.importer.base_dump_downloader import BaseDumpDownloader
+from soweego.importer.models.base_entity import BaseEntity
+from soweego.importer.models.musicbrainz_entity import (MusicbrainzBandEntity,
+                                                        MusicbrainzPersonEntity)
 
 LOGGER = logging.getLogger(__name__)
 
