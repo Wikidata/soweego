@@ -49,10 +49,7 @@ class DiscogsDumpDownloader(BaseDumpDownloader):
         mappings: dict
         orm_model: DiscogsMusicianEntity
 
-        credentials = json.loads(
-            get_data('soweego.importer.resources', 'db_credentials.json'))
-
-        db_manager = DBManager(credentials)
+        db_manager = DBManager()
         db_manager.drop(DiscogsMusicianEntity)
         db_manager.create(DiscogsMusicianEntity)
 

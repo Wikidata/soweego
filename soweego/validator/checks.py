@@ -53,11 +53,7 @@ def check_existence_cli(wikidata_query_type, class_qid, catalog_pid, database_ta
 def check_existence(class_or_occupation_query, class_qid, catalog_pid, entity: BaseEntity):
     query_type = 'identifier', class_or_occupation_query
 
-    # TODO refactor with the dump extraction code of musicbrainz and discogs. Code repeated
-    credentials = json.loads(
-        get_data('soweego.importer.resources', 'db_credentials.json'))
-
-    db_manager = DBManager(credentials)
+    db_manager = DBManager()
     session = db_manager.new_session()
 
     invalid = defaultdict(set)

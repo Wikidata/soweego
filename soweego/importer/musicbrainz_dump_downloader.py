@@ -38,14 +38,11 @@ class MusicBrainzDumpDownloader(BaseDumpDownloader):
     def import_from_dump(self, dump_file_path):
         # TODO improve dump folder name
         dump_path = os.path.join(os.path.dirname(
-            os.path.abspath(dump_file_path)), 'dump')
+            os.path.abspath(dump_file_path)), "%s_%s" % (os.path.basename(dump_file_path), 'extracted'))
         with tarfile.open(dump_file_path, "r:bz2") as tar:
             tar.extractall(dump_path)
 
-        credentials = json.loads(
-            get_data('soweego.importer.resources', 'db_credentials.json'))
-
-        db_manager = DBManager(credentials)
+        db_manager = DBManager()
         db_manager.drop(MusicbrainzPersonEntity)
         db_manager.create(MusicbrainzPersonEntity)
         db_manager.drop(MusicbrainzBandEntity)

@@ -79,6 +79,8 @@ class Importer():
             except Exception as e:
                 LOGGER.warning("%s\n%s", loc.FAIL_DOWNLOAD, str(e))
 
+        downloader.import_from_dump(file_full_path)
+
     def _update_dump(self, dump_url: str, file_output_path: str) -> None:
         """Download the dump"""
         client.download_file(dump_url, file_output_path)
