@@ -14,7 +14,6 @@ import logging
 import os
 
 import click
-
 from soweego.commons import constants as const
 from soweego.commons import http_client as client
 from soweego.commons import localizations as loc
@@ -79,6 +78,8 @@ class Importer():
                     LOGGER.warning("%s\n%s", loc.FAIL_HANDLER, str(e))
             except Exception as e:
                 LOGGER.warning("%s\n%s", loc.FAIL_DOWNLOAD, str(e))
+
+        downloader.import_from_dump(file_full_path)
 
     def _update_dump(self, dump_url: str, file_output_path: str) -> None:
         """Download the dump"""
