@@ -9,7 +9,9 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, lenzi.edoardo'
 
+import json
 import logging
+from pkgutil import get_data
 
 from soweego.commons import constants as const
 from soweego.commons import json_utils
@@ -29,12 +31,10 @@ class DBManager(object):
 
     __engine: object
 
-    def __init__(self, credentials_path='TODO default credentials path'):
-        try:
-            credentials = json_utils.load(credentials_path)
-        except:
-            LOGGER.warning(loc.MISSING_CREDENTIALS)
-            raise Exception(loc.MISSING_CREDENTIALS)
+    def __init__(self):
+
+        credentials = json.loads(
+            get_data('soweego.importer.resources', 'db_credentials.json'))
 
         db_engine = credentials[const.DB_ENGINE_KEY]
         db_name = credentials[const.PROD_DB_KEY]

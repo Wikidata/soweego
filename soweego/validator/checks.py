@@ -18,40 +18,57 @@ import click
 import regex
 
 from soweego.commons import url_utils
+from soweego.commons.db_manager import DBManager
+from soweego.importer.models.base_entity import BaseEntity
+from soweego.importer.models.musicbrainz_entity import (MusicbrainzBandEntity,
+                                                        MusicbrainzPersonEntity)
 from soweego.wikidata import api_requests, sparql_queries, vocabulary
 
 LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
-@click.argument('class_or_occupation_query', type=click.Choice(['class', 'occupation']))
+@click.argument('wikidata_query_type', type=click.Choice(['class', 'occupation']))
 @click.argument('class_qid')
 @click.argument('catalog_pid')
-@click.argument('target_identifiers', type=click.File())
+@click.argument('database_table')
 @click.option('-o', '--outfile', type=click.File('w'), default='output/non_existent_ids.json', help="default: 'output/non_existent_ids.json'")
-def check_existence_cli(class_or_occupation_query, class_qid, catalog_pid, target_identifiers, outfile):
+def check_existence_cli(wikidata_query_type, class_qid, catalog_pid, database_table, outfile):
     """Check the existence of identifier statements.
 
     Dump a JSON file of invalid ones ``{identifier: QID}``
     """
-    invalid = check_existence(class_or_occupation_query, class_qid,
-                              catalog_pid, target_identifiers)
+    entity = BaseEntity
+    if database_table == 'musicbrainz_person':
+        entity = MusicbrainzPersonEntity
+    elif database_table == 'musicbrainz_band':
+        entity = MusicbrainzBandEntity
+    else:
+        LOGGER.error('Not able to retrive entity for given database_table')
+
+    invalid = check_existence(wikidata_query_type, class_qid,
+                              catalog_pid, entity)
     json.dump(invalid, outfile, indent=2)
 
 
-def check_existence(class_or_occupation_query, class_qid, catalog_pid, target_identifiers):
-    # TODO for each wikidata_items item, do a binary search on the target list
+def check_existence(class_or_occupation_query, class_qid, catalog_pid, entity: BaseEntity):
     query_type = 'identifier', class_or_occupation_query
-    target_ids_set = set(target_id.rstrip()
-                         for target_id in target_identifiers)
+
+    db_manager = DBManager()
+    session = db_manager.new_session()
+
     invalid = defaultdict(set)
     count = 0
-    for qid, target_id in sparql_queries.run_identifier_or_links_query(query_type, class_qid, catalog_pid, 0):
-        if target_id not in target_ids_set:
-            LOGGER.warning(
-                '%s identifier %s is invalid', qid, target_id)
-            invalid[target_id].add(qid)
-            count += 1
+    for result in sparql_queries.run_identifier_or_links_query(query_type, class_qid, catalog_pid, 0):
+        for qid, target_id in result.items():
+            results = session.query(entity).filter(
+                entity.catalog_id == target_id).all()
+            if not results:
+                LOGGER.warning(
+                    '%s identifier %s is invalid', qid, target_id)
+                invalid[target_id].add(qid)
+                count += 1
+
     LOGGER.info('Total invalid identifiers = %d', count)
     # Sets are not serializable to JSON, so cast them to lists
     return {target_id: list(qids) for target_id, qids in invalid.items()}
