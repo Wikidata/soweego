@@ -163,25 +163,3 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             variation_entity.profile = main_entity.profile
             variation_entity.data_quality = main_entity.data_quality
             yield variation_entity
-
-    # TODO populate links
-    # def _fill_link_entity(self, link_entity: DiscogsMusicianLinkEntity, node):
-    #     urls = node.find('urls')
-    #     if urls:
-    #         for url_element in urls.iterfind('url'):
-    #             url = url_element.text
-    #             if url:
-    #                 try:
-    #                     domain = urlsplit(url).netloc
-    #                     if any(wiki_project in domain for wiki_project in WIKI_PROJECTS):
-    #                         wikilinks[url] = identifier
-    #                     else:
-    #                         links[url] = identifier
-    #                 except ValueError as value_error:
-    #                     LOGGER.warning(
-    #                         "Skipping %s: '%s'", value_error, url)
-    #                     continue
-    #             else:
-    #                 LOGGER.debug(
-    #                     'Artist %s: skipping empty <url> tag', identifier)
-    #                 continue
