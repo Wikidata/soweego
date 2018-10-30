@@ -12,6 +12,7 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import logging
 import re
 from functools import lru_cache
+from urllib.parse import urlsplit
 
 import regex
 import requests.exceptions
@@ -21,7 +22,11 @@ from urllib3.exceptions import InsecureRequestWarning
 
 LOGGER = logging.getLogger(__name__)
 
-# TODO run this function in the ingestor handler (during dump extraction)
+# URLs stopwords
+TOP_LEVEL_DOMAINS = set(['com', 'org', 'net', 'info', 'fm'])
+DOMAIN_PREFIXES = set(['www', 'm', 'mobile'])
+
+
 def clean(url):
     stripped = url.strip()
     if ' ' in stripped:
@@ -97,6 +102,7 @@ def resolve(url):
     except requests.exceptions.TooManyRedirects as too_many_redirects:
         LOGGER.info(
             'Dropping URL because of too many redirects: <%s> - %s', url, too_many_redirects)
+        return None
     except Exception as unexpected_error:
         LOGGER.warning(
             'Dropping URL that led to an unexpected error: <%s> - Reason: %s', url, unexpected_error)
@@ -113,6 +119,27 @@ def resolve(url):
     else:
         LOGGER.debug('Original URL: <%s> - Resolved URL: <%s>', url, resolved)
     return resolved
+
+
+def tokenize(url, domain_only=False) -> set:
+    """Tokenize a URL, removing stopwords.
+        Return `None` if the URL is invalid.
+    """
+    try:
+        split = urlsplit(url)
+    except ValueError as value_error:
+        LOGGER.warning('Invalid URL: %s. Reason: %s',
+                       url, value_error, exc_info=1)
+        return None
+    domain_tokens = set(split.netloc.split('.'))
+    domain_tokens.difference_update(TOP_LEVEL_DOMAINS, DOMAIN_PREFIXES)
+    if domain_only:
+        LOGGER.debug('URL: %s - Domain-only tokens: %s', url, domain_tokens)
+        return domain_tokens
+    path_tokens = set(filter(None, split.path.split('/')))
+    tokens = domain_tokens.union(path_tokens)
+    LOGGER.debug('URL: %s - Tokens: %s', url, tokens)
+    return tokens
 
 
 def get_external_id_from_url(url, ext_id_pids_to_urls):
