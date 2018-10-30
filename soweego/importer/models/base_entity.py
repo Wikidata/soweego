@@ -16,7 +16,6 @@ class BaseEntity():
     __table_args__ = {'mysql_charset': 'utf8mb4'}
     internal_id = Column(Integer, unique=True,
                          primary_key=True, autoincrement=True)
-
     # Catalog identifier, indexed
     catalog_id = Column(String(50), nullable=False, index=True)
     # Full name (<name> <surname>)
