@@ -14,18 +14,15 @@ import logging
 import re
 from collections import defaultdict
 from os import path
-from urllib.parse import urlsplit
 
 import click
 import jellyfish
 
 from soweego.commons.candidate_acquisition import (IDENTIFIER_COLUMN,
                                                    INDEXED_COLUMN, query_index)
+from soweego.commons.url_utils import tokenize
 
 LOGGER = logging.getLogger(__name__)
-# URLs stopwords
-TOP_LEVEL_DOMAINS = set(['com', 'org', 'net', 'info', 'fm'])
-DOMAIN_PREFIXES = set(['www', 'm', 'mobile'])
 # Names processing
 NAMES_STOPWORDS = set(
     ['sir', 'lord', 'mr', 'mrs', 'ms', 'miss', 'madam', 'jr', 'sr', 'phd',
@@ -305,30 +302,9 @@ def _process_links(dataset) -> dict:
     """
     processed = {}
     for link, identifier in dataset.items():
-        tokens = tokenize_url(link)
+        tokens = tokenize(link)
         if not tokens:
             LOGGER.info('Skipping invalid URL')
             continue
         processed['|'.join(tokens)] = identifier
     return processed
-
-
-def tokenize_url(url, domain_only=False) -> set:
-    """Tokenize a URL, removing stopwords.
-        Return `None` if the URL is invalid.
-    """
-    try:
-        split = urlsplit(url)
-    except ValueError as value_error:
-        LOGGER.warning('Invalid URL: %s. Reason: %s',
-                       url, value_error, exc_info=1)
-        return None
-    domain_tokens = set(split.netloc.split('.'))
-    domain_tokens.difference_update(TOP_LEVEL_DOMAINS, DOMAIN_PREFIXES)
-    if domain_only:
-        LOGGER.debug('URL: %s - Domain-only tokens: %s', url, domain_tokens)
-        return domain_tokens
-    path_tokens = set(filter(None, split.path.split('/')))
-    tokens = domain_tokens.union(path_tokens)
-    LOGGER.debug('URL: %s - Tokens: %s', url, tokens)
-    return tokens

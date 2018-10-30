@@ -13,19 +13,19 @@ import json
 import logging
 from pkgutil import get_data
 
-from soweego.commons import constants as const
-from soweego.commons import json_utils
-from soweego.commons import localizations as loc
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
+from soweego.commons import constants as const
+from soweego.commons import localizations as loc
+
 DECLARATIVE_BASE = declarative_base()
 LOGGER = logging.getLogger(__name__)
 
 
-class DBManager(object):
+class DBManager():
 
     """Class that exposes some primitives for the DB access"""
 
