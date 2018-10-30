@@ -26,6 +26,22 @@ LOGGER = logging.getLogger(__name__)
 TOP_LEVEL_DOMAINS = set(['com', 'org', 'net', 'info', 'fm'])
 DOMAIN_PREFIXES = set(['www', 'm', 'mobile'])
 
+# Used to check whether a URL is a wiki link
+# From https://wikimediafoundation.org/our-work/wikimedia-projects/
+WIKI_PROJECTS = [
+    'wikipedia',
+    'wikibooks',
+    'wiktionary',
+    'wikiquote',
+    'commons.wikimedia',
+    'wikisource',
+    'wikiversity',
+    'wikidata',
+    'mediawiki',
+    'wikivoyage',
+    'meta.wikimedia'
+]
+
 
 def clean(url):
     stripped = url.strip()
@@ -168,3 +184,8 @@ def get_external_id_from_url(url, ext_id_pids_to_urls):
                 return ext_id, pid
     LOGGER.debug('Could not extract any identifier from URL <%s>', url)
     return None, None
+
+
+def is_wiki_link(url):
+    domain = urlsplit(url).netloc
+    return True if any(wiki_project in domain for wiki_project in WIKI_PROJECTS) else False

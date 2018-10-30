@@ -13,7 +13,6 @@ import gzip
 import logging
 import xml.etree.ElementTree as et
 from datetime import date, datetime
-from urllib.parse import urlsplit
 
 from requests import get
 
@@ -26,21 +25,6 @@ LOGGER = logging.getLogger(__name__)
 
 DUMP_BASE_URL = 'https://discogs-data.s3-us-west-2.amazonaws.com/'
 DUMP_LIST_URL_TEMPLATE = DUMP_BASE_URL + '?delimiter=/&prefix=data/{}/'
-
-# From https://wikimediafoundation.org/our-work/wikimedia-projects/
-WIKI_PROJECTS = [
-    'wikipedia',
-    'wikibooks',
-    'wiktionary',
-    'wikiquote',
-    'commons.wikimedia',
-    'wikisource',
-    'wikiversity',
-    'wikidata',
-    'mediawiki',
-    'wikivoyage',
-    'meta.wikimedia'
-]
 
 
 class DiscogsDumpExtractor(BaseDumpExtractor):
@@ -215,12 +199,10 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                 dead_urls += 1
                 continue
             LOGGER.debug('Living URL: <%s>', resolved)
-            domain = urlsplit(resolved).netloc
             link_entity = entity_class()
             link_entity.catalog_id = identifier
             link_entity.url = resolved
-            link_entity.is_wiki = True if any(
-                wiki_project in domain for wiki_project in WIKI_PROJECTS) else False
+            link_entity.is_wiki = url_utils.is_wiki_link(resolved)
             link_entity.tokens = '|'.join(url_utils.tokenize(resolved))
             valid_urls += 1
             yield link_entity
