@@ -18,10 +18,12 @@ from csv import DictReader
 from datetime import date
 
 import requests
+from soweego.commons import url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.musicbrainz_entity import (MusicbrainzBandEntity,
+                                                        MusicBrainzLink,
                                                         MusicbrainzPersonEntity)
 
 LOGGER = logging.getLogger(__name__)
@@ -47,11 +49,71 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         db_manager.create(MusicbrainzPersonEntity)
         db_manager.drop(MusicbrainzBandEntity)
         db_manager.create(MusicbrainzBandEntity)
+        db_manager.drop(MusicBrainzLink)
+        db_manager.create(MusicBrainzLink)
 
         for artist in self._artist_generator(dump_path):
             session = db_manager.new_session()
             session.add(artist)
             session.commit()
+
+        for link in self._link_generator(dump_path):
+            session = db_manager.new_session()
+            session.add(link)
+            session.commit()
+    def _link_generator(self, dump_path):
+        l_artist_url_path = os.path.join(dump_path, 'mbdump', 'l_artist_url')
+
+        urlid_artistid_relationship = {}
+
+        with open(l_artist_url_path, "r") as tsvfile:
+            url_relationships = DictReader(tsvfile,
+                                           delimiter='\t',
+                                           fieldnames=[i for i in range(0, 6)])
+            for relationship in url_relationships:
+                # url id matched with its user id
+                if relationship[3] in urlid_artistid_relationship:
+                    LOGGER.warning(
+                        'Url with ID %s has multiple artists, only one will be stored' % relationship[3])
+                else:
+                    urlid_artistid_relationship[relationship[3]
+                                                ] = relationship[2]
+
+        url_artistid = {}
+        url_path = os.path.join(dump_path, 'mbdump', 'url')
+
+        with open(url_path, "r") as tsvfile:
+            urls = DictReader(tsvfile,
+                              delimiter='\t',
+                              fieldnames=[i for i in range(0, 5)])
+            for url_record in urls:
+                urlid = url_record[0]
+                if urlid in urlid_artistid_relationship:
+                    url_artistid[url_record[2]
+                                 ] = urlid_artistid_relationship[urlid]
+                    del urlid_artistid_relationship[urlid]
+
+        urlid_artistid_relationship = None
+
+        artistid_url = {v: k for k, v in url_artistid.items()}
+
+        artist_path = os.path.join(dump_path, 'mbdump', 'artist')
+        with open(artist_path, 'r') as artistfile:
+            for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day', 'd_year', 'd_month', 'd_day', 'type_id']):
+                if artist['id'] in artistid_url:
+                    for candidate_url in url_utils.clean(artistid_url[artist['id']]):
+                        if not url_utils.validate(candidate_url):
+                            continue
+                        if not url_utils.resolve(candidate_url):
+                            continue
+                        current_entity = MusicBrainzLink()
+                        current_entity.catalog_id = artist['gid']
+                        current_entity.url = candidate_url
+                        current_entity.is_wiki = url_utils.is_wiki_link(
+                            candidate_url)
+                        current_entity.tokens = ' '.join(
+                            url_utils.tokenize(candidate_url))
+                        yield current_entity
 
     def _artist_generator(self, dump_path):
         artist_alias_path = os.path.join(dump_path, 'mbdump', 'artist_alias')
