@@ -5,13 +5,16 @@ services:
     tty: true
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.test
     depends_on:
       - db
     volumes:
       - type: bind
         source: ${DUMP_FOLDER}
         target: /app/dump
+      - type: bind
+        source: .
+        target: /app/soweego
   db:
     image: mariadb:10.0.36-xenial
     environment:

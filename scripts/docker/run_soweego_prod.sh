@@ -12,7 +12,7 @@ if [ -z "$1" ]
     then
         mv soweego/importer/resources/db_credentials.json.old soweego/importer/resources/db_credentials.json
     fi
-    docker build --rm -f "Dockerfile" -t maxfrax/soweego:latest .
+    docker build --rm -f "Dockerfile.prod" -t maxfrax/soweego:latest .
     docker run -it --rm --name soweego --env-file .env --volume "${DUMP_FOLDER}":"/app/dump" maxfrax/soweego:latest /bin/bash
     exit 0
 fi
@@ -23,5 +23,5 @@ then
     mv soweego/importer/resources/db_credentials.json $old_credentials
 fi
 cp $1 soweego/importer/resources/db_credentials.json
-docker build --rm -f "Dockerfile" -t maxfrax/soweego:latest .
+docker build --rm -f "Dockerfile.prod" -t maxfrax/soweego:latest .
 docker run -it --rm --name soweego --env-file .env --volume "${DUMP_FOLDER}":"/app/dump" maxfrax/soweego:latest /bin/bash
