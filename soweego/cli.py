@@ -12,7 +12,6 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import logging
 
 import click
-
 from soweego import (commons, importer, ingestor, target_selection, validator,
                      wikidata)
 
