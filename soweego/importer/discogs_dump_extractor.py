@@ -21,11 +21,6 @@ from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models import discogs_entity
 
-<< << << < HEAD
-== == == =
-
->>>>>> > master
-
 LOGGER = logging.getLogger(__name__)
 
 DUMP_BASE_URL = 'https://discogs-data.s3-us-west-2.amazonaws.com/'
