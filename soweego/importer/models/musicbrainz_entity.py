@@ -9,11 +9,10 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, MaxFrax96'
 
-from sqlalchemy import Column, ForeignKey, String
-from sqlalchemy.ext.declarative import declarative_base
-
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.base_link_entity import BaseLinkEntity
+from sqlalchemy import Column, ForeignKey, String
+from sqlalchemy.ext.declarative import declarative_base
 
 BASE = declarative_base()
 
@@ -28,13 +27,5 @@ class MusicbrainzBandEntity(BaseEntity, BASE):
     # TODO define missing non-standard fields
 
 
-class MusicbrainzPersonLinkEntity(BaseLinkEntity, BASE):
-    __tablename__ = "musicbrainz_person_link"
-    catalog_id = Column(String(32), ForeignKey(MusicbrainzPersonEntity.catalog_id),
-                        index=True)
-
-
-class MusicbrainzBandLinkEntity(BaseLinkEntity, BASE):
-    __tablename__ = "musicbrainz_band_link"
-    catalog_id = Column(String(32), ForeignKey(MusicbrainzBandEntity.catalog_id),
-                        index=True)
+class MusicBrainzLink(BaseLinkEntity, BASE):
+    __tablename__ = "musicbrainz_link"
