@@ -16,9 +16,7 @@ from datetime import date
 from urllib.parse import urlsplit
 
 from requests import get
-
 from soweego.commons.db_manager import DBManager
-from soweego.commons.file_utils import get_path
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models import discogs_entity
 
@@ -56,8 +54,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         return DUMP_BASE_URL + dump_file_name
 
     def extract_and_populate(self, dump_file_path: str):
-        db_manager = DBManager(
-            get_path('soweego.importer.resources', 'db_credentials.json'))
+        db_manager = DBManager()
         db_manager.drop(discogs_entity.DiscogsMusicianEntity)
         db_manager.create(discogs_entity.DiscogsMusicianEntity)
         db_manager.drop(discogs_entity.DiscogsGroupEntity)
