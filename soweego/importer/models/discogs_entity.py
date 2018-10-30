@@ -9,7 +9,7 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
-from sqlalchemy import Column, ForeignKey, String, Text
+from sqlalchemy import Column, String, Text
 from sqlalchemy.ext.declarative import declarative_base
 
 from soweego.importer.models.base_entity import BaseEntity
@@ -37,8 +37,6 @@ class DiscogsMusicianEntity(DiscogsBaseEntity, BASE):
 
 class DiscogsMusicianLinkEntity(BaseLinkEntity, BASE):
     __tablename__ = DISCOGS_MUSICIAN_LINK_TABLE_NAME
-    catalog_id = Column(String(32), ForeignKey(DiscogsMusicianEntity.catalog_id),
-                        index=True)
 
 
 class DiscogsGroupEntity(DiscogsBaseEntity, BASE):
@@ -47,5 +45,3 @@ class DiscogsGroupEntity(DiscogsBaseEntity, BASE):
 
 class DiscogsGroupLinkEntity(BaseLinkEntity, BASE):
     __tablename__ = DISCOGS_GROUP_LINK_TABLE_NAME
-    catalog_id = Column(String(32), ForeignKey(DiscogsGroupEntity.catalog_id),
-                        index=True)
