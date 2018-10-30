@@ -74,8 +74,6 @@ class Importer():
             self._update_dump(download_url, file_full_path)
             downloader.extract_and_populate(file_full_path)
 
-        downloader.import_from_dump(file_full_path)
-
     def _update_dump(self, dump_url: str, file_output_path: str) -> None:
         """Download the dump"""
         client.download_file(dump_url, file_output_path)
