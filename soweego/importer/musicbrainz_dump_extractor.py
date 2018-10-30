@@ -18,7 +18,6 @@ from csv import DictReader
 from datetime import date
 
 import requests
-
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models.base_entity import BaseEntity
@@ -36,11 +35,12 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         return 'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/%s/mbdump.tar.bz2' % latest_version
 
     def extract_and_populate(self, dump_file_path):
-        # TODO improve dump folder name
         dump_path = os.path.join(os.path.dirname(
             os.path.abspath(dump_file_path)), "%s_%s" % (os.path.basename(dump_file_path), 'extracted'))
-        with tarfile.open(dump_file_path, "r:bz2") as tar:
-            tar.extractall(dump_path)
+
+        if not os.path.isdir(dump_path):
+            with tarfile.open(dump_file_path, "r:bz2") as tar:
+                tar.extractall(dump_path)
 
         db_manager = DBManager()
         db_manager.drop(MusicbrainzPersonEntity)
@@ -48,6 +48,12 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         db_manager.drop(MusicbrainzBandEntity)
         db_manager.create(MusicbrainzBandEntity)
 
+        for artist in self._artist_generator(dump_path):
+            session = db_manager.new_session()
+            session.add(artist)
+            session.commit()
+
+    def _artist_generator(self, dump_path):
         artist_alias_path = os.path.join(dump_path, 'mbdump', 'artist_alias')
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
 
@@ -61,7 +67,6 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         with open(artist_path, 'r') as artistfile:
             for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day', 'd_year', 'd_month', 'd_day', 'type_id']):
-                session = db_manager.new_session()
                 if self._check_person(artist['type_id']):
                     current_entity = MusicbrainzPersonEntity()
 
@@ -71,11 +76,12 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                         LOGGER.error('Wrong date: %s', artist)
                         continue
 
-                    session.add(current_entity)
+                    yield current_entity
 
                     # Creates an entity foreach available alias
-                    session.add_all(self._alias_entities(
-                        current_entity, MusicbrainzPersonEntity, aliases[artist['id']]))
+                    for alias in self._alias_entities(
+                            current_entity, MusicbrainzPersonEntity, aliases[artist['id']]):
+                        yield alias
 
                 if self._check_band(artist['type_id']):
                     current_entity = MusicbrainzBandEntity()
@@ -86,13 +92,12 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                         LOGGER.error('Wrong date: %s', artist)
                         continue
 
-                    session.add(current_entity)
+                    yield current_entity
 
                     # Creates an entity foreach available alias
-                    session.add_all(self._alias_entities(
-                        current_entity, MusicbrainzPersonEntity, aliases[artist['id']]))
-
-                session.commit()
+                    for alias in self._alias_entities(
+                            current_entity, MusicbrainzPersonEntity, aliases[artist['id']]):
+                        yield alias
 
     def _fill_entity(self, entity: BaseEntity, info):
         entity.catalog_id = info['gid']
