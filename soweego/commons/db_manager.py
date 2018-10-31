@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-"""DB manager based on sqlalchemy engine"""
+"""DB manager based on SQL Alchemy engine"""
 
 __author__ = 'Edoardo Lenzi'
 __email__ = 'edoardolenzi9@gmail.com'
@@ -21,21 +21,19 @@ from sqlalchemy.orm import sessionmaker
 from soweego.commons import constants as const
 from soweego.commons import localizations as loc
 
-DECLARATIVE_BASE = declarative_base()
+BASE = declarative_base()
 LOGGER = logging.getLogger(__name__)
 
 
 class DBManager():
 
-    """Class that exposes some primitives for the DB access"""
+    """Exposes some primitives for the DB access"""
 
     __engine: object
 
     def __init__(self):
-
         credentials = json.loads(
             get_data('soweego.importer.resources', 'db_credentials.json'))
-
         db_engine = credentials[const.DB_ENGINE_KEY]
         db_name = credentials[const.PROD_DB_KEY]
         user = credentials[const.USER_KEY]
@@ -46,25 +44,24 @@ class DBManager():
                 '{0}://{1}:{2}@{3}/{4}'.format(db_engine,
                                                user, password, host, db_name),
                 echo=False)
-        except:
-            LOGGER.warning(loc.FAIL_CREATE_ENGINE)
+        except Exception as error:
+            LOGGER.critical(loc.FAIL_CREATE_ENGINE, error)
 
     def get_engine(self) -> Engine:
-        """returns the current SqlAlchemy-Engine instance"""
+        """Return the current SQL Alchemy engine instance"""
         return self.__engine
 
     def new_session(self) -> object:
-        """Creates a new DB session"""
+        """Create a new DB session"""
         Session = sessionmaker(bind=self.__engine)
-        session = Session()
-        return session
+        return Session()
 
-    def create(self, table) -> None:
-        """Creates the schema of the table (table can be an instance or a type)"""
-        DECLARATIVE_BASE.metadata.create_all(self.__engine,
-                                             tables=[table.__table__])
+    def create(self, tables) -> None:
+        """Create the tables (tables can be ORM entity instances or classes)"""
+        BASE.metadata.create_all(self.__engine, tables=[
+                                 table.__table__ for table in tables])
 
-    def drop(self, table) -> None:
-        """Drops the table (table can be an instance or a type)"""
-        DECLARATIVE_BASE.metadata.drop_all(self.__engine,
-                                           tables=[table.__table__])
+    def drop(self, tables) -> None:
+        """Drop the tables (table can be ORM entity instances or classes)"""
+        BASE.metadata.drop_all(self.__engine, tables=[
+                               table.__table__ for table in tables])
