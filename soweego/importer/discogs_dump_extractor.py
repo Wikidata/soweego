@@ -16,7 +16,7 @@ from datetime import date, datetime
 
 from requests import get
 
-from soweego.commons import url_utils
+from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models import discogs_entity
@@ -46,18 +46,24 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         dead_links = 0
         musicians = 0
         musician_links = 0
+        musician_nlp = 0
         bands = 0
         band_links = 0
+        band_nlp = 0
         total_entities = 0
 
         db_manager = DBManager()
         db_manager.drop(discogs_entity.DiscogsMusicianEntity)
+        db_manager.drop(discogs_entity.DiscogsMusicianNlpEntity)
         db_manager.drop(discogs_entity.DiscogsMusicianLinkEntity)
         db_manager.create(discogs_entity.DiscogsMusicianEntity)
+        db_manager.create(discogs_entity.DiscogsMusicianNlpEntity)
         db_manager.create(discogs_entity.DiscogsMusicianLinkEntity)
         db_manager.drop(discogs_entity.DiscogsGroupEntity)
+        db_manager.drop(discogs_entity.DiscogsGroupNlpEntity)
         db_manager.drop(discogs_entity.DiscogsGroupLinkEntity)
         db_manager.create(discogs_entity.DiscogsGroupEntity)
+        db_manager.create(discogs_entity.DiscogsGroupNlpEntity)
         db_manager.create(discogs_entity.DiscogsGroupLinkEntity)
 
         with gzip.open(dump_file_path, 'rt') as dump:
@@ -77,32 +83,46 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
 
                 session = db_manager.new_session()
 
-                # Populate entities
+                # Populate musicians
                 groups = node.find('groups')
                 if groups:
                     current_entity = discogs_entity.DiscogsMusicianEntity()
+                    # Main entity
                     self._fill_entity(
                         current_entity, identifier, name, node)
                     session.add(current_entity)
                     musicians += 1
                     total_entities += 1
+                    # Textual data
+                    self._populate_nlp_entity(
+                        session, node, discogs_entity.DiscogsMusicianNlpEntity, identifier, musician_nlp)
+                    # Denormalized name variations
                     self._populate_name_variations(
                         session, node, current_entity, identifier, musicians)
+                    # Links
                     self._populate_links(
                         session, node, discogs_entity.DiscogsMusicianLinkEntity, identifier, musician_links, dead_links)
                     # TODO populate musician -> groups relationship table
                     #  for group in list(groups):
                     #      get group.attrib['id']
+
+                # Populate bands
                 members = node.find('members')
                 if members:
                     current_entity = discogs_entity.DiscogsGroupEntity()
+                    # Main entity
                     self._fill_entity(
                         current_entity, identifier, name, node)
                     session.add(current_entity)
                     bands += 1
                     total_entities += 1
+                    # Textual data
                     self._populate_name_variations(
                         session, node, current_entity, identifier, bands)
+                    # Denormalized name variations
+                    self._populate_nlp_entity(
+                        session, node, discogs_entity.DiscogsGroupNlpEntity, identifier, band_nlp)
+                    # Links
                     self._populate_links(
                         session, node, discogs_entity.DiscogsGroupLinkEntity, identifier, band_links, dead_links)
                     # TODO populate group -> musicians relationship table
@@ -129,6 +149,18 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             LOGGER.debug(
                 'Artist %s has no <namevariations> tag', identifier)
 
+    def _populate_nlp_entity(self, session, artist_node, entity_class, identifier, count):
+        profile = artist_node.findtext('profile')
+        if profile:
+            nlp_entity = entity_class()
+            nlp_entity.catalog_id = identifier
+            nlp_entity.description = profile
+            nlp_entity.tokens = ' '.join(text_utils.tokenize(profile))
+            session.add(nlp_entity)
+            count += 1
+        else:
+            LOGGER.debug('Artist %s has an empty <profile/> tag', identifier)
+
     def _fill_entity(self, entity: discogs_entity.DiscogsBaseEntity, identifier, name, artist_node):
         # Required fields
         entity.catalog_id = identifier
@@ -140,12 +172,6 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         else:
             LOGGER.debug(
                 'Artist %s has an empty <realname/> tag', identifier)
-        # Profile
-        profile = artist_node.findtext('profile')
-        if profile:
-            entity.profile = profile
-        else:
-            LOGGER.debug('Artist %s has an empty <profile/> tag', identifier)
         # Data quality
         data_quality = artist_node.findtext('data_quality')
         if data_quality:
@@ -166,7 +192,6 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             variation_entity.catalog_id = main_entity.catalog_id
             variation_entity.name = name_variation
             variation_entity.real_name = main_entity.real_name
-            variation_entity.profile = main_entity.profile
             variation_entity.data_quality = main_entity.data_quality
             count += 1
             yield variation_entity
