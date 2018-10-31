@@ -9,39 +9,48 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
-from sqlalchemy import Column, String, Text
+from sqlalchemy import Column, String
 from sqlalchemy.ext.declarative import declarative_base
 
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.base_link_entity import BaseLinkEntity
+from soweego.importer.models.base_nlp_entity import BaseNlpEntity
 
 BASE = declarative_base()
-DISCOGS_MUSICIAN_TABLE_NAME = 'discogs_musician'
-DISCOGS_MUSICIAN_LINK_TABLE_NAME = 'discogs_musician_link'
-DISCOGS_GROUP_TABLE_NAME = 'discogs_group'
-DISCOGS_GROUP_LINK_TABLE_NAME = 'discogs_group_link'
+MUSICIAN_TABLE = 'discogs_musician'
+MUSICIAN_LINK_TABLE = 'discogs_musician_link'
+MUSICIAN_NLP_TABLE = 'discogs_musician_nlp'
+GROUP_TABLE = 'discogs_group'
+GROUP_LINK_TABLE = 'discogs_group_link'
+GROUP_NLP_TABLE = 'discogs_group_nlp'
 
 
 class DiscogsBaseEntity(BaseEntity):
     # Name in real life
     real_name = Column(String(255))
-    # Description
-    profile = Column(Text)
     # Discogs-specific indicator of data quality
     data_quality = Column(String(20))
 
 
 class DiscogsMusicianEntity(DiscogsBaseEntity, BASE):
-    __tablename__ = DISCOGS_MUSICIAN_TABLE_NAME
+    __tablename__ = MUSICIAN_TABLE
 
 
 class DiscogsMusicianLinkEntity(BaseLinkEntity, BASE):
-    __tablename__ = DISCOGS_MUSICIAN_LINK_TABLE_NAME
+    __tablename__ = MUSICIAN_LINK_TABLE
+
+
+class DiscogsMusicianNlpEntity(BaseNlpEntity, BASE):
+    __tablename__ = MUSICIAN_NLP_TABLE
 
 
 class DiscogsGroupEntity(DiscogsBaseEntity, BASE):
-    __tablename__ = DISCOGS_GROUP_TABLE_NAME
+    __tablename__ = GROUP_TABLE
 
 
 class DiscogsGroupLinkEntity(BaseLinkEntity, BASE):
-    __tablename__ = DISCOGS_GROUP_LINK_TABLE_NAME
+    __tablename__ = GROUP_LINK_TABLE
+
+
+class DiscogsGroupNlpEntity(BaseNlpEntity, BASE):
+    __tablename__ = GROUP_NLP_TABLE
