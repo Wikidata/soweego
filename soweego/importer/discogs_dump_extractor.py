@@ -131,9 +131,8 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         # Denormalized name variations
         self._populate_name_variations(session, node, entity, identifier)
         # Links
-        for link in links:
-            self._fill_link_entity(
-                discogs_entity.DiscogsMusicianLinkEntity(), identifier, link)
+        self._populate_links(
+            session, links, discogs_entity.DiscogsGroupLinkEntity, identifier)
         # TODO populate group -> musicians relationship table
         #  for member in list(members):
         #      get member.attrib['id']
@@ -150,12 +149,17 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         # Denormalized name variations
         self._populate_name_variations(session, node, entity, identifier)
         # Links
-        for link in links:
-            self._fill_link_entity(
-                discogs_entity.DiscogsMusicianLinkEntity(), identifier, link)
+        self._populate_links(
+            session, links, discogs_entity.DiscogsMusicianLinkEntity, identifier)
         # TODO populate musician -> groups relationship table
         #  for group in list(groups):
         #      get group.attrib['id']
+
+    def _populate_links(self, session, links, entity_class, identifier):
+        for link in links:
+            link_entity = entity_class()
+            self._fill_link_entity(link_entity, identifier, link)
+            session.add(link_entity)
 
     def _populate_name_variations(self, session, artist_node, current_entity, identifier):
         name_variations_node = artist_node.find('namevariations')
