@@ -192,7 +192,15 @@ def _add_or_reference(subject: str, predicate: str, value: str, stated_in: str) 
         LOGGER.debug('%s has no %s claim', subject, predicate)
         _add(item, predicate, value, stated_in)
         return
-    existing_values = [value.getTarget() for value in given_predicate_claims]
+    # Facebook IDs are case-insensitive
+    # See https://www.wikidata.org/wiki/Topic:Unym71ais48bt6ih
+    if predicate == vocabulary.FACEBOOK_PID:
+        value = value.lower()
+        existing_values = [value.getTarget().lower()
+                           for value in given_predicate_claims]
+    else:
+        existing_values = [value.getTarget()
+                           for value in given_predicate_claims]
     # No given value
     if value not in existing_values:
         LOGGER.debug('%s has no %s claim with value %s',
@@ -221,8 +229,8 @@ def _reference(claim, stated_in):
     STATED_IN_REFERENCE.setTarget(
         pywikibot.ItemPage(REPO, stated_in))
     claim.addSources([STATED_IN_REFERENCE, RETRIEVED_REFERENCE])
-    LOGGER.info('Added reference node: %s, %s',
-                STATED_IN_REFERENCE.toJSON(), RETRIEVED_REFERENCE.toJSON())
+    LOGGER.info('Added (%s, %s), (%s, %s) reference node', STATED_IN_REFERENCE.getID(
+    ), stated_in, RETRIEVED_REFERENCE.getID(), TODAY)
 
 
 def _delete_or_deprecate(action: str, qid: str, catalog_id: str, catalog_name: str) -> None:
