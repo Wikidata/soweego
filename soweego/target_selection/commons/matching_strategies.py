@@ -11,72 +11,22 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import json
 import logging
-import re
 from collections import defaultdict
 from os import path
 
 import click
 import jellyfish
 
+from soweego.commons import text_utils, url_utils
 from soweego.commons.candidate_acquisition import (IDENTIFIER_COLUMN,
                                                    INDEXED_COLUMN, query_index)
-from soweego.commons.url_utils import tokenize
 
 LOGGER = logging.getLogger(__name__)
-# Names processing
-NAMES_STOPWORDS = set(
-    ['sir', 'lord', 'mr', 'mrs', 'ms', 'miss', 'madam', 'jr', 'sr', 'phd',
-     'dr', 'mme', 'mlle', 'baron', 'baronet', 'bt', 'graf', 'gräfin', 'de',
-     'of', 'von', 'the']
-)
 EDIT_DISTANCES = {
     'jw': jellyfish.jaro_winkler,
     'l': jellyfish.levenshtein_distance,
     'dl': jellyfish.damerau_levenshtein_distance
 }
-# Latin alphabet diacritics and Russian
-ASCII_TRANSLATION_TABLE = str.maketrans({
-    'á': 'a', 'Á': 'A', 'à': 'a', 'À': 'A', 'ă': 'a', 'Ă': 'A', 'â': 'a',
-    'Â': 'A', 'å': 'a', 'Å': 'A', 'ã': 'a', 'Ã': 'A', 'ą': 'a', 'Ą': 'A',
-    'ā': 'a', 'Ā': 'A', 'ä': 'ae', 'Ä': 'AE', 'æ': 'ae', 'Æ': 'AE',
-    'ḃ': 'b', 'Ḃ': 'B', 'ć': 'c', 'Ć': 'C', 'ĉ': 'c', 'Ĉ': 'C', 'č': 'c',
-    'Č': 'C', 'ċ': 'c', 'Ċ': 'C', 'ç': 'c', 'Ç': 'C', 'ď': 'd', 'Ď': 'D',
-    'ḋ': 'd', 'Ḋ': 'D', 'đ': 'd', 'Đ': 'D', 'ð': 'dh', 'Ð': 'Dh',
-    'é': 'e', 'É': 'E', 'è': 'e', 'È': 'E', 'ĕ': 'e', 'Ĕ': 'E', 'ê': 'e',
-    'Ê': 'E', 'ě': 'e', 'Ě': 'E', 'ë': 'e', 'Ë': 'E', 'ė': 'e', 'Ė': 'E',
-    'ę': 'e', 'Ę': 'E', 'ē': 'e', 'Ē': 'E', 'ḟ': 'f', 'Ḟ': 'F', 'ƒ': 'f',
-    'Ƒ': 'F', 'ğ': 'g', 'Ğ': 'G', 'ĝ': 'g', 'Ĝ': 'G', 'ġ': 'g', 'Ġ': 'G',
-    'ģ': 'g', 'Ģ': 'G', 'ĥ': 'h', 'Ĥ': 'H', 'ħ': 'h', 'Ħ': 'H', 'í': 'i',
-    'Í': 'I', 'ì': 'i', 'Ì': 'I', 'î': 'i', 'Î': 'I', 'ï': 'i', 'Ï': 'I',
-    'ĩ': 'i', 'Ĩ': 'I', 'į': 'i', 'Į': 'I', 'ī': 'i', 'Ī': 'I', 'ĵ': 'j',
-    'Ĵ': 'J', 'ķ': 'k', 'Ķ': 'K', 'ĺ': 'l', 'Ĺ': 'L', 'ľ': 'l', 'Ľ': 'L',
-    'ļ': 'l', 'Ļ': 'L', 'ł': 'l', 'Ł': 'L', 'ṁ': 'm', 'Ṁ': 'M', 'ń': 'n',
-    'Ń': 'N', 'ň': 'n', 'Ň': 'N', 'ñ': 'n', 'Ñ': 'N', 'ņ': 'n', 'Ņ': 'N',
-    'ó': 'o', 'Ó': 'O', 'ò': 'o', 'Ò': 'O', 'ô': 'o', 'Ô': 'O', 'ő': 'o',
-    'Ő': 'O', 'õ': 'o', 'Õ': 'O', 'ø': 'oe', 'Ø': 'OE', 'ō': 'o', 'Ō': 'O',
-    'ơ': 'o', 'Ơ': 'O', 'ö': 'oe', 'Ö': 'OE', 'ṗ': 'p', 'Ṗ': 'P', 'ŕ': 'r',
-    'Ŕ': 'R', 'ř': 'r', 'Ř': 'R', 'ŗ': 'r', 'Ŗ': 'R', 'ś': 's', 'Ś': 'S',
-    'ŝ': 's', 'Ŝ': 'S', 'š': 's', 'Š': 'S', 'ṡ': 's', 'Ṡ': 'S', 'ş': 's',
-    'Ş': 'S', 'ș': 's', 'Ș': 'S', 'ß': 'SS', 'ť': 't', 'Ť': 'T', 'ṫ': 't',
-    'Ṫ': 'T', 'ţ': 't', 'Ţ': 'T', 'ț': 't', 'Ț': 'T', 'ŧ': 't', 'Ŧ': 'T',
-    'ú': 'u', 'Ú': 'U', 'ù': 'u', 'Ù': 'U', 'ŭ': 'u', 'Ŭ': 'U', 'û': 'u',
-    'Û': 'U', 'ů': 'u', 'Ů': 'U', 'ű': 'u', 'Ű': 'U', 'ũ': 'u', 'Ũ': 'U',
-    'ų': 'u', 'Ų': 'U', 'ū': 'u', 'Ū': 'U', 'ư': 'u', 'Ư': 'U', 'ü': 'ue',
-    'Ü': 'UE', 'ẃ': 'w', 'Ẃ': 'W', 'ẁ': 'w', 'Ẁ': 'W', 'ŵ': 'w', 'Ŵ': 'W',
-    'ẅ': 'w', 'Ẅ': 'W', 'ý': 'y', 'Ý': 'Y', 'ỳ': 'y', 'Ỳ': 'Y', 'ŷ': 'y',
-    'Ŷ': 'Y', 'ÿ': 'y', 'Ÿ': 'Y', 'ź': 'z', 'Ź': 'Z', 'ž': 'z', 'Ž': 'Z',
-    'ż': 'z', 'Ż': 'Z', 'þ': 'th', 'Þ': 'Th', 'µ': 'u', 'а': 'a', 'А': 'a',
-    'б': 'b', 'Б': 'b', 'в': 'v', 'В': 'v', 'г': 'g', 'Г': 'g', 'д': 'd',
-    'Д': 'd', 'е': 'e', 'Е': 'E', 'ё': 'e', 'Ё': 'E', 'ж': 'zh', 'Ж': 'zh',
-    'з': 'z', 'З': 'z', 'и': 'i', 'И': 'i', 'й': 'j', 'Й': 'j', 'к': 'k',
-    'К': 'k', 'л': 'l', 'Л': 'l', 'м': 'm', 'М': 'm', 'н': 'n', 'Н': 'n',
-    'о': 'o', 'О': 'o', 'п': 'p', 'П': 'p', 'р': 'r', 'Р': 'r', 'с': 's',
-    'С': 's', 'т': 't', 'Т': 't', 'у': 'u', 'У': 'u', 'ф': 'f', 'Ф': 'f',
-    'х': 'h', 'Х': 'h', 'ц': 'c', 'Ц': 'c', 'ч': 'ch', 'Ч': 'ch', 'ш': 'sh',
-    'Ш': 'sh', 'щ': 'sch', 'Щ': 'sch', 'ъ': '', 'Ъ': '', 'ы': 'y', 'Ы': 'y',
-    'ь': '', 'Ь': '', 'э': 'e', 'Э': 'e', 'ю': 'ju', 'Ю': 'ju', 'я': 'ja',
-    'Я': 'ja'
-})
 
 
 @click.command()
@@ -223,11 +173,13 @@ def edit_distance_match(source, target_table, target_database, target_search_typ
             continue
         # This should be a very small loop, just 1 iteration most of the time
         for source_string in most_frequent_source_strings:
-            source_normalized, source_ascii = _normalize(source_string)
+            source_ascii, source_normalized = text_utils.normalize(
+                source_string)
             for result in target_candidates:
                 target_string = result[INDEXED_COLUMN]
                 target_id = result[IDENTIFIER_COLUMN]
-                target_normalized, target_ascii = _normalize(target_string)
+                target_ascii, target_normalized = text_utils.normalize(
+                    target_string)
                 try:
                     distance = distance_function(
                         source_normalized, target_normalized)
@@ -273,25 +225,12 @@ def _process_names(dataset) -> dict:
     processed = {}
     for name, identifier in dataset.items():
         LOGGER.debug('Identifier [%s]: processing name "%s"', identifier, name)
-        ascii_lowercased, ascii_name = _normalize(name)
-        split = re.split(r'\W+', ascii_lowercased)
-        LOGGER.debug('%s > %s > %s > %s',
-                     name, ascii_name, ascii_lowercased, split)
-        filtered = filter(lambda token: len(token) > 1, split)
-        for token in filtered:
-            if token and token not in NAMES_STOPWORDS:
-                tokenized[identifier].add(token)
+        tokens = text_utils.tokenize(name, text_utils.NAME_STOPWORDS)
+        tokenized[identifier].update(tokens)
     for identifier, tokens in tokenized.items():
         LOGGER.debug('Identifier [%s]: tokens = %s', identifier, tokens)
         processed['|'.join(tokens)] = identifier
     return processed
-
-
-def _normalize(name):
-    """Convert to ASCII and lowercase a name."""
-    ascii_name = name.translate(ASCII_TRANSLATION_TABLE)
-    lowercased = ascii_name.lower()
-    return lowercased, ascii_name
 
 
 def _process_links(dataset) -> dict:
@@ -302,7 +241,7 @@ def _process_links(dataset) -> dict:
     """
     processed = {}
     for link, identifier in dataset.items():
-        tokens = tokenize(link)
+        tokens = url_utils.tokenize(link)
         if not tokens:
             LOGGER.info('Skipping invalid URL')
             continue

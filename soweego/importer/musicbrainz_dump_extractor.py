@@ -9,7 +9,6 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, MaxFrax96'
 
-import json
 import logging
 import os
 import tarfile
@@ -44,13 +43,12 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             with tarfile.open(dump_file_path, "r:bz2") as tar:
                 tar.extractall(dump_path)
 
+        tables = [MusicbrainzPersonEntity,
+                  MusicbrainzBandEntity, MusicBrainzLink]
+
         db_manager = DBManager()
-        db_manager.drop(MusicbrainzPersonEntity)
-        db_manager.create(MusicbrainzPersonEntity)
-        db_manager.drop(MusicbrainzBandEntity)
-        db_manager.create(MusicbrainzBandEntity)
-        db_manager.drop(MusicBrainzLink)
-        db_manager.create(MusicBrainzLink)
+        db_manager.drop(tables)
+        db_manager.create(tables)
 
         artist_count = 0
         for artist in self._artist_generator(dump_path):
