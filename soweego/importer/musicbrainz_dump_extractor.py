@@ -52,15 +52,24 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         db_manager.drop(MusicBrainzLink)
         db_manager.create(MusicBrainzLink)
 
+        artist_count = 0
         for artist in self._artist_generator(dump_path):
+            artist_count = artist_count + 1
             session = db_manager.new_session()
             session.add(artist)
             session.commit()
 
+        print("Added %s artist records" % artist_count)
+
+        link_count = 0
         for link in self._link_generator(dump_path):
+            link_count = link_count + 1
             session = db_manager.new_session()
             session.add(link)
             session.commit()
+
+        print("Added %s link records" % link_count)
+
     def _link_generator(self, dump_path):
         l_artist_url_path = os.path.join(dump_path, 'mbdump', 'l_artist_url')
 
@@ -95,25 +104,29 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         urlid_artistid_relationship = None
 
-        artistid_url = {v: k for k, v in url_artistid.items()}
+        artistid_url = defaultdict(list)
+
+        for url, artistid in url_artistid.items():
+            artistid_url[artistid].append(url)
 
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
         with open(artist_path, 'r') as artistfile:
             for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day', 'd_year', 'd_month', 'd_day', 'type_id']):
                 if artist['id'] in artistid_url:
-                    for candidate_url in url_utils.clean(artistid_url[artist['id']]):
-                        if not url_utils.validate(candidate_url):
-                            continue
-                        if not url_utils.resolve(candidate_url):
-                            continue
-                        current_entity = MusicBrainzLink()
-                        current_entity.catalog_id = artist['gid']
-                        current_entity.url = candidate_url
-                        current_entity.is_wiki = url_utils.is_wiki_link(
-                            candidate_url)
-                        current_entity.tokens = ' '.join(
-                            url_utils.tokenize(candidate_url))
-                        yield current_entity
+                    for link in artistid_url[artist['id']]:
+                        for candidate_url in url_utils.clean(link):
+                            if not url_utils.validate(candidate_url):
+                                continue
+                            if not url_utils.resolve(candidate_url):
+                                continue
+                            current_entity = MusicBrainzLink()
+                            current_entity.catalog_id = artist['gid']
+                            current_entity.url = candidate_url
+                            current_entity.is_wiki = url_utils.is_wiki_link(
+                                candidate_url)
+                            current_entity.tokens = ' '.join(
+                                url_utils.tokenize(candidate_url))
+                            yield current_entity
 
     def _artist_generator(self, dump_path):
         artist_alias_path = os.path.join(dump_path, 'mbdump', 'artist_alias')
