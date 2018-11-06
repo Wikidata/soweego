@@ -65,9 +65,10 @@ def add_statements_cli(catalog_name, statements, sandbox):
     for statement in statements:
         subject, predicate, value = statement.rstrip().split('\t')
         if sandbox:
-            _add(vocabulary.SANDBOX_1_QID, predicate, value, stated_in)
+            _add_or_reference(vocabulary.SANDBOX_1_QID,
+                              predicate, value, stated_in)
         else:
-            _add(subject, predicate, value, stated_in)
+            _add_or_reference(subject, predicate, value, stated_in)
 
 
 @click.command()
@@ -111,10 +112,11 @@ def add_identifiers(matches: dict, catalog_name: str, sandbox: bool) -> None:
         LOGGER.info('Processing %s match: %s -> %s',
                     catalog_name, qid, catalog_id)
         if sandbox:
-            _add(vocabulary.SANDBOX_1_QID,
-                 catalog_terms['pid'], catalog_id, catalog_terms['qid'])
+            _add_or_reference(vocabulary.SANDBOX_1_QID,
+                              catalog_terms['pid'], catalog_id, catalog_terms['qid'])
         else:
-            _add(qid, catalog_terms['pid'], catalog_id, catalog_terms['qid'])
+            _add_or_reference(
+                qid, catalog_terms['pid'], catalog_id, catalog_terms['qid'])
 
 
 def add_statements(statements: list, stated_in: str, sandbox: bool) -> None:
@@ -134,9 +136,10 @@ def add_statements(statements: list, stated_in: str, sandbox: bool) -> None:
     for subject, predicate, value in statements:
         LOGGER.info('Processing (%s, %s, %s) statement')
         if sandbox:
-            _add(vocabulary.SANDBOX_1_QID, predicate, value, stated_in)
+            _add_or_reference(vocabulary.SANDBOX_1_QID,
+                              predicate, value, stated_in)
         else:
-            _add(subject, predicate, value, stated_in)
+            _add_or_reference(subject, predicate, value, stated_in)
 
 
 def delete_or_deprecate_identifiers(action: str, invalid: dict, catalog_name: str, sandbox: bool) -> None:
@@ -169,19 +172,57 @@ def delete_or_deprecate_identifiers(action: str, invalid: dict, catalog_name: st
                 _delete_or_deprecate(action, qid, catalog_id, catalog_name)
 
 
-def _add(subject_qid: str, catalog_pid: str, catalog_id: str, stated_in_qid: str) -> None:
-    subject = pywikibot.ItemPage(REPO, subject_qid)
-    claim = pywikibot.Claim(REPO, catalog_pid)
-    claim.setTarget(catalog_id)
-    subject.addClaim(claim)
+def _add_or_reference(subject: str, predicate: str, value: str, stated_in: str) -> None:
+    item = pywikibot.ItemPage(REPO, subject)
+    data = item.get()
+    # No data at all
+    if not data:
+        LOGGER.warning('%s has no data at all', subject)
+        _add(item, predicate, value, stated_in)
+        return
+    claims = data.get('claims')
+    # No claims
+    if not claims:
+        LOGGER.warning('%s has no claims', subject)
+        _add(item, predicate, value, stated_in)
+        return
+    given_predicate_claims = claims.get(predicate)
+    # No claim with the given predicate
+    if not given_predicate_claims:
+        LOGGER.debug('%s has no %s claim', subject, predicate)
+        _add(item, predicate, value, stated_in)
+        return
+    existing_values = [value.getTarget() for value in given_predicate_claims]
+    # No given value
+    if value not in existing_values:
+        LOGGER.debug('%s has no %s claim with value %s',
+                     subject, predicate, value)
+        _add(item, predicate, value, stated_in)
+        return
+    # Claim with the given predicate and value
+    LOGGER.debug("%s has a %s claim with value '%s'",
+                 subject, predicate, value)
+    for claim in given_predicate_claims:
+        if claim.getTarget() == value:
+            _reference(claim, stated_in)
+
+
+def _add(subject_item, predicate, value, stated_in):
+    claim = pywikibot.Claim(REPO, predicate)
+    claim.setTarget(value)
+    subject_item.addClaim(claim)
     LOGGER.debug('Added claim: %s', claim.toJSON())
-    STATED_IN_REFERENCE.setTarget(
-        pywikibot.ItemPage(REPO, stated_in_qid))
-    claim.addSources([STATED_IN_REFERENCE, RETRIEVED_REFERENCE])
-    LOGGER.debug('Added reference node: %s, %s',
-                 STATED_IN_REFERENCE.toJSON(), RETRIEVED_REFERENCE.toJSON())
+    _reference(claim, stated_in)
     LOGGER.info('Added (%s, %s, %s) statement',
-                subject_qid, catalog_pid, catalog_id)
+                subject_item.getID(), predicate, value)
+
+
+def _reference(claim, stated_in):
+    STATED_IN_REFERENCE.setTarget(
+        pywikibot.ItemPage(REPO, stated_in))
+    claim.addSources([STATED_IN_REFERENCE, RETRIEVED_REFERENCE])
+    LOGGER.info('Added reference node: %s, %s',
+                STATED_IN_REFERENCE.toJSON(), RETRIEVED_REFERENCE.toJSON())
 
 
 def _delete_or_deprecate(action: str, qid: str, catalog_id: str, catalog_name: str) -> None:
@@ -191,7 +232,7 @@ def _delete_or_deprecate(action: str, qid: str, catalog_id: str, catalog_name: s
     item_claims = item_data.get('claims')
     # This should not happen:
     # the input item is supposed to have at least an identifier claim.
-    # We never know, Wikidata is live.
+    # We never know, Wikidata is alive.
     if not item_claims:
         LOGGER.error('%s has no claims. Cannot %s %s identifier %s',
                      qid, action, catalog_name, catalog_id)
@@ -201,7 +242,7 @@ def _delete_or_deprecate(action: str, qid: str, catalog_id: str, catalog_name: s
     # Same comment as the previous one
     if not identifier_claims:
         LOGGER.error('%s has no %s claims. Cannot %s %s identifier %s',
-                     qid, action, catalog_pid, catalog_name, catalog_id)
+                     qid, catalog_pid, action, catalog_name, catalog_id)
         return
     for claim in identifier_claims:
         if claim.getTarget() == catalog_id:
