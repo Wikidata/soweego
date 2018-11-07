@@ -87,7 +87,7 @@ def delete_identifiers_cli(catalog_name, invalid_identifiers, sandbox):
 @click.command()
 @click.argument('catalog_name', type=click.Choice(['discogs', 'imdb', 'musicbrainz', 'twitter']))
 @click.argument('invalid_identifiers', type=click.File())
-@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits in a random Wikidata sandbox item')
+@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits on the Wikidata sandbox item Q4115189')
 def deprecate_identifiers_cli(catalog_name, invalid_identifiers, sandbox):
     """Bot deprecate invalid identifiers from existing Wikidata items.
     """
@@ -119,7 +119,7 @@ def add_identifiers(matches: dict, catalog_name: str, sandbox: bool) -> None:
                 qid, catalog_terms['pid'], catalog_id, catalog_terms['qid'])
 
 
-def add_statements(statements: list, stated_in: str, sandbox: bool) -> None:
+def add_statements(statements: list, stated_in_catalog: str, sandbox: bool) -> None:
     """Add generic statements to existing Wikidata items.
 
     Addition candidates typically come from validation criteria 2 or 3
@@ -128,8 +128,8 @@ def add_statements(statements: list, stated_in: str, sandbox: bool) -> None:
 
     :param statements: list of (subject, predicate, value) triples
     :type statements: list
-    :param stated_in: QID of the target catalog where statements come from
-    :type stated_in: str
+    :param stated_in_catalog: QID of the target catalog where statements come from
+    :type stated_in_catalog: str
     :param sandbox: whether to perform edits on the Wikidata sandbox item Q4115189
     :type sandbox: bool
     """
@@ -137,9 +137,9 @@ def add_statements(statements: list, stated_in: str, sandbox: bool) -> None:
         LOGGER.info('Processing (%s, %s, %s) statement')
         if sandbox:
             _add_or_reference(vocabulary.SANDBOX_1_QID,
-                              predicate, value, stated_in)
+                              predicate, value, stated_in_catalog)
         else:
-            _add_or_reference(subject, predicate, value, stated_in)
+            _add_or_reference(subject, predicate, value, stated_in_catalog)
 
 
 def delete_or_deprecate_identifiers(action: str, invalid: dict, catalog_name: str, sandbox: bool) -> None:
