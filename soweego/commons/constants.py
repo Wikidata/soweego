@@ -13,3 +13,5 @@ DB_ENGINE_KEY = 'DB_ENGINE'
 USER_KEY = 'USER'
 PASSWORD_KEY = 'PASSWORD'
 HOST_KEY = 'HOST'
+
+TARGET_CATALOGS = ['discogs', 'imdb', 'musicbrainz', 'twitter']
