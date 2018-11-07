@@ -22,6 +22,9 @@ from urllib3.exceptions import InsecureRequestWarning
 
 LOGGER = logging.getLogger(__name__)
 
+# HTTP requests timeout in seconds
+READ_TIMEOUT = 10
+
 # URLs stopwords
 TOP_LEVEL_DOMAINS = set(['com', 'org', 'net', 'info', 'fm'])
 DOMAIN_PREFIXES = set(['www', 'm', 'mobile'])
@@ -101,7 +104,8 @@ def resolve(url):
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:62.0) Gecko/20100101 Firefox/62.0'}
     try:
         # Some Web sites do not accept the HEAD method: fire a GET, but don't download anything
-        response = get(url, headers=browser_ua, stream=True)
+        response = get(url, headers=browser_ua,
+                       stream=True, timeout=READ_TIMEOUT)
     except requests.exceptions.SSLError as ssl_error:
         LOGGER.debug(
             'SSL certificate verification failed, will retry without verification. Original URL: <%s> - Reason: %s', url, ssl_error)
@@ -111,13 +115,17 @@ def resolve(url):
             LOGGER.warning(
                 'Dropping URL that led to an unexpected error: <%s> - Reason: %s', url, unexpected_error)
             return None
-    except requests.exceptions.ConnectionError as connection_error:
+    except requests.exceptions.Timeout as timeout:
         LOGGER.info(
-            'Dropping URL that led to an aborted connection: <%s> - Reason: %s', url, connection_error)
+            'Dropping URL that led to a request timeout: <%s> - Reason: %s', url, timeout)
         return None
     except requests.exceptions.TooManyRedirects as too_many_redirects:
         LOGGER.info(
             'Dropping URL because of too many redirects: <%s> - %s', url, too_many_redirects)
+        return None
+    except requests.exceptions.ConnectionError as connection_error:
+        LOGGER.info(
+            'Dropping URL that led to an aborted connection: <%s> - Reason: %s', url, connection_error)
         return None
     except Exception as unexpected_error:
         LOGGER.warning(
