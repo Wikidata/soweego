@@ -163,8 +163,7 @@ def _assess(source, target, to_deprecate, to_add):
                     LOGGER.warning(
                         'Skipping check: no links available in target ID %s', target_id)
                     continue
-                else:
-                    target_links = set(target_links)
+                target_links = set(target_links)
                 shared_links = source_links.intersection(target_links)
                 if not shared_links:
                     LOGGER.debug(
