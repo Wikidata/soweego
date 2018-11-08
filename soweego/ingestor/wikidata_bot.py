@@ -192,9 +192,9 @@ def _add_or_reference(subject: str, predicate: str, value: str, stated_in: str) 
         LOGGER.debug('%s has no %s claim', subject, predicate)
         _add(item, predicate, value, stated_in)
         return
-    # Facebook IDs are case-insensitive
+    # Handle case-insensitive IDs: Facebook, Twitter
     # See https://www.wikidata.org/wiki/Topic:Unym71ais48bt6ih
-    if predicate == vocabulary.FACEBOOK_PID:
+    if predicate in [vocabulary.FACEBOOK_PID, vocabulary.TWITTER_USERNAME_PID]:
         value = value.lower()
         existing_values = [value.getTarget().lower()
                            for value in given_predicate_claims]
