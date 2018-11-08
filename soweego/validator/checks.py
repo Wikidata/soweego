@@ -165,6 +165,7 @@ def _assess(source, target, to_deprecate, to_add):
                     continue
                 target_links = set(target_links)
                 shared_links = source_links.intersection(target_links)
+                extra_links = target_links.difference(source_links)
                 if not shared_links:
                     LOGGER.debug(
                         'No shared links between %s and %s. The identifier statement will be deprecated', qid, target_id)
@@ -172,13 +173,12 @@ def _assess(source, target, to_deprecate, to_add):
                 else:
                     LOGGER.debug('%s and %s share these links: %s',
                                  qid, target_id, shared_links)
-                    extra_links = target_links.difference(source_links)
-                    if extra_links:
-                        LOGGER.debug(
-                            '%s has extra links that will be added to %s: %s', target_id, qid, extra_links)
-                        to_add[qid].update(extra_links)
-                    else:
-                        LOGGER.debug('%s has no extra links', target_id)
+                if extra_links:
+                    LOGGER.debug(
+                        '%s has extra links that will be added to %s: %s', target_id, qid, extra_links)
+                    to_add[qid].update(extra_links)
+                else:
+                    LOGGER.debug('%s has no extra links', target_id)
 
 
 def _extract_ids_from_urls(to_add, ext_id_pids_to_urls):
