@@ -18,7 +18,7 @@ import click
 import regex
 
 from soweego.commons import url_utils
-from soweego.commons.constants import TARGET_CATALOGS
+from soweego.commons.constants import HANDLED_ENTITIES, TARGET_CATALOGS
 from soweego.commons.db_manager import DBManager
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.musicbrainz_entity import (MusicbrainzBandEntity,
@@ -30,12 +30,12 @@ LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
-@click.argument('wikidata_query_type', type=click.Choice(['class', 'occupation']))
+@click.argument('wikidata_query', type=click.Choice(['class', 'occupation']))
 @click.argument('class_qid')
 @click.argument('catalog_pid')
 @click.argument('database_table')
 @click.option('-o', '--outfile', type=click.File('w'), default='output/non_existent_ids.json', help="default: 'output/non_existent_ids.json'")
-def check_existence_cli(wikidata_query_type, class_qid, catalog_pid, database_table, outfile):
+def check_existence_cli(wikidata_query, class_qid, catalog_pid, database_table, outfile):
     """Check the existence of identifier statements.
 
     Dump a JSON file of invalid ones ``{identifier: QID}``
@@ -48,19 +48,17 @@ def check_existence_cli(wikidata_query_type, class_qid, catalog_pid, database_ta
     else:
         LOGGER.error('Not able to retrive entity for given database_table')
 
-    invalid = check_existence(wikidata_query_type, class_qid,
+    invalid = check_existence(wikidata_query, class_qid,
                               catalog_pid, entity)
     json.dump(invalid, outfile, indent=2)
 
 
 def check_existence(class_or_occupation_query, class_qid, catalog_pid, entity: BaseEntity):
     query_type = 'identifier', class_or_occupation_query
-
-    db_manager = DBManager()
-    session = db_manager.new_session()
-
+    session = _connect_to_db()
     invalid = defaultdict(set)
     count = 0
+
     for result in sparql_queries.run_identifier_or_links_query(query_type, class_qid, catalog_pid, 0):
         for qid, target_id in result.items():
             results = session.query(entity).filter(
@@ -76,11 +74,15 @@ def check_existence(class_or_occupation_query, class_qid, catalog_pid, entity: B
     return {target_id: list(qids) for target_id, qids in invalid.items()}
 
 
+def _connect_to_db():
+    db_manager = DBManager()
+    session = db_manager.new_session()
+    return session
+
+
 @click.command()
-@click.argument('class_or_occupation_query', type=click.Choice(['class', 'occupation']))
-@click.argument('class_qid')
-@click.argument('catalog', type=click.Choice(TARGET_CATALOGS))
-@click.argument('target_links', type=click.File())
+@click.argument('entity', type=click.Choice(HANDLED_ENTITIES.keys()))
+@click.argument('catalog', type=click.Choice(TARGET_CATALOGS.keys()))
 @click.option('--wikidata-dump/--no-wikidata-dump', default=False, help='Dump links gathered from Wikidata')
 @click.option('--upload/--no-upload', default=True, help='Upload check results to Wikidata')
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189')
@@ -88,7 +90,7 @@ def check_existence(class_or_occupation_query, class_qid, catalog_pid, entity: B
 @click.option('-e', '--ext-ids-outfile', type=click.File('w'), default='output/external_ids_to_be_added.tsv', help="default: 'output/external_ids_to_be_added.tsv'")
 @click.option('-u', '--urls-outfile', type=click.File('w'), default='output/urls_to_be_added.tsv', help="default: 'output/urls_to_be_added.tsv'")
 @click.option('-w', '--wikidata-outfile', type=click.File('w'), default='output/wikidata_links.json', help="default: 'output/wikidata_links.json'")
-def check_links_cli(class_or_occupation_query, class_qid, catalog, target_links, wikidata_dump, upload, sandbox, deprecated_outfile, ext_ids_outfile, urls_outfile, wikidata_outfile):
+def check_links_cli(entity, catalog, wikidata_dump, upload, sandbox, deprecated_outfile, ext_ids_outfile, urls_outfile, wikidata_outfile):
     """Check the validity of identifier statements based on the available links.
 
     Dump 3 files:
@@ -96,11 +98,8 @@ def check_links_cli(class_or_occupation_query, class_qid, catalog, target_links,
     - external identifiers to be added, as a TSV ``QID  identifier_PID  identifier``;
     - URLs to be added, as a TSV ``QID  P973   URL``.
     """
-    loaded_target_links = json.load(target_links)
-    LOGGER.info("Loaded target links file '%s'", target_links.name)
-
     to_deprecate, ext_ids_to_add, urls_to_add, wikidata = check_links(
-        class_or_occupation_query, class_qid, catalog, loaded_target_links)
+        entity, catalog)
 
     if wikidata_dump:
         json.dump({qid: {data_type: list(values) for data_type, values in data.items()}
@@ -120,23 +119,23 @@ def check_links_cli(class_or_occupation_query, class_qid, catalog, target_links,
                 ext_ids_outfile.name, urls_outfile.name)
 
 
-def check_links(wikidata_query, class_qid, catalog, target_ids_to_links):
-    # TODO https://github.com/Wikidata/soweego/issues/119
-
+def check_links(entity, catalog):
     catalog_terms = _get_vocabulary(catalog)
 
-    wikidata = {}
+    wikidata_links = {}
     to_deprecate = defaultdict(set)
     to_add = defaultdict(set)
 
+    # Target links
+    target_links = _gather_target_links(entity, catalog)
+
     # Wikidata links
-    _gather_identifiers(wikidata_query, class_qid,
-                        catalog, catalog_terms['pid'], wikidata)
+    _gather_identifiers(entity, catalog, catalog_terms['pid'], wikidata_links)
     url_pids, ext_id_pids_to_urls = _gather_relevant_pids()
-    _gather_links(wikidata, url_pids, ext_id_pids_to_urls)
+    _gather_wikidata_links(wikidata_links, url_pids, ext_id_pids_to_urls)
 
     # Check
-    _assess(wikidata, target_ids_to_links, to_deprecate, to_add)
+    _assess(wikidata_links, target_links, to_deprecate, to_add)
 
     # Separate external IDs from URLs
     ext_ids_to_add, urls_to_add = _extract_ids_from_urls(
@@ -145,7 +144,33 @@ def check_links(wikidata_query, class_qid, catalog, target_ids_to_links):
     LOGGER.info('Check completed. %d %s IDs to be deprecated, %d external IDs to be added, %d URL statements to be added', len(
         to_deprecate), catalog, len(ext_ids_to_add), len(urls_to_add))
 
-    return to_deprecate, ext_ids_to_add, urls_to_add, wikidata
+    return to_deprecate, ext_ids_to_add, urls_to_add, wikidata_links
+
+
+def _gather_target_links(entity, catalog):
+    catalog_constants = _get_catalog_constants(catalog)
+    catalog_entity = _get_catalog_entity(entity, catalog_constants)
+
+    LOGGER.info('Gathering %s links ...', catalog)
+    target_links = defaultdict(list)
+    count = 0
+    link_entity = catalog_entity['link_entity']
+    session = _connect_to_db()
+    result = session.query(link_entity.catalog_id, link_entity.url).all()
+    for row in result:
+        target_links[row.catalog_id].append(row.url)
+        count += 1
+    LOGGER.info('Got %d links from %d %s identifiers',
+                count, len(target_links), catalog)
+    return target_links
+
+
+def _get_catalog_entity(entity, catalog_constants):
+    catalog_entity = catalog_constants.get(entity)
+    if not catalog_entity:
+        raise ValueError('Bad entity type: %s. Please use one of %s' %
+                         (entity, catalog_constants.keys()))
+    return catalog_entity
 
 
 def _assess(source, target, to_deprecate, to_add):
@@ -193,7 +218,7 @@ def _extract_ids_from_urls(to_add, ext_id_pids_to_urls):
                 ext_ids_to_add.append((qid, pid, ext_id))
             else:
                 urls_to_add.append(
-                    (qid, vocabulary.DESCRIBED_AT_URL_PID, url))
+                    (qid, vocabulary.DESCRIBED_AT_URL, url))
     return ext_ids_to_add, urls_to_add
 
 
@@ -205,7 +230,15 @@ def _get_vocabulary(catalog):
     return catalog_terms
 
 
-def _gather_links(wikidata, url_pids, ext_id_pids_to_urls):
+def _get_catalog_constants(catalog):
+    catalog_constants = TARGET_CATALOGS.get(catalog)
+    if not catalog_constants:
+        raise ValueError('Bad catalog: %s. Please use on of %s' %
+                         (catalog, TARGET_CATALOGS.keys()))
+    return catalog_constants
+
+
+def _gather_wikidata_links(wikidata, url_pids, ext_id_pids_to_urls):
     LOGGER.info(
         'Gathering Wikidata sitelinks, third-party links, and external identifier links. This will take a while ...')
     total = 0
@@ -239,10 +272,11 @@ def _gather_relevant_pids():
     return url_pids, ext_id_pids_to_urls
 
 
-def _gather_identifiers(class_or_occupation_query, class_qid, catalog, catalog_pid, aggregated):
+def _gather_identifiers(entity, catalog, catalog_pid, aggregated):
+    catalog_constants = _get_catalog_constants(catalog)
     LOGGER.info('Gathering %s identifiers ...', catalog)
-    query_type = 'identifier', class_or_occupation_query
-    for result in sparql_queries.run_identifier_or_links_query(query_type, class_qid, catalog_pid, 0):
+    query_type = 'identifier', HANDLED_ENTITIES.get(entity)
+    for result in sparql_queries.run_identifier_or_links_query(query_type, catalog_constants[entity]['qid'], catalog_pid, 0):
         for qid, target_id in result.items():
             if not aggregated.get(qid):
                 aggregated[qid] = {'identifiers': set()}

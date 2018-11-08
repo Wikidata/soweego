@@ -29,14 +29,14 @@ REPO = SITE.data_repository()
 
 # (stated in, CATALOG) reference object
 STATED_IN_REFERENCE = pywikibot.Claim(
-    REPO, vocabulary.STATED_IN_PID, is_reference=True)
+    REPO, vocabulary.STATED_IN, is_reference=True)
 
 # (retrieved, TIMESTAMP) reference object
 TODAY = date.today()
 TIMESTAMP = pywikibot.WbTime(
     site=REPO, year=TODAY.year, month=TODAY.month, day=TODAY.day, precision='day')
 RETRIEVED_REFERENCE = pywikibot.Claim(
-    REPO, vocabulary.RETRIEVED_PID, is_reference=True)
+    REPO, vocabulary.RETRIEVED, is_reference=True)
 RETRIEVED_REFERENCE.setTarget(TIMESTAMP)
 
 
@@ -65,7 +65,7 @@ def add_statements_cli(catalog_name, statements, sandbox):
     for statement in statements:
         subject, predicate, value = statement.rstrip().split('\t')
         if sandbox:
-            _add_or_reference(vocabulary.SANDBOX_1_QID,
+            _add_or_reference(vocabulary.SANDBOX_1,
                               predicate, value, stated_in)
         else:
             _add_or_reference(subject, predicate, value, stated_in)
@@ -112,7 +112,7 @@ def add_identifiers(matches: dict, catalog_name: str, sandbox: bool) -> None:
         LOGGER.info('Processing %s match: %s -> %s',
                     catalog_name, qid, catalog_id)
         if sandbox:
-            _add_or_reference(vocabulary.SANDBOX_1_QID,
+            _add_or_reference(vocabulary.SANDBOX_1,
                               catalog_terms['pid'], catalog_id, catalog_terms['qid'])
         else:
             _add_or_reference(
@@ -136,7 +136,7 @@ def add_statements(statements: list, stated_in_catalog: str, sandbox: bool) -> N
     for subject, predicate, value in statements:
         LOGGER.info('Processing (%s, %s, %s) statement')
         if sandbox:
-            _add_or_reference(vocabulary.SANDBOX_1_QID,
+            _add_or_reference(vocabulary.SANDBOX_1,
                               predicate, value, stated_in_catalog)
         else:
             _add_or_reference(subject, predicate, value, stated_in_catalog)
@@ -166,7 +166,7 @@ def delete_or_deprecate_identifiers(action: str, invalid: dict, catalog_name: st
             LOGGER.info('Will %s %s identifier: %s -> %s',
                         action, catalog_name, qid, catalog_id)
             if sandbox:
-                _delete_or_deprecate(action, vocabulary.SANDBOX_1_QID,
+                _delete_or_deprecate(action, vocabulary.SANDBOX_1,
                                      catalog_id, catalog_name)
             else:
                 _delete_or_deprecate(action, qid, catalog_id, catalog_name)

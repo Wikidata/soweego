@@ -45,11 +45,11 @@ URL_PID_TERMS = ' '.join(['wdt:%s' % pid for pid in vocabulary.URL_PIDS])
 
 IDENTIFIER_CLASS_BASED_QUERY_TEMPLATE = 'SELECT DISTINCT ' + ITEM_BINDING + ' ' + IDENTIFIER_BINDING + \
     ' WHERE { ' + ITEM_BINDING + \
-    ' wdt:' + vocabulary.INSTANCE_OF_PID + \
+    ' wdt:' + vocabulary.INSTANCE_OF + \
     '/wdt:P279* wd:%s ; wdt:%s ' + IDENTIFIER_BINDING + ' . }'
 IDENTIFIER_OCCUPATION_BASED_QUERY_TEMPLATE = 'SELECT DISTINCT ' + ITEM_BINDING + ' ' + IDENTIFIER_BINDING + \
     ' WHERE { ' + ITEM_BINDING + \
-    ' wdt:' + vocabulary.OCCUPATION_PID + \
+    ' wdt:' + vocabulary.OCCUPATION + \
     '/wdt:P279* wd:%s ; wdt:%s ' + IDENTIFIER_BINDING + ' . }'
 VALUES_QUERY_TEMPLATE = 'SELECT * WHERE { VALUES ' + \
     ITEM_BINDING + ' { %s } . ' + ITEM_BINDING + ' %s }'
@@ -57,10 +57,10 @@ PROPERTIES_WITH_URL_DATATYPE_QUERY = 'SELECT ' + PROPERTY_BINDING + \
     ' WHERE { ' + PROPERTY_BINDING + \
     ' a wikibase:Property ; wikibase:propertyType wikibase:Url . }'
 LINKS_CLASS_BASED_QUERY_TEMPLATE = 'SELECT DISTINCT ' + ITEM_BINDING + ' ' + LINK_BINDING + \
-    ' WHERE { VALUES ' + PROPERTY_BINDING + ' { ' + URL_PID_TERMS + ' } . ' + ITEM_BINDING + ' wdt:' + vocabulary.INSTANCE_OF_PID + '/wdt:P279* wd:%s ; wdt:%s ' + IDENTIFIER_BINDING + \
+    ' WHERE { VALUES ' + PROPERTY_BINDING + ' { ' + URL_PID_TERMS + ' } . ' + ITEM_BINDING + ' wdt:' + vocabulary.INSTANCE_OF + '/wdt:P279* wd:%s ; wdt:%s ' + IDENTIFIER_BINDING + \
     ' ; ' + PROPERTY_BINDING + ' ' + LINK_BINDING + ' . }'
 LINKS_OCCUPATION_BASED_QUERY_TEMPLATE = 'SELECT DISTINCT ' + ITEM_BINDING + ' ' + LINK_BINDING + \
-    ' WHERE { VALUES ' + PROPERTY_BINDING + ' { ' + URL_PID_TERMS + ' } . ' + ITEM_BINDING + ' wdt:' + vocabulary.OCCUPATION_PID + '/wdt:P279* wd:%s ; wdt:%s ' + IDENTIFIER_BINDING + \
+    ' WHERE { VALUES ' + PROPERTY_BINDING + ' { ' + URL_PID_TERMS + ' } . ' + ITEM_BINDING + ' wdt:' + vocabulary.OCCUPATION + '/wdt:P279* wd:%s ; wdt:%s ' + IDENTIFIER_BINDING + \
     ' ; ' + PROPERTY_BINDING + ' ' + LINK_BINDING + ' . }'
 CATALOG_QID_QUERY_TEMPLATE = 'SELECT ' + ITEM_BINDING + \
     ' WHERE { wd:%s wdt:P1629 ' + ITEM_BINDING + ' . }'
