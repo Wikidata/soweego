@@ -10,23 +10,23 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
 # Sandbox items in production site
-SANDBOX_1_QID = 'Q4115189'
-SANDBOX_2_QID = 'Q13406268'
-SANDBOX_3_QID = 'Q15397819'
+SANDBOX_1 = 'Q4115189'
+SANDBOX_2 = 'Q13406268'
+SANDBOX_3 = 'Q15397819'
 
 # Properties used to get instances
-INSTANCE_OF_PID = 'P31'
-OCCUPATION_PID = 'P106'
+INSTANCE_OF = 'P31'
+OCCUPATION = 'P106'
 
 # Properties used for references
-STATED_IN_PID = 'P248'
-RETRIEVED_PID = 'P813'
+STATED_IN = 'P248'
+RETRIEVED = 'P813'
 
 # Target catalog items
-DISCOGS_QID = 'Q504063'
-IMDB_QID = 'Q37312'
-MUSICBRAINZ_QID = 'Q14005'
-TWITTER_QID = 'Q918'
+DISCOGS = 'Q504063'
+IMDB = 'Q37312'
+MUSICBRAINZ = 'Q14005'
+TWITTER = 'Q918'
 
 # Identifier properties
 DISCOGS_ARTIST_PID = 'P1953'
@@ -36,24 +36,32 @@ TWITTER_USERNAME_PID = 'P2002'
 FACEBOOK_PID = 'P2013'
 
 # Widely used generic property to hold URLs
-DESCRIBED_AT_URL_PID = 'P973'
+DESCRIBED_AT_URL = 'P973'
+
+# Entity classes handled by soweego
+ACTOR = 'Q33999'
+BAND = 'Q215380'
+FILM_DIRECTOR = 'Q2526255'
+FILM_PRODUCER = 'Q3282637'
+HUMAN = 'Q5'
+MUSICIAN = 'Q639669'
 
 # Target catalogs helper dictionary
 CATALOG_MAPPING = {
     'discogs': {
-        'qid': DISCOGS_QID,
+        'qid': DISCOGS,
         'pid': DISCOGS_ARTIST_PID
     },
     'imdb': {
-        'qid': IMDB_QID,
+        'qid': IMDB,
         'pid': IMDB_PID
     },
     'musicbrainz': {
-        'qid': MUSICBRAINZ_QID,
+        'qid': MUSICBRAINZ,
         'pid': MUSICBRAINZ_ARTIST_PID
     },
     'twitter': {
-        'qid': TWITTER_QID,
+        'qid': TWITTER,
         'pid': TWITTER_USERNAME_PID
     }
 }
