@@ -168,9 +168,11 @@ def tokenize(url, domain_only=False) -> set:
 
 def get_external_id_from_url(url, ext_id_pids_to_urls):
     LOGGER.debug('Trying to extract an identifier from URL <%s>', url)
+    url = url.rstrip('/')
     for pid, formatters in ext_id_pids_to_urls.items():
         for formatter_url, formatter_regex in formatters.items():
             before, _, after = formatter_url.partition('$1')
+            after = after.rstrip('/')
             if url.startswith(before) and url.endswith(after):
                 LOGGER.debug(
                     'Input URL matches external ID formatter URL: <%s> -> <%s>', url, formatter_url)
