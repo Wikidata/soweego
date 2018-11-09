@@ -118,7 +118,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 if artist['id'] in artistid_url:
                     for link in artistid_url[artist['id']]:
                         if self._check_person(artist['type_id']):
-                            current_entity = MusicbrainzPersonLinkEntity()
+                            current_entity = MusicbrainzArtistLinkEntity()
                             current_entity.catalog_id = artist['gid']
                             current_entity.url = link
                             current_entity.is_wiki = url_utils.is_wiki_link(
@@ -151,23 +151,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         with open(artist_path, 'r') as artistfile:
             for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day', 'd_year', 'd_month', 'd_day', 'type_id', 'area', 'gender']):
                 if self._check_person(artist['type_id']):
-                    current_entity = MusicbrainzPersonEntity()
-
-                    try:
-                        self._fill_entity(current_entity, artist)
-                    except ValueError:
-                        LOGGER.error('Wrong date: %s', artist)
-                        continue
-
-                    yield current_entity
-
-                    # Creates an entity foreach available alias
-                    for alias in self._alias_entities(
-                            current_entity, MusicbrainzPersonEntity, aliases[artist['id']]):
-                        yield alias
-
-                if self._check_band(artist['type_id']):
-                    current_entity = MusicbrainzBandEntity()
+                    current_entity = MusicbrainzArtistEntity()
 
                     try:
                         self._fill_entity(current_entity, artist)
@@ -181,7 +165,24 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
                     # Creates an entity foreach available alias
                     for alias in self._alias_entities(
-                            current_entity, MusicbrainzPersonEntity, aliases[artist['id']]):
+                            current_entity, MusicbrainzArtistEntity, aliases[artist['id']]):
+                        alias.gender = current_entity.gender
+                        yield alias
+
+                if self._check_band(artist['type_id']):
+                    current_entity = MusicbrainzBandEntity()
+
+                    try:
+                        self._fill_entity(current_entity, artist)
+                    except ValueError:
+                        LOGGER.error('Wrong date: %s', artist)
+                        continue
+
+                    yield current_entity
+
+                    # Creates an entity foreach available alias
+                    for alias in self._alias_entities(
+                            current_entity, MusicbrainzBandEntity, aliases[artist['id']]):
                         yield alias
 
     def _fill_entity(self, entity: BaseEntity, info):
@@ -231,5 +232,5 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         return type_code in ['2', '5', '6', '3', '\\N']
 
     def _artist_gender(self, gender_code):
-        genders = {'1': 'male', '2': 'female', '3': 'other'}
+        genders = {'1': 'male', '2': 'female', '3': 'other', '\\N': 'other'}
         return genders[gender_code]

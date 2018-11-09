@@ -15,32 +15,26 @@ from sqlalchemy import Column, ForeignKey, String
 from sqlalchemy.ext.declarative import declarative_base
 
 BASE = declarative_base()
-PERSON_TABLE = 'musicbrainz_person'
-PERSON_LINK_TABLE = 'musicbrainz_person_link'
-PERSON_NLP_TABLE = 'musicbrainz_person_nlp'
+ARTIST_TABLE = 'musicbrainz_artist'
+ARTIST_LINK_TABLE = 'musicbrainz_artist_link'
 BAND_TABLE = 'musicbrainz_band'
 BAND_LINK_TABLE = 'musicbrainz_band_link'
-BAND_NLP_TABLE = 'musicbrainz_band_nlp'
 
 
 class MusicbrainzArtistEntity(BaseEntity, BASE):
-    __tablename__ = PERSON_TABLE
+    __tablename__ = ARTIST_TABLE
 
-    gender = Column(String(10)
+    gender = Column(String(10))
 
 
 class MusicbrainzBandEntity(BaseEntity, BASE):
-    __tablename__=BAND_TABLE
+    __tablename__ = BAND_TABLE
     # TODO define missing non-standard fields
 
 
 class MusicbrainzArtistLinkEntity(BaseLinkEntity, BASE):
-    __tablename__=PERSON_LINK_TABLE
-    catalog_id=Column(String(32), ForeignKey(MusicbrainzPersonEntity.catalog_id),
-                        index=True)
+    __tablename__ = ARTIST_LINK_TABLE
 
 
 class MusicbrainzBandLinkEntity(BaseLinkEntity, BASE):
-    __tablename__=BAND_LINK_TABLE
-    catalog_id=Column(String(32), ForeignKey(MusicbrainzBandEntity.catalog_id),
-                        index=True)
+    __tablename__ = BAND_LINK_TABLE
