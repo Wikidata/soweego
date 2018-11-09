@@ -23,23 +23,24 @@ BAND_LINK_TABLE = 'musicbrainz_band_link'
 BAND_NLP_TABLE = 'musicbrainz_band_nlp'
 
 
-class MusicbrainzPersonEntity(BaseEntity, BASE):
+class MusicbrainzArtistEntity(BaseEntity, BASE):
     __tablename__ = PERSON_TABLE
-    # TODO define missing non-standard fields
+
+    gender = Column(String(10)
 
 
 class MusicbrainzBandEntity(BaseEntity, BASE):
-    __tablename__ = BAND_TABLE
+    __tablename__=BAND_TABLE
     # TODO define missing non-standard fields
 
 
-class MusicbrainzPersonLinkEntity(BaseLinkEntity, BASE):
-    __tablename__ = PERSON_LINK_TABLE
-    catalog_id = Column(String(32), ForeignKey(MusicbrainzPersonEntity.catalog_id),
+class MusicbrainzArtistLinkEntity(BaseLinkEntity, BASE):
+    __tablename__=PERSON_LINK_TABLE
+    catalog_id=Column(String(32), ForeignKey(MusicbrainzPersonEntity.catalog_id),
                         index=True)
 
 
 class MusicbrainzBandLinkEntity(BaseLinkEntity, BASE):
-    __tablename__ = BAND_LINK_TABLE
-    catalog_id = Column(String(32), ForeignKey(MusicbrainzBandEntity.catalog_id),
+    __tablename__=BAND_LINK_TABLE
+    catalog_id=Column(String(32), ForeignKey(MusicbrainzBandEntity.catalog_id),
                         index=True)

@@ -21,10 +21,10 @@ from soweego.commons import url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models.base_entity import BaseEntity
-from soweego.importer.models.musicbrainz_entity import (MusicbrainzBandEntity,
-                                                        MusicbrainzBandLinkEntity,
-                                                        MusicbrainzPersonEntity,
-                                                        MusicbrainzPersonLinkEntity)
+from soweego.importer.models.musicbrainz_entity import (MusicbrainzArtistEntity,
+                                                        MusicbrainzArtistLinkEntity,
+                                                        MusicbrainzBandEntity,
+                                                        MusicbrainzBandLinkEntity)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -44,8 +44,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             with tarfile.open(dump_file_path, "r:bz2") as tar:
                 tar.extractall(dump_path)
 
-        tables = [MusicbrainzPersonEntity,
-                  MusicbrainzBandEntity, MusicbrainzBandLinkEntity, MusicbrainzPersonLinkEntity]
+        tables = [MusicbrainzArtistEntity,
+                  MusicbrainzBandEntity, MusicbrainzBandLinkEntity, MusicbrainzArtistLinkEntity]
 
         db_manager = DBManager()
         db_manager.drop(tables)
@@ -117,7 +117,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day', 'd_year', 'd_month', 'd_day', 'type_id']):
                 if artist['id'] in artistid_url:
                     for link in artistid_url[artist['id']]:
-                        if self._check_person(artist):
+                        if self._check_person(artist['type_id']):
                             current_entity = MusicbrainzPersonLinkEntity()
                             current_entity.catalog_id = artist['gid']
                             current_entity.url = link
@@ -126,7 +126,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                             current_entity.tokens = ' '.join(
                                 url_utils.tokenize(link))
                             yield current_entity
-                        if self._check_band(artist):
+                        if self._check_band(artist['type_id']):
                             current_entity = MusicbrainzBandLinkEntity()
                             current_entity.catalog_id = artist['gid']
                             current_entity.url = link
@@ -149,7 +149,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 aliases[alias['parent_id']].append(alias['label'])
 
         with open(artist_path, 'r') as artistfile:
-            for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day', 'd_year', 'd_month', 'd_day', 'type_id']):
+            for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day', 'd_year', 'd_month', 'd_day', 'type_id', 'area', 'gender']):
                 if self._check_person(artist['type_id']):
                     current_entity = MusicbrainzPersonEntity()
 
@@ -171,6 +171,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
                     try:
                         self._fill_entity(current_entity, artist)
+                        current_entity.gender = self._artist_gender(
+                            artist['gender'])
                     except ValueError:
                         LOGGER.error('Wrong date: %s', artist)
                         continue
@@ -227,3 +229,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
     def _check_band(self, type_code):
         return type_code in ['2', '5', '6', '3', '\\N']
+
+    def _artist_gender(self, gender_code):
+        genders = {'1': 'male', '2': 'female', '3': 'other'}
+        return genders[gender_code]
