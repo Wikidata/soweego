@@ -20,6 +20,8 @@ class BaseEntity():
     catalog_id = Column(String(50), nullable=False, index=True)
     # Full name (<name> <surname>)
     name = Column(String(255), nullable=False)
+    # Full name (<name> <surname>) tokenized
+    tokens = Column(String(255), nullable=False)
     # Date of birth
     born = Column(Date)
     # Date of birth precision

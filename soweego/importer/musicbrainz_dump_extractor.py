@@ -17,7 +17,7 @@ from csv import DictReader
 from datetime import date
 
 import requests
-from soweego.commons import url_utils
+from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models.base_entity import BaseEntity
@@ -188,6 +188,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
     def _fill_entity(self, entity: BaseEntity, info):
         entity.catalog_id = info['gid']
         entity.name = info['label']
+        entity.tokens = " ".join(text_utils.tokenize(info['label']))
         birth_date = self._get_date_and_precision(
             info['b_year'], info['b_month'], info['b_day'])
         death_date = self._get_date_and_precision(
@@ -207,6 +208,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             alias_entity.died_precision = entity.died_precision
 
             alias_entity.name = alias_label
+            alias_entity.tokens = " ".join(url_utils.tokenize(alias_label))
             yield alias_entity
 
     def _get_date_and_precision(self, year, month, day):
