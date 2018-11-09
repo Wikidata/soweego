@@ -25,11 +25,15 @@ class MusicbrainzArtistEntity(BaseEntity, BASE):
     __tablename__ = ARTIST_TABLE
 
     gender = Column(String(10))
+    birth_place = Column(String(255), nullable=True)
+    death_place = Column(String(255), nullable=True)
 
 
 class MusicbrainzBandEntity(BaseEntity, BASE):
     __tablename__ = BAND_TABLE
-    # TODO define missing non-standard fields
+
+    birth_place = Column(String(255), nullable=True)
+    death_place = Column(String(255), nullable=True)
 
 
 class MusicbrainzArtistLinkEntity(BaseLinkEntity, BASE):
