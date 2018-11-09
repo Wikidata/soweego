@@ -22,8 +22,9 @@ from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.musicbrainz_entity import (MusicbrainzBandEntity,
-                                                        MusicBrainzLink,
-                                                        MusicbrainzPersonEntity)
+                                                        MusicbrainzBandLinkEntity,
+                                                        MusicbrainzPersonEntity,
+                                                        MusicbrainzPersonLinkEntity)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -116,14 +117,24 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day', 'd_year', 'd_month', 'd_day', 'type_id']):
                 if artist['id'] in artistid_url:
                     for link in artistid_url[artist['id']]:
-                        current_entity = MusicBrainzLink()
-                        current_entity.catalog_id = artist['gid']
-                        current_entity.url = link
-                        current_entity.is_wiki = url_utils.is_wiki_link(
-                            link)
-                        current_entity.tokens = ' '.join(
-                            url_utils.tokenize(link))
-                        yield current_entity
+                        if self._check_person(artist):
+                            current_entity = MusicbrainzPersonLinkEntity()
+                            current_entity.catalog_id = artist['gid']
+                            current_entity.url = link
+                            current_entity.is_wiki = url_utils.is_wiki_link(
+                                link)
+                            current_entity.tokens = ' '.join(
+                                url_utils.tokenize(link))
+                            yield current_entity
+                        if self._check_band(artist):
+                            current_entity = MusicbrainzBandLinkEntity()
+                            current_entity.catalog_id = artist['gid']
+                            current_entity.url = link
+                            current_entity.is_wiki = url_utils.is_wiki_link(
+                                link)
+                            current_entity.tokens = ' '.join(
+                                url_utils.tokenize(link))
+                            yield current_entity
 
     def _artist_generator(self, dump_path):
         artist_alias_path = os.path.join(dump_path, 'mbdump', 'artist_alias')

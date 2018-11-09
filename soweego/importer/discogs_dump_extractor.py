@@ -19,6 +19,7 @@ from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models import discogs_entity
+from soweego.importer.models.base_link_entity import BaseLinkEntity
 
 LOGGER = logging.getLogger(__name__)
 
@@ -58,6 +59,8 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                   discogs_entity.DiscogsGroupEntity, discogs_entity.DiscogsGroupNlpEntity, discogs_entity.DiscogsGroupLinkEntity]
 
         db_manager = DBManager()
+        LOGGER.info('Connected to database: %s', db_manager.get_engine().url)
+
         db_manager.drop(tables)
         db_manager.create(tables)
         LOGGER.info('SQL tables dropped and re-created: %s',
@@ -80,6 +83,8 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                         'Skipping import for identifier with no name: %s', identifier)
                     continue
 
+                living_links = self._extract_living_links(node, identifier)
+
                 session = db_manager.new_session()
 
                 # Musician
@@ -88,32 +93,32 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                 if groups:
                     entity = discogs_entity.DiscogsMusicianEntity()
                     self._populate_musician(
-                        entity, identifier, name, node, session)
+                        entity, identifier, name, living_links, node, session)
                 # Band
                 elif members:
                     entity = discogs_entity.DiscogsGroupEntity()
                     self._populate_band(entity, identifier,
-                                        name, node, session)
+                                        name, living_links, node, session)
                 # Can't infer the entity type, so populate both
                 else:
                     LOGGER.debug(
                         'Unknown artist type. Will add it to both musicians and bands: %s', identifier)
                     entity = discogs_entity.DiscogsMusicianEntity()
                     self._populate_musician(
-                        entity, identifier, name, node, session)
+                        entity, identifier, name, living_links, node, session)
                     entity = discogs_entity.DiscogsGroupEntity()
                     self._populate_band(entity, identifier,
-                                        name, node, session)
+                                        name, living_links, node, session)
 
                 session.commit()
-                LOGGER.critical('Total entities added to the DB: %d. %d musicians with %d links, %d bands with %d links, %d discarded dead links.',
-                                self.total_entities, self.musicians, self.musician_links, self.bands, self.band_links, self.dead_links)
+                LOGGER.debug('%d entities imported so far: %d musicians with %d links, %d bands with %d links, %d discarded dead links.',
+                             self.total_entities, self.musicians, self.musician_links, self.bands, self.band_links, self.dead_links)
 
         end = datetime.now()
-        LOGGER.info('Import completed in %d. Total entities: %d. %d musicians with %d links, %d bands with %d links, %d discarded dead links.',
+        LOGGER.info('Import completed in %d. Total entities: %d - %d musicians with %d links - %d bands with %d links - %d discarded dead links.',
                     end - start, self.total_entities, self.musicians, self.musician_links, self.bands, self.band_links, self.dead_links)
 
-    def _populate_band(self, entity, identifier, name, node, session):
+    def _populate_band(self, entity: discogs_entity.DiscogsGroupEntity, identifier, name, links, node, session):
         # Main entity
         self._fill_entity(entity, identifier, name, node)
         session.add(entity)
@@ -126,12 +131,12 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         self._populate_name_variations(session, node, entity, identifier)
         # Links
         self._populate_links(
-            session, node, discogs_entity.DiscogsGroupLinkEntity, identifier)
+            session, links, discogs_entity.DiscogsGroupLinkEntity, identifier)
         # TODO populate group -> musicians relationship table
         #  for member in list(members):
         #      get member.attrib['id']
 
-    def _populate_musician(self, entity, identifier, name, node, session):
+    def _populate_musician(self, entity: discogs_entity.DiscogsMusicianEntity, identifier, name, links, node, session):
         # Main entity
         self._fill_entity(entity, identifier, name, node)
         session.add(entity)
@@ -144,10 +149,16 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         self._populate_name_variations(session, node, entity, identifier)
         # Links
         self._populate_links(
-            session, node, discogs_entity.DiscogsMusicianLinkEntity, identifier)
+            session, links, discogs_entity.DiscogsMusicianLinkEntity, identifier)
         # TODO populate musician -> groups relationship table
         #  for group in list(groups):
         #      get group.attrib['id']
+
+    def _populate_links(self, session, links, entity_class, identifier):
+        for link in links:
+            link_entity = entity_class()
+            self._fill_link_entity(link_entity, identifier, link)
+            session.add(link_entity)
 
     def _populate_name_variations(self, session, artist_node, current_entity, identifier):
         name_variations_node = artist_node.find('namevariations')
@@ -218,42 +229,43 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                 self.bands += 1
             yield variation_entity
 
-    def _populate_links(self, session, artist_node, entity_class, identifier):
+    def _extract_living_links(self, artist_node, identifier):
+        LOGGER.debug('Extracting living links from artist %s', identifier)
         urls = artist_node.find('urls')
         if urls:
             for url_element in urls.iterfind('url'):
                 url = url_element.text
-                if url:
-                    session.add_all(self._fill_clean_link(
-                        url, identifier, entity_class))
-                else:
+                if not url:
                     LOGGER.debug(
                         'Artist %s: skipping empty <url> tag', identifier)
                     continue
+                for alive_link in self._check_link(url):
+                    yield alive_link
 
-    def _fill_clean_link(self, url, identifier, entity_class):
-        LOGGER.debug('Processing URL <%s>', url)
-        clean_parts = url_utils.clean(url)
-        LOGGER.debug('Clean URL: %s', clean_parts)
+    def _check_link(self, link):
+        LOGGER.debug('Processing link <%s>', link)
+        clean_parts = url_utils.clean(link)
+        LOGGER.debug('Clean link: %s', clean_parts)
         for part in clean_parts:
-            valid_url = url_utils.validate(part)
-            if not valid_url:
+            valid = url_utils.validate(part)
+            if not valid:
                 self.dead_links += 1
                 continue
-            LOGGER.debug('Valid URL: <%s>', valid_url)
-            resolved = url_utils.resolve(valid_url)
-            if not resolved:
+            LOGGER.debug('Valid URL: <%s>', valid)
+            alive = url_utils.resolve(valid)
+            if not alive:
                 self.dead_links += 1
                 continue
-            LOGGER.debug('Living URL: <%s>', resolved)
-            link_entity = entity_class()
-            link_entity.catalog_id = identifier
-            link_entity.url = resolved
-            link_entity.is_wiki = url_utils.is_wiki_link(resolved)
-            link_entity.tokens = '|'.join(url_utils.tokenize(resolved))
+            LOGGER.debug('Living URL: <%s>', alive)
             self.valid_links += 1
-            if 'Musician' in entity_class.__name__:
-                self.musician_links += 1
-            else:
-                self.band_links += 1
-            yield link_entity
+            yield alive
+
+    def _fill_link_entity(self, entity: BaseLinkEntity, identifier, url):
+        entity.catalog_id = identifier
+        entity.url = url
+        entity.is_wiki = url_utils.is_wiki_link(url)
+        entity.tokens = '|'.join(url_utils.tokenize(url))
+        if isinstance(entity, discogs_entity.DiscogsMusicianLinkEntity):
+            self.musician_links += 1
+        elif isinstance(entity, discogs_entity.DiscogsGroupLinkEntity):
+            self.band_links += 1
