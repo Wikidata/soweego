@@ -16,6 +16,7 @@ from collections import defaultdict
 
 import click
 import regex
+from sqlalchemy import or_
 
 from soweego.commons import url_utils
 from soweego.commons.constants import HANDLED_ENTITIES, TARGET_CATALOGS
@@ -145,6 +146,98 @@ def check_links(entity, catalog):
         to_deprecate), catalog, len(ext_ids_to_add), len(urls_to_add))
 
     return to_deprecate, ext_ids_to_add, urls_to_add, wikidata_links
+
+
+@click.command()
+@click.argument('entity', type=click.Choice(HANDLED_ENTITIES.keys()))
+@click.argument('catalog', type=click.Choice(TARGET_CATALOGS.keys()))
+@click.option('--wikidata-dump/--no-wikidata-dump', default=False, help='Dump metadata gathered from Wikidata')
+@click.option('--upload/--no-upload', default=True, help='Upload check results to Wikidata')
+@click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189')
+@click.option('-d', '--deprecated-outfile', type=click.File('w'), default='output/deprecated_ids.json', help="default: 'output/deprecated_ids.json'")
+@click.option('-a', '--added-outfile', type=click.File('w'), default='output/statements_to_be_added.tsv', help="default: 'output/statements_to_be_added.tsv'")
+@click.option('-w', '--wikidata-outfile', type=click.File('w'), default='output/wikidata_metadata.json', help="default: 'output/wikidata_metadata.json'")
+def check_metadata_cli(entity, catalog, wikidata_dump, upload, sandbox, deprecated_outfile, added_outfile, wikidata_outfile):
+    to_deprecate, to_add, wikidata = check_metadata(
+        entity, catalog)
+
+    if wikidata_dump and wikidata:
+        json.dump({qid: {data_type: list(values) for data_type, values in data.items()}
+                   for qid, data in wikidata.items()}, wikidata_outfile, indent=2, ensure_ascii=False)
+        LOGGER.info('Wikidata metadata dumped to %s', wikidata_outfile.name)
+    if upload:
+        # TODO upload_metadata(to_deprecate, to_add, catalog, sandbox)
+        pass
+
+    if to_deprecate:
+        json.dump({target_id: list(qids) for target_id,
+                   qids in to_deprecate.items()}, deprecated_outfile, indent=2)
+    if to_add:
+        added_outfile.writelines(
+            ['\t'.join(triple) + '\n' for triple in to_add])
+
+    LOGGER.info('Result dumped to %s, %s',
+                deprecated_outfile.name, added_outfile.name)
+
+
+def check_metadata(entity, catalog):
+    catalog_terms = _get_vocabulary(catalog)
+
+    to_deprecate = defaultdict(set)
+    to_add = defaultdict(set)
+    wikidata_meta = {}
+
+    # Target metadata
+    target_metadata = _gather_target_metadata(entity, catalog)
+    for row in target_metadata:
+        if row is None:
+            return to_deprecate, to_add, wikidata_meta
+
+    # Wikidata metadata
+    _gather_identifiers(entity, catalog, catalog_terms['pid'], wikidata_meta)
+    # TODO _gather_wikidata_meta(wikidata_meta)
+
+    # Check
+    # TODO _assess(wikidata_meta, target_meta, to_deprecate, to_add)
+
+    return to_deprecate, to_add, wikidata_meta
+
+
+def _gather_target_metadata(entity_type, catalog):
+    catalog_constants = _get_catalog_constants(catalog)
+    catalog_entity = _get_catalog_entity(entity_type, catalog_constants)
+
+    LOGGER.info('Gathering %s metadata ...', catalog)
+    entity = catalog_entity['entity']
+    # Base metadata
+    query_fields = [entity.catalog_id, entity.born,
+                    entity.born_precision, entity.died, entity.died_precision]
+    # Check additional metadata ('gender', 'birth_place', 'death_place'):
+    if hasattr(entity, 'gender'):
+        query_fields.append(entity.gender)
+    else:
+        LOGGER.info('%s %s has no gender information', catalog, entity_type)
+    if hasattr(entity, 'birth_place'):
+        query_fields.append(entity.birth_place)
+    else:
+        LOGGER.info('%s %s has no birth place information',
+                    catalog, entity_type)
+    if hasattr(entity, 'death_place'):
+        query_fields.append(entity.death_place)
+    else:
+        LOGGER.info('%s %s has no death place information',
+                    catalog, entity_type)
+    session = _connect_to_db()
+    query = session.query(
+        *query_fields).filter(or_(entity.born.isnot(None), entity.died.isnot(None)))
+    count = query.count()
+    if count == 0:
+        LOGGER.warning(
+            "No validation metadata available for %s. Stopping here", catalog)
+        yield None
+    LOGGER.info('Got %d metadata rows from %s', count, catalog)
+    for row in query.all():
+        yield row
 
 
 def _gather_target_links(entity, catalog):
@@ -294,14 +387,3 @@ def upload_links(to_deprecate, ext_ids_to_add, urls_to_add, catalog, sandbox):
     wikidata_bot.add_statements(ext_ids_to_add, catalog_qid, sandbox)
     LOGGER.info('Starting addition of URL statements to Wikidata ...')
     wikidata_bot.add_statements(urls_to_add, catalog_qid, sandbox)
-
-
-@click.command()
-def check_metadata_cli():
-    # TODO https://github.com/Wikidata/soweego/issues/89
-    pass
-
-
-def check_metadata():
-    # TODO https://github.com/Wikidata/soweego/issues/89
-    pass
