@@ -45,7 +45,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 tar.extractall(dump_path)
 
         tables = [MusicbrainzPersonEntity,
-                  MusicbrainzBandEntity, MusicBrainzLink]
+                  MusicbrainzBandEntity, MusicbrainzBandLinkEntity, MusicbrainzPersonLinkEntity]
 
         db_manager = DBManager()
         db_manager.drop(tables)
