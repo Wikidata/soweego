@@ -11,6 +11,7 @@ __copyright__ = 'Copyleft 2018, MaxFrax96'
 
 import logging
 import os
+import re
 import tarfile
 from collections import defaultdict
 from csv import DictReader
@@ -25,6 +26,7 @@ from soweego.importer.models.musicbrainz_entity import (MusicbrainzArtistEntity,
                                                         MusicbrainzArtistLinkEntity,
                                                         MusicbrainzBandEntity,
                                                         MusicbrainzBandLinkEntity)
+from soweego.wikidata.sparql_queries import external_id_pids_and_urls_query
 
 LOGGER = logging.getLogger(__name__)
 
@@ -68,6 +70,15 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             session.commit()
 
         print("Added %s link records" % link_count)
+
+        isni_link_count = 0
+        for link in self._isni_link_generator(dump_path):
+            isni_link_count = isni_link_count + 1
+            session = db_manager.new_session()
+            session.add(link)
+            session.commit()
+
+        print("Added %s ISNI link records" % isni_link_count)
 
     def _link_generator(self, dump_path):
         l_artist_url_path = os.path.join(dump_path, 'mbdump', 'l_artist_url')
@@ -122,22 +133,63 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                     for link in artistid_url[artist['id']]:
                         if self._check_person(artist['type_id']):
                             current_entity = MusicbrainzArtistLinkEntity()
-                            current_entity.catalog_id = artist['gid']
-                            current_entity.url = link
-                            current_entity.is_wiki = url_utils.is_wiki_link(
-                                link)
-                            current_entity.tokens = ' '.join(
-                                url_utils.tokenize(link))
+                            self._fill_link_entity(
+                                current_entity, artist['gid'], link)
                             yield current_entity
                         if self._check_band(artist['type_id']):
                             current_entity = MusicbrainzBandLinkEntity()
-                            current_entity.catalog_id = artist['gid']
-                            current_entity.url = link
-                            current_entity.is_wiki = url_utils.is_wiki_link(
-                                link)
-                            current_entity.tokens = ' '.join(
-                                url_utils.tokenize(link))
+                            self._fill_link_entity(
+                                current_entity, artist['gid'], link)
                             yield current_entity
+
+    def _isni_link_generator(self, dump_path):
+        isni_file_path = os.path.join(dump_path, 'mbdump', 'artist_isni')
+
+        artist_link = {}
+
+        done = False
+        for result in external_id_pids_and_urls_query():
+            if done:
+                break
+            for pid, formatter in result.items():
+                if pid == 'P213':
+                    for url_formatter, regex in formatter.items():
+                        r = re.compile(regex)
+
+                        with open(isni_file_path, 'r') as artistfile:
+                            for artistid_isni in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'isni']):
+                                # If ISNI is valid, generates an url for the artist
+                                artistid = artistid_isni['id']
+                                isni = artistid_isni['isni']
+
+                                link = url_formatter.replace(
+                                    '$1', isni)
+                                for candidate_url in url_utils.clean(link):
+                                    if not url_utils.validate(candidate_url):
+                                        continue
+                                    if not url_utils.resolve(candidate_url):
+                                        continue
+                                    artist_link[artistid] = candidate_url
+                    done = True
+
+        artist_path = os.path.join(dump_path, 'mbdump', 'artist')
+        with open(artist_path, 'r') as artistfile:
+            for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day', 'd_year', 'd_month', 'd_day', 'type_id']):
+                try:
+                    # Checks if artist has isni
+                    link = artist_link[artist['id']]
+                    if self._check_person(artist['type_id']):
+                        current_entity = MusicbrainzArtistLinkEntity()
+                        self._fill_link_entity(
+                            current_entity, artist['gid'], link)
+                        yield current_entity
+                    if self._check_band(artist['type_id']):
+                        current_entity = MusicbrainzBandLinkEntity()
+                        self._fill_link_entity(
+                            current_entity, artist['gid'], link)
+                        yield current_entity
+                except KeyError:
+                    continue
 
     def _artist_generator(self, dump_path):
         artist_alias_path = os.path.join(dump_path, 'mbdump', 'artist_alias')
@@ -215,6 +267,14 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             entity.death_place = areas[info['d_place']]
         except KeyError:
             entity.death_place = None
+
+    def _fill_link_entity(self, entity, gid, link):
+        entity.catalog_id = gid
+        entity.url = link
+        entity.is_wiki = url_utils.is_wiki_link(
+            link)
+        entity.tokens = ' '.join(
+            url_utils.tokenize(link))
 
     def _alias_entities(self, entity: BaseEntity, aliases_class, aliases: []):
         for alias_label in aliases:
