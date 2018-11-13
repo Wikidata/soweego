@@ -72,6 +72,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
     def _link_generator(self, dump_path):
         l_artist_url_path = os.path.join(dump_path, 'mbdump', 'l_artist_url')
 
+        # Loads all the relationships between URL ID and ARTIST ID
         urlid_artistid_relationship = {}
 
         with open(l_artist_url_path, "r") as tsvfile:
@@ -89,7 +90,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         url_artistid = {}
         url_path = os.path.join(dump_path, 'mbdump', 'url')
-
+        # Translates URL IDs to the relative URL
         with open(url_path, "r") as tsvfile:
             urls = DictReader(tsvfile,
                               delimiter='\t',
@@ -108,10 +109,12 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         urlid_artistid_relationship = None
 
         artistid_url = defaultdict(list)
-
+        # Inverts dictionary
         for url, artistid in url_artistid.items():
             artistid_url[artistid].append(url)
 
+        url_artistid = None
+        # Translates ARTIST ID to the relative ARTIST
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
         with open(artist_path, 'r') as artistfile:
             for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day', 'd_year', 'd_month', 'd_day', 'type_id']):
@@ -139,8 +142,10 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
     def _artist_generator(self, dump_path):
         artist_alias_path = os.path.join(dump_path, 'mbdump', 'artist_alias')
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
+        area_path = os.path.join(dump_path, 'mbdump', 'area')
 
         aliases = defaultdict(list)
+        areas = {}
 
         # Key is the entity id which has a list of aliases
         with open(artist_alias_path, 'r') as aliasesfile:
@@ -148,13 +153,18 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                     'id', 'parent_id', 'label']):
                 aliases[alias['parent_id']].append(alias['label'])
 
+        # Key is the area internal id, value is the name
+        with open(area_path, 'r') as areafile:
+            for area in DictReader(areafile, delimiter='\t', fieldnames=['id', 'gid', 'name']):
+                areas[area['id']] = area['name'].lower()
+
         with open(artist_path, 'r') as artistfile:
-            for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day', 'd_year', 'd_month', 'd_day', 'type_id', 'area', 'gender']):
+            for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day', 'd_year', 'd_month', 'd_day', 'type_id', 'area', 'gender', 'ND1', 'ND2', 'ND3', 'ND4', 'b_place', 'd_place']):
                 if self._check_person(artist['type_id']):
                     current_entity = MusicbrainzArtistEntity()
 
                     try:
-                        self._fill_entity(current_entity, artist)
+                        self._fill_entity(current_entity, artist, areas)
                         current_entity.gender = self._artist_gender(
                             artist['gender'])
                     except ValueError:
@@ -173,7 +183,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                     current_entity = MusicbrainzBandEntity()
 
                     try:
-                        self._fill_entity(current_entity, artist)
+                        self._fill_entity(current_entity, artist, areas)
                     except ValueError:
                         LOGGER.error('Wrong date: %s', artist)
                         continue
@@ -185,7 +195,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                             current_entity, MusicbrainzBandEntity, aliases[artist['id']]):
                         yield alias
 
-    def _fill_entity(self, entity: BaseEntity, info):
+    def _fill_entity(self, entity, info, areas):
         entity.catalog_id = info['gid']
         entity.name = info['label']
         entity.tokens = " ".join(text_utils.tokenize(info['label']))
@@ -197,6 +207,14 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         entity.born_precision = birth_date[1]
         entity.died = death_date[0]
         entity.died_precision = death_date[1]
+        try:
+            entity.birth_place = areas[info['b_place']]
+        except KeyError:
+            entity.birth_place = None
+        try:
+            entity.death_place = areas[info['d_place']]
+        except KeyError:
+            entity.death_place = None
 
     def _alias_entities(self, entity: BaseEntity, aliases_class, aliases: []):
         for alias_label in aliases:
@@ -206,6 +224,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             alias_entity.born_precision = entity.born_precision
             alias_entity.died = entity.died
             alias_entity.died_precision = entity.died_precision
+            alias_entity.birth_place = entity.birth_place
+            alias_entity.death_place = entity.death_place
 
             alias_entity.name = alias_label
             alias_entity.tokens = " ".join(url_utils.tokenize(alias_label))
