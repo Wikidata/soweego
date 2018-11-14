@@ -13,7 +13,6 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import logging
 import logging.config
 import os
-from datetime import datetime
 from urllib.parse import unquote_plus
 
 LEVELS = {
