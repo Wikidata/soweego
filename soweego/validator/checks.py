@@ -22,8 +22,8 @@ from soweego.commons import url_utils
 from soweego.commons.constants import HANDLED_ENTITIES, TARGET_CATALOGS
 from soweego.commons.db_manager import DBManager
 from soweego.importer.models.base_entity import BaseEntity
-from soweego.importer.models.musicbrainz_entity import (MusicbrainzBandEntity,
-                                                        MusicbrainzPersonEntity)
+from soweego.importer.models.musicbrainz_entity import (MusicbrainzArtistEntity,
+                                                        MusicbrainzBandEntity)
 from soweego.ingestor import wikidata_bot
 from soweego.wikidata import api_requests, sparql_queries, vocabulary
 
@@ -43,7 +43,7 @@ def check_existence_cli(wikidata_query, class_qid, catalog_pid, database_table, 
     """
     entity = BaseEntity
     if database_table == 'musicbrainz_person':
-        entity = MusicbrainzPersonEntity
+        entity = MusicbrainzArtistEntity
     elif database_table == 'musicbrainz_band':
         entity = MusicbrainzBandEntity
     else:

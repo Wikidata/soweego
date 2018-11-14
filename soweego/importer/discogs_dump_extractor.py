@@ -15,7 +15,6 @@ import xml.etree.ElementTree as et
 from datetime import date, datetime
 
 from requests import get
-
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor

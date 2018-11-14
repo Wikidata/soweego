@@ -28,7 +28,7 @@ LOGGER = logging.getLogger(__name__)
 @click.command()
 @click.argument('catalog', type=click.Choice(['discogs', 'musicbrainz']))
 @click.option('--download-url', '-du', default=None)
-@click.option('--output', '-o', default='output', type=click.Path())
+@click.option('--output', '-o', default='/app/dump', type=click.Path())
 def import_cli(catalog: str, download_url: str, output: str) -> None:
     """Download, extract and import an available catalog."""
     importer = Importer()
@@ -73,8 +73,6 @@ class Importer():
         else:
             self._update_dump(download_url, file_full_path)
             downloader.extract_and_populate(file_full_path)
-
-        downloader.import_from_dump(file_full_path)
 
     def _update_dump(self, dump_url: str, file_output_path: str) -> None:
         """Download the dump"""
