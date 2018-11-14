@@ -66,7 +66,7 @@ CATALOG_MAPPING = {
     }
 }
 
-# Properties IDs with URL data type, from SPARQL query:
+# Properties with URL data type, from SPARQL query:
 # SELECT ?property WHERE { ?property a wikibase:Property ; wikibase:propertyType wikibase:Url . }
 URL_PIDS = set([
     'P854', 'P855', 'P856', 'P953', 'P963', 'P968', 'P973', 'P1019', 'P1065',
@@ -76,3 +76,12 @@ URL_PIDS = set([
     'P3268', 'P3950', 'P4001', 'P4238', 'P4570', 'P4656', 'P4765', 'P4945',
     'P4997', 'P5178', 'P5195', 'P5282', 'P5305', 'P5715'
 ])
+
+# Properties for metadata-based validation: gender, birth/death date/place
+PLACE_OF_BIRTH = 'P19'
+PLACE_OF_DEATH = 'P20'
+SEX_OR_GENDER = 'P21'
+DATE_OF_BIRTH = 'P569'
+DATE_OF_DEATH = 'P570'
+METADATA_PIDS = set([PLACE_OF_BIRTH, PLACE_OF_DEATH,
+                     SEX_OR_GENDER, DATE_OF_BIRTH, DATE_OF_DEATH])
