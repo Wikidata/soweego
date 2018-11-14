@@ -67,8 +67,8 @@ TARGET_CATALOGS = {
         # FIXME is it correct?
         'musician': {
             'qid': vocabulary.MUSICIAN,
-            'entity': musicbrainz_entity.MusicbrainzPersonEntity,
-            'link_entity': musicbrainz_entity.MusicbrainzPersonLinkEntity,
+            'entity': musicbrainz_entity.MusicbrainzArtistEntity,
+            'link_entity': musicbrainz_entity.MusicbrainzArtistLinkEntity,
             'nlp_entity': None
         },
         'band': {
