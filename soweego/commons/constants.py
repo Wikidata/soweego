@@ -27,7 +27,6 @@ HANDLED_ENTITIES = {
 }
 
 # TODO add IMDb entities
-# TODO add MusicBrainz NLP entities
 # DB entities and their Wikidata class QID
 TARGET_CATALOGS = {
     'discogs': {
