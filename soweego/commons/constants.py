@@ -17,6 +17,7 @@ USER_KEY = 'USER'
 PASSWORD_KEY = 'PASSWORD'
 HOST_KEY = 'HOST'
 
+# Entity types and corresponding Wikidata query
 HANDLED_ENTITIES = {
     'band': 'class',
     'musician': 'occupation',
@@ -25,9 +26,8 @@ HANDLED_ENTITIES = {
     'producer': 'occupation'
 }
 
-# What soweego handles
 # TODO add IMDb entities
-# TODO add MusicBrainz NLP entities
+# DB entities and their Wikidata class QID
 TARGET_CATALOGS = {
     'discogs': {
         'musician': {
@@ -64,7 +64,6 @@ TARGET_CATALOGS = {
         }
     },
     'musicbrainz': {
-        # FIXME is it correct?
         'musician': {
             'qid': vocabulary.MUSICIAN,
             'entity': musicbrainz_entity.MusicbrainzArtistEntity,

@@ -19,17 +19,37 @@ from requests import get
 from requests.exceptions import ChunkedEncodingError
 
 from soweego.commons.logging import log_request_data
+from soweego.wikidata.vocabulary import METADATA_PIDS
 
 LOGGER = logging.getLogger(__name__)
 
 WIKIDATA_API_URL = 'https://www.wikidata.org/w/api.php'
 BUCKET_SIZE = 50
 
-WD = '/Users/focs/soweego/soweego/wikidata/resources/'
-SAMPLE = 'imdb_unlinked_producers_sample'
+
+def get_metadata(qids: set) -> Iterator[tuple]:
+    no_claims_count = 0
+
+    qid_buckets, request_params = _prepare_request(qids, 'claims')
+    for bucket in qid_buckets:
+        response_body = _make_request(bucket, request_params)
+        if not response_body:
+            continue
+        for qid in response_body['entities']:
+            claims = response_body['entities'][qid].get('claims')
+            if not claims:
+                LOGGER.info('Skipping QID with no claims: %s', qid)
+                no_claims_count += 1
+                continue
+            # Remember this yields a generator of generators
+            # see https://stackoverflow.com/questions/6503079/understanding-nested-yield-return-in-python#6503192
+            yield _yield_expected_values(qid, claims, METADATA_PIDS, no_claims_count, include_pid=True)
+
+    LOGGER.info('Got %d QIDs with no %s claims',
+                no_claims_count, METADATA_PIDS)
 
 
-def get_links(qids: set, url_pids: set, ext_id_pids_to_urls: dict) -> Iterator[dict]:
+def get_links(qids: set, url_pids: set, ext_id_pids_to_urls: dict) -> Iterator[tuple]:
     """Get sitelinks and third-party links for each Wikidata item in the given set.
 
     :param qids: set of Wikidata QIDs
@@ -38,91 +58,121 @@ def get_links(qids: set, url_pids: set, ext_id_pids_to_urls: dict) -> Iterator[d
     :type url_pids: set
     :param ext_id_pids_to_urls: a dictionary ``{external_ID_PID: {formatter_URL: formatter_regex}}``
     :type ext_id_pids_to_urls: dict
-    :return: a generator yielding ``{QID: URL}``
-    :rtype: Iterator[dict]
+    :return: a generator yielding ``QID, URL`` tuples
+    :rtype: Iterator[tuple]
     """
+    no_sitelinks_count = 0
+    no_links_count = 0
+    no_ext_ids_count = 0
+
+    qid_buckets, request_params = _prepare_request(qids, 'sitelinks|claims')
+    for bucket in qid_buckets:
+        response_body = _make_request(bucket, request_params)
+        if not response_body:
+            continue
+        for qid in response_body['entities']:
+            entity = response_body['entities'][qid]
+            # Sitelinks
+            yield _yield_sitelinks(entity, qid, no_sitelinks_count)
+
+            claims = entity.get('claims')
+            if claims:
+                # Third-party links
+                yield _yield_expected_values(qid, claims, url_pids, no_links_count)
+                # External IDs links
+                yield _yield_ext_id_links(ext_id_pids_to_urls,
+                                          claims, qid, no_ext_ids_count)
+            else:
+                LOGGER.warning('No claims for QID %s', qid)
+
+    LOGGER.info('QIDs: got %d with no sitelinks, %d with no third-party links, %d with no external ID links',
+                no_sitelinks_count, no_links_count, no_ext_ids_count)
+
+
+def _yield_sitelinks(entity, qid, no_sitelinks_count):
+    sitelinks = entity.get('sitelinks')
+    if not sitelinks:
+        LOGGER.debug('No sitelinks for %s', qid)
+        no_sitelinks_count += 1
+    else:
+        LOGGER.debug('Sitelinks for %s: %s', qid, sitelinks)
+        for site, data in sitelinks.items():
+            url = _build_sitelink_url(site, data['title'])
+            yield qid, url
+
+
+def _yield_ext_id_links(ext_id_pids_to_urls, claims, qid, no_ext_ids_count):
+    available_ext_id_pids = set(
+        ext_id_pids_to_urls.keys()).intersection(claims.keys())
+    if not available_ext_id_pids:
+        LOGGER.debug(
+            'No external identifier links for %s', qid)
+        no_ext_ids_count += 1
+    else:
+        LOGGER.debug(
+            'Available PIDs with external IDs for %s: %s', qid, available_ext_id_pids)
+        for pid in available_ext_id_pids:
+            for pid_claim in claims[pid]:
+                ext_id = _extract_value_from_claim(
+                    pid_claim, pid, qid)
+                if not ext_id:
+                    continue
+                for formatter_url in ext_id_pids_to_urls[pid]:
+                    yield qid, formatter_url.replace('$1', ext_id)
+
+
+def _yield_expected_values(qid, claims, expected_pids, count, include_pid=False):
+    available = expected_pids.intersection(claims.keys())
+    if not available:
+        LOGGER.debug('No %s claims for %s', expected_pids, qid)
+        count += 1
+    else:
+        LOGGER.debug(
+            'Available claims for %s: %s', qid, available)
+        for pid in available:
+            for pid_claim in claims[pid]:
+                value = _extract_value_from_claim(
+                    pid_claim, pid, qid)
+                if not value:
+                    continue
+                if include_pid:
+                    yield qid, pid, value
+                else:
+                    yield qid, value
+
+
+def _prepare_request(qids, props):
     qid_buckets = _make_buckets(qids)
     request_params = {
         'action': 'wbgetentities',
         'format': 'json',
-        'props': 'sitelinks|claims'
+        'props': props
     }
-    no_sitelinks_count = 0
-    no_links_count = 0
-    no_ext_ids_count = 0
-    for bucket in qid_buckets:
-        request_params['ids'] = '|'.join(bucket)
-        connection_is_ok = True
-        while True:
-            try:
-                response = get(WIKIDATA_API_URL, params=request_params)
-                log_request_data(response, LOGGER)
-            except ChunkedEncodingError:
-                LOGGER.error(
-                    'Connection broken, retrying the request to the Wikidata API')
-                connection_is_ok = False
-            else:
-                connection_is_ok = True
-            if connection_is_ok:
-                break
-        if response.ok:
-            LOGGER.debug(
-                'Successful %s to the Wikidata API. Status code: %d', response.request.method, response.status_code)
-            response_body = response.json()
-            for qid in response_body['entities']:
-                entity = response_body['entities'][qid]
-                sitelinks = entity.get('sitelinks')
-                if sitelinks:
-                    LOGGER.debug('Sitelinks for %s: %s', qid, sitelinks)
-                    for site, data in sitelinks.items():
-                        url = _build_sitelink_url(site, data['title'])
-                        yield {qid: url}
-                else:
-                    LOGGER.debug('No sitelinks for %s', qid)
-                    no_sitelinks_count += 1
-                claims = entity.get('claims')
-                if claims:
-                    # Third-party URLs
-                    available_url_pids = url_pids.intersection(claims.keys())
-                    if available_url_pids:
-                        LOGGER.debug(
-                            'Available PIDs with URLs for %s: %s', qid, available_url_pids)
-                        for pid in available_url_pids:
-                            for pid_claim in claims[pid]:
-                                url = _extract_value_from_claim(
-                                    pid_claim, pid, qid)
-                                if not url:
-                                    continue
-                                yield {qid: url}
-                    else:
-                        LOGGER.debug('No third-party links for %s', qid)
-                        no_links_count += 1
-                    # External IDs URLs
-                    available_ext_id_pids = set(
-                        ext_id_pids_to_urls.keys()).intersection(claims.keys())
-                    if available_ext_id_pids:
-                        LOGGER.debug(
-                            'Available PIDs with external IDs for %s: %s', qid, available_ext_id_pids)
-                        for pid in available_ext_id_pids:
-                            for pid_claim in claims[pid]:
-                                ext_id = _extract_value_from_claim(
-                                    pid_claim, pid, qid)
-                                if not ext_id:
-                                    continue
-                                for formatter_url in ext_id_pids_to_urls[pid]:
-                                    yield {qid: formatter_url.replace('$1', ext_id)}
-                    else:
-                        LOGGER.debug(
-                            'No external identifier links for %s', qid)
-                        no_ext_ids_count += 1
-                else:
-                    LOGGER.warning('No claims for QID %s', qid)
+    return qid_buckets, request_params
+
+
+def _make_request(bucket, params):
+    params['ids'] = '|'.join(bucket)
+    connection_is_ok = True
+    while True:
+        try:
+            response = get(WIKIDATA_API_URL, params=params)
+            log_request_data(response, LOGGER)
+        except ChunkedEncodingError:
+            LOGGER.warning(
+                'Connection broken, retrying the request to the Wikidata API')
+            connection_is_ok = False
         else:
-            LOGGER.warning('Skipping failed %s to the Wikidata API. Reason: %d %s - Full URL: %s',
-                           response.request.method, response.status_code, response.reason, response.request.url)
-            continue
-    LOGGER.info('Total QIDs with no sitelinks: %d', no_sitelinks_count)
-    LOGGER.info('Total QIDs with no third-party links: %d', no_links_count)
+            connection_is_ok = True
+        if connection_is_ok:
+            break
+    if not response.ok:
+        LOGGER.warning('Skipping failed %s to the Wikidata API. Reason: %d %s - Full URL: %s',
+                       response.request.method, response.status_code, response.reason, response.request.url)
+        return None
+    LOGGER.debug(
+        'Successful %s to the Wikidata API. Status code: %d', response.request.method, response.status_code)
+    return response.json()
 
 
 def _extract_value_from_claim(pid_claim, pid, qid):
