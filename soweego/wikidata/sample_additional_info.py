@@ -145,7 +145,7 @@ def get_birth_death_dates_for_sample(sample_path, output):
 @click.option('--output', '-o', default='output', type=click.Path(exists=True))
 def get_url_formatters_for_properties(property_mapping_path, output):
     """Retrieves the url formatters for the properties listed in the given dict"""
-    filepath = os.path.join(output, 'url_formatters.json')
+    filepath = os.path.join(output, 'musicbrainz_url_formatters.json')
 
     properties = json.load(open(property_mapping_path))
 

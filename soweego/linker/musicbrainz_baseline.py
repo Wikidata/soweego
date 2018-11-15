@@ -1,12 +1,11 @@
 import csv
 import json
 import os
-import re
 from collections import defaultdict
 from urllib.parse import urlparse
 import click
 
-from soweego.target_selection.commons import matching_strategies
+from soweego.linker import linking_strategies
 
 
 # Utilities functions
@@ -161,7 +160,7 @@ def links_match(dump_folder_path, links_qid_dictionary, sitelinks_qid_dictionary
     # Equal strigs match among urls
     link_qid.update(sitelink_qid)
 
-    ids_matching = matching_strategies.perfect_string_match(
+    ids_matching = linking_strategies.perfect_string_match(
         (link_qid, url_mbid))
 
     full_outputh_path = os.path.join(output, 'link_match.json')
