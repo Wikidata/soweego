@@ -8,40 +8,9 @@ import click
 import iso8601
 from soweego.commons.api import api_request_wikidata
 
-# Queries computing
+from soweego.wikidata.sparql_queries import query_info_for, query_wikipedia_articles_for, query_birth_death
 
 
-def query_info_for(qids_bucket, properties):
-    """Given a list of wikidata entities returns a query for getting some external ids"""
-
-    query = """SELECT * WHERE{ VALUES ?id { %s } """ % ' '.join(qids_bucket)
-    for i in properties:
-        query += """OPTIONAL { ?id wdt:%s ?%s . } """ % (i, i)
-    query += """}"""
-    return query
-
-
-def query_wikipedia_articles_for(qids_bucket):
-    """Given a list of wikidata entities returns a query for getting wikidata articles"""
-
-    query = """SELECT * WHERE{ VALUES ?id { %s } """ % ' '.join(qids_bucket)
-    query += """OPTIONAL { ?article schema:about ?id . }"""
-    query += """}"""
-    return query
-
-
-def query_birth_death(qids_bucket):
-    """Given a list of wikidata entities returns a query for getting their birth and death dates"""
-
-    query = """SELECT ?id ?birth ?b_precision ?death ?d_precision WHERE{ VALUES ?id { %s } """ % ' '.join(
-        qids_bucket)
-    query += """?id p:P569 ?b. ?b psv:P569 ?t1 . ?t1 wikibase:timePrecision ?b_precision . ?t1 wikibase:timeValue ?birth . OPTIONAL { ?id p:P570 ?d . ?d psv:P570 ?t2 . ?t2 wikibase:timePrecision ?d_precision . ?t2 wikibase:timeValue ?death . }"""
-    query += """}"""
-
-    return query
-
-
-# Utils
 
 
 def get_wikidata_id_from_uri(uri):
