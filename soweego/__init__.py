@@ -1,1 +1,1 @@
-from soweego import commons, target_selection, validator, wikidata
+from soweego import commons, importer, ingestor, linker, validator, wikidata
