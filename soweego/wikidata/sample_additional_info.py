@@ -1,4 +1,3 @@
-import csv
 import json
 import os
 import re
@@ -6,42 +5,10 @@ from collections import defaultdict
 
 import click
 import iso8601
-from soweego.commons.api import api_request_wikidata
 
-# Queries computing
-
-
-def query_info_for(qids_bucket, properties):
-    """Given a list of wikidata entities returns a query for getting some external ids"""
-
-    query = """SELECT * WHERE{ VALUES ?id { %s } """ % ' '.join(qids_bucket)
-    for i in properties:
-        query += """OPTIONAL { ?id wdt:%s ?%s . } """ % (i, i)
-    query += """}"""
-    return query
-
-
-def query_wikipedia_articles_for(qids_bucket):
-    """Given a list of wikidata entities returns a query for getting wikidata articles"""
-
-    query = """SELECT * WHERE{ VALUES ?id { %s } """ % ' '.join(qids_bucket)
-    query += """OPTIONAL { ?article schema:about ?id . }"""
-    query += """}"""
-    return query
-
-
-def query_birth_death(qids_bucket):
-    """Given a list of wikidata entities returns a query for getting their birth and death dates"""
-
-    query = """SELECT ?id ?birth ?b_precision ?death ?d_precision WHERE{ VALUES ?id { %s } """ % ' '.join(
-        qids_bucket)
-    query += """?id p:P569 ?b. ?b psv:P569 ?t1 . ?t1 wikibase:timePrecision ?b_precision . ?t1 wikibase:timeValue ?birth . OPTIONAL { ?id p:P570 ?d . ?d psv:P570 ?t2 . ?t2 wikibase:timePrecision ?d_precision . ?t2 wikibase:timeValue ?death . }"""
-    query += """}"""
-
-    return query
-
-
-# Utils
+from soweego.wikidata.sparql_queries import (make_request, query_birth_death,
+                                             query_info_for,
+                                             query_wikipedia_articles_for)
 
 
 def get_wikidata_id_from_uri(uri):
@@ -49,7 +16,7 @@ def get_wikidata_id_from_uri(uri):
     return re.search(r'\/(\w+)>', uri).group(1)
 
 
-def stripe_first_last_characters(string):
+def trim_first_last_characters(string):
     '''Given a string removes the first and the last characters'''
     return string[1:-1]
 
@@ -97,15 +64,14 @@ def get_links_for_sample(sample_path, url_formatters, output):
 
     for bucket in buckets:
         # Downloads the first bucket
-        response = api_request_wikidata(
+        result = make_request(
             query_info_for(bucket, [k for k, v in formatters_dict.items()]))
-        ids_collection = csv.DictReader(response, dialect='excel-tab')
-        for id_row in ids_collection:
+        for id_row in result:
             # Extracts the wikidata id from the URI
             entity_id = get_wikidata_id_from_uri(id_row['?id'])
-            url_id[stripe_first_last_characters(id_row['?id'])] = entity_id
+            url_id[trim_first_last_characters(id_row['?id'])] = entity_id
             # Foreach id in the response, creates the full url and adds it to the dict
-            for col in ids_collection.fieldnames:
+            for col in result.fieldnames:
                 prop_id = col[1:]
                 if col != '?id' and id_row[col]:
                     if formatters_dict.get(prop_id):
@@ -133,11 +99,10 @@ def get_sitelinks_for_sample(sample_path, output):
 
     for bucket in buckets:
         # Downloads the first bucket
-        response = api_request_wikidata(
+        result = make_request(
             query_wikipedia_articles_for(bucket))
-        articles_collection = csv.DictReader(response, dialect='excel-tab')
-        for article_row in articles_collection:
-            site_url = stripe_first_last_characters(article_row['?article'])
+        for article_row in result:
+            site_url = trim_first_last_characters(article_row['?article'])
             entity_id = get_wikidata_id_from_uri(article_row['?id'])
             url_id[site_url] = entity_id
 
@@ -156,9 +121,8 @@ def get_birth_death_dates_for_sample(sample_path, output):
     filepath = os.path.join(output, 'sample_dates.json')
 
     for bucket in buckets:
-        response = api_request_wikidata(query_birth_death(bucket))
-        dates_collection = csv.DictReader(response, dialect='excel-tab')
-        for date_row in dates_collection:
+        result = make_request(query_birth_death(bucket))
+        for date_row in result:
             qid = get_wikidata_id_from_uri(date_row['?id'])
             # creates the combination of all birth dates strings and all death dates strings
             if date_row['?birth']:
@@ -181,16 +145,14 @@ def get_birth_death_dates_for_sample(sample_path, output):
 @click.option('--output', '-o', default='output', type=click.Path(exists=True))
 def get_url_formatters_for_properties(property_mapping_path, output):
     """Retrieves the url formatters for the properties listed in the given dict"""
-    filepath = os.path.join(output, 'url_formatters.json')
+    filepath = os.path.join(output, 'musicbrainz_url_formatters.json')
 
     properties = json.load(open(property_mapping_path))
 
     formatters = {}
     for _, prop_id in properties.items():
         query = """SELECT * WHERE { wd:%s wdt:P1630 ?formatterUrl . }""" % prop_id
-        reader = csv.DictReader(
-            api_request_wikidata(query), dialect='excel-tab')
-        for r in reader:
+        for r in make_request(query):
             formatters[prop_id] = r['?formatterUrl']
 
     json.dump(formatters, open(filepath, 'w'),

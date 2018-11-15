@@ -131,7 +131,7 @@ def run_identifier_or_links_query(query_type: tuple, class_qid: str, catalog_pid
 
 def catalog_qid_query(catalog_pid):
     LOGGER.info('Retrieving the catalog QID from PID %s', catalog_pid)
-    result_set = _make_request(CATALOG_QID_QUERY_TEMPLATE % catalog_pid)
+    result_set = make_request(CATALOG_QID_QUERY_TEMPLATE % catalog_pid)
     for result in result_set:
         valid_qid = _get_valid_qid(result)
         if not valid_qid:
@@ -142,7 +142,7 @@ def catalog_qid_query(catalog_pid):
 @lru_cache()
 def url_pids_query():
     LOGGER.info('Retrieving PIDs with URL values')
-    result_set = _make_request(URL_PIDS_QUERY)
+    result_set = make_request(URL_PIDS_QUERY)
     for result in result_set:
         valid_pid = _get_valid_pid(result)
         if not valid_pid:
@@ -154,7 +154,7 @@ def url_pids_query():
 def external_id_pids_and_urls_query():
     LOGGER.info(
         'Retrieving PIDs with external ID values, their formatter URLs and regexps')
-    result_set = _make_request(
+    result_set = make_request(
         EXT_ID_PIDS_AND_URLS_QUERY, response_format=JSON_RESPONSE_FORMAT)
     for result in result_set['results']['bindings']:
         formatter_url_dict = result.get(FORMATTER_URL_BINDING.lstrip('?'))
@@ -253,7 +253,7 @@ def _get_valid_qid(result):
 def _run_paged_query(result_per_page, query):
     if result_per_page == 0:
         LOGGER.info('Running query without paging: %s', query)
-        result_set = _make_request(query)
+        result_set = make_request(query)
         if not result_set:
             LOGGER.error('The query went wrong')
             yield {}
@@ -270,7 +270,7 @@ def _run_paged_query(result_per_page, query):
             query_builder = [query]
             query_builder.append('OFFSET %d LIMIT %d' %
                                  (result_per_page * pages, result_per_page))
-            result_set = _make_request(' '.join(query_builder))
+            result_set = make_request(' '.join(query_builder))
             if not result_set:
                 LOGGER.error('Stopping paging because the query went wrong')
                 break
@@ -329,7 +329,7 @@ def values_query(items_file, condition_pattern, bucket_size, outdir):
         for bucket in buckets:
             query = VALUES_QUERY_TEMPLATE % (
                 ' '.join(bucket), condition_pattern)
-            result_set = _make_request(query)
+            result_set = make_request(query)
             if not result_set:
                 LOGGER.warning('Skipping bucket that went wrong')
                 continue
@@ -346,7 +346,7 @@ def _dump_result(result_set, outfile):
         outfile.write(json.dumps(row, ensure_ascii=False) + '\n')
 
 
-def _make_request(query, response_format=DEFAULT_RESPONSE_FORMAT):
+def make_request(query, response_format=DEFAULT_RESPONSE_FORMAT):
     response = get(WIKIDATA_SPARQL_ENDPOINT, params={
         'query': query}, headers={'Accept': response_format})
     log_request_data(response, LOGGER)
@@ -366,3 +366,33 @@ def _make_request(query, response_format=DEFAULT_RESPONSE_FORMAT):
         'The GET to the Wikidata SPARQL endpoint went wrong. Reason: %d %s - Query: %s',
         response.status_code, response.reason, query)
     return None
+
+
+def query_info_for(qids_bucket, properties):
+    """Given a list of wikidata entities returns a query for getting some external ids"""
+
+    query = """SELECT * WHERE{ VALUES ?id { %s } """ % ' '.join(qids_bucket)
+    for i in properties:
+        query += """OPTIONAL { ?id wdt:%s ?%s . } """ % (i, i)
+    query += """}"""
+    return query
+
+
+def query_wikipedia_articles_for(qids_bucket):
+    """Given a list of wikidata entities returns a query for getting wikidata articles"""
+
+    query = """SELECT * WHERE{ VALUES ?id { %s } """ % ' '.join(qids_bucket)
+    query += """OPTIONAL { ?article schema:about ?id . }"""
+    query += """}"""
+    return query
+
+
+def query_birth_death(qids_bucket):
+    """Given a list of wikidata entities returns a query for getting their birth and death dates"""
+
+    query = """SELECT ?id ?birth ?b_precision ?death ?d_precision WHERE{ VALUES ?id { %s } """ % ' '.join(
+        qids_bucket)
+    query += """?id p:P569 ?b. ?b psv:P569 ?t1 . ?t1 wikibase:timePrecision ?b_precision . ?t1 wikibase:timeValue ?birth . OPTIONAL { ?id p:P570 ?d . ?d psv:P570 ?t2 . ?t2 wikibase:timePrecision ?d_precision . ?t2 wikibase:timeValue ?death . }"""
+    query += """}"""
+
+    return query

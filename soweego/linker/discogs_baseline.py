@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 import click
 
 from soweego.commons.candidate_acquisition import PROD_DB, TEST_DB
-from soweego.target_selection.commons import matching_strategies
+from soweego.linker import linking_strategies
 
 LOGGER = logging.getLogger(__name__)
 # Wikidata musicians samples
@@ -44,18 +44,18 @@ def perfect_match(names, links, wikilinks, output_path):
     """Baseline matching strategy #1: treat everything as perfect string matches.
     Dump 3 JSON files with names, links, and wikilinks matches."""
     wikidata_names = json.loads(get_data(SAMPLES_LOCATION, NAMES_SAMPLE))
-    name_matches = matching_strategies.perfect_string_match(
+    name_matches = linking_strategies.perfect_string_match(
         (wikidata_names, names))
     json.dump(name_matches, open(os.path.join(
         output_path, 'musicians_labels_perfect_matches.json'), 'w'), indent=2, ensure_ascii=False)
     wikidata_links = json.loads(get_data(SAMPLES_LOCATION, LINKS_SAMPLE))
-    link_matches = matching_strategies.perfect_string_match(
+    link_matches = linking_strategies.perfect_string_match(
         (wikidata_links, links))
     json.dump(link_matches, open(os.path.join(
         output_path, 'musicians_links_perfect_matches.json'), 'w'), indent=2, ensure_ascii=False)
     wikidata_site_links = json.loads(
         get_data(SAMPLES_LOCATION, SITELINKS_SAMPLE))
-    wikilink_matches = matching_strategies.perfect_string_match(
+    wikilink_matches = linking_strategies.perfect_string_match(
         (wikidata_site_links, wikilinks))
     json.dump(wikilink_matches, open(os.path.join(
         output_path, 'musicians_wikilinks_perfect_matches.json'), 'w'), indent=2, ensure_ascii=False)
@@ -66,7 +66,7 @@ def link_match(links, output_path):
     Dump a JSON file with link matches.
     """
     wikidata_links = json.loads(get_data(SAMPLES_LOCATION, LINKS_SAMPLE))
-    matches = matching_strategies.similar_link_match(wikidata_links, links)
+    matches = linking_strategies.similar_link_match(wikidata_links, links)
     json.dump(matches, open(os.path.join(
         output_path, 'musicians_links_similar_matches.json'), 'w'), indent=2, ensure_ascii=False)
 
@@ -76,7 +76,7 @@ def name_match(names, output_path):
     Dump a JSON file with names matches
     """
     wikidata_names = json.loads(get_data(SAMPLES_LOCATION, NAMES_SAMPLE))
-    matches = matching_strategies.similar_name_match(wikidata_names, names)
+    matches = linking_strategies.similar_name_match(wikidata_names, names)
     json.dump(matches, open(os.path.join(
         output_path, 'musicians_names_similar_matches.json'), 'w'), indent=2, ensure_ascii=False)
 
@@ -87,7 +87,7 @@ def edit_distance_name_match(target_table, target_database, target_search_type, 
     """
     wikidata_names = json.loads(
         get_data(SAMPLES_LOCATION, QID_NAMES_LANGUAGES_SAMPLE))
-    matches = matching_strategies.edit_distance_match(
+    matches = linking_strategies.edit_distance_match(
         wikidata_names, target_table, target_database, target_search_type, metric, threshold)
     json.dump(matches, open(os.path.join(
         output_path, 'musicians_names_%s_matches.json' % metric), 'w'), indent=2, ensure_ascii=False)
