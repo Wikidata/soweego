@@ -10,8 +10,8 @@ services:
       - db
     volumes:
       - type: bind
-        source: ${DUMP_FOLDER}
-        target: /app/dump
+        source: ${DOCKER_SHARED_FOLDER}
+        target: /app/shared
       - type: bind
         source: .
         target: /app/soweego

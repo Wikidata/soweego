@@ -14,9 +14,9 @@ import logging
 import os
 
 import click
+
 from soweego.commons import constants as const
 from soweego.commons import http_client as client
-from soweego.commons import localizations as loc
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.discogs_dump_extractor import DiscogsDumpExtractor
 from soweego.importer.musicbrainz_dump_extractor import \
@@ -28,7 +28,7 @@ LOGGER = logging.getLogger(__name__)
 @click.command()
 @click.argument('catalog', type=click.Choice(['discogs', 'musicbrainz']))
 @click.option('--download-url', '-du', default=None)
-@click.option('--output', '-o', default='/app/dump', type=click.Path())
+@click.option('--output', '-o', default='/app/shared', type=click.Path())
 def import_cli(catalog: str, download_url: str, output: str) -> None:
     """Download, extract and import an available catalog."""
     importer = Importer()

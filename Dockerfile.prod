@@ -13,5 +13,5 @@ RUN pip install --trusted-host pypi.python.org -r requirements.txt
 # Copy the whole project
 COPY . /app/soweego
 
-# Run app.py when the container launches
+# Run a BASH shell when the container launches
 CMD ["/bin/bash"]
