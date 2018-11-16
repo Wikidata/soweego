@@ -39,7 +39,7 @@ class MusicbrainzArtistEntity(BaseEntity, BASE):
     # many to many Artist<->Band
     bands = relationship("MusicbrainzBandEntity",
                          secondary=artist_band,
-                         back_populates=__tablename__,
+                         back_populates='members',
                          lazy='dynamic')
 
 
@@ -52,7 +52,7 @@ class MusicbrainzBandEntity(BaseEntity, BASE):
     # many to many Band<->Artist
     members = relationship("MusicbrainzArtistEntity",
                            secondary=artist_band,
-                           back_populates=__tablename__,
+                           back_populates='bands',
                            lazy='dynamic')
 
 
