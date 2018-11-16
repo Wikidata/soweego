@@ -260,7 +260,30 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 if row['link_type'] in link_types:
                     links.add(row['id'])
 
-        print(len(links))
+        artists_relationship_file = os.path.join(
+            dump_path, 'mbdump', 'l_artist_artist')
+
+        ids_translator = {}
+        relationships = []
+        with open(artists_relationship_file) as relfile:
+            reader = DictReader(relfile, delimiter='\t', fieldnames=[
+                                'id', 'link_id', 'entity0', 'entity1'])
+            for row in reader:
+                if row['link_id'] in links:
+                    en0 = row['entity0']
+                    en1 = row['entity1']
+                    ids_translator[en0] = ''
+                    ids_translator[en1] = ''
+                    relationships.append((en0, en1))
+
+        # To hope in Garbage collection intervention
+        links = None
+
+        artist_path = os.path.join(dump_path, 'mbdump', 'artist')
+        with open(artist_path, 'r') as artistfile:
+            for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid']):
+                if artist['id'] in ids_translator:
+                    ids_translator[artist['id']] = artist['gid']
 
     def _fill_entity(self, entity, info, areas):
         entity.catalog_id = info['gid']
