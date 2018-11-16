@@ -76,8 +76,8 @@ EXT_ID_PIDS_AND_URLS_QUERY = 'SELECT * WHERE { ' + PROPERTY_BINDING + \
 @click.command()
 @click.argument('ontology_class')
 @click.argument('identifier_property')
-@click.option('-p', '--results-per-page', default=1000, help='default: 1000')
-@click.option('-o', '--outdir', type=click.Path(), default='output', help="default: 'output'")
+@click.option('-p', '--results-per-page', default=1000, help='Default: 1000.')
+@click.option('-o', '--outdir', type=click.Path(), default='output', help="Default: 'output'.")
 def identifier_class_based_query_cli(ontology_class, identifier_property, results_per_page, outdir):
     """Run a paged SPARQL query against the Wikidata endpoint to get items and external catalog
     identifiers. Dump the result into a JSONlines file.
@@ -263,7 +263,8 @@ def _run_paged_query(result_per_page, query):
         for result in result_set:
             yield result
     else:
-        LOGGER.info('Running paged query: %s', query)
+        LOGGER.info('Running paged query with %d results per page: %s',
+                    query, result_per_page)
         pages = 0
         while True:
             LOGGER.info('Page #%d', pages)
@@ -272,8 +273,10 @@ def _run_paged_query(result_per_page, query):
                                  (result_per_page * pages, result_per_page))
             result_set = make_request(' '.join(query_builder))
             if not result_set:
-                LOGGER.error('Stopping paging because the query went wrong')
-                break
+                LOGGER.error(
+                    'Skipping page %d because the query went wrong', pages)
+                pages += 1
+                continue
             if result_set == 'empty':
                 LOGGER.info('Paging finished. Total pages: %d', pages)
                 break
@@ -313,9 +316,9 @@ def identifier_occupation_based_query(occupation_class, identifier_property, res
 @click.command()
 @click.argument('items_file', type=click.File())
 @click.argument('condition_pattern')
-@click.option('-b', '--bucket-size', default=500, help="default: 500")
+@click.option('-b', '--bucket-size', default=500, help='Default: 500.')
 @click.option('-o', '--outdir', type=click.Path(), default='output',
-              help="default: 'output'")
+              help="Default: 'output'.")
 def values_query(items_file, condition_pattern, bucket_size, outdir):
     """Run a SPARQL query against the Wikidata endpoint using buckets of item values
     and dump the result into a JSONlines file.
