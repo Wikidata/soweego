@@ -9,7 +9,7 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, lenzi.edoardo'
 
-from sqlalchemy import Column, Date, Index, Integer, String
+from sqlalchemy import Column, Date, Index, Integer, String, UniqueConstraint
 
 
 class BaseEntity():
@@ -35,3 +35,19 @@ class BaseEntity():
 
     def __repr__(self) -> str:
         return "<BaseEntity(catalog_id='{0}', name='{1}')>".format(self.catalog_id, self.name)
+
+
+class BaseRelationship():
+    __table_args__ = (
+        UniqueConstraint("catalog_id0", "catalog_id1"),
+    )
+
+    internal_id = Column(Integer, unique=True,
+                         primary_key=True, autoincrement=True)
+
+    catalog_id0 = Column(String(50), nullable=False, index=True)
+    catalog_id1 = Column(String(50), nullable=False, index=True)
+
+    def __init__(self, cat_0: str, cat_1: str):
+        catalog_id0 = cat_0
+        catalog_id1 = cat_1
