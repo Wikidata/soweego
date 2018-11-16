@@ -247,6 +247,21 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                             current_entity, MusicbrainzBandEntity, aliases[artist['id']]):
                         yield alias
 
+    def _store_artist_group_relationships(self, dump_path):
+        link_types = set(['855', '103', '305', '965', '895'])
+        link_file_path = os.path.join(dump_path, 'mbdump', 'link')
+
+        links = set()
+        with open(link_file_path) as link_file:
+            reader = DictReader(link_file,
+                                delimiter='\t',
+                                fieldnames=['id', 'link_type'])
+            for row in reader:
+                if row['link_type'] in link_types:
+                    links.add(row['id'])
+
+        print(len(links))
+
     def _fill_entity(self, entity, info, areas):
         entity.catalog_id = info['gid']
         entity.name = info['label']
