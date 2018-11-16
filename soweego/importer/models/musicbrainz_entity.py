@@ -21,13 +21,6 @@ ARTIST_LINK_TABLE = 'musicbrainz_artist_link'
 BAND_TABLE = 'musicbrainz_band'
 BAND_LINK_TABLE = 'musicbrainz_band_link'
 
-artist_band = Table('artist_band', BASE.metadata,
-                    Column('artist_id', ForeignKey(
-                        '%s.internal_id' % ARTIST_TABLE), primary_key=True),
-                    Column('band_id', ForeignKey(
-                        '%s.internal_id' % BAND_TABLE), primary_key=True)
-                    )
-
 
 class MusicbrainzArtistEntity(BaseEntity, BASE):
     __tablename__ = ARTIST_TABLE
@@ -36,24 +29,12 @@ class MusicbrainzArtistEntity(BaseEntity, BASE):
     birth_place = Column(String(255), nullable=True)
     death_place = Column(String(255), nullable=True)
 
-    # many to many Artist<->Band
-    bands = relationship("MusicbrainzBandEntity",
-                         secondary=artist_band,
-                         back_populates='members',
-                         lazy='dynamic')
-
 
 class MusicbrainzBandEntity(BaseEntity, BASE):
     __tablename__ = BAND_TABLE
 
     birth_place = Column(String(255), nullable=True)
     death_place = Column(String(255), nullable=True)
-
-    # many to many Band<->Artist
-    members = relationship("MusicbrainzArtistEntity",
-                           secondary=artist_band,
-                           back_populates='bands',
-                           lazy='dynamic')
 
 
 class MusicbrainzArtistLinkEntity(BaseLinkEntity, BASE):
