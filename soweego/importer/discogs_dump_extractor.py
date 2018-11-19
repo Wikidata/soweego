@@ -15,6 +15,7 @@ import xml.etree.ElementTree as et
 from datetime import date, datetime
 
 from requests import get
+
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
@@ -115,7 +116,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                              self.total_entities, self.musicians, self.musician_links, self.bands, self.band_links, self.dead_links)
 
         end = datetime.now()
-        LOGGER.info('Import completed in %d. Total entities: %d - %d musicians with %d links - %d bands with %d links - %d discarded dead links.',
+        LOGGER.info('Import completed in %s. Total entities: %d - %d musicians with %d links - %d bands with %d links - %d discarded dead links.',
                     end - start, self.total_entities, self.musicians, self.musician_links, self.bands, self.band_links, self.dead_links)
 
     def _populate_band(self, entity: discogs_entity.DiscogsGroupEntity, identifier, name, links, node, session):
