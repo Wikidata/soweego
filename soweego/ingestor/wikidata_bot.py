@@ -186,30 +186,47 @@ def _add_or_reference(subject: str, predicate: str, value: str, stated_in: str) 
         LOGGER.warning('%s has no claims', subject)
         _add(item, predicate, value, stated_in)
         return
+    # Check 1: same value in 'official website' property -> add reference
+    # See https://www.wikidata.org/wiki/User_talk:Jura1#Thanks_for_your_feedback_on_User:Soweego_bot_task_2
+    official_websites = claims.get(vocabulary.OFFICIAL_WEBSITE)
+    if official_websites:
+        for claim in official_websites:
+            if claim.getTarget() == value:
+                LOGGER.debug(
+                    "%s has an official website claim with value '%s'", subject, value)
+                _reference(claim, stated_in)
+                return
     given_predicate_claims = claims.get(predicate)
-    # No claim with the given predicate
+    # Check 2: no claim with the given predicate -> add statement
     if not given_predicate_claims:
         LOGGER.debug('%s has no %s claim', subject, predicate)
         _add(item, predicate, value, stated_in)
         return
-    # Handle case-insensitive IDs: Facebook, Twitter
+    # Check 3: handle case-insensitive IDs: Facebook, Twitter
     # See https://www.wikidata.org/wiki/Topic:Unym71ais48bt6ih
-    if predicate in [vocabulary.FACEBOOK_PID, vocabulary.TWITTER_USERNAME_PID]:
+    case_insensitive = True if predicate in [
+        vocabulary.FACEBOOK_PID, vocabulary.TWITTER_USERNAME_PID] else False
+    if case_insensitive:
         value = value.lower()
-        existing_values = [value.getTarget().lower()
-                           for value in given_predicate_claims]
+        existing_values = [claim_value.getTarget().lower()
+                           for claim_value in given_predicate_claims]
     else:
-        existing_values = [value.getTarget()
-                           for value in given_predicate_claims]
-    # No given value
+        existing_values = [claim_value.getTarget()
+                           for claim_value in given_predicate_claims]
+    # No given value -> add statement
     if value not in existing_values:
         LOGGER.debug('%s has no %s claim with value %s',
                      subject, predicate, value)
         _add(item, predicate, value, stated_in)
         return
-    # Claim with the given predicate and value
+    # Claim with the given predicate and value -> add reference
     LOGGER.debug("%s has a %s claim with value '%s'",
                  subject, predicate, value)
+    if case_insensitive:
+        for claim in given_predicate_claims:
+            if claim.getTarget().lower() == value:
+                _reference(claim, stated_in)
+                return
     for claim in given_predicate_claims:
         if claim.getTarget() == value:
             _reference(claim, stated_in)
