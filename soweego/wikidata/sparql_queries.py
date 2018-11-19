@@ -264,7 +264,7 @@ def _run_paged_query(result_per_page, query):
             yield result
     else:
         LOGGER.info('Running paged query with %d results per page: %s',
-                    query, result_per_page)
+                    result_per_page, query)
         pages = 0
         while True:
             LOGGER.info('Page #%d', pages)
