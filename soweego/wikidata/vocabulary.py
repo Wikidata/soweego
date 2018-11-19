@@ -37,6 +37,7 @@ FACEBOOK_PID = 'P2013'
 
 # Widely used generic property to hold URLs
 DESCRIBED_AT_URL = 'P973'
+OFFICIAL_WEBSITE = 'P856'
 
 # Entity classes handled by soweego
 ACTOR = 'Q33999'
