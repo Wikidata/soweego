@@ -11,7 +11,7 @@ __copyright__ = 'Copyleft 2018, MaxFrax96'
 
 from soweego.importer.models.base_entity import BaseEntity, BaseRelationship
 from soweego.importer.models.base_link_entity import BaseLinkEntity
-from sqlalchemy import Column, ForeignKey, String, Table
+from sqlalchemy import Column, ForeignKey, Index, String, Table
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -50,6 +50,9 @@ class MusicbrainzBandLinkEntity(BaseLinkEntity, BASE):
 
 class MusicBrainzArtistBandRelationship(BaseRelationship, BASE):
     __tablename__ = ARTIST_BAND_RELATIONSHIP_TABLE
+
+    Index('idx_catalog_ids', 'from_catalog_id',
+          'to_catalog_id', unique=True)
 
     def __repr__(self):
         return super().__repr__()
