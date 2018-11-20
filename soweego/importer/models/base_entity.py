@@ -38,19 +38,15 @@ class BaseEntity():
 
 
 class BaseRelationship():
-    __table_args__ = (
-        UniqueConstraint("catalog_id0", "catalog_id1"),
-    )
-
     internal_id = Column(Integer, unique=True,
                          primary_key=True, autoincrement=True)
 
     from_catalog_id = Column(String(50), nullable=False, index=False)
     to_catalog_id = Column(String(50), nullable=False, index=False)
 
-    def __init__(self, from: str, to: str):
-        self.from_catalog_id = from
-        self.to_catalog_id = to
+    def __init__(self, from_id: str, to_id: str):
+        self.from_catalog_id = from_id
+        self.to_catalog_id = to_id
 
     def __repr__(self):
         return '< BaseRelationship object({} {}) >'.format(self.from_catalog_id, self.to_catalog_id)
