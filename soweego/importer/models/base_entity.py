@@ -45,7 +45,7 @@ class BaseRelationship():
     internal_id = Column(Integer, unique=True,
                          primary_key=True, autoincrement=True)
 
-    catalog_id0 = Column(String(50), nullable=False, index=False)
+    from_catalog_id = Column(String(50), nullable=False, index=False)
     catalog_id1 = Column(String(50), nullable=False, index=False)
 
     def __init__(self, cat_0: str, cat_1: str):
