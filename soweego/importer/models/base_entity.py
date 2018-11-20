@@ -48,7 +48,7 @@ class BaseRelationship():
     from_catalog_id = Column(String(50), nullable=False, index=False)
     to_catalog_id = Column(String(50), nullable=False, index=False)
 
-    def __init__(self, cat_0: str, cat_1: str):
+    def __init__(self, from: str, to: str):
         self.from_catalog_id = from
         self.to_catalog_id = to
 
