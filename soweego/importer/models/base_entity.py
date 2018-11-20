@@ -50,7 +50,7 @@ class BaseRelationship():
 
     def __init__(self, cat_0: str, cat_1: str):
         self.from_catalog_id = from
-        self.catalog_id1 = cat_1
+        self.to_catalog_id = to
 
     def __repr__(self):
         return '< BaseRelationship object({} {}) >'.format(self.from_catalog_id, self.to_catalog_id)
