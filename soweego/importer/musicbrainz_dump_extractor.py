@@ -273,6 +273,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
     def _artist_band_relationship_generator(self, dump_path):
         link_types = set(['855', '103', '305', '965', '895'])
         link_file_path = os.path.join(dump_path, 'mbdump', 'link')
+        to_invert = set()
 
         links = set()
         with open(link_file_path) as link_file:
@@ -292,12 +293,16 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             reader = DictReader(relfile, delimiter='\t', fieldnames=[
                                 'id', 'link_id', 'entity0', 'entity1'])
             for row in reader:
-                if row['link_id'] in links:
+                link_id = row['link_id']
+                if link_id in links:
                     en0 = row['entity0']
                     en1 = row['entity1']
                     ids_translator[en0] = ''
                     ids_translator[en1] = ''
-                    relationships.append((en0, en1))
+                    relationship = (en0, en1)
+                    relationships.append(relationship)
+                    if link_id == '855':
+                        to_invert.add(relationship)
 
         # To hope in Garbage collection intervention
         links = None
@@ -313,7 +318,10 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                                                         ], ids_translator[relation[1]]
 
             if translation0 and translation1:
-                yield MusicBrainzArtistBandRelationship(translation0, translation1)
+                if relation in to_invert:
+                    yield MusicBrainzArtistBandRelationship(translation1, translation0)
+                else:
+                    yield MusicBrainzArtistBandRelationship(translation0, translation1)
             else:
                 LOGGER.warning("Artist id missing translation: %s to (%s, %s)" %
                                (relation, translation0, translation1))
