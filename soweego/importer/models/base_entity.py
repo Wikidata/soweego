@@ -45,9 +45,12 @@ class BaseRelationship():
     internal_id = Column(Integer, unique=True,
                          primary_key=True, autoincrement=True)
 
-    catalog_id0 = Column(String(50), nullable=False, index=True)
-    catalog_id1 = Column(String(50), nullable=False, index=True)
+    catalog_id0 = Column(String(50), nullable=False, index=False)
+    catalog_id1 = Column(String(50), nullable=False, index=False)
 
     def __init__(self, cat_0: str, cat_1: str):
-        catalog_id0 = cat_0
-        catalog_id1 = cat_1
+        self.catalog_id0 = cat_0
+        self.catalog_id1 = cat_1
+
+    def __repr__(self):
+        return '< BaseRelationship object({} {}) >'.format(self.catalog_id0, self.catalog_id1)

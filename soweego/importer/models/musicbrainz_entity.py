@@ -46,5 +46,10 @@ class MusicbrainzBandLinkEntity(BaseLinkEntity, BASE):
     __tablename__ = BAND_LINK_TABLE
 
 # NOTICE: both catalog_ids of this entity can be both in Artist and Band table
+
+
 class MusicBrainzArtistBandRelationship(BaseRelationship, BASE):
     __tablename__ = ARTIST_BAND_RELATIONSHIP_TABLE
+
+    def __repr__(self):
+        return super().__repr__()
