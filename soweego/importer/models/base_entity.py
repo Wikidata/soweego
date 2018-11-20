@@ -53,4 +53,4 @@ class BaseRelationship():
         self.catalog_id1 = cat_1
 
     def __repr__(self):
-        return '< BaseRelationship object({} {}) >'.format(self.catalog_id0, self.catalog_id1)
+        return '< BaseRelationship object({} {}) >'.format(self.from_catalog_id, self.to_catalog_id)
