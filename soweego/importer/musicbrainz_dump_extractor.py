@@ -22,11 +22,13 @@ from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models.base_entity import BaseEntity
-from soweego.importer.models.musicbrainz_entity import (MusicbrainzArtistEntity,
+from soweego.importer.models.musicbrainz_entity import (MusicBrainzArtistBandRelationship,
+                                                        MusicbrainzArtistEntity,
                                                         MusicbrainzArtistLinkEntity,
                                                         MusicbrainzBandEntity,
                                                         MusicbrainzBandLinkEntity)
 from soweego.wikidata.sparql_queries import external_id_pids_and_urls_query
+from sqlalchemy.exc import IntegrityError
 
 LOGGER = logging.getLogger(__name__)
 
@@ -47,7 +49,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 tar.extractall(dump_path)
 
         tables = [MusicbrainzArtistEntity,
-                  MusicbrainzBandEntity, MusicbrainzBandLinkEntity, MusicbrainzArtistLinkEntity]
+                  MusicbrainzBandEntity]
 
         db_manager = DBManager()
         db_manager.drop(tables)
@@ -60,7 +62,10 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             session.add(artist)
             session.commit()
 
-        print("Added %s artist records" % artist_count)
+        LOGGER.debug("Added %s artist records" % artist_count)
+
+        db_manager.drop([MusicbrainzArtistLinkEntity])
+        db_manager.create([MusicbrainzArtistLinkEntity])
 
         link_count = 0
         for link in self._link_generator(dump_path):
@@ -69,7 +74,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             session.add(link)
             session.commit()
 
-        print("Added %s link records" % link_count)
+        LOGGER.debug("Added %s link records" % link_count)
 
         isni_link_count = 0
         for link in self._isni_link_generator(dump_path):
@@ -78,7 +83,25 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             session.add(link)
             session.commit()
 
-        print("Added %s ISNI link records" % isni_link_count)
+        LOGGER.debug("Added %s ISNI link records" % isni_link_count)
+
+        db_manager.drop([MusicBrainzArtistBandRelationship])
+        db_manager.create([MusicBrainzArtistBandRelationship])
+
+        relationships_count = 0
+        relationships_total = 0
+        for relationship in self._artist_band_relationship_generator(dump_path):
+            try:
+                relationships_total = relationships_total + 1
+                session = db_manager.new_session()
+                session.add(relationship)
+                session.commit()
+                relationships_count = relationships_count + 1
+            except IntegrityError as i:
+                LOGGER.warning(str(i))
+
+        LOGGER.debug("Added %s/%s relationships records" %
+                     (relationships_count, relationships_total))
 
     def _link_generator(self, dump_path):
         l_artist_url_path = os.path.join(dump_path, 'mbdump', 'l_artist_url')
@@ -246,6 +269,62 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                     for alias in self._alias_entities(
                             current_entity, MusicbrainzBandEntity, aliases[artist['id']]):
                         yield alias
+
+    def _artist_band_relationship_generator(self, dump_path):
+        link_types = set(['855', '103', '305', '965', '895'])
+        link_file_path = os.path.join(dump_path, 'mbdump', 'link')
+        to_invert = set()
+
+        links = set()
+        with open(link_file_path) as link_file:
+            reader = DictReader(link_file,
+                                delimiter='\t',
+                                fieldnames=['id', 'link_type'])
+            for row in reader:
+                if row['link_type'] in link_types:
+                    links.add(row['id'])
+
+        artists_relationship_file = os.path.join(
+            dump_path, 'mbdump', 'l_artist_artist')
+
+        ids_translator = {}
+        relationships = []
+        with open(artists_relationship_file) as relfile:
+            reader = DictReader(relfile, delimiter='\t', fieldnames=[
+                                'id', 'link_id', 'entity0', 'entity1'])
+            for row in reader:
+                link_id = row['link_id']
+                if link_id in links:
+                    en0 = row['entity0']
+                    en1 = row['entity1']
+                    ids_translator[en0] = ''
+                    ids_translator[en1] = ''
+                    relationship = (en0, en1)
+                    relationships.append(relationship)
+                    if link_id == '855':
+                        to_invert.add(relationship)
+
+        # To hope in Garbage collection intervention
+        links = None
+
+        artist_path = os.path.join(dump_path, 'mbdump', 'artist')
+        with open(artist_path, 'r') as artistfile:
+            for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid']):
+                if artist['id'] in ids_translator:
+                    ids_translator[artist['id']] = artist['gid']
+
+        for relation in relationships:
+            translation0, translation1 = ids_translator[relation[0]
+                                                        ], ids_translator[relation[1]]
+
+            if translation0 and translation1:
+                if relation in to_invert:
+                    yield MusicBrainzArtistBandRelationship(translation1, translation0)
+                else:
+                    yield MusicBrainzArtistBandRelationship(translation0, translation1)
+            else:
+                LOGGER.warning("Artist id missing translation: %s to (%s, %s)" %
+                               (relation, translation0, translation1))
 
     def _fill_entity(self, entity, info, areas):
         entity.catalog_id = info['gid']
