@@ -12,15 +12,15 @@ __copyright__ = 'Copyleft 2018, lenzi.edoardo'
 import json
 import logging
 from pkgutil import get_data
+from typing import Iterator
 
-from sqlalchemy import create_engine
+from soweego.commons import constants as const
+from soweego.commons import localizations as loc
+from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
-
-from soweego.commons import constants as const
-from soweego.commons import localizations as loc
 
 BASE = declarative_base()
 LOGGER = logging.getLogger(__name__)
@@ -66,3 +66,9 @@ class DBManager():
         """Drop the tables (table can be ORM entity instances or classes)"""
         BASE.metadata.drop_all(self.__engine, tables=[
                                table.__table__ for table in tables])
+
+    def create_fulltext_index(self, table: str, columns: Iterator[str]) -> None:
+        print(','.join(columns))
+        query = "CREATE FULLTEXT INDEX ftix_%s_%s on %s(%s) ALGORITHM=INPLACE;" % (
+            table, ','.join(columns), table, ','.join(columns))
+        self.new_session().execute(text(query))

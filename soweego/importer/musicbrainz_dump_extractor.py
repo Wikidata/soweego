@@ -22,7 +22,8 @@ from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models.base_entity import BaseEntity
-from soweego.importer.models.musicbrainz_entity import (MusicBrainzArtistBandRelationship,
+from soweego.importer.models.musicbrainz_entity import (ARTIST_TABLE,
+                                                        MusicBrainzArtistBandRelationship,
                                                         MusicbrainzArtistEntity,
                                                         MusicbrainzArtistLinkEntity,
                                                         MusicbrainzBandEntity,
@@ -63,6 +64,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             session.commit()
 
         LOGGER.debug("Added %s artist records" % artist_count)
+        db_manager.create_fulltext_index(ARTIST_TABLE, ['tokens'])
 
         db_manager.drop([MusicbrainzArtistLinkEntity])
         db_manager.create([MusicbrainzArtistLinkEntity])
