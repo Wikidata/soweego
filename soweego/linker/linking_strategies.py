@@ -33,14 +33,17 @@ EDIT_DISTANCES = {
 
 @click.command()
 @click.argument('source', type=click.File())
-@click.argument('target', type=click.File())
+@click.argument('target', type=click.Choice(target_database.available_targets()))
+@click.argument('target_type', type=click.Choice(target_database.available_types()))
 @click.option('-s', '--strategy', type=click.Choice(['perfect', 'links', 'names', 'all']), default='all')
-@click.option('-o', '--output-dir', type=click.Path(file_okay=False), default='output',
+@click.option('-o', '--output-dir', type=click.Path(file_okay=False), default='/app/shared',
               help="default: 'output'")
-def baseline(source, target, strategy, output_dir):
+def baseline(source, target, target_type, strategy, output_dir):
     """Rule-based matching strategies.
 
-    SOURCE and TARGET must be {string: identifier} JSON files.
+    SOURCE must be {string: identifier} JSON files.
+
+    NOTICE: not all the entity types are available for all the targets
 
     Available strategies are:
     'perfect' = perfect strings;
@@ -49,21 +52,22 @@ def baseline(source, target, strategy, output_dir):
 
     Run all of them by default.
     """
+
+    # TODO source should be a stream from wikidata
     source_dataset = json.load(source)
     LOGGER.info("Loaded source dataset '%s'", source.name)
-    target_dataset = json.load(target)
-    LOGGER.info("Loaded target dataset '%s'", target.name)
+    target_entity = target_database.get_entity(target, target_type)
     if strategy == 'perfect':
-        _perfect_string_wrapper(source_dataset, target_dataset, output_dir)
+        _perfect_string_wrapper(source_dataset, target_entity, output_dir)
     elif strategy == 'links':
-        _similar_links_wrapper(source_dataset, target_dataset, output_dir)
+        _similar_links_wrapper(source_dataset, target_entity, output_dir)
     elif strategy == 'names':
-        _similar_names_wrapper(source_dataset, target_dataset, output_dir)
+        _similar_names_wrapper(source_dataset, target_entity, output_dir)
     elif strategy == 'all':
         LOGGER.info('Will run all the baseline strategies')
-        _perfect_string_wrapper(source_dataset, target_dataset, output_dir)
-        _similar_links_wrapper(source_dataset, target_dataset, output_dir)
-        _similar_names_wrapper(source_dataset, target_dataset, output_dir)
+        _perfect_string_wrapper(source_dataset, target_entity, output_dir)
+        _similar_links_wrapper(source_dataset, target_entity, output_dir)
+        _similar_names_wrapper(source_dataset, target_entity, output_dir)
 
 
 def _similar_names_wrapper(source_dataset, target_dataset, output_dir):
@@ -124,7 +128,6 @@ def similar_link_match(source, target) -> dict:
 
 
 def similar_name_match(source, target) -> dict:
-    """Given 2 dictionaries ``{person_name: identifier}``,
     """Given a dictionaries ``{person_name: identifier} and a BaseEntity``,
     match similar names and return a dataset ``{source_id: target_id}``.
 
