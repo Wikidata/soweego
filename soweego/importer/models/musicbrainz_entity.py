@@ -34,8 +34,9 @@ class MusicbrainzArtistEntity(BaseEntity, FullText, BASE):
     death_place = Column(String(255), nullable=True)
 
 
-class MusicbrainzBandEntity(BaseEntity, BASE):
+class MusicbrainzBandEntity(BaseEntity, FullText, BASE):
     __tablename__ = BAND_TABLE
+    __fulltext_columns__ = ('tokens',)
 
     birth_place = Column(String(255), nullable=True)
     death_place = Column(String(255), nullable=True)
