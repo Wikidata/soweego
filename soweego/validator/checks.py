@@ -14,7 +14,7 @@ import logging
 from collections import defaultdict
 
 import click
-
+from soweego.commons import target_database
 from soweego.commons.constants import HANDLED_ENTITIES, TARGET_CATALOGS
 from soweego.commons.data_gathering import (connect_to_db,
                                             extract_ids_from_urls,
@@ -37,19 +37,17 @@ LOGGER = logging.getLogger(__name__)
 @click.argument('wikidata_query', type=click.Choice(['class', 'occupation']))
 @click.argument('class_qid')
 @click.argument('catalog_pid')
-@click.argument('database_table')
+@click.argument('catalog', type=click.Choice(target_database.available_targets()))
+@click.argument('entity_type', type=click.Choice(target_database.available_types()))
 @click.option('-o', '--outfile', type=click.File('w'), default='output/non_existent_ids.json', help="default: 'output/non_existent_ids.json'")
-def check_existence_cli(wikidata_query, class_qid, catalog_pid, database_table, outfile):
+def check_existence_cli(wikidata_query, class_qid, catalog_pid, catalog, entity_type, outfile):
     """Check the existence of identifier statements.
 
     Dump a JSON file of invalid ones ``{identifier: QID}``
     """
-    entity = BaseEntity
-    if database_table == 'musicbrainz_person':
-        entity = MusicbrainzArtistEntity
-    elif database_table == 'musicbrainz_band':
-        entity = MusicbrainzBandEntity
-    else:
+    try:
+        entity = target_database.get_entity(catalog, entity_type)
+    except:
         LOGGER.error('Not able to retrive entity for given database_table')
 
     invalid = check_existence(wikidata_query, class_qid,
