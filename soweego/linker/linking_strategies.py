@@ -16,10 +16,12 @@ from os import path
 
 import click
 import jellyfish
-
-from soweego.commons import text_utils, url_utils
+from soweego.commons import target_database, text_utils, url_utils
 from soweego.commons.candidate_acquisition import (IDENTIFIER_COLUMN,
                                                    INDEXED_COLUMN, query_index)
+from soweego.commons.db_manager import DBManager
+from soweego.importer.models.musicbrainz_entity import MusicbrainzArtistEntity
+from sqlalchemy_fulltext import FullTextMode, FullTextSearch
 
 LOGGER = logging.getLogger(__name__)
 EDIT_DISTANCES = {
@@ -123,11 +125,50 @@ def similar_link_match(source, target) -> dict:
 
 def similar_name_match(source, target) -> dict:
     """Given 2 dictionaries ``{person_name: identifier}``,
+    """Given a dictionaries ``{person_name: identifier} and a BaseEntity``,
     match similar names and return a dataset ``{source_id: target_id}``.
 
     This strategy only applies to people names.
     """
-    return perfect_string_match((_process_names(source), _process_names(target)))
+    matches = defaultdict(list)
+    to_exclude = set()
+
+    db_manager = DBManager()
+
+    for label, qid in source.items():
+        if not label:
+            continue
+
+        to_exclude.clear()
+
+        tokenized = text_utils.tokenize(label)
+        if len(tokenized) <= 1:
+            continue
+
+        boolean_search = ' '.join(map('+{0}'.format, tokenized))
+        natural_search = ' '.join(tokenized)
+        session = db_manager.new_session()
+
+        # NOTICE: sets of size 1 are always exluded
+        # Looks for sets equal or bigger containing our tokens
+        ft_search = FullTextSearch(
+            boolean_search, target, FullTextMode.BOOLEAN)
+        for res in session.query(target).filter(ft_search).all():
+            matches[qid].append(res.catalog_id)
+            to_exclude.add(res.catalog_id)
+        # Looks for sets contained in our set of tokens
+        ft_search = FullTextSearch(natural_search, target)
+        for res in session.query(target).filter(ft_search).filter(~target.catalog_id.in_(to_exclude)).all():
+            res_tokenized = text_utils.tokenize(res.tokens)
+            if len(res_tokenized) > 1 and res_tokenized.issubset(tokenized):
+                matches[qid].append(res.catalog_id)
+
+        if matches[qid]:
+            matches[qid] = list(set(matches[qid]))
+        else:
+            del matches[qid]
+
+    return matches
 
 
 def edit_distance_match(source, target_table, target_database, target_search_type, metric, threshold) -> dict:
