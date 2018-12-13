@@ -66,9 +66,3 @@ class DBManager():
         """Drop the tables (table can be ORM entity instances or classes)"""
         BASE.metadata.drop_all(self.__engine, tables=[
                                table.__table__ for table in tables])
-
-    def create_fulltext_index(self, table: str, columns: Iterator[str]) -> None:
-        print(','.join(columns))
-        query = "CREATE FULLTEXT INDEX ftix_%s_%s on %s(%s) ALGORITHM=INPLACE;" % (
-            table, ','.join(columns), table, ','.join(columns))
-        self.new_session().execute(text(query))

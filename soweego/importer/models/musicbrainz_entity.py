@@ -15,6 +15,7 @@ from sqlalchemy import (Column, ForeignKey, Index, String, Table,
                         UniqueConstraint)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
+from sqlalchemy_fulltext import FullText
 
 BASE = declarative_base()
 ARTIST_TABLE = 'musicbrainz_artist'
@@ -24,8 +25,9 @@ BAND_LINK_TABLE = 'musicbrainz_band_link'
 ARTIST_BAND_RELATIONSHIP_TABLE = "musicbrainz_artist_band_relationship"
 
 
-class MusicbrainzArtistEntity(BaseEntity, BASE):
+class MusicbrainzArtistEntity(BaseEntity, FullText, BASE):
     __tablename__ = ARTIST_TABLE
+    __fulltext_columns__ = ('tokens',)
 
     gender = Column(String(10))
     birth_place = Column(String(255), nullable=True)

@@ -64,7 +64,6 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             session.commit()
 
         LOGGER.debug("Added %s artist records" % artist_count)
-        db_manager.create_fulltext_index(ARTIST_TABLE, ['tokens'])
 
         db_manager.drop([MusicbrainzArtistLinkEntity])
         db_manager.create([MusicbrainzArtistLinkEntity])

@@ -23,7 +23,6 @@ pbr==4.2.0
 pexpect==4.6.0
 pickleshare==0.7.4
 pipenv==2018.7.1
-pipenv-to-requirements==0.5.1
 pipfile==0.0.2
 prompt-toolkit==1.0.15
 ptyprocess==0.6.0
@@ -39,6 +38,7 @@ rope==0.11.0
 simplegeneric==0.8.1
 six==1.11.0
 SQLAlchemy==1.2.13
+SQLAlchemy-FullText-Search==0.2.5
 toml==0.9.4
 toolforge==4.1.0
 traitlets==4.3.2
