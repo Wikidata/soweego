@@ -10,10 +10,13 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, lenzi.edoardo'
 
 from sqlalchemy import Column, Date, Index, Integer, String, UniqueConstraint
+from sqlalchemy.ext.declarative import (AbstractConcreteBase, declarative_base,
+                                        declared_attr)
+
+BASE = declarative_base()
 
 
-class BaseEntity():
-    __table_args__ = {'mysql_charset': 'utf8mb4'}
+class BaseEntity(AbstractConcreteBase, BASE):
     __tablename__ = None
     internal_id = Column(Integer, unique=True,
                          primary_key=True, autoincrement=True)
@@ -35,13 +38,32 @@ class BaseEntity():
     def __repr__(self) -> str:
         return "<BaseEntity(catalog_id='{0}', name='{1}')>".format(self.catalog_id, self.name)
 
+    @declared_attr
+    def __table_args__(cls):
+        return (
+            Index('ftix_tokens_%s' % cls.__tablename__,
+                  "tokens", mysql_prefix="FULLTEXT"),
+            Index('ftix_name_%s' % cls.__tablename__,
+                  "name", mysql_prefix="FULLTEXT"),
+            {'mysql_charset': 'utf8mb4'}
+        )
 
-class BaseRelationship():
+
+class BaseRelationship(AbstractConcreteBase, BASE):
+    __tablename__ = None
     internal_id = Column(Integer, unique=True,
                          primary_key=True, autoincrement=True)
 
     from_catalog_id = Column(String(50), nullable=False, index=False)
     to_catalog_id = Column(String(50), nullable=False, index=False)
+
+    @declared_attr
+    def __table_args__(cls):
+        return (
+            Index('idx_catalog_ids_%s' % cls.__tablename__, 'from_catalog_id',
+                  'to_catalog_id', unique=True),
+            {'mysql_charset': 'utf8mb4'}
+        )
 
     def __init__(self, from_id: str, to_id: str):
         self.from_catalog_id = from_id
