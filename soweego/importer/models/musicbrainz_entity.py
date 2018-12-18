@@ -15,7 +15,6 @@ from sqlalchemy import (Column, ForeignKey, Index, String, Table,
                         UniqueConstraint)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from sqlalchemy_fulltext import FullText
 
 BASE = declarative_base()
 ARTIST_TABLE = 'musicbrainz_artist'
@@ -25,21 +24,33 @@ BAND_LINK_TABLE = 'musicbrainz_band_link'
 ARTIST_BAND_RELATIONSHIP_TABLE = "musicbrainz_artist_band_relationship"
 
 
-class MusicbrainzArtistEntity(BaseEntity, FullText, BASE):
+class MusicbrainzArtistEntity(BaseEntity, BASE):
     __tablename__ = ARTIST_TABLE
-    __fulltext_columns__ = ('tokens',)
 
     gender = Column(String(10))
     birth_place = Column(String(255), nullable=True)
     death_place = Column(String(255), nullable=True)
 
+    __table_args__ = (
+        Index('ftix_tokens_%s' % __tablename__,
+              "tokens", mysql_prefix="FULLTEXT"),
+        Index('ftix_name_%s' % __tablename__, "name", mysql_prefix="FULLTEXT"),
+        BaseEntity.__table_args__
+    )
 
-class MusicbrainzBandEntity(BaseEntity, FullText, BASE):
+
+class MusicbrainzBandEntity(BaseEntity, BASE):
     __tablename__ = BAND_TABLE
-    __fulltext_columns__ = ('tokens',)
 
     birth_place = Column(String(255), nullable=True)
     death_place = Column(String(255), nullable=True)
+
+    __table_args__ = (
+        Index('ftix_tokens_%s' % __tablename__,
+              "tokens", mysql_prefix="FULLTEXT"),
+        Index('ftix_name_%s' % __tablename__, "name", mysql_prefix="FULLTEXT"),
+        BaseEntity.__table_args__
+    )
 
 
 class MusicbrainzArtistLinkEntity(BaseLinkEntity, BASE):

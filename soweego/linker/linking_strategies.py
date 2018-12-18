@@ -21,7 +21,6 @@ from soweego.commons.candidate_acquisition import (IDENTIFIER_COLUMN,
                                                    INDEXED_COLUMN, query_index)
 from soweego.commons.db_manager import DBManager
 from soweego.importer.models.musicbrainz_entity import MusicbrainzArtistEntity
-from sqlalchemy_fulltext import FullTextMode, FullTextSearch
 
 LOGGER = logging.getLogger(__name__)
 EDIT_DISTANCES = {
@@ -154,13 +153,12 @@ def similar_name_match(source, target) -> dict:
 
         # NOTICE: sets of size 1 are always exluded
         # Looks for sets equal or bigger containing our tokens
-        ft_search = FullTextSearch(
-            boolean_search, target, FullTextMode.BOOLEAN)
+        ft_search = target.tokens.match(boolean_search)
         for res in session.query(target).filter(ft_search).all():
             matches[qid].append(res.catalog_id)
             to_exclude.add(res.catalog_id)
         # Looks for sets contained in our set of tokens
-        ft_search = FullTextSearch(natural_search, target)
+        ft_search = target.tokens.match(natural_search)
         for res in session.query(target).filter(ft_search).filter(~target.catalog_id.in_(to_exclude)).all():
             res_tokenized = text_utils.tokenize(res.tokens)
             if len(res_tokenized) > 1 and res_tokenized.issubset(tokenized):
