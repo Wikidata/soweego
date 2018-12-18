@@ -86,8 +86,10 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         LOGGER.debug("Added %s ISNI link records" % isni_link_count)
 
-        db_manager.drop([MusicBrainzArtistBandRelationship])
-        db_manager.create([MusicBrainzArtistBandRelationship])
+        db_manager.drop([MusicbrainzArtistLinkEntity,
+                         MusicbrainzBandLinkEntity])
+        db_manager.create([MusicbrainzArtistLinkEntity,
+                           MusicbrainzBandLinkEntity])
 
         relationships_count = 0
         relationships_total = 0
