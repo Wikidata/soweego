@@ -74,7 +74,8 @@ def baseline(source, target, target_type, strategy, output_dir):
 
 def _similar_names_wrapper(source_dataset, target_dataset, output_dir):
     LOGGER.info('Starting similar name match')
-    matches = similar_name_match(source_dataset, target_dataset)
+    matches = similar_name_match(
+        source_dataset, target_dataset, text_utils.tokenize)
     with open(path.join(output_dir, 'similar_name_matches.json'), 'w') as output_file:
         json.dump(matches, output_file, indent=2, ensure_ascii=False)
         LOGGER.info("Matches dumped to '%s'", output_file.name)
@@ -127,21 +128,11 @@ def similar_link_match(source, target: BaseLinkEntity) -> dict:
 
     This strategy only applies to URLs.
     """
-    db_manager = DBManager()
-    session = db_manager.new_session()
-    matched = defaultdict(list)
-
-    for link, qid in source.items():
-        link_query = ' '.join(url_utils.tokenize(link))
-        ft_search = target.tokens.match(link_query)
-        for res in session.query(target).filter(ft_search).all():
-            matched[qid].append(res.catalog_id)
-
-    return matched
+    return similar_name_match(source, target, url_utils.tokenize)
 
 
-def similar_name_match(source, target) -> dict:
-    """Given a dictionaries ``{person_name: identifier} and a BaseEntity``,
+def similar_name_match(source, target, tokenize) -> dict:
+    """Given a dictionaries ``{person_name: identifier}, a BaseEntity and a tokenization function``,
     match similar names and return a dataset ``{source_id: target_id}``.
 
     This strategy only applies to people names.
@@ -157,7 +148,7 @@ def similar_name_match(source, target) -> dict:
 
         to_exclude.clear()
 
-        tokenized = text_utils.tokenize(label)
+        tokenized = tokenize(label)
         if len(tokenized) <= 1:
             continue
 
