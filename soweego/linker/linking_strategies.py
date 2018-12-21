@@ -271,37 +271,3 @@ def _build_index_query(source_strings):
         # TODO experiment with different strategies
         query_builder.append('"%s"' % label)
     return ' '.join(query_builder), most_frequent
-
-
-def _process_names(dataset) -> dict:
-    """Convert a dataset `{person_name: identifier}`
-    into a `{person_tokens: identifier}` one.
-
-    Name tokens are grouped by identifier and joined to treat them as a string.
-    """
-    tokenized = defaultdict(set)
-    processed = {}
-    for name, identifier in dataset.items():
-        LOGGER.debug('Identifier [%s]: processing name "%s"', identifier, name)
-        tokens = text_utils.tokenize(name, text_utils.NAME_STOPWORDS)
-        tokenized[identifier].update(tokens)
-    for identifier, tokens in tokenized.items():
-        LOGGER.debug('Identifier [%s]: tokens = %s', identifier, tokens)
-        processed['|'.join(tokens)] = identifier
-    return processed
-
-
-def _process_links(dataset) -> dict:
-    """Convert a dataset `{link: identifier}`
-    into a `{link_tokens: identifier}` one.
-
-    Link tokens are joined to treat them as a string.
-    """
-    processed = {}
-    for link, identifier in dataset.items():
-        tokens = url_utils.tokenize(link)
-        if not tokens:
-            LOGGER.info('Skipping invalid URL')
-            continue
-        processed['|'.join(tokens)] = identifier
-    return processed
