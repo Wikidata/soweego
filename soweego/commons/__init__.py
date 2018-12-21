@@ -1,2 +1,1 @@
-from soweego.commons import (candidate_acquisition, cli, logging,
-                             target_database)
+from soweego.commons import cli, logging, target_database
