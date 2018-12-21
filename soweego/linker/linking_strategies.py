@@ -17,10 +17,9 @@ from os import path
 import click
 import jellyfish
 from soweego.commons import target_database, text_utils, url_utils
-from soweego.commons.candidate_acquisition import (IDENTIFIER_COLUMN,
-                                                   INDEXED_COLUMN, query_index)
 from soweego.commons.db_manager import DBManager
-from soweego.importer.models.musicbrainz_entity import MusicbrainzArtistEntity
+from soweego.importer.models.base_entity import BaseEntity
+from soweego.importer.models.base_link_entity import BaseLinkEntity
 
 LOGGER = logging.getLogger(__name__)
 EDIT_DISTANCES = {
@@ -56,17 +55,18 @@ def baseline(source, target, target_type, strategy, output_dir):
     source_dataset = json.load(source)
     LOGGER.info("Loaded source dataset '%s'", source.name)
     target_entity = target_database.get_entity(target, target_type)
+    target_link_entity = target_database.get_link_entity(target, target_type)
     if strategy == 'perfect':
-        _perfect_string_wrapper(source_dataset, target_entity, output_dir)
+        _perfect_name_wrapper(source_dataset, target_entity, output_dir)
     elif strategy == 'links':
-        _similar_links_wrapper(source_dataset, target_entity, output_dir)
+        _similar_links_wrapper(source_dataset, target_link_entity, output_dir)
     elif strategy == 'names':
         _similar_names_wrapper(source_dataset, target_entity, output_dir)
     elif strategy == 'all':
         LOGGER.info('Will run all the baseline strategies')
-        _perfect_string_wrapper(source_dataset, target_entity, output_dir)
-        _similar_links_wrapper(source_dataset, target_entity, output_dir)
+        _perfect_name_wrapper(source_dataset, target_entity, output_dir)
         _similar_names_wrapper(source_dataset, target_entity, output_dir)
+        _similar_links_wrapper(source_dataset, target_link_entity, output_dir)
 
 
 def _similar_names_wrapper(source_dataset, target_dataset, output_dir):
@@ -77,45 +77,46 @@ def _similar_names_wrapper(source_dataset, target_dataset, output_dir):
         LOGGER.info("Matches dumped to '%s'", output_file.name)
 
 
-def _similar_links_wrapper(source_dataset, target_dataset, output_dir):
+def _similar_links_wrapper(source_dataset, target_entity, output_dir):
     LOGGER.info('Starting similar link match')
-    matches = similar_link_match(source_dataset, target_dataset)
+    matches = similar_link_match(source_dataset, target_entity)
     with open(path.join(output_dir, 'similar_link_matches.json'), 'w') as output_file:
         json.dump(matches, output_file, indent=2, ensure_ascii=False)
         LOGGER.info("Matches dumped to '%s'", output_file.name)
     return matches
 
 
-def _perfect_string_wrapper(source_dataset, target_dataset, output_dir):
+def _perfect_name_wrapper(source_dataset, target_entity, output_dir):
     LOGGER.info('Starting perfect string match')
-    matches = perfect_string_match((source_dataset, target_dataset))
+    matches = perfect_name_match(source_dataset, target_entity)
     with open(path.join(output_dir, 'perfect_string_matches.json'), 'w') as output_file:
         json.dump(matches, output_file, indent=2, ensure_ascii=False)
         LOGGER.info("Matches dumped to '%s'", output_file.name)
 
 
-def perfect_string_match(datasets) -> dict:
+def perfect_name_match(source_dataset, target_entity: BaseEntity) -> dict:
     """Given an iterable of dictionaries ``{string: identifier}``,
     match perfect strings and return a dataset ``{id: id}``.
 
     This strategy applies to any object that can be
     treated as a string: names, links, etc.
     """
+    db_manager = DBManager()
+    session = db_manager.new_session()
     matched = {}
-    merged = defaultdict(list)
-    for dataset in datasets:
-        for string, identifier in dataset.items():
-            merged[string].append(identifier)
-    for string, identifiers in merged.items():
-        if len(identifiers) > 1:
-            LOGGER.debug("'%s': it's a match! %s -> %s",
-                         string, identifiers[0], identifiers[1])
-            matched[identifiers[0]] = identifiers[1]
+
+    for label, qid in source_dataset.items():
+        for res in session.query(target_entity).filter(target_entity.name == label).all():
+            if matched.get(qid):
+                LOGGER.warning(
+                    '%s - %s has already a perfect name match' % (qid, label))
+            matched[qid] = res.catalog_id
+
     return matched
 
 
-def similar_link_match(source, target) -> dict:
-    """Given 2 dictionaries ``{link: identifier}``,
+def similar_link_match(source, target: BaseLinkEntity) -> dict:
+    """Given a dictionaries ``{link: identifier} and a BaseLinkEntity``,
     match similar links and return a dataset ``{source_id: target_id}``.
 
     We treat links as natural language:
@@ -123,7 +124,17 @@ def similar_link_match(source, target) -> dict:
 
     This strategy only applies to URLs.
     """
-    return perfect_string_match((_process_links(source), _process_links(target)))
+    db_manager = DBManager()
+    session = db_manager.new_session()
+    matched = defaultdict(list)
+
+    for link, qid in source.items():
+        link_query = ' '.join(url_utils.tokenize(link))
+        ft_search = target.tokens.match(link_query)
+        for res in session.query(target).filter(ft_search).all():
+            matched[qid].append(res.catalog_id)
+
+    return matched
 
 
 def similar_name_match(source, target) -> dict:

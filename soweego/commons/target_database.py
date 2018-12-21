@@ -15,3 +15,7 @@ def available_types():
 
 def get_entity(target, entity_type):
     return TARGET_CATALOGS[target][entity_type]['entity']
+
+
+def get_link_entity(target, entity_type):
+    return TARGET_CATALOGS[target][entity_type]['link_entity']
