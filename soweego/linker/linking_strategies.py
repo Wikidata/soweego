@@ -33,7 +33,7 @@ EDIT_DISTANCES = {
 @click.argument('source', type=click.File())
 @click.argument('target', type=click.Choice(target_database.available_targets()))
 @click.argument('target_type', type=click.Choice(target_database.available_types()))
-@click.option('-s', '--strategy', type=click.Choice(['perfect', 'links', 'names', 'all']), default='all')
+@click.option('-s', '--strategy', type=click.Choice(['perfect', 'links', 'names', 'edit_distance', 'all']), default='all')
 @click.option('-o', '--output-dir', type=click.Path(file_okay=False), default='/app/shared',
               help="default: 'output'")
 def baseline(source, target, target_type, strategy, output_dir):
@@ -62,6 +62,9 @@ def baseline(source, target, target_type, strategy, output_dir):
         _similar_links_wrapper(source_dataset, target_link_entity, output_dir)
     elif strategy == 'names':
         _similar_names_wrapper(source_dataset, target_entity, output_dir)
+    elif strategy == 'edit_distance':
+       # TODO create a command only for this matching technique to expose the edit distance function too
+        edit_distance_match(source_dataset, target_entity, 'jw', 0)
     elif strategy == 'all':
         LOGGER.info('Will run all the baseline strategies')
         _perfect_name_wrapper(source_dataset, target_entity, output_dir)
@@ -183,7 +186,7 @@ def similar_name_match(source, target) -> dict:
     return matches
 
 
-def edit_distance_match(source, target_table, target_database, target_search_type, metric, threshold) -> dict:
+def edit_distance_match(source, target: BaseEntity, metric, threshold) -> dict:
     """Given a source dataset ``{identifier: {string: [languages]}}``,
     match strings having the given edit distance ``metric``
     above the given ``threshold`` and return a dataset
@@ -203,6 +206,7 @@ def edit_distance_match(source, target_table, target_database, target_search_typ
 
     Return ``None`` if the given edit distance is not valid.
     """
+    db_manager = DBManager()
     scores = {}
     distance_function = EDIT_DISTANCES.get(metric)
     if not distance_function:
@@ -216,8 +220,9 @@ def edit_distance_match(source, target_table, target_database, target_search_typ
         query, most_frequent_source_strings = _build_index_query(
             source_strings)
         LOGGER.debug('Query: %s', query)
-        target_candidates = query_index(
-            query, target_search_type, target_table, target_database)
+        session = db_manager.new_session()
+        target_candidates = session.query(target).filter(
+            target.name.match(query)).all()
         if target_candidates is None:
             LOGGER.warning('Skipping query that went wrong: %s', query)
             continue
@@ -229,8 +234,8 @@ def edit_distance_match(source, target_table, target_database, target_search_typ
             source_ascii, source_normalized = text_utils.normalize(
                 source_string)
             for result in target_candidates:
-                target_string = result[INDEXED_COLUMN]
-                target_id = result[IDENTIFIER_COLUMN]
+                target_string = result.name
+                target_id = result.catalog_id
                 target_ascii, target_normalized = text_utils.normalize(
                     target_string)
                 try:
