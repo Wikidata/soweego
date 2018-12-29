@@ -24,40 +24,49 @@ BAND_LINK_TABLE = 'musicbrainz_band_link'
 ARTIST_BAND_RELATIONSHIP_TABLE = "musicbrainz_artist_band_relationship"
 
 
-class MusicbrainzArtistEntity(BaseEntity, BASE):
+class MusicbrainzArtistEntity(BaseEntity):
     __tablename__ = ARTIST_TABLE
+    __mapper_args__ = {
+        'polymorphic_identity': __tablename__,
+        'concrete': True}
 
     gender = Column(String(10))
     birth_place = Column(String(255), nullable=True)
     death_place = Column(String(255), nullable=True)
 
 
-class MusicbrainzBandEntity(BaseEntity, BASE):
+class MusicbrainzBandEntity(BaseEntity):
     __tablename__ = BAND_TABLE
+    __mapper_args__ = {
+        'polymorphic_identity': __tablename__,
+        'concrete': True}
 
     birth_place = Column(String(255), nullable=True)
     death_place = Column(String(255), nullable=True)
 
 
-class MusicbrainzArtistLinkEntity(BaseLinkEntity, BASE):
+class MusicbrainzArtistLinkEntity(BaseLinkEntity):
     __tablename__ = ARTIST_LINK_TABLE
+    __mapper_args__ = {
+        'polymorphic_identity': __tablename__,
+        'concrete': True}
 
 
-class MusicbrainzBandLinkEntity(BaseLinkEntity, BASE):
+class MusicbrainzBandLinkEntity(BaseLinkEntity):
     __tablename__ = BAND_LINK_TABLE
+    __mapper_args__ = {
+        'polymorphic_identity': __tablename__,
+        'concrete': True}
 
 # NOTICE: both catalog_ids of this entity can be both in Artist and Band table
 
 
-class MusicBrainzArtistBandRelationship(BaseRelationship, BASE):
+class MusicBrainzArtistBandRelationship(BaseRelationship):
     __tablename__ = ARTIST_BAND_RELATIONSHIP_TABLE
 
-    __table_args__ = (
-        UniqueConstraint("from_catalog_id", "to_catalog_id"),
-    )
-
-    Index('idx_catalog_ids', 'from_catalog_id',
-          'to_catalog_id', unique=True)
+    __mapper_args__ = {
+        'polymorphic_identity': __tablename__,
+        'concrete': True}
 
     def __repr__(self):
         return super().__repr__()

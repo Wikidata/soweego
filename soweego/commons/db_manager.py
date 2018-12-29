@@ -12,15 +12,16 @@ __copyright__ = 'Copyleft 2018, lenzi.edoardo'
 import json
 import logging
 from pkgutil import get_data
-
-from sqlalchemy import create_engine
-from sqlalchemy.engine import Engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import NullPool
+from typing import Iterator
 
 from soweego.commons import constants as const
 from soweego.commons import localizations as loc
+from soweego.importer.models.musicbrainz_entity import MusicbrainzArtistEntity
+from sqlalchemy import Index, create_engine, text
+from sqlalchemy.engine import Engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import configure_mappers, sessionmaker
+from sqlalchemy.pool import NullPool
 
 BASE = declarative_base()
 LOGGER = logging.getLogger(__name__)
@@ -59,6 +60,7 @@ class DBManager():
 
     def create(self, tables) -> None:
         """Create the tables (tables can be ORM entity instances or classes)"""
+        configure_mappers()
         BASE.metadata.create_all(self.__engine, tables=[
                                  table.__table__ for table in tables])
 

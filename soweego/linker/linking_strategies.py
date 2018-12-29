@@ -16,10 +16,10 @@ from os import path
 
 import click
 import jellyfish
-
-from soweego.commons import text_utils, url_utils
-from soweego.commons.candidate_acquisition import (IDENTIFIER_COLUMN,
-                                                   INDEXED_COLUMN, query_index)
+from soweego.commons import target_database, text_utils, url_utils
+from soweego.commons.db_manager import DBManager
+from soweego.importer.models.base_entity import BaseEntity
+from soweego.importer.models.base_link_entity import BaseLinkEntity
 
 LOGGER = logging.getLogger(__name__)
 EDIT_DISTANCES = {
@@ -31,14 +31,17 @@ EDIT_DISTANCES = {
 
 @click.command()
 @click.argument('source', type=click.File())
-@click.argument('target', type=click.File())
-@click.option('-s', '--strategy', type=click.Choice(['perfect', 'links', 'names', 'all']), default='all')
-@click.option('-o', '--output-dir', type=click.Path(file_okay=False), default='output',
+@click.argument('target', type=click.Choice(target_database.available_targets()))
+@click.argument('target_type', type=click.Choice(target_database.available_types()))
+@click.option('-s', '--strategy', type=click.Choice(['perfect', 'links', 'names', 'edit_distance', 'all']), default='all')
+@click.option('-o', '--output-dir', type=click.Path(file_okay=False), default='/app/shared',
               help="default: 'output'")
-def baseline(source, target, strategy, output_dir):
+def baseline(source, target, target_type, strategy, output_dir):
     """Rule-based matching strategies.
 
-    SOURCE and TARGET must be {string: identifier} JSON files.
+    SOURCE must be {string: identifier} JSON files.
+
+    NOTICE: not all the entity types are available for all the targets
 
     Available strategies are:
     'perfect' = perfect strings;
@@ -47,70 +50,77 @@ def baseline(source, target, strategy, output_dir):
 
     Run all of them by default.
     """
+
+    # TODO source should be a stream from wikidata
     source_dataset = json.load(source)
     LOGGER.info("Loaded source dataset '%s'", source.name)
-    target_dataset = json.load(target)
-    LOGGER.info("Loaded target dataset '%s'", target.name)
+    target_entity = target_database.get_entity(target, target_type)
+    target_link_entity = target_database.get_link_entity(target, target_type)
     if strategy == 'perfect':
-        _perfect_string_wrapper(source_dataset, target_dataset, output_dir)
+        _perfect_name_wrapper(source_dataset, target_entity, output_dir)
     elif strategy == 'links':
-        _similar_links_wrapper(source_dataset, target_dataset, output_dir)
+        _similar_links_wrapper(source_dataset, target_link_entity, output_dir)
     elif strategy == 'names':
-        _similar_names_wrapper(source_dataset, target_dataset, output_dir)
+        _similar_names_wrapper(source_dataset, target_entity, output_dir)
+    elif strategy == 'edit_distance':
+       # TODO create a command only for this matching technique to expose the edit distance function too
+        edit_distance_match(source_dataset, target_entity, 'jw', 0)
     elif strategy == 'all':
         LOGGER.info('Will run all the baseline strategies')
-        _perfect_string_wrapper(source_dataset, target_dataset, output_dir)
-        _similar_links_wrapper(source_dataset, target_dataset, output_dir)
-        _similar_names_wrapper(source_dataset, target_dataset, output_dir)
+        _perfect_name_wrapper(source_dataset, target_entity, output_dir)
+        _similar_names_wrapper(source_dataset, target_entity, output_dir)
+        _similar_links_wrapper(source_dataset, target_link_entity, output_dir)
 
 
 def _similar_names_wrapper(source_dataset, target_dataset, output_dir):
     LOGGER.info('Starting similar name match')
-    matches = similar_name_match(source_dataset, target_dataset)
+    matches = similar_name_match(
+        source_dataset, target_dataset, text_utils.tokenize)
     with open(path.join(output_dir, 'similar_name_matches.json'), 'w') as output_file:
         json.dump(matches, output_file, indent=2, ensure_ascii=False)
         LOGGER.info("Matches dumped to '%s'", output_file.name)
 
 
-def _similar_links_wrapper(source_dataset, target_dataset, output_dir):
+def _similar_links_wrapper(source_dataset, target_entity, output_dir):
     LOGGER.info('Starting similar link match')
-    matches = similar_link_match(source_dataset, target_dataset)
+    matches = similar_link_match(source_dataset, target_entity)
     with open(path.join(output_dir, 'similar_link_matches.json'), 'w') as output_file:
         json.dump(matches, output_file, indent=2, ensure_ascii=False)
         LOGGER.info("Matches dumped to '%s'", output_file.name)
     return matches
 
 
-def _perfect_string_wrapper(source_dataset, target_dataset, output_dir):
+def _perfect_name_wrapper(source_dataset, target_entity, output_dir):
     LOGGER.info('Starting perfect string match')
-    matches = perfect_string_match((source_dataset, target_dataset))
+    matches = perfect_name_match(source_dataset, target_entity)
     with open(path.join(output_dir, 'perfect_string_matches.json'), 'w') as output_file:
         json.dump(matches, output_file, indent=2, ensure_ascii=False)
         LOGGER.info("Matches dumped to '%s'", output_file.name)
 
 
-def perfect_string_match(datasets) -> dict:
+def perfect_name_match(source_dataset, target_entity: BaseEntity) -> dict:
     """Given an iterable of dictionaries ``{string: identifier}``,
     match perfect strings and return a dataset ``{id: id}``.
 
     This strategy applies to any object that can be
     treated as a string: names, links, etc.
     """
+    db_manager = DBManager()
+    session = db_manager.new_session()
     matched = {}
-    merged = defaultdict(list)
-    for dataset in datasets:
-        for string, identifier in dataset.items():
-            merged[string].append(identifier)
-    for string, identifiers in merged.items():
-        if len(identifiers) > 1:
-            LOGGER.debug("'%s': it's a match! %s -> %s",
-                         string, identifiers[0], identifiers[1])
-            matched[identifiers[0]] = identifiers[1]
+
+    for label, qid in source_dataset.items():
+        for res in session.query(target_entity).filter(target_entity.name == label).all():
+            if matched.get(qid):
+                LOGGER.warning(
+                    '%s - %s has already a perfect name match' % (qid, label))
+            matched[qid] = res.catalog_id
+
     return matched
 
 
-def similar_link_match(source, target) -> dict:
-    """Given 2 dictionaries ``{link: identifier}``,
+def similar_link_match(source, target: BaseLinkEntity) -> dict:
+    """Given a dictionaries ``{link: identifier} and a BaseLinkEntity``,
     match similar links and return a dataset ``{source_id: target_id}``.
 
     We treat links as natural language:
@@ -118,19 +128,56 @@ def similar_link_match(source, target) -> dict:
 
     This strategy only applies to URLs.
     """
-    return perfect_string_match((_process_links(source), _process_links(target)))
+    return similar_name_match(source, target, url_utils.tokenize)
 
 
-def similar_name_match(source, target) -> dict:
-    """Given 2 dictionaries ``{person_name: identifier}``,
+def similar_name_match(source, target, tokenize) -> dict:
+    """Given a dictionaries ``{person_name: identifier}, a BaseEntity and a tokenization function``,
     match similar names and return a dataset ``{source_id: target_id}``.
 
     This strategy only applies to people names.
     """
-    return perfect_string_match((_process_names(source), _process_names(target)))
+    matches = defaultdict(list)
+    to_exclude = set()
+
+    db_manager = DBManager()
+
+    for label, qid in source.items():
+        if not label:
+            continue
+
+        to_exclude.clear()
+
+        tokenized = tokenize(label)
+        if len(tokenized) <= 1:
+            continue
+
+        boolean_search = ' '.join(map('+{0}'.format, tokenized))
+        natural_search = ' '.join(tokenized)
+        session = db_manager.new_session()
+
+        # NOTICE: sets of size 1 are always exluded
+        # Looks for sets equal or bigger containing our tokens
+        ft_search = target.tokens.match(boolean_search)
+        for res in session.query(target).filter(ft_search).all():
+            matches[qid].append(res.catalog_id)
+            to_exclude.add(res.catalog_id)
+        # Looks for sets contained in our set of tokens
+        ft_search = target.tokens.match(natural_search)
+        for res in session.query(target).filter(ft_search).filter(~target.catalog_id.in_(to_exclude)).all():
+            res_tokenized = text_utils.tokenize(res.tokens)
+            if len(res_tokenized) > 1 and res_tokenized.issubset(tokenized):
+                matches[qid].append(res.catalog_id)
+
+        if matches[qid]:
+            matches[qid] = list(set(matches[qid]))
+        else:
+            del matches[qid]
+
+    return matches
 
 
-def edit_distance_match(source, target_table, target_database, target_search_type, metric, threshold) -> dict:
+def edit_distance_match(source, target: BaseEntity, metric, threshold) -> dict:
     """Given a source dataset ``{identifier: {string: [languages]}}``,
     match strings having the given edit distance ``metric``
     above the given ``threshold`` and return a dataset
@@ -150,6 +197,7 @@ def edit_distance_match(source, target_table, target_database, target_search_typ
 
     Return ``None`` if the given edit distance is not valid.
     """
+    db_manager = DBManager()
     scores = {}
     distance_function = EDIT_DISTANCES.get(metric)
     if not distance_function:
@@ -163,8 +211,9 @@ def edit_distance_match(source, target_table, target_database, target_search_typ
         query, most_frequent_source_strings = _build_index_query(
             source_strings)
         LOGGER.debug('Query: %s', query)
-        target_candidates = query_index(
-            query, target_search_type, target_table, target_database)
+        session = db_manager.new_session()
+        target_candidates = session.query(target).filter(
+            target.name.match(query)).all()
         if target_candidates is None:
             LOGGER.warning('Skipping query that went wrong: %s', query)
             continue
@@ -176,8 +225,8 @@ def edit_distance_match(source, target_table, target_database, target_search_typ
             source_ascii, source_normalized = text_utils.normalize(
                 source_string)
             for result in target_candidates:
-                target_string = result[INDEXED_COLUMN]
-                target_id = result[IDENTIFIER_COLUMN]
+                target_string = result.name
+                target_id = result.catalog_id
                 target_ascii, target_normalized = text_utils.normalize(
                     target_string)
                 try:
@@ -213,37 +262,3 @@ def _build_index_query(source_strings):
         # TODO experiment with different strategies
         query_builder.append('"%s"' % label)
     return ' '.join(query_builder), most_frequent
-
-
-def _process_names(dataset) -> dict:
-    """Convert a dataset `{person_name: identifier}`
-    into a `{person_tokens: identifier}` one.
-
-    Name tokens are grouped by identifier and joined to treat them as a string.
-    """
-    tokenized = defaultdict(set)
-    processed = {}
-    for name, identifier in dataset.items():
-        LOGGER.debug('Identifier [%s]: processing name "%s"', identifier, name)
-        tokens = text_utils.tokenize(name, text_utils.NAME_STOPWORDS)
-        tokenized[identifier].update(tokens)
-    for identifier, tokens in tokenized.items():
-        LOGGER.debug('Identifier [%s]: tokens = %s', identifier, tokens)
-        processed['|'.join(tokens)] = identifier
-    return processed
-
-
-def _process_links(dataset) -> dict:
-    """Convert a dataset `{link: identifier}`
-    into a `{link_tokens: identifier}` one.
-
-    Link tokens are joined to treat them as a string.
-    """
-    processed = {}
-    for link, identifier in dataset.items():
-        tokens = url_utils.tokenize(link)
-        if not tokens:
-            LOGGER.info('Skipping invalid URL')
-            continue
-        processed['|'.join(tokens)] = identifier
-    return processed

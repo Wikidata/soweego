@@ -1,12 +1,8 @@
 import click
-from soweego.linker import musicbrainz_baseline
+from soweego.linker import linking_strategies
 
 CLI_COMMANDS = {
-    'get_users_urls': musicbrainz_baseline.get_users_urls,
-    'links_match': musicbrainz_baseline.links_match,
-    'get_url_domains': musicbrainz_baseline.get_url_domains,
-    'get_label_musicbrainzid_dict': musicbrainz_baseline.get_label_musicbrainzid_dict,
-    'get_users_label_dates_dictionary': musicbrainz_baseline.get_users_label_dates_dictionary
+    'baseline': linking_strategies.baseline
 }
 
 
