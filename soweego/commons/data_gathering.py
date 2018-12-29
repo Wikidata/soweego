@@ -24,6 +24,13 @@ from soweego.wikidata import api_requests, sparql_queries, vocabulary
 
 LOGGER = logging.getLogger(__name__)
 
+# https://github.com/Wikidata/soweego/issues/146#issuecomment-449039298
+# TODO try with pandas.read_sql
+
+
+def gather_target_training_set():
+    pass
+
 
 def connect_to_db():
     db_manager = DBManager()
@@ -159,30 +166,85 @@ def gather_target_links(entity_type, catalog):
         yield row.catalog_id, row.url
 
 
-def _get_catalog_entity(entity, catalog_constants):
-    catalog_entity = catalog_constants.get(entity)
+def _get_catalog_entity(entity_type, catalog_constants):
+    catalog_entity = catalog_constants.get(entity_type)
     if not catalog_entity:
-        raise ValueError('Bad entity type: %s. Please use one of %s' %
-                         (entity, catalog_constants.keys()))
+        LOGGER.fatal('Bad entity type: %s. It should be one of %s',
+                     entity_type, catalog_constants)
+        raise ValueError('Bad entity type: %s. It should be one of %s' %
+                         (entity_type, catalog_constants.keys()))
     return catalog_entity
 
 
 def _get_catalog_constants(catalog):
     catalog_constants = TARGET_CATALOGS.get(catalog)
     if not catalog_constants:
-        raise ValueError('Bad catalog: %s. Please use on of %s' %
+        LOGGER.fatal('Bad catalog: %s. It should be one of %s',
+                     catalog, TARGET_CATALOGS.keys())
+        raise ValueError('Bad catalog: %s. It should be one of %s' %
                          (catalog, TARGET_CATALOGS.keys()))
     return catalog_constants
 
 
+def gather_wikidata_training_set(wikidata, url_pids, ext_id_pids_to_urls):
+    LOGGER.info(
+        'Gathering Wikidata training set from the Web API. This will take a while ...')
+    total = 0
+
+    for entity in api_requests.get_data_for_linker(wikidata.keys(), url_pids, ext_id_pids_to_urls):
+        for qid, *data in entity:
+            if len(data) == 1:  # Links
+                if not wikidata[qid].get('links'):
+                    wikidata[qid]['links'] = set()
+                wikidata[qid]['links'].add(data.pop())
+            elif len(data) == 2:  # Statements
+                pid, value = data
+                pid_label = vocabulary.LINKER_PIDS.get(pid)
+                if not pid_label:
+                    LOGGER.fatal('PID label lookup failed: %s. The PID should be one of %s',
+                                 pid, vocabulary.LINKER_PIDS.keys())
+                    raise ValueError('PID label lookup failed: %s. The PID should be one of %s' % (
+                        pid, vocabulary.LINKER_PIDS.keys()))
+                parsed_value = _parse_wikidata_value(value)
+                if not wikidata[qid].get(pid_label):
+                    wikidata[qid][pid_label] = set()
+                wikidata[qid][pid_label].add(parsed_value)
+            elif len(data) == 3:  # Strings
+                language, value, value_type = data
+                if value_type == 'label':
+                    if not wikidata[qid].get('labels'):
+                        wikidata[qid]['labels'] = set()
+                    wikidata[qid]['labels'].add(value)
+                elif value_type == 'alias':
+                    if not wikidata[qid].get('aliases'):
+                        wikidata[qid]['aliases'] = set()
+                    wikidata[qid]['aliases'].add(value)
+                elif value_type == 'description':
+                    if not wikidata[qid].get('descriptions'):
+                        wikidata[qid]['descriptions'] = set()
+                    wikidata[qid]['descriptions'].add(value)
+                else:
+                    expected_value_types = ('label', 'alias', 'description')
+                    LOGGER.fatal(
+                        'Bad value type for Wikidata API result: %s. It should be one of %s', value_type, expected_value_types)
+                    raise ValueError('Bad value type for Wikidata API result: %s. It should be one of %s' % (
+                        value_type, expected_value_types))
+            else:
+                LOGGER.fatal(
+                    'Bad size for Wikidata API result tuple: %d. It should be between 2 and 4. Tuple: %s', len(data) + 1, (qid, data))
+                raise ValueError(
+                    'Bad size for Wikidata API result tuple: %d. It should be between 2 and 4. Tuple: %s' % (len(data) + 1, (qid, data)))
+            total += 1
+
+
 def gather_wikidata_metadata(wikidata):
     LOGGER.info(
-        'Gathering Wikidata birth/death dates/places and gender metadata. This will take a while ...')
+        'Gathering Wikidata birth/death dates/places and gender metadata from the Web API. This will take a while ...')
     total = 0
     # Generator of generators
     for entity in api_requests.get_metadata(wikidata.keys()):
         for qid, pid, value in entity:
-            parsed = _parse_wikidata_metadata_value(value)
+            parsed = _parse_wikidata_value(value)
             if not wikidata[qid].get('metadata'):
                 wikidata[qid]['metadata'] = set()
             wikidata[qid]['metadata'].add((pid, parsed))
@@ -190,8 +252,10 @@ def gather_wikidata_metadata(wikidata):
     LOGGER.info('Got %d statements', total)
 
 
-def _parse_wikidata_metadata_value(value):
-    # Values: birth/death DATES, gender, birth/death places QIDs
+def _parse_wikidata_value(value):
+    # Values: plain strings, monolingual strings, birth/death DATES, gender, birth/death places QIDs
+    if isinstance(value, str):
+        return value  # String
     date_value = value.get('time')
     if date_value:
         # +1180-01-01T00:00:00Z -> 1180-01-01
@@ -200,12 +264,14 @@ def _parse_wikidata_metadata_value(value):
     item_value = value.get('id')
     if item_value:
         return item_value  # QID
-    return value  # String
+    monolingual_string_value = value.get('text')
+    if monolingual_string_value:
+        return monolingual_string_value  # Language string
 
 
 def gather_wikidata_links(wikidata, url_pids, ext_id_pids_to_urls):
     LOGGER.info(
-        'Gathering Wikidata sitelinks, third-party links, and external identifier links. This will take a while ...')
+        'Gathering Wikidata sitelinks, third-party links, and external identifier links from the Web API. This will take a while ...')
     total = 0
     for iterator in api_requests.get_links(wikidata.keys(), url_pids, ext_id_pids_to_urls):
         for qid, url in iterator:
@@ -230,7 +296,12 @@ def gather_relevant_pids():
                     except re.error:
                         LOGGER.debug(
                             "Using 'regex' third-party library. Formatter regex not supported by the 're' standard library: %s", formatter_regex)
-                        compiled_regex = regex.compile(formatter_regex)
+                        try:
+                            compiled_regex = regex.compile(formatter_regex)
+                        except regex.error:
+                            LOGGER.debug(
+                                "Giving up. Formatter regex not supported by 'regex': %s", formatter_regex)
+                            compiled_regex = None
                 else:
                     compiled_regex = None
                 ext_id_pids_to_urls[pid][formatter_url] = compiled_regex
