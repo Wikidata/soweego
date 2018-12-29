@@ -30,6 +30,9 @@ def build_training_set(entity, catalog):
     url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
     data_gathering.gather_wikidata_training_set(
         wikidata, url_pids, ext_id_pids_to_urls)
+    
+    # Target
+    
     return DataFrame.from_dict(wikidata, orient='index')
 
 
