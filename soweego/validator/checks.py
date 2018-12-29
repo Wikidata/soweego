@@ -125,7 +125,7 @@ def check_links_cli(entity, catalog, wikidata_dump, upload, sandbox, cache, depr
 
 
 def check_links(entity, catalog, wikidata_cache=None):
-    catalog_terms = _get_vocabulary(catalog)
+    catalog_terms = get_vocabulary(catalog)
 
     # Target links
     target = gather_target_links(entity, catalog)
@@ -206,7 +206,7 @@ def check_metadata_cli(entity, catalog, wikidata_dump, upload, sandbox, cache, d
 
 
 def check_metadata(entity, catalog, wikidata_cache=None):
-    catalog_terms = _get_vocabulary(catalog)
+    catalog_terms = get_vocabulary(catalog)
 
     # Target metadata
     target = gather_target_metadata(entity, catalog)
@@ -303,7 +303,7 @@ def _consume_target_iterator(target_iterator):
     return target
 
 
-def _get_vocabulary(catalog):
+def get_vocabulary(catalog):
     catalog_terms = vocabulary.CATALOG_MAPPING.get(catalog)
     if not catalog_terms:
         raise ValueError('Bad catalog: %s. Please use one of %s' %
@@ -318,7 +318,7 @@ def _upload_links(catalog, to_deprecate, urls_to_add, ext_ids_to_add, sandbox):
 
 
 def _upload(catalog, to_deprecate, to_add, sandbox):
-    catalog_terms = _get_vocabulary(catalog)
+    catalog_terms = get_vocabulary(catalog)
     catalog_qid = catalog_terms['qid']
     LOGGER.info('Starting deprecation of %s IDs ...', catalog)
     wikidata_bot.delete_or_deprecate_identifiers(
