@@ -26,12 +26,6 @@ LOGGER = logging.getLogger(__name__)
 T = TypeVar('T')
 
 
-def connect_to_db():
-    db_manager = DBManager()
-    session = db_manager.new_session()
-    return session
-
-
 @cached
 def gather_target_metadata(entity_type, catalog):
     catalog_constants = _get_catalog_constants(catalog)
@@ -43,7 +37,7 @@ def gather_target_metadata(entity_type, catalog):
     # Base metadata
     query_fields = _build_metadata_query_fields(entity, entity_type, catalog)
 
-    session = connect_to_db()
+    session = DBManager.connect_to_db()
     result = None
     try:
         result = _run_metadata_query(
@@ -69,7 +63,7 @@ def tokens_fulltext_search(target_entity: T, boolean_mode: bool, tokens: Iterabl
 
     ft_search = target_entity.tokens.match(query)
 
-    session = connect_to_db()
+    session = DBManager.connect_to_db()
     result = []
     try:
         result = session.query(target_entity).filter(ft_search).all()
@@ -86,7 +80,7 @@ def tokens_fulltext_search(target_entity: T, boolean_mode: bool, tokens: Iterabl
 def name_fulltext_search(target_entity: T, query: str) -> Iterable[T]:
     ft_search = target_entity.name.match(query)
 
-    session = connect_to_db()
+    session = DBManager.connect_to_db()
     try:
         for r in session.query(target_entity).filter(ft_search).all():
             yield r
@@ -99,7 +93,7 @@ def name_fulltext_search(target_entity: T, query: str) -> Iterable[T]:
 
 
 def perfect_name_search(target_entity: T, to_search: str) -> Iterable[T]:
-    session = connect_to_db()
+    session = DBManager.connect_to_db()
     try:
         for r in session.query(target_entity).filter(
                 target_entity.name == to_search).all():
@@ -188,7 +182,7 @@ def gather_target_links(entity_type, catalog):
     LOGGER.info('Gathering %s %s links ...', catalog, entity_type)
     link_entity = catalog_entity['link_entity']
 
-    session = connect_to_db()
+    session = DBManager.connect_to_db()
     result = None
     try:
         query = session.query(link_entity.catalog_id, link_entity.url)
