@@ -12,7 +12,6 @@ __copyright__ = 'Copyleft 2018, lenzi.edoardo'
 import json
 import logging
 from pkgutil import get_data
-from typing import Iterator
 
 from soweego.commons import constants as const
 from soweego.commons import localizations as loc

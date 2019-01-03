@@ -12,17 +12,18 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import logging
 import re
 from collections import defaultdict
+from typing import Iterable, TypeVar
 
 import regex
-from sqlalchemy import or_
-
 from soweego.commons import url_utils
 from soweego.commons.cache import cached
 from soweego.commons.constants import HANDLED_ENTITIES, TARGET_CATALOGS
 from soweego.commons.db_manager import DBManager
 from soweego.wikidata import api_requests, sparql_queries, vocabulary
+from sqlalchemy import or_
 
 LOGGER = logging.getLogger(__name__)
+T = TypeVar('T')
 
 
 def connect_to_db():
@@ -57,6 +58,58 @@ def gather_target_metadata(entity_type, catalog):
     if not result:
         return None
     return _parse_target_metadata_query_result(result)
+
+
+def tokens_fulltext_search(target_entity: T, boolean_mode: bool, tokens: Iterable[str]) -> Iterable[T]:
+    query = None
+    if boolean_mode:
+        query = ' '.join(map('+{0}'.format, tokens))
+    else:
+        query = ' '.join(tokens)
+
+    ft_search = target_entity.tokens.match(query)
+
+    session = connect_to_db()
+    result = []
+    try:
+        result = session.query(target_entity).filter(ft_search).all()
+        session.commit()
+    except:
+        session.rollback()
+        raise
+
+    if not result:
+        return []
+    return result
+
+
+def name_fulltext_search(target_entity: T, query: str) -> Iterable[T]:
+    ft_search = target_entity.name.match(query)
+
+    session = connect_to_db()
+    try:
+        for r in session.query(target_entity).filter(ft_search).all():
+            yield r
+        session.commit()
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+def perfect_name_search(target_entity: T, to_search: str) -> Iterable[T]:
+    session = connect_to_db()
+    try:
+        for r in session.query(target_entity).filter(
+                target_entity.name == to_search).all():
+            yield r
+        session.commit()
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 def _run_metadata_query(session, query_fields, entity, catalog, entity_type):
