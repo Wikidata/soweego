@@ -12,7 +12,6 @@ __copyright__ = 'Copyleft 2018, lenzi.edoardo'
 import json
 import logging
 from pkgutil import get_data
-from typing import Iterator
 
 from soweego.commons import constants as const
 from soweego.commons import localizations as loc
@@ -27,6 +26,7 @@ BASE = declarative_base()
 LOGGER = logging.getLogger(__name__)
 
 
+# TODO this class should become a singleton
 class DBManager():
 
     """Exposes some primitives for the DB access"""
@@ -68,3 +68,9 @@ class DBManager():
         """Drop the tables (table can be ORM entity instances or classes)"""
         BASE.metadata.drop_all(self.__engine, tables=[
                                table.__table__ for table in tables])
+
+    @staticmethod
+    def connect_to_db():
+        db_manager = DBManager()
+        session = db_manager.new_session()
+        return session

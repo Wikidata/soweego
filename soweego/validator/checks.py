@@ -16,14 +16,14 @@ from collections import defaultdict
 import click
 from soweego.commons import target_database
 from soweego.commons.constants import HANDLED_ENTITIES, TARGET_CATALOGS
-from soweego.commons.data_gathering import (connect_to_db,
-                                            extract_ids_from_urls,
+from soweego.commons.data_gathering import (extract_ids_from_urls,
                                             gather_identifiers,
                                             gather_relevant_pids,
                                             gather_target_links,
                                             gather_target_metadata,
                                             gather_wikidata_links,
                                             gather_wikidata_metadata)
+from soweego.commons.db_manager import DBManager
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.musicbrainz_entity import (MusicbrainzArtistEntity,
                                                         MusicbrainzBandEntity)
@@ -57,7 +57,7 @@ def check_existence_cli(wikidata_query, class_qid, catalog_pid, catalog, entity_
 
 def check_existence(class_or_occupation_query, class_qid, catalog_pid, entity: BaseEntity):
     query_type = 'identifier', class_or_occupation_query
-    session = connect_to_db()
+    session = DBManager.connect_to_db()
     invalid = defaultdict(set)
     count = 0
 

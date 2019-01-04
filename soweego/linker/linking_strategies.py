@@ -16,8 +16,8 @@ from os import path
 
 import click
 import jellyfish
-from soweego.commons import target_database, text_utils, url_utils
-from soweego.commons.db_manager import DBManager
+from soweego.commons import (data_gathering, target_database, text_utils,
+                             url_utils)
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.base_link_entity import BaseLinkEntity
 
@@ -105,12 +105,10 @@ def perfect_name_match(source_dataset, target_entity: BaseEntity) -> dict:
     This strategy applies to any object that can be
     treated as a string: names, links, etc.
     """
-    db_manager = DBManager()
-    session = db_manager.new_session()
     matched = {}
 
     for label, qid in source_dataset.items():
-        for res in session.query(target_entity).filter(target_entity.name == label).all():
+        for res in data_gathering.perfect_name_search(target_entity, label):
             if matched.get(qid):
                 LOGGER.warning(
                     '%s - %s has already a perfect name match' % (qid, label))
@@ -140,8 +138,6 @@ def similar_name_match(source, target, tokenize) -> dict:
     matches = defaultdict(list)
     to_exclude = set()
 
-    db_manager = DBManager()
-
     for label, qid in source.items():
         if not label:
             continue
@@ -152,19 +148,13 @@ def similar_name_match(source, target, tokenize) -> dict:
         if len(tokenized) <= 1:
             continue
 
-        boolean_search = ' '.join(map('+{0}'.format, tokenized))
-        natural_search = ' '.join(tokenized)
-        session = db_manager.new_session()
-
         # NOTICE: sets of size 1 are always exluded
         # Looks for sets equal or bigger containing our tokens
-        ft_search = target.tokens.match(boolean_search)
-        for res in session.query(target).filter(ft_search).all():
+        for res in data_gathering.tokens_fulltext_search(target, True, tokenized):
             matches[qid].append(res.catalog_id)
             to_exclude.add(res.catalog_id)
         # Looks for sets contained in our set of tokens
-        ft_search = target.tokens.match(natural_search)
-        for res in session.query(target).filter(ft_search).filter(~target.catalog_id.in_(to_exclude)).all():
+        for res in data_gathering.tokens_fulltext_search(target, False, tokenized):
             res_tokenized = text_utils.tokenize(res.tokens)
             if len(res_tokenized) > 1 and res_tokenized.issubset(tokenized):
                 matches[qid].append(res.catalog_id)
@@ -197,7 +187,6 @@ def edit_distance_match(source, target: BaseEntity, metric, threshold) -> dict:
 
     Return ``None`` if the given edit distance is not valid.
     """
-    db_manager = DBManager()
     scores = {}
     distance_function = EDIT_DISTANCES.get(metric)
     if not distance_function:
@@ -211,9 +200,8 @@ def edit_distance_match(source, target: BaseEntity, metric, threshold) -> dict:
         query, most_frequent_source_strings = _build_index_query(
             source_strings)
         LOGGER.debug('Query: %s', query)
-        session = db_manager.new_session()
-        target_candidates = session.query(target).filter(
-            target.name.match(query)).all()
+        target_candidates = data_gathering.name_fulltext_search(
+            target, query)
         if target_candidates is None:
             LOGGER.warning('Skipping query that went wrong: %s', query)
             continue
