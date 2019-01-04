@@ -30,5 +30,5 @@ done
 shift "$((OPTIND - 1))"
 
 
-docker build --rm -f "Dockerfile.prod" -t maxfrax/soweego:latest .
-docker run -it --rm --name soweego --env-file .env --volume "${DOCKER_SHARED_FOLDER}":"/app/shared" maxfrax/soweego:latest /bin/bash
+docker build --rm -f "Dockerfile.test" -t maxfrax/soweego:latest .
+docker run -it --rm --name soweego --env-file .env --volume "${DOCKER_SHARED_FOLDER}":"/app/shared" --volume "$(pwd)":"/app/soweego" maxfrax/soweego:latest /bin/bash
