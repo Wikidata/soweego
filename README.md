@@ -1,4 +1,5 @@
 ![Work in progress](https://mauroparravicini.files.wordpress.com/2011/10/lavori_in_corso.jpg?w=150&h=131)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FWikidata%2Fsoweego.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2FWikidata%2Fsoweego?ref=badge_shield)
 
 **Work in progress!**
 
@@ -28,3 +29,7 @@ _[pipenv](https://docs.python-guide.org/dev/virtualenvs/#installing-pipenv)_ is 
 - write _[Sphinx](http://www.sphinx-doc.org/en/stable/)_ docstrings:
   - follow _[PEP 257](https://www.python.org/dev/peps/pep-0257/)_ and _[PEP 287](https://www.python.org/dev/peps/pep-0287/)_;
   - pay special attention to [field lists](http://sphinx-doc.org/domains.html#info-field-lists).
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FWikidata%2Fsoweego.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2FWikidata%2Fsoweego?ref=badge_large)
