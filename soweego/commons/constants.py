@@ -78,3 +78,10 @@ TARGET_CATALOGS = {
         }
     }
 }
+
+# DataFrame column names that should be tokenized
+DF_LABEL = 'label'
+DF_ALIAS = 'alias'
+DF_PSEUDONYM = 'pseudonym'
+DF_DESCRIPTION = 'description'
+DF_URL = 'url'
