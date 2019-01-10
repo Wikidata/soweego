@@ -6,11 +6,11 @@ def available_targets():
 
 
 def available_types():
-    result = []
+    result = set()
     for key in TARGET_CATALOGS:
         for k in TARGET_CATALOGS[key].keys():
-            result.append(k)
-    return list(set(result))
+            result.add(k)
+    return list(result)
 
 
 def get_entity(target, entity_type):
@@ -19,3 +19,7 @@ def get_entity(target, entity_type):
 
 def get_link_entity(target, entity_type):
     return TARGET_CATALOGS[target][entity_type]['link_entity']
+
+
+def get_nlp_entity(target, entity_type):
+    return TARGET_CATALOGS[target][entity_type]['nlp_entity']
