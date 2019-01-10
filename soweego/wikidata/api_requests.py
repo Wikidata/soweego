@@ -18,6 +18,7 @@ from urllib.parse import urlunsplit
 from requests import get
 from requests.exceptions import ChunkedEncodingError
 
+from soweego.commons.constants import DF_ALIAS, DF_DESCRIPTION, DF_LABEL
 from soweego.commons.logging import log_request_data
 from soweego.wikidata.vocabulary import LINKER_PIDS, METADATA_PIDS
 
@@ -42,37 +43,43 @@ def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict) -> 
         response_body = _make_request(bucket, request_params)
         if not response_body:
             continue
+
         for qid in response_body['entities']:
             entity = response_body['entities'][qid]
+
             # Labels
             labels = entity.get('labels')
             if not labels:
                 LOGGER.info('Skipping QID with no labels: %s', qid)
                 no_labels_count += 1
                 continue
-            yield _yield_monolingual_strings(qid, labels, 'label')
+            yield _yield_monolingual_strings(qid, labels, DF_LABEL)
+
             # Aliases
             aliases = entity.get('aliases')
-            if not aliases:
-                LOGGER.info('Skipping QID with no aliases: %s', qid)
+            if aliases:
+                yield _yield_aliases(qid, aliases)
+            else:
+                LOGGER.debug('Skipping QID with no aliases: %s', qid)
                 no_aliases_count += 1
-                continue
-            yield _yield_aliases(qid, aliases)
+
             # Descriptions
             descriptions = entity.get('descriptions')
-            if not descriptions:
-                LOGGER.info('Skipping QID with no descriptions: %s', qid)
+            if descriptions:
+                yield _yield_monolingual_strings(qid, descriptions, DF_DESCRIPTION)
+            else:
+                LOGGER.debug('Skipping QID with no descriptions: %s', qid)
                 no_descriptions_count += 1
-                continue
-            yield _yield_monolingual_strings(qid, descriptions, 'description')
+
             # Sitelinks
             yield _yield_sitelinks(entity, qid, no_sitelinks_count)
+
             claims = entity.get('claims')
             if not claims:
                 LOGGER.info('Skipping QID with no claims: %s', qid)
                 no_claims_count += 1
                 continue
-            # Remember the following yield a generator of generators
+            # Remember the following yields a generator of generators
             # see https://stackoverflow.com/questions/6503079/understanding-nested-yield-return-in-python#6503192
             # Third-party links
             yield _yield_expected_values(qid, claims, url_pids, no_links_count)
@@ -166,7 +173,7 @@ def _yield_aliases(qid, aliases):
                 LOGGER.warning(
                     'Skipping malformed alias with no value for %s: %s', qid, data)
                 continue
-            yield qid, language_code, alias, 'alias'
+            yield qid, language_code, alias, DF_ALIAS
 
 
 def _yield_sitelinks(entity, qid, no_sitelinks_count):
