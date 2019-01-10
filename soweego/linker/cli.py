@@ -1,8 +1,10 @@
 import click
-from soweego.linker import linking_strategies
+
+from soweego.linker import linking_strategies, train
 
 CLI_COMMANDS = {
-    'baseline': linking_strategies.baseline
+    'baseline': linking_strategies.baseline,
+    'train': train.train_cli
 }
 
 
