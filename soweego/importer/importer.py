@@ -39,6 +39,12 @@ def import_cli(catalog: str, download_url: str, output: str) -> None:
     elif catalog == 'musicbrainz':
         extractor = MusicBrainzDumpExtractor()
 
+    if download_url is None:
+        download_url = extractor.get_dump_download_url()
+        # Failed to get the URL
+        if download_url is None:
+            return
+
     importer.refresh_dump(
         output, download_url, extractor)
 
@@ -48,23 +54,12 @@ class Importer():
     def refresh_dump(self, output_folder: str, download_url: str, downloader: BaseDumpExtractor):
         """Downloads the dump, if necessary, 
         and calls the handler over the dump file"""
-
-        try:
-            last_modified = client.http_call(download_url,
-                                             'HEAD').headers[const.LAST_MODIFIED_KEY]
-
-        except ValueError:
-            last_modified = client.http_call(downloader.get_dump_download_url(),
-                                             'HEAD').headers[const.LAST_MODIFIED_KEY]
-            download_url = downloader.get_dump_download_url()
-
+        last_modified_header = client.http_call(
+            download_url, 'HEAD').headers[const.LAST_MODIFIED_KEY]
         last_modified = datetime.datetime.strptime(
-            last_modified, '%a, %d %b %Y %H:%M:%S GMT').strftime('%Y%m%d_%H%M%S')
-
+            last_modified_header, '%a, %d %b %Y %H:%M:%S GMT').strftime('%Y%m%d_%H%M%S')
         extensions = download_url.split('/')[-1].split('.')[1:]
-
         file_name = "%s.%s" % (last_modified, '.'.join(extensions))
-
         file_full_path = os.path.join(output_folder, file_name)
 
         # Check if the current dump is up-to-date
