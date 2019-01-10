@@ -46,9 +46,14 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         root = et.fromstring(response.text)
         # 4 dump files, sorted alphabetically: artists, labels, masters, releases
         latest = list(root)[-4]  # Take the 4th from last child
+        dump_file_name = None
         for child in latest:
             if 'Key' in child.tag:
                 dump_file_name = child.text
+        if dump_file_name is None:
+            LOGGER.error(
+                "Failed to get the Discogs dump download URL: are we at the very start of the year?")
+            return None
         return DUMP_BASE_URL + dump_file_name
 
     def extract_and_populate(self, dump_file_path: str):
@@ -181,7 +186,9 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             nlp_entity = entity_class()
             nlp_entity.catalog_id = identifier
             nlp_entity.description = profile
-            nlp_entity.tokens = ' '.join(text_utils.tokenize(profile))
+            description_tokens = text_utils.tokenize(profile)
+            if description_tokens:
+                nlp_entity.description_tokens = ' '.join(description_tokens)
             session.add(nlp_entity)
             self.total_entities += 1
             if 'Musician' in entity_class.__name__:
@@ -192,9 +199,12 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             LOGGER.debug('Artist %s has an empty <profile/> tag', identifier)
 
     def _fill_entity(self, entity: discogs_entity.DiscogsBaseEntity, identifier, name, artist_node):
-        # Required fields
+        # Base fields
         entity.catalog_id = identifier
         entity.name = name
+        name_tokens = text_utils.tokenize(name)
+        if name_tokens:
+            entity.name_tokens = ' '.join(name_tokens)
         # Real name
         real_name = artist_node.findtext('realname')
         if real_name:
@@ -221,6 +231,9 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             variation_entity = entity_class()
             variation_entity.catalog_id = main_entity.catalog_id
             variation_entity.name = name_variation
+            name_tokens = text_utils.tokenize(name_variation)
+            if name_tokens:
+                variation_entity.name_tokens = ' '.join(name_tokens)
             variation_entity.real_name = main_entity.real_name
             variation_entity.data_quality = main_entity.data_quality
             self.total_entities += 1
@@ -265,7 +278,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         entity.catalog_id = identifier
         entity.url = url
         entity.is_wiki = url_utils.is_wiki_link(url)
-        entity.tokens = '|'.join(url_utils.tokenize(url))
+        entity.url_tokens = ' '.join(url_utils.tokenize(url))
         if isinstance(entity, discogs_entity.DiscogsMusicianLinkEntity):
             self.musician_links += 1
         elif isinstance(entity, discogs_entity.DiscogsGroupLinkEntity):
