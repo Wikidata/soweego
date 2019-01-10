@@ -16,6 +16,7 @@ from os import path
 
 import click
 import jellyfish
+
 from soweego.commons import (data_gathering, target_database, text_utils,
                              url_utils)
 from soweego.importer.models.base_entity import BaseEntity
@@ -111,7 +112,7 @@ def perfect_name_match(source_dataset, target_entity: BaseEntity) -> dict:
         for res in data_gathering.perfect_name_search(target_entity, label):
             if matched.get(qid):
                 LOGGER.warning(
-                    '%s - %s has already a perfect name match' % (qid, label))
+                    '%s - %s has already a perfect name match', qid, label)
             matched[qid] = res.catalog_id
 
     return matched
@@ -155,7 +156,7 @@ def similar_name_match(source, target, tokenize) -> dict:
             to_exclude.add(res.catalog_id)
         # Looks for sets contained in our set of tokens
         for res in data_gathering.tokens_fulltext_search(target, False, tokenized):
-            res_tokenized = text_utils.tokenize(res.tokens)
+            res_tokenized = text_utils.tokenize(res.name_tokens)
             if len(res_tokenized) > 1 and res_tokenized.issubset(tokenized):
                 matches[qid].append(res.catalog_id)
 
