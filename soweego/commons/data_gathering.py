@@ -15,12 +15,12 @@ from collections import defaultdict
 from typing import Iterable, TypeVar
 
 import regex
-from soweego.commons import url_utils
+from sqlalchemy import or_
+
+from soweego.commons import constants, url_utils
 from soweego.commons.cache import cached
-from soweego.commons.constants import HANDLED_ENTITIES, TARGET_CATALOGS
 from soweego.commons.db_manager import DBManager
 from soweego.wikidata import api_requests, sparql_queries, vocabulary
-from sqlalchemy import or_
 
 LOGGER = logging.getLogger(__name__)
 T = TypeVar('T')
@@ -38,20 +38,19 @@ def gather_target_metadata(entity_type, catalog):
     query_fields = _build_metadata_query_fields(entity, entity_type, catalog)
 
     session = DBManager.connect_to_db()
+    query = session.query(
+        *query_fields).filter(or_(entity.born.isnot(None), entity.died.isnot(None)))
     result = None
     try:
-        result = _run_metadata_query(
-            session, query_fields, entity, catalog, entity_type)
+        raw_result = _run_query(query, catalog, entity_type)
+        result = _parse_target_metadata_query_result(raw_result)
         session.commit()
     except:
         session.rollback()
         raise
     finally:
         session.close()
-
-    if not result:
-        return None
-    return _parse_target_metadata_query_result(result)
+    return result
 
 
 def tokens_fulltext_search(target_entity: T, boolean_mode: bool, tokens: Iterable[str]) -> Iterable[T]:
@@ -106,15 +105,74 @@ def perfect_name_search(target_entity: T, to_search: str) -> Iterable[T]:
         session.close()
 
 
-def _run_metadata_query(session, query_fields, entity, catalog, entity_type):
-    query = session.query(
-        *query_fields).filter(or_(entity.born.isnot(None), entity.died.isnot(None)))
+def gather_target_training_set(entity_type, catalog, identifiers):
+    # TODO similar functions in constants
+    catalog_constants = _get_catalog_constants(catalog)
+    catalog_entity = _get_catalog_entity(entity_type, catalog_constants)
+
+    LOGGER.info(
+        'Gathering %s training set for the linker ...', catalog)
+    base, link, nlp = catalog_entity['entity'], catalog_entity['link_entity'], catalog_entity['nlp_entity']
+
+    session = DBManager.connect_to_db()
+    query = session.query(base, link, nlp).join(link, base.catalog_id == link.catalog_id).join(
+        nlp, base.catalog_id == nlp.catalog_id).filter(base.catalog_id.in_(identifiers))
+
+    result = None
+    try:
+        raw_result = _run_query(query, catalog, entity_type)
+        relevant_fields = _build_training_set_relevant_fields(base, link, nlp)
+        result = _parse_target_training_set_query_result(
+            raw_result, relevant_fields)
+        session.commit()
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+    return result
+
+
+def _build_training_set_relevant_fields(base, link, nlp):
+    fields = set()
+    for entity in base, link, nlp:
+        for column in entity.__mapper__.column_attrs:
+            field = column.key
+            if field in ('internal_id', 'catalog_id'):
+                continue
+            fields.add(field)
+    return fields
+
+
+def _parse_target_training_set_query_result(result_set, relevant_fields):
+    parsed = defaultdict(dict)
+    for base, link, nlp in result_set:
+        identifier = base.catalog_id
+        for field in relevant_fields:
+            if not parsed[identifier].get(field):
+                parsed[identifier][field] = set()
+            try:
+                parsed[identifier][field].add(getattr(base, field))
+            except AttributeError:
+                pass
+            try:
+                parsed[identifier][field].add(getattr(link, field))
+            except AttributeError:
+                pass
+            try:
+                parsed[identifier][field].add(getattr(nlp, field))
+            except AttributeError:
+                pass
+    return parsed
+
+
+def _run_query(query, catalog, entity_type):
     count = query.count()
     if count == 0:
         LOGGER.warning(
-            "No metadata available for %s %s. Stopping validation here", catalog, entity_type)
+            "No data available for %s %s. Stopping here", catalog, entity_type)
         return None
-    LOGGER.info('Got %d entries with metadata from %s %s',
+    LOGGER.info('Got %d entries with data from %s %s',
                 count, catalog, entity_type)
     result_set = query.all()
     return result_set
@@ -217,12 +275,12 @@ def _get_catalog_entity(entity_type, catalog_constants):
 
 
 def _get_catalog_constants(catalog):
-    catalog_constants = TARGET_CATALOGS.get(catalog)
+    catalog_constants = constants.TARGET_CATALOGS.get(catalog)
     if not catalog_constants:
         LOGGER.fatal('Bad catalog: %s. It should be one of %s',
-                     catalog, TARGET_CATALOGS.keys())
+                     catalog, constants.TARGET_CATALOGS.keys())
         raise ValueError('Bad catalog: %s. It should be one of %s' %
-                         (catalog, TARGET_CATALOGS.keys()))
+                         (catalog, constants.TARGET_CATALOGS.keys()))
     return catalog_constants
 
 
@@ -233,10 +291,10 @@ def gather_wikidata_training_set(wikidata, url_pids, ext_id_pids_to_urls):
 
     for entity in api_requests.get_data_for_linker(wikidata.keys(), url_pids, ext_id_pids_to_urls):
         for qid, *data in entity:
-            if len(data) == 1:  # Links
-                if not wikidata[qid].get('links'):
-                    wikidata[qid]['links'] = set()
-                wikidata[qid]['links'].add(data.pop())
+            if len(data) == 1:  # URLs
+                if not wikidata[qid].get(constants.DF_URL):
+                    wikidata[qid][constants.DF_URL] = set()
+                wikidata[qid][constants.DF_URL].add(data.pop())
             elif len(data) == 2:  # Statements
                 pid, value = data
                 pid_label = vocabulary.LINKER_PIDS.get(pid)
@@ -250,21 +308,23 @@ def gather_wikidata_training_set(wikidata, url_pids, ext_id_pids_to_urls):
                     wikidata[qid][pid_label] = set()
                 wikidata[qid][pid_label].add(parsed_value)
             elif len(data) == 3:  # Strings
+                # TODO what to do with language codes?
                 language, value, value_type = data
-                if value_type == 'label':
-                    if not wikidata[qid].get('labels'):
-                        wikidata[qid]['labels'] = set()
-                    wikidata[qid]['labels'].add(value)
-                elif value_type == 'alias':
-                    if not wikidata[qid].get('aliases'):
-                        wikidata[qid]['aliases'] = set()
-                    wikidata[qid]['aliases'].add(value)
-                elif value_type == 'description':
-                    if not wikidata[qid].get('descriptions'):
-                        wikidata[qid]['descriptions'] = set()
-                    wikidata[qid]['descriptions'].add(value)
+                if value_type == constants.DF_LABEL:
+                    if not wikidata[qid].get(constants.DF_LABEL):
+                        wikidata[qid][constants.DF_LABEL] = set()
+                    wikidata[qid][constants.DF_LABEL].add(value)
+                elif value_type == constants.DF_ALIAS:
+                    if not wikidata[qid].get(constants.DF_ALIAS):
+                        wikidata[qid][constants.DF_ALIAS] = set()
+                    wikidata[qid][constants.DF_ALIAS].add(value)
+                elif value_type == constants.DF_DESCRIPTION:
+                    if not wikidata[qid].get(constants.DF_DESCRIPTION):
+                        wikidata[qid][constants.DF_DESCRIPTION] = set()
+                    wikidata[qid][constants.DF_DESCRIPTION].add(value)
                 else:
-                    expected_value_types = ('label', 'alias', 'description')
+                    expected_value_types = (
+                        constants.DF_LABEL, constants.DF_ALIAS, constants.DF_DESCRIPTION)
                     LOGGER.fatal(
                         'Bad value type for Wikidata API result: %s. It should be one of %s', value_type, expected_value_types)
                     raise ValueError('Bad value type for Wikidata API result: %s. It should be one of %s' % (
@@ -307,6 +367,7 @@ def _parse_wikidata_value(value):
     monolingual_string_value = value.get('text')
     if monolingual_string_value:
         return monolingual_string_value  # Language string
+    return None
 
 
 def gather_wikidata_links(wikidata, url_pids, ext_id_pids_to_urls):
@@ -351,7 +412,7 @@ def gather_relevant_pids():
 def gather_identifiers(entity, catalog, catalog_pid, aggregated):
     catalog_constants = _get_catalog_constants(catalog)
     LOGGER.info('Gathering Wikidata items with %s identifiers ...', catalog)
-    query_type = 'identifier', HANDLED_ENTITIES.get(entity)
+    query_type = 'identifier', constants.HANDLED_ENTITIES.get(entity)
     for result in sparql_queries.run_identifier_or_links_query(query_type, catalog_constants[entity]['qid'], catalog_pid, 0):
         for qid, target_id in result.items():
             if not aggregated.get(qid):
