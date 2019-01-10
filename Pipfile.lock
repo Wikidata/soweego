@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "3bde217e9a2c492e8e3a448a23d88b165bcf33ac650dc73dc1328be96538465d"
+            "sha256": "b18ad823d6a810d690f55fc41b2ba857ee40f51345c59c6e440421a48ee1b223"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -134,17 +134,17 @@
         },
         "pytz": {
             "hashes": [
-                "sha256:31cb35c89bd7d333cd32c5f278fca91b523b0834369e757f4c5641ea252236ca",
-                "sha256:8e0f8568c118d3077b46be7d654cc8167fa916092e28320cde048e54bfc9f1e6"
+                "sha256:32b0891edff07e28efe91284ed9c31e123d84bea3fd98e1f72be2508f43ef8d9",
+                "sha256:d5f05e487007e29e03409f9398d074e158d920d36eb82eaf66fb1136b0c5374c"
             ],
-            "version": "==2018.7"
+            "version": "==2018.9"
         },
         "pywikibot": {
             "hashes": [
-                "sha256:c1c5d8fca17fe4a363186312340efebbd7b41fcbf12a1189cd4bb3010086e1ee"
+                "sha256:73ac3db29bb1f984098af42182ceb336a813ed1e0143a0b0d5f479f8b88c4b3e"
             ],
             "index": "pypi",
-            "version": "==3.0.20181203"
+            "version": "==3.0.20190106"
         },
         "recordlinkage": {
             "hashes": [
@@ -410,15 +410,6 @@
                 "sha256:fd17048d8335c1e6d5ee403c3569953ba3eb8555d710bfc548faf0712666ea39"
             ],
             "version": "==2.0.7"
-        },
-        "ptvsd": {
-            "hashes": [
-                "sha256:533b3ca9a3973700d5fe6cb152cf6c69bac2839389460164c84ab1956ec992a0",
-                "sha256:8e6feb4d577b1a939af4b08821fd6afa6e71652d1e2ce41579d8b959b1e21d94",
-                "sha256:cfcde6a3de3cfa720e4f637af13deeae744f6dc6665b9bda92380885caf16ae6"
-            ],
-            "index": "pypi",
-            "version": "==4.2.0"
         },
         "ptyprocess": {
             "hashes": [

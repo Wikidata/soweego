@@ -16,8 +16,7 @@ regex = "*"
 recordlinkage = "*"
 
 [dev-packages]
+pylint = "*"
 rope = "*"
 ipython = "*"
-pylint = "*"
 "autopep8" = "*"
-ptvsd = "*"
