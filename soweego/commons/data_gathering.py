@@ -26,7 +26,6 @@ LOGGER = logging.getLogger(__name__)
 T = TypeVar('T')
 
 
-@cached
 def gather_target_metadata(entity_type, catalog):
     catalog_constants = _get_catalog_constants(catalog)
     catalog_entity = _get_catalog_entity(entity_type, catalog_constants)
@@ -43,6 +42,8 @@ def gather_target_metadata(entity_type, catalog):
     result = None
     try:
         raw_result = _run_query(query, catalog, entity_type)
+        if raw_result is None:
+            return None
         result = _parse_target_metadata_query_result(raw_result)
         session.commit()
     except:
@@ -267,8 +268,8 @@ def gather_target_links(entity_type, catalog):
 def _get_catalog_entity(entity_type, catalog_constants):
     catalog_entity = catalog_constants.get(entity_type)
     if not catalog_entity:
-        LOGGER.fatal('Bad entity type: %s. It should be one of %s',
-                     entity_type, catalog_constants)
+        LOGGER.critical('Bad entity type: %s. It should be one of %s',
+                        entity_type, catalog_constants)
         raise ValueError('Bad entity type: %s. It should be one of %s' %
                          (entity_type, catalog_constants.keys()))
     return catalog_entity
@@ -277,8 +278,8 @@ def _get_catalog_entity(entity_type, catalog_constants):
 def _get_catalog_constants(catalog):
     catalog_constants = constants.TARGET_CATALOGS.get(catalog)
     if not catalog_constants:
-        LOGGER.fatal('Bad catalog: %s. It should be one of %s',
-                     catalog, constants.TARGET_CATALOGS.keys())
+        LOGGER.critical('Bad catalog: %s. It should be one of %s',
+                        catalog, constants.TARGET_CATALOGS.keys())
         raise ValueError('Bad catalog: %s. It should be one of %s' %
                          (catalog, constants.TARGET_CATALOGS.keys()))
     return catalog_constants
@@ -299,8 +300,8 @@ def gather_wikidata_training_set(wikidata, url_pids, ext_id_pids_to_urls):
                 pid, value = data
                 pid_label = vocabulary.LINKER_PIDS.get(pid)
                 if not pid_label:
-                    LOGGER.fatal('PID label lookup failed: %s. The PID should be one of %s',
-                                 pid, vocabulary.LINKER_PIDS.keys())
+                    LOGGER.critical('PID label lookup failed: %s. The PID should be one of %s',
+                                    pid, vocabulary.LINKER_PIDS.keys())
                     raise ValueError('PID label lookup failed: %s. The PID should be one of %s' % (
                         pid, vocabulary.LINKER_PIDS.keys()))
                 parsed_value = _parse_wikidata_value(value)
@@ -325,12 +326,12 @@ def gather_wikidata_training_set(wikidata, url_pids, ext_id_pids_to_urls):
                 else:
                     expected_value_types = (
                         constants.DF_LABEL, constants.DF_ALIAS, constants.DF_DESCRIPTION)
-                    LOGGER.fatal(
+                    LOGGER.critical(
                         'Bad value type for Wikidata API result: %s. It should be one of %s', value_type, expected_value_types)
                     raise ValueError('Bad value type for Wikidata API result: %s. It should be one of %s' % (
                         value_type, expected_value_types))
             else:
-                LOGGER.fatal(
+                LOGGER.critical(
                     'Bad size for Wikidata API result tuple: %d. It should be between 2 and 4. Tuple: %s', len(data) + 1, (qid, data))
                 raise ValueError(
                     'Bad size for Wikidata API result tuple: %d. It should be between 2 and 4. Tuple: %s' % (len(data) + 1, (qid, data)))
@@ -412,8 +413,8 @@ def gather_relevant_pids():
 def gather_identifiers(entity, catalog, catalog_pid, aggregated):
     catalog_constants = _get_catalog_constants(catalog)
     LOGGER.info('Gathering Wikidata items with %s identifiers ...', catalog)
-    query_type = 'identifier', constants.HANDLED_ENTITIES.get(entity)
-    for result in sparql_queries.run_identifier_or_links_query(query_type, catalog_constants[entity]['qid'], catalog_pid, 0):
+    query_type = constants.IDENTIFIER, constants.HANDLED_ENTITIES.get(entity)
+    for result in sparql_queries.run_query(query_type, catalog_constants[entity]['qid'], catalog_pid, 0):
         for qid, target_id in result.items():
             if not aggregated.get(qid):
                 aggregated[qid] = {'identifiers': set()}
