@@ -55,7 +55,7 @@ class Importer():
         """Downloads the dump, if necessary, 
         and calls the handler over the dump file"""
         last_modified_header = client.http_call(
-            download_url, 'HEAD').headers[const.LAST_MODIFIED_KEY]
+            download_url, 'HEAD').headers[const.LAST_MODIFIED]
         last_modified = datetime.datetime.strptime(
             last_modified_header, '%a, %d %b %Y %H:%M:%S GMT').strftime('%Y%m%d_%H%M%S')
         extensions = download_url.split('/')[-1].split('.')[1:]

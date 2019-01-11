@@ -36,11 +36,11 @@ class DBManager():
     def __init__(self):
         credentials = json.loads(
             get_data('soweego.importer.resources', 'db_credentials.json'))
-        db_engine = credentials[const.DB_ENGINE_KEY]
-        db_name = credentials[const.PROD_DB_KEY]
-        user = credentials[const.USER_KEY]
-        password = credentials[const.PASSWORD_KEY]
-        host = credentials[const.HOST_KEY]
+        db_engine = credentials[const.DB_ENGINE]
+        db_name = credentials[const.PROD_DB]
+        user = credentials[const.USER]
+        password = credentials[const.PASSWORD]
+        host = credentials[const.HOST]
         try:
             # Disable connection pooling, as per Wikimedia policy
             # https://wikitech.wikimedia.org/wiki/Help:Toolforge/Database#Connection_handling_policy
