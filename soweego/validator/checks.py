@@ -14,8 +14,8 @@ import logging
 from collections import defaultdict
 
 import click
-from soweego.commons import target_database
-from soweego.commons.constants import HANDLED_ENTITIES, TARGET_CATALOGS
+
+from soweego.commons import constants, target_database
 from soweego.commons.data_gathering import (extract_ids_from_urls,
                                             gather_identifiers,
                                             gather_relevant_pids,
@@ -25,8 +25,6 @@ from soweego.commons.data_gathering import (extract_ids_from_urls,
                                             gather_wikidata_metadata)
 from soweego.commons.db_manager import DBManager
 from soweego.importer.models.base_entity import BaseEntity
-from soweego.importer.models.musicbrainz_entity import (MusicbrainzArtistEntity,
-                                                        MusicbrainzBandEntity)
 from soweego.ingestor import wikidata_bot
 from soweego.wikidata import sparql_queries, vocabulary
 
@@ -34,7 +32,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
-@click.argument('wikidata_query', type=click.Choice(['class', 'occupation']))
+@click.argument('wikidata_query', type=click.Choice(constants.SUPPORTED_QUERY_TYPES))
 @click.argument('class_qid')
 @click.argument('catalog_pid')
 @click.argument('catalog', type=click.Choice(target_database.available_targets()))
@@ -56,12 +54,12 @@ def check_existence_cli(wikidata_query, class_qid, catalog_pid, catalog, entity_
 
 
 def check_existence(class_or_occupation_query, class_qid, catalog_pid, entity: BaseEntity):
-    query_type = 'identifier', class_or_occupation_query
+    query_type = constants.IDENTIFIER, class_or_occupation_query
     session = DBManager.connect_to_db()
     invalid = defaultdict(set)
     count = 0
 
-    for result in sparql_queries.run_identifier_or_links_query(query_type, class_qid, catalog_pid, 0):
+    for result in sparql_queries.run_query(query_type, class_qid, catalog_pid, 0):
         for qid, target_id in result.items():
             results = session.query(entity).filter(
                 entity.catalog_id == target_id).all()
@@ -77,8 +75,8 @@ def check_existence(class_or_occupation_query, class_qid, catalog_pid, entity: B
 
 
 @click.command()
-@click.argument('entity', type=click.Choice(HANDLED_ENTITIES.keys()))
-@click.argument('catalog', type=click.Choice(TARGET_CATALOGS.keys()))
+@click.argument('entity', type=click.Choice(constants.HANDLED_ENTITIES.keys()))
+@click.argument('catalog', type=click.Choice(constants.TARGET_CATALOGS.keys()))
 @click.option('--wikidata-dump/--no-wikidata-dump', default=False, help='Dump links gathered from Wikidata. Default: no.')
 @click.option('--upload/--no-upload', default=True, help='Upload check results to Wikidata. Default: yes.')
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
@@ -106,6 +104,9 @@ def check_links_cli(entity, catalog, wikidata_dump, upload, sandbox, cache, depr
         to_deprecate, ext_ids_to_add, urls_to_add, wikidata_links = check_links(
             entity, catalog, wikidata_cache)
 
+    if to_deprecate is None:
+        return
+
     if wikidata_dump:
         json.dump({qid: {data_type: list(values) for data_type, values in data.items()}
                    for qid, data in wikidata_links.items()}, wikidata, indent=2, ensure_ascii=False)
@@ -131,7 +132,7 @@ def check_links(entity, catalog, wikidata_cache=None):
     target = gather_target_links(entity, catalog)
     # Early stop in case of no target links
     if target is None:
-        return None, None, None
+        return None, None, None, None
 
     to_deprecate = defaultdict(set)
     to_add = defaultdict(set)
@@ -160,8 +161,8 @@ def check_links(entity, catalog, wikidata_cache=None):
 
 
 @click.command()
-@click.argument('entity', type=click.Choice(HANDLED_ENTITIES.keys()))
-@click.argument('catalog', type=click.Choice(TARGET_CATALOGS.keys()))
+@click.argument('entity', type=click.Choice(constants.HANDLED_ENTITIES.keys()))
+@click.argument('catalog', type=click.Choice(constants.TARGET_CATALOGS.keys()))
 @click.option('--wikidata-dump/--no-wikidata-dump', default=False, help='Dump metadata gathered from Wikidata. Default: no.')
 @click.option('--upload/--no-upload', default=True, help='Upload check results to Wikidata. Default: yes.')
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
@@ -186,6 +187,9 @@ def check_metadata_cli(entity, catalog, wikidata_dump, upload, sandbox, cache, d
     else:
         to_deprecate, to_add, wikidata_metadata = check_metadata(
             entity, catalog)
+
+    if to_deprecate is None:
+        return
 
     if wikidata_dump:
         json.dump({qid: {data_type: list(values) for data_type, values in data.items()}
