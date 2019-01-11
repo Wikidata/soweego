@@ -219,7 +219,8 @@ def check_metadata(entity, catalog, wikidata_cache=None):
         wikidata = {}
 
         # Wikidata metadata
-        gather_identifiers(entity, catalog, target_database.get_pid(catalog), wikidata)
+        gather_identifiers(
+            entity, catalog, target_database.get_pid(catalog), wikidata)
         gather_wikidata_metadata(wikidata)
     else:
         wikidata = wikidata_cache

@@ -21,6 +21,7 @@ from soweego.commons import (data_gathering, target_database, text_utils,
                              url_utils)
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.base_link_entity import BaseLinkEntity
+from soweego.ingestor import wikidata_bot
 
 LOGGER = logging.getLogger(__name__)
 EDIT_DISTANCES = {
@@ -36,9 +37,10 @@ EDIT_DISTANCES = {
 @click.argument('target_type', type=click.Choice(target_database.available_types()))
 @click.option('-s', '--strategy', type=click.Choice(['perfect', 'links', 'names']), default='perfect')
 @click.option('--upload/--no-upload', default=False, help='Upload check results to Wikidata. Default: no.')
+@click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
 @click.option('-o', '--output-dir', type=click.Path(file_okay=False), default='/app/shared',
               help="default: 'output'")
-def baseline(source, target, target_type, strategy, upload, output_dir):
+def baseline(source, target, target_type, strategy, upload, sandbox, output_dir):
     """Rule-based matching strategies.
 
     SOURCE must be {string: identifier} JSON files.
@@ -73,7 +75,8 @@ def baseline(source, target, target_type, strategy, upload, output_dir):
             source_dataset, target_entity, target_pid, text_utils.tokenize)
 
     if upload:
-        print("SEND ME TO INGESTOR PLS")
+        wikidata_bot.add_statements(
+            result, target_database.get_qid(target), sandbox)
     else:
         filepath = path.join(output_dir, 'baseline_output.csv')
         with open(filepath, 'w') as filehandle:
@@ -126,7 +129,7 @@ def similar_tokens_match(source, target, target_pid: str, tokenize: Callable[[st
                 yield (qid, target_pid, res.catalog_id)
 
 
-def edit_distance_match(source, target: BaseEntity, target_pid: str, metric: str, threshold: float) -> Iterable[Tuple[str, str, str]]:
+def edit_distance_match(source, target: BaseEntity, target_pid: str, metric: str, threshold: float) -> Iterable[Tuple[str, str, str, float]]:
     """Given a source dataset ``{identifier: {string: [languages]}}``,
     match strings having the given edit distance ``metric``
     above the given ``threshold`` and return a dataset
