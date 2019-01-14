@@ -39,7 +39,7 @@ EDIT_DISTANCES = {
 @click.option('--upload/--no-upload', default=False, help='Upload check results to Wikidata. Default: no.')
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
 @click.option('-o', '--output-dir', type=click.Path(file_okay=False), default='/app/shared',
-              help="default: 'output'")
+              help="default: '/app/shared'")
 def baseline(source, target, target_type, strategy, upload, sandbox, output_dir):
     """Rule-based matching strategies.
 
@@ -83,7 +83,7 @@ def baseline(source, target, target_type, strategy, upload, sandbox, output_dir)
             for res in result:
                 filehandle.write('%s\n' % ";".join(res))
                 filehandle.flush()
-        LOGGER.info("Dump baseline %s against %s in %s",
+        LOGGER.info('Baseline %s strategy against %s dumped to %s',
                     strategy, target, filepath)
 
 
@@ -124,7 +124,7 @@ def similar_tokens_match(source, target, target_pid: str, tokenize: Callable[[st
             to_exclude.add(res.catalog_id)
         # Looks for sets contained in our set of tokens
         for res in data_gathering.tokens_fulltext_search(target, False, tokenized):
-            res_tokenized = set(res.tokens.split(' '))
+            res_tokenized = set(res.tokens.split())
             if len(res_tokenized) > 1 and res_tokenized.issubset(tokenized):
                 yield (qid, target_pid, res.catalog_id)
 
