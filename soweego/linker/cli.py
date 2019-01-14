@@ -1,8 +1,8 @@
 import click
-from soweego.linker import linking_strategies
+from soweego.linker import baseline
 
 CLI_COMMANDS = {
-    'baseline': linking_strategies.baseline
+    'baseline': baseline.baseline
 }
 
 

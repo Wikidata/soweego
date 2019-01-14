@@ -28,7 +28,7 @@ from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.musicbrainz_entity import (MusicbrainzArtistEntity,
                                                         MusicbrainzBandEntity)
 from soweego.ingestor import wikidata_bot
-from soweego.wikidata import sparql_queries, vocabulary
+from soweego.wikidata import sparql_queries
 
 LOGGER = logging.getLogger(__name__)
 
@@ -206,8 +206,6 @@ def check_metadata_cli(entity, catalog, wikidata_dump, upload, sandbox, cache, d
 
 
 def check_metadata(entity, catalog, wikidata_cache=None):
-    catalog_terms = _get_vocabulary(catalog)
-
     # Target metadata
     target = gather_target_metadata(entity, catalog)
     # Early stop in case of no target metadata
@@ -221,7 +219,8 @@ def check_metadata(entity, catalog, wikidata_cache=None):
         wikidata = {}
 
         # Wikidata metadata
-        gather_identifiers(entity, catalog, catalog_terms['pid'], wikidata)
+        gather_identifiers(
+            entity, catalog, target_database.get_pid(catalog), wikidata)
         gather_wikidata_metadata(wikidata)
     else:
         wikidata = wikidata_cache
@@ -303,14 +302,6 @@ def _consume_target_iterator(target_iterator):
     return target
 
 
-def _get_vocabulary(catalog):
-    catalog_terms = vocabulary.CATALOG_MAPPING.get(catalog)
-    if not catalog_terms:
-        raise ValueError('Bad catalog: %s. Please use one of %s' %
-                         (catalog, vocabulary.CATALOG_MAPPING.keys()))
-    return catalog_terms
-
-
 def _upload_links(catalog, to_deprecate, urls_to_add, ext_ids_to_add, sandbox):
     catalog_qid = _upload(catalog, to_deprecate, urls_to_add, sandbox)
     LOGGER.info('Starting addition of external IDs to Wikidata ...')
@@ -318,8 +309,7 @@ def _upload_links(catalog, to_deprecate, urls_to_add, ext_ids_to_add, sandbox):
 
 
 def _upload(catalog, to_deprecate, to_add, sandbox):
-    catalog_terms = _get_vocabulary(catalog)
-    catalog_qid = catalog_terms['qid']
+    catalog_qid = target_database.get_qid(catalog)
     LOGGER.info('Starting deprecation of %s IDs ...', catalog)
     wikidata_bot.delete_or_deprecate_identifiers(
         'deprecate', to_deprecate, catalog, sandbox)

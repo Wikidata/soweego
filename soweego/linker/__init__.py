@@ -1,1 +1,1 @@
-from soweego.linker import cli, linking_strategies
+from soweego.linker import baseline, cli
