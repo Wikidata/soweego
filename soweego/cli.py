@@ -12,8 +12,8 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import logging
 
 import click
-
-from soweego import commons, importer, ingestor, linker, validator, wikidata
+from soweego import (commons, importer, ingestor, linker, pipeline, validator,
+                     wikidata)
 
 CLI_COMMANDS = {
     'commons': commons.cli.cli,
@@ -21,7 +21,8 @@ CLI_COMMANDS = {
     'ingestor': ingestor.cli.cli,
     'linker': linker.cli.cli,
     'validator': validator.cli.cli,
-    'wikidata': wikidata.cli.cli
+    'wikidata': wikidata.cli.cli,
+    'pipeline': pipeline.pipeline.pipeline
 }
 
 # Avoid verbose requests logging

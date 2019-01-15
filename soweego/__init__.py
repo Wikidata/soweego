@@ -1,1 +1,2 @@
-from soweego import commons, importer, ingestor, linker, validator, wikidata
+from soweego import (commons, importer, ingestor, linker, pipeline, validator,
+                     wikidata)
