@@ -1,5 +1,7 @@
 import click
 from soweego.commons import target_database
+from soweego.commons.db_manager import DBManager
+from soweego.importer.importer import import_cli
 
 
 @click.command()
@@ -22,7 +24,7 @@ def pipeline(target: str, validator: bool, credentials_path: str, output_dir: st
 
 
 def _importer(target: str, output_dir: str):
-    return
+    call_click_command(import_cli, target, '--output', output_dir)
 
 
 def _linker(target: str, output_dir: str):
