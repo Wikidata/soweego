@@ -125,7 +125,7 @@ def check_links_cli(entity, catalog, wikidata_dump, upload, sandbox, cache, depr
 
 
 def check_links(entity, catalog, wikidata_cache=None):
-    catalog_terms = _get_vocabulary(catalog)
+    pid = target_database.get_pid(catalog)
 
     # Target links
     target = gather_target_links(entity, catalog)
@@ -140,7 +140,7 @@ def check_links(entity, catalog, wikidata_cache=None):
         wikidata = {}
 
         # Wikidata links
-        gather_identifiers(entity, catalog, catalog_terms['pid'], wikidata)
+        gather_identifiers(entity, catalog, pid, wikidata)
         url_pids, ext_id_pids_to_urls = gather_relevant_pids()
         gather_wikidata_links(wikidata, url_pids, ext_id_pids_to_urls)
     else:
