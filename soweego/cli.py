@@ -32,7 +32,7 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 @click.option('-l', '--log-level',
               type=(str, click.Choice(commons.logging.LEVELS)),
               multiple=True,
-              help='Module name followed by one of [DEBUG, INFO, WARNING, ERROR, CRITICAL].')
+              help='Module name followed by one of [DEBUG, INFO, WARNING, ERROR, CRITICAL]. Multiple pairs allowed.')
 @click.pass_context
 def cli(ctx, log_level):
     """Link Wikidata items to trusted external catalogs."""
