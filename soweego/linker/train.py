@@ -29,7 +29,7 @@ LOGGER = logging.getLogger(__name__)
 @click.argument('target_type', type=click.Choice(target_database.available_types()))
 @click.option('-c', '--cache', type=click.File(), default=None, help="Load dumped Wikidata training set. Default: no.")
 @click.option('-o', '--output-dir', type=click.Path(file_okay=False), default='/app/shared')
-def train_cli(target, target_type, cache, output_dir):
+def cli(target, target_type, cache, output_dir):
     """Build the training set."""
     wikidata_df, target_df = build(target, target_type, cache)
     wikidata_df.to_json(os.path.join(
@@ -52,16 +52,25 @@ def build(catalog, entity, wikidata_cache):
     if wikidata_cache is None:
         wikidata = {}
 
-        data_gathering.gather_identifiers(
+        data_gathering.gather_target_ids(
             entity, catalog, catalog_terms['pid'], wikidata)
         url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
-        data_gathering.gather_wikidata_training_set(
+        data_gathering.gather_wikidata_dataset(
             wikidata, url_pids, ext_id_pids_to_urls)
         wikidata_df = DataFrame.from_dict(wikidata, orient='index')
     else:
         wikidata_df = read_json(wikidata_cache)
 
     # Target
+    target_ids = get_target_ids(wikidata_cache, wikidata, wikidata_df)
+    target = data_gathering.gather_target_dataset(
+        entity, catalog, target_ids, False)
+    target_df = DataFrame.from_dict(target, orient='index')
+
+    return wikidata_df, target_df
+
+
+def get_target_ids(wikidata_cache, wikidata, wikidata_df):
     identifiers = set()
     if wikidata_cache is None:
         for data in wikidata.values():
@@ -72,11 +81,7 @@ def build(catalog, entity, wikidata_cache):
         for array in ids_series.values():
             for identifier in array:
                 identifiers.add(identifier)
-    target = data_gathering.gather_target_training_set(
-        entity, catalog, identifiers)
-    target_df = DataFrame.from_dict(target, orient='index')
-
-    return wikidata_df, target_df
+    return identifiers
 
 
 def preprocess(wikidata_df, target_df):
