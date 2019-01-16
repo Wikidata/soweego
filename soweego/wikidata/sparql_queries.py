@@ -93,7 +93,7 @@ def identifier_class_based_query_cli(ontology_class, identifier_property, result
 
 
 @lru_cache()
-def run_query(query_type: tuple, class_qid: str, catalog_pid: str, result_per_page: int) -> Iterator[dict]:
+def run_query(query_type: tuple, class_qid: str, catalog_pid: str, result_per_page: int) -> Iterator:
     """Run a filled SPARQL query template against the Wikidata endpoint with eventual paging.
 
     :param query_type: pair with one of ``identifier``, ``links``, ``dataset``, ``metadata``, and either ``class`` or ``occupation``
@@ -104,8 +104,8 @@ def run_query(query_type: tuple, class_qid: str, catalog_pid: str, result_per_pa
     :type catalog_pid: str
     :param result_per_page: page size. Use ``0`` to switch paging off
     :type result_per_page: int
-    :return: query result generator yielding ``{QID: identifier_or_URL}``
-    :rtype: Iterator[dict]
+    :return: query result generator yielding ``QID, identifier_or_URL`` or ``QID`` only
+    :rtype: Iterator
     """
     what, how = query_type
 
@@ -248,7 +248,7 @@ def _parse_query_result(query_type, result_set):
         if query_type == constants.DATASET:
             yield valid_qid.group()
         else:
-            yield {valid_qid.group(): identifier_or_link}
+            yield valid_qid.group(), identifier_or_link
 
 
 def _get_valid_qid(result):
