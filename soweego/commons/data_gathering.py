@@ -9,6 +9,7 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+import json
 import logging
 import re
 from collections import defaultdict
@@ -106,25 +107,31 @@ def perfect_name_search(target_entity: T, to_search: str) -> Iterable[T]:
         session.close()
 
 
-def gather_target_training_set(entity_type, catalog, identifiers):
+def gather_target_dataset(entity_type, catalog, identifiers, fileout, for_linking=True):
     # TODO similar functions in constants
     catalog_constants = _get_catalog_constants(catalog)
     catalog_entity = _get_catalog_entity(entity_type, catalog_constants)
+    base, link, nlp = catalog_entity['entity'], catalog_entity['link_entity'], catalog_entity['nlp_entity']
+    if for_linking:
+        condition = ~base.catalog_id.in_(identifiers)
+        to_log = 'dataset'
+    else:
+        condition = base.catalog_id.in_(identifiers)
+        to_log = 'training set'
 
     LOGGER.info(
-        'Gathering %s training set for the linker ...', catalog)
-    base, link, nlp = catalog_entity['entity'], catalog_entity['link_entity'], catalog_entity['nlp_entity']
+        'Gathering %s %s for the linker ...', catalog, to_log)
 
     session = DBManager.connect_to_db()
     query = session.query(base, link, nlp).join(link, base.catalog_id == link.catalog_id).join(
-        nlp, base.catalog_id == nlp.catalog_id).filter(base.catalog_id.in_(identifiers))
+        nlp, base.catalog_id == nlp.catalog_id).filter(condition)
 
     result = None
     try:
         raw_result = _run_query(query, catalog, entity_type)
-        relevant_fields = _build_training_set_relevant_fields(base, link, nlp)
-        result = _parse_target_training_set_query_result(
-            raw_result, relevant_fields)
+        relevant_fields = _build_dataset_relevant_fields(base, link, nlp)
+        _dump_target_dataset_query_result(
+            raw_result, relevant_fields, fileout)
         session.commit()
     except:
         session.rollback()
@@ -134,7 +141,7 @@ def gather_target_training_set(entity_type, catalog, identifiers):
     return result
 
 
-def _build_training_set_relevant_fields(base, link, nlp):
+def _build_dataset_relevant_fields(base, link, nlp):
     fields = set()
     for entity in base, link, nlp:
         for column in entity.__mapper__.column_attrs:
@@ -145,26 +152,26 @@ def _build_training_set_relevant_fields(base, link, nlp):
     return fields
 
 
-def _parse_target_training_set_query_result(result_set, relevant_fields):
-    parsed = defaultdict(dict)
+def _dump_target_dataset_query_result(result_set, relevant_fields, fileout):
     for base, link, nlp in result_set:
-        identifier = base.catalog_id
+        parsed = defaultdict(set)
+        parsed[constants.DF_TID] = base.catalog_id
         for field in relevant_fields:
-            if not parsed[identifier].get(field):
-                parsed[identifier][field] = set()
             try:
-                parsed[identifier][field].add(getattr(base, field))
+                parsed[field].add(getattr(base, field))
             except AttributeError:
                 pass
             try:
-                parsed[identifier][field].add(getattr(link, field))
+                parsed[field].add(getattr(link, field))
             except AttributeError:
                 pass
             try:
-                parsed[identifier][field].add(getattr(nlp, field))
+                parsed[field].add(getattr(nlp, field))
             except AttributeError:
                 pass
-    return parsed
+        fileout.write(json.dumps({field: list(values) for field, values in parsed.items(
+        ) if field != constants.DF_TID}, ensure_ascii=False) + '\n')
+        fileout.flush()
 
 
 def _run_query(query, catalog, entity_type):
@@ -175,6 +182,7 @@ def _run_query(query, catalog, entity_type):
         return None
     LOGGER.info('Got %d entries with data from %s %s',
                 count, catalog, entity_type)
+    # TODO is this a generator?
     result_set = query.all()
     return result_set
 
@@ -285,12 +293,12 @@ def _get_catalog_constants(catalog):
     return catalog_constants
 
 
-def gather_wikidata_training_set(wikidata, url_pids, ext_id_pids_to_urls):
+def gather_wikidata_dataset(wikidata, url_pids, ext_id_pids_to_urls):
     LOGGER.info(
-        'Gathering Wikidata training set from the Web API. This will take a while ...')
+        'Gathering Wikidata dataset from the Web API. This will take a while ...')
     total = 0
 
-    for entity in api_requests.get_data_for_linker(wikidata.keys(), url_pids, ext_id_pids_to_urls):
+    for entity in api_requests.get_data_for_linker(wikidata.keys(), url_pids, ext_id_pids_to_urls, None):
         for qid, *data in entity:
             if len(data) == 1:  # URLs
                 if not wikidata[qid].get(constants.DF_URL):
@@ -304,7 +312,7 @@ def gather_wikidata_training_set(wikidata, url_pids, ext_id_pids_to_urls):
                                     pid, vocabulary.LINKER_PIDS.keys())
                     raise ValueError('PID label lookup failed: %s. The PID should be one of %s' % (
                         pid, vocabulary.LINKER_PIDS.keys()))
-                parsed_value = _parse_wikidata_value(value)
+                parsed_value = api_requests.parse_wikidata_value(value)
                 if not wikidata[qid].get(pid_label):
                     wikidata[qid][pid_label] = set()
                 wikidata[qid][pid_label].add(parsed_value)
@@ -345,30 +353,12 @@ def gather_wikidata_metadata(wikidata):
     # Generator of generators
     for entity in api_requests.get_metadata(wikidata.keys()):
         for qid, pid, value in entity:
-            parsed = _parse_wikidata_value(value)
+            parsed = api_requests.parse_wikidata_value(value)
             if not wikidata[qid].get('metadata'):
                 wikidata[qid]['metadata'] = set()
             wikidata[qid]['metadata'].add((pid, parsed))
             total += 1
     LOGGER.info('Got %d statements', total)
-
-
-def _parse_wikidata_value(value):
-    # Values: plain strings, monolingual strings, birth/death DATES, gender, birth/death places QIDs
-    if isinstance(value, str):
-        return value  # String
-    date_value = value.get('time')
-    if date_value:
-        # +1180-01-01T00:00:00Z -> 1180-01-01
-        parsed = date_value[1:].split('T')[0]
-        return f"{parsed}/{value['precision']}"  # Date
-    item_value = value.get('id')
-    if item_value:
-        return item_value  # QID
-    monolingual_string_value = value.get('text')
-    if monolingual_string_value:
-        return monolingual_string_value  # Language string
-    return None
 
 
 def gather_wikidata_links(wikidata, url_pids, ext_id_pids_to_urls):
@@ -410,16 +400,25 @@ def gather_relevant_pids():
     return url_pids, ext_id_pids_to_urls
 
 
-def gather_identifiers(entity, catalog, catalog_pid, aggregated):
+def gather_target_ids(entity, catalog, catalog_pid, aggregated):
     catalog_constants = _get_catalog_constants(catalog)
     LOGGER.info('Gathering Wikidata items with %s identifiers ...', catalog)
     query_type = constants.IDENTIFIER, constants.HANDLED_ENTITIES.get(entity)
-    for result in sparql_queries.run_query(query_type, catalog_constants[entity]['qid'], catalog_pid, 0):
-        for qid, target_id in result.items():
-            if not aggregated.get(qid):
-                aggregated[qid] = {'identifiers': set()}
-            aggregated[qid]['identifiers'].add(target_id)
+    for qid, target_id in sparql_queries.run_query(query_type, catalog_constants[entity]['qid'], catalog_pid, 0):
+        if not aggregated.get(qid):
+            aggregated[qid] = {'identifiers': set()}
+        aggregated[qid]['identifiers'].add(target_id)
     LOGGER.info('Got %d %s identifiers', len(aggregated), catalog)
+
+
+def gather_qids(entity, catalog, catalog_pid):
+    catalog_constants = _get_catalog_constants(catalog)
+    LOGGER.info('Gathering Wikidata items with no %s identifiers ...', catalog)
+    query_type = constants.DATASET, constants.HANDLED_ENTITIES.get(entity)
+    qids = set(sparql_queries.run_query(
+        query_type, catalog_constants[entity]['qid'], catalog_pid, 0))
+    LOGGER.info('Got %d Wikidata items', len(qids))
+    return qids
 
 
 def extract_ids_from_urls(to_add, ext_id_pids_to_urls):
