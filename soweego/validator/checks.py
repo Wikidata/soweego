@@ -17,8 +17,8 @@ import click
 
 from soweego.commons import constants, target_database
 from soweego.commons.data_gathering import (extract_ids_from_urls,
-                                            gather_identifiers,
                                             gather_relevant_pids,
+                                            gather_target_ids,
                                             gather_target_links,
                                             gather_target_metadata,
                                             gather_wikidata_links,
@@ -59,15 +59,14 @@ def check_existence(class_or_occupation_query, class_qid, catalog_pid, entity: B
     invalid = defaultdict(set)
     count = 0
 
-    for result in sparql_queries.run_query(query_type, class_qid, catalog_pid, 0):
-        for qid, target_id in result.items():
-            results = session.query(entity).filter(
-                entity.catalog_id == target_id).all()
-            if not results:
-                LOGGER.warning(
-                    '%s identifier %s is invalid', qid, target_id)
-                invalid[target_id].add(qid)
-                count += 1
+    for qid, target_id in sparql_queries.run_query(query_type, class_qid, catalog_pid, 0):
+        results = session.query(entity).filter(
+            entity.catalog_id == target_id).all()
+        if not results:
+            LOGGER.warning(
+                '%s identifier %s is invalid', qid, target_id)
+            invalid[target_id].add(qid)
+            count += 1
 
     LOGGER.info('Total invalid identifiers = %d', count)
     # Sets are not serializable to JSON, so cast them to lists
@@ -141,7 +140,8 @@ def check_links(entity, catalog, wikidata_cache=None):
         wikidata = {}
 
         # Wikidata links
-        gather_identifiers(entity, catalog, catalog_terms['pid'], wikidata)
+        gather_target_ids(
+            entity, catalog, catalog_terms['pid'], wikidata)
         url_pids, ext_id_pids_to_urls = gather_relevant_pids()
         gather_wikidata_links(wikidata, url_pids, ext_id_pids_to_urls)
     else:
@@ -225,7 +225,8 @@ def check_metadata(entity, catalog, wikidata_cache=None):
         wikidata = {}
 
         # Wikidata metadata
-        gather_identifiers(entity, catalog, catalog_terms['pid'], wikidata)
+        gather_target_ids(
+            entity, catalog, catalog_terms['pid'], wikidata)
         gather_wikidata_metadata(wikidata)
     else:
         wikidata = wikidata_cache
