@@ -11,16 +11,18 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+import json
 import logging
-from typing import Iterator
+from collections import defaultdict
+from typing import Iterator, TextIO
 from urllib.parse import urlunsplit
 
 from requests import get
 from requests.exceptions import ChunkedEncodingError
 
-from soweego.commons.constants import DF_ALIAS, DF_DESCRIPTION, DF_LABEL
+from soweego.commons import constants
 from soweego.commons.logging import log_request_data
-from soweego.wikidata.vocabulary import LINKER_PIDS, METADATA_PIDS
+from soweego.wikidata import vocabulary
 
 LOGGER = logging.getLogger(__name__)
 
@@ -28,7 +30,25 @@ WIKIDATA_API_URL = 'https://www.wikidata.org/w/api.php'
 BUCKET_SIZE = 50
 
 
-def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict) -> Iterator[tuple]:
+def parse_wikidata_value(value):
+    # Values: plain strings, monolingual strings, birth/death DATES, gender, birth/death places QIDs
+    if isinstance(value, str):
+        return value  # String
+    date_value = value.get('time')
+    if date_value:
+        # +1180-01-01T00:00:00Z -> 1180-01-01
+        parsed = date_value[1:].split('T')[0]
+        return f"{parsed}/{value['precision']}"  # Date
+    item_value = value.get('id')
+    if item_value:
+        return item_value  # QID
+    monolingual_string_value = value.get('text')
+    if monolingual_string_value:
+        return monolingual_string_value  # Language string
+    return None
+
+
+def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO) -> Iterator[tuple]:
     no_labels_count = 0
     no_aliases_count = 0
     no_descriptions_count = 0
@@ -45,7 +65,13 @@ def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict) -> 
             continue
 
         for qid in response_body['entities']:
+            to_write = {}
             entity = response_body['entities'][qid]
+            claims = entity.get('claims')
+            if not claims:
+                LOGGER.info('Skipping QID with no claims: %s', qid)
+                no_claims_count += 1
+                continue
 
             # Labels
             labels = entity.get('labels')
@@ -53,41 +79,54 @@ def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict) -> 
                 LOGGER.info('Skipping QID with no labels: %s', qid)
                 no_labels_count += 1
                 continue
-            yield _yield_monolingual_strings(qid, labels, DF_LABEL)
+            to_write[constants.DF_QID] = qid
+            to_write[constants.DF_LABEL] = _return_monolingual_strings(
+                qid, labels)
 
             # Aliases
             aliases = entity.get('aliases')
             if aliases:
-                yield _yield_aliases(qid, aliases)
+                # Merge them into labels
+                to_write[constants.DF_LABEL].update(
+                    _return_aliases(qid, aliases))
             else:
-                LOGGER.debug('Skipping QID with no aliases: %s', qid)
+                LOGGER.debug('%s has no aliases', qid)
                 no_aliases_count += 1
 
             # Descriptions
             descriptions = entity.get('descriptions')
             if descriptions:
-                yield _yield_monolingual_strings(qid, descriptions, DF_DESCRIPTION)
+                to_write[constants.DF_DESCRIPTION] = _return_monolingual_strings(
+                    qid, descriptions)
             else:
-                LOGGER.debug('Skipping QID with no descriptions: %s', qid)
+                LOGGER.debug('%s has no descriptions', qid)
                 no_descriptions_count += 1
 
             # Sitelinks
-            yield _yield_sitelinks(entity, qid, no_sitelinks_count)
+            sitelinks = entity.get('sitelinks')
+            if sitelinks:
+                to_write[constants.DF_URL] = _return_sitelinks(sitelinks)
+            else:
+                LOGGER.debug('%s has no sitelinks', qid)
+                to_write[constants.DF_URL] = set()
+                no_sitelinks_count += 1
 
-            claims = entity.get('claims')
-            if not claims:
-                LOGGER.info('Skipping QID with no claims: %s', qid)
-                no_claims_count += 1
-                continue
-            # Remember the following yields a generator of generators
-            # see https://stackoverflow.com/questions/6503079/understanding-nested-yield-return-in-python#6503192
-            # Third-party links
-            yield _yield_expected_values(qid, claims, url_pids, no_links_count)
-            # External ID links
-            yield _yield_ext_id_links(ext_id_pids_to_urls,
-                                      claims, qid, no_ext_ids_count)
-            # Claims
-            yield _yield_expected_values(qid, claims, set(LINKER_PIDS.keys()), no_claims_count, include_pid=True)
+            # Third-party URLs
+            to_write[constants.DF_URL].update(
+                _return_third_party_urls(qid, claims, url_pids, no_links_count))
+
+            # External ID URLs
+            to_write[constants.DF_URL].update(_return_ext_id_urls(
+                qid, claims, ext_id_pids_to_urls, no_ext_ids_count))
+            # Convert set to list for JSON serialization
+            to_write[constants.DF_URL] = list(to_write[constants.DF_URL])
+
+            # Expected claims
+            to_write.update(_return_claims_for_linker(
+                qid, claims, no_claims_count))
+
+            fileout.write(json.dumps(to_write, ensure_ascii=False) + '\n')
+            fileout.flush()
 
     LOGGER.info('QIDs: got %d with no labels, %d with no aliases, %d with no descriptions, %d with no sitelinks, %d with no third-party links, %d with no external ID links, %d with no expected claims',
                 no_labels_count, no_aliases_count, no_descriptions_count, no_sitelinks_count, no_links_count, no_ext_ids_count, no_claims_count)
@@ -109,10 +148,10 @@ def get_metadata(qids: set) -> Iterator[tuple]:
                 continue
             # Remember this yields a generator of generators
             # see https://stackoverflow.com/questions/6503079/understanding-nested-yield-return-in-python#6503192
-            yield _yield_expected_values(qid, claims, METADATA_PIDS, no_claims_count, include_pid=True)
+            yield _yield_expected_values(qid, claims, vocabulary.METADATA_PIDS, no_claims_count, include_pid=True)
 
     LOGGER.info('Got %d QIDs with no %s claims',
-                no_claims_count, METADATA_PIDS)
+                no_claims_count, vocabulary.METADATA_PIDS)
 
 
 def get_links(qids: set, url_pids: set, ext_id_pids_to_urls: dict) -> Iterator[tuple]:
@@ -155,6 +194,102 @@ def get_links(qids: set, url_pids: set, ext_id_pids_to_urls: dict) -> Iterator[t
                 no_sitelinks_count, no_links_count, no_ext_ids_count)
 
 
+def _return_monolingual_strings(qid, strings):
+    to_return = defaultdict(set)
+    for language_code, data in strings.items():
+        string = data.get('value')
+        if not string:
+            LOGGER.warning(
+                'Skipping malformed monolingual string with no value for %s: %s', qid, data)
+            continue
+        to_return[string].add(language_code)
+    return {field: list(values) for field, values in to_return.items()}
+
+
+def _return_aliases(qid, aliases):
+    to_return = defaultdict(set)
+    for language_code, values in aliases.items():
+        for data in values:
+            alias = data.get('value')
+            if not alias:
+                LOGGER.warning(
+                    'Skipping malformed alias with no value for %s: %s', qid, data)
+                continue
+            to_return[alias].add(language_code)
+    return {field: list(values) for field, values in to_return.items()}
+
+
+def _return_sitelinks(sitelinks):
+    to_return = set()
+    for site, data in sitelinks.items():
+        to_return.add(_build_sitelink_url(site, data['title']))
+    return to_return
+
+
+def _return_third_party_urls(qid, claims, url_pids, no_count):
+    to_return = set()
+    available = url_pids.intersection(claims.keys())
+    if available:
+        LOGGER.debug('Available third-party URL PIDs for %s: %s',
+                     qid, available)
+        for pid in available:
+            for pid_claim in claims[pid]:
+                value = _extract_value_from_claim(pid_claim, pid, qid)
+                if not value:
+                    continue
+                parsed_value = parse_wikidata_value(value)
+                to_return.add(parsed_value)
+    else:
+        LOGGER.debug('No third-party URLs for %s', qid)
+        no_count += 1
+    return to_return
+
+
+def _return_claims_for_linker(qid, claims, no_count):
+    to_return = defaultdict(set)
+    expected_pids = set(vocabulary.LINKER_PIDS.keys())
+    available = expected_pids.intersection(claims.keys())
+    if available:
+        LOGGER.debug('Available claim PIDs for %s: %s', qid, available)
+        for pid in available:
+            for pid_claim in claims[pid]:
+                value = _extract_value_from_claim(pid_claim, pid, qid)
+                if not value:
+                    continue
+                pid_label = vocabulary.LINKER_PIDS.get(pid)
+                parsed_value = parse_wikidata_value(value)
+                if not pid_label:
+                    LOGGER.critical('PID label lookup failed: %s. The PID should be one of %s',
+                                    pid, expected_pids)
+                    raise ValueError('PID label lookup failed: %s. The PID should be one of %s' % (
+                        pid, expected_pids))
+                to_return[pid_label].add(parsed_value)
+    else:
+        LOGGER.debug('No %s expected claims for %s', expected_pids, qid)
+        no_count += 1
+    return {field: list(values) for field, values in to_return.items()}
+
+
+def _return_ext_id_urls(qid, claims, ext_id_pids_to_urls, no_count):
+    to_return = set()
+    available = set(
+        ext_id_pids_to_urls.keys()).intersection(claims.keys())
+    if available:
+        LOGGER.debug('Available external ID PIDs for %s: %s', qid, available)
+        for pid in available:
+            for pid_claim in claims[pid]:
+                ext_id = _extract_value_from_claim(
+                    pid_claim, pid, qid)
+                if not ext_id:
+                    continue
+                for formatter_url in ext_id_pids_to_urls[pid]:
+                    to_return.add(formatter_url.replace('$1', ext_id))
+    else:
+        LOGGER.debug('No external ID links for %s', qid)
+        no_count += 1
+    return to_return
+
+
 def _yield_monolingual_strings(qid, strings, string_type):
     for language_code, data in strings.items():
         string = data.get('value')
@@ -173,7 +308,7 @@ def _yield_aliases(qid, aliases):
                 LOGGER.warning(
                     'Skipping malformed alias with no value for %s: %s', qid, data)
                 continue
-            yield qid, language_code, alias, DF_ALIAS
+            yield qid, language_code, alias, constants.DF_ALIAS
 
 
 def _yield_sitelinks(entity, qid, no_sitelinks_count):
@@ -211,7 +346,7 @@ def _yield_ext_id_links(ext_id_pids_to_urls, claims, qid, no_ext_ids_count):
 def _yield_expected_values(qid, claims, expected_pids, count, include_pid=False):
     available = expected_pids.intersection(claims.keys())
     if not available:
-        LOGGER.debug('No %s claims for %s', expected_pids, qid)
+        LOGGER.debug('No %s expected claims for %s', expected_pids, qid)
         count += 1
     else:
         LOGGER.debug(
