@@ -45,24 +45,29 @@ def check_existence_cli(wikidata_query, class_qid, catalog_pid, catalog, entity_
 
     Dump a JSON file of invalid ones ``{identifier: QID}``
     """
-    try:
-        entity = target_database.get_entity(catalog, entity_type)
-    except:
-        LOGGER.error('Not able to retrive entity for given database_table')
-
-    invalid = check_existence(wikidata_query, class_qid,
-                              catalog_pid, entity)
-    json.dump(invalid, outfile, indent=2)
 
 
-def check_existence(class_or_occupation_query, class_qid, catalog_pid, entity: BaseEntity):
-    query_type = 'identifier', class_or_occupation_query
+    invalid = {target_id: list(qids) for target_id, qids in invalid.items()}
+    json.dump(invalid, deprecated, indent=2)
+    LOGGER.info('Result dumped to %s', deprecated.name)
+def check_existence(entity, catalog, wikidata_cache=None):
+
+    if wikidata_cache is None:
+        wikidata = {}
+
+        pid = target_database.get_pid(catalog)
+        gather_identifiers(entity, catalog, pid, wikidata)
+    else:
+        wikidata = wikidata_cache
+
     session = DBManager.connect_to_db()
     invalid = defaultdict(set)
     count = 0
+    entity = target_database.get_entity(catalog, entity)
 
-    for result in sparql_queries.run_identifier_or_links_query(query_type, class_qid, catalog_pid, 0):
-        for qid, target_id in result.items():
+    for qid in wikidata:
+        identifiers = wikidata[qid]['identifiers']
+        for target_id in identifiers:
             results = session.query(entity).filter(
                 entity.catalog_id == target_id).all()
             if not results:
@@ -73,7 +78,7 @@ def check_existence(class_or_occupation_query, class_qid, catalog_pid, entity: B
 
     LOGGER.info('Total invalid identifiers = %d', count)
     # Sets are not serializable to JSON, so cast them to lists
-    return {target_id: list(qids) for target_id, qids in invalid.items()}
+    return invalid, wikidata
 
 
 @click.command()
