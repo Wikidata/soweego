@@ -41,29 +41,25 @@ LOGGER = logging.getLogger(__name__)
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
 @click.option('-c', '--cache', type=click.File(), default=None, help="Load Wikidata links previously dumped via '-w'. Default: no.")
 @click.option('-d', '--deprecated', type=click.File('w'), default='/app/shared/entities_deprecated_ids.json', help="Default: '/app/shared/entities_deprecated_ids.json'")
-@click.option('-i', '--ids', type=click.File('w'), default='/app/shared/ids_to_be_added.tsv', help="Default: '/app/shared/ids_to_be_added.tsv'")
 @click.option('-w', '--wikidata', type=click.File('w'), default='/app/shared/wikidata_entities.json', help="Default: '/app/shared/wikidata_entities.json'")
-def check_existence_cli(entity, catalog, wikidata_dump, upload, sandbox, cache, deprecated, ids, wikidata):
+def check_existence_cli(entity, catalog, wikidata_dump, upload, sandbox, cache, deprecated, wikidata):
     """Check the existence of identifier statements.
 
     Dump a JSON file of invalid ones ``{identifier: QID}``
     """
 
-    # TODO this if/else has to be tested
     if cache is None:
-        invalid, wikidata = check_existence(entity, catalog)
+        invalid, wikidata_cache = check_existence(entity, catalog)
     else:
         wikidata_cache = _load_wikidata_cache(cache)
         invalid, wikidata = check_existence(
             entity, catalog, wikidata_cache=wikidata_cache)
 
-    # TODO test
     if wikidata_dump:
         json.dump({qid: {data_type: list(values) for data_type, values in data.items()}
-                   for qid, data in wikidata.items()}, wikidata, indent=2, ensure_ascii=False)
+                   for qid, data in wikidata_cache.items()}, wikidata, indent=2, ensure_ascii=False)
         LOGGER.info('Wikidata metadata dumped to %s', wikidata.name)
 
-    # TODO to test
     if upload:
         _upload_links(catalog, invalid, None, None, sandbox)
 
