@@ -2,6 +2,7 @@ import click
 from soweego.commons import target_database
 from soweego.commons.db_manager import DBManager
 from soweego.importer.importer import import_cli
+from soweego.validator.checks import check_existence_cli, check_links_cli, check_metadata_cli
 
 
 @click.command()
@@ -36,7 +37,11 @@ def _linker(target: str, output_dir: str):
 
 
 def _validator(target: str, output_dir: str):
-    return
+    # Runs the validator for each kind of entity of the given target database
+    for entity_type in target_database.available_types_for_target(target):
+        call_click_command(check_existence_cli, entity_type, target)
+        call_click_command(check_links_cli, entity_type, target)
+        call_click_command(check_metadata_cli, entity_type, target)
 
 
 # Calls click commands
