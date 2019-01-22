@@ -47,7 +47,11 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         if not os.path.isdir(dump_path):
             with tarfile.open(dump_file_path, "r:bz2") as tar:
+                LOGGER.info("Extracting dump %s in %s" %
+                            (dump_file_path, dump_path))
                 tar.extractall(dump_path)
+                LOGGER.info("Extracted dump %s in %s" %
+                            (dump_file_path, dump_path))
 
         tables = [MusicbrainzArtistEntity,
                   MusicbrainzBandEntity]
@@ -55,6 +59,9 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         db_manager = DBManager()
         db_manager.drop(tables)
         db_manager.create(tables)
+
+        LOGGER.info("Dropped and created tables %s" % tables)
+        LOGGER.info("Importing artists and bands")
 
         artist_count = 0
         for artist in self._artist_generator(dump_path):
@@ -70,6 +77,9 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         db_manager.create([MusicbrainzArtistLinkEntity,
                            MusicbrainzBandLinkEntity])
 
+        LOGGER.info("Dropped and created tables %s" % tables)
+        LOGGER.info("Importing links")
+
         link_count = 0
         for link in self._link_generator(dump_path):
             link_count = link_count + 1
@@ -78,6 +88,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             session.commit()
 
         LOGGER.debug("Added %s link records" % link_count)
+        LOGGER.info("Importing ISNIs")
 
         isni_link_count = 0
         for link in self._isni_link_generator(dump_path):
@@ -90,6 +101,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         db_manager.drop([MusicBrainzArtistBandRelationship])
         db_manager.create([MusicBrainzArtistBandRelationship])
+        LOGGER.info("Dropped and created tables %s" % tables)
+        LOGGER.info("Importing relationships artist-band")
 
         relationships_count = 0
         relationships_total = 0

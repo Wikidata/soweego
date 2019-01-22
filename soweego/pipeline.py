@@ -1,9 +1,13 @@
+import logging
+
 import click
 from soweego.commons import target_database
 from soweego.commons.db_manager import DBManager
 from soweego.importer.importer import import_cli
 from soweego.validator.checks import (check_existence_cli, check_links_cli,
                                       check_metadata_cli)
+
+LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
@@ -18,21 +22,33 @@ def cli(target: str, validator: bool, importer: bool, linker: bool, upload: bool
     """Executes importer/linker and optionally validator for a target"""
 
     if credentials_path:
+        LOGGER.info("Using database credentials from file %s" %
+                    credentials_path)
         DBManager.set_credentials_from_path(credentials_path)
 
     if importer:
         _importer(target)
+    else:
+        LOGGER.info("Skipping importer")
+
     if linker:
         _linker(target)
+    else:
+        LOGGER.info("Skipping linker")
+
     if validator:
         _validator(target, upload)
+    else:
+        LOGGER.info("Skipping validator")
 
 
 def _importer(target: str):
+    LOGGER.info("Running importer for target: %s" % target)
     import_cli([target])
 
 
 def _linker(target: str):
+    LOGGER.info("Running linker for target: %s" % target)
     return
 
 
@@ -40,6 +56,8 @@ def _validator(target: str, upload: bool):
     upload_option = "--upload" if upload else "--no-upload"
     # Runs the validator for each kind of entity of the given target database
     for entity_type in target_database.available_types_for_target(target):
+        LOGGER.info("Running validator for target %s %s" %
+                    (target, entity_type))
         check_existence_cli([entity_type, target, upload_option])
         check_links_cli([entity_type, target, upload_option])
         check_metadata_cli([entity_type, target, upload_option])
