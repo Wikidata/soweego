@@ -22,7 +22,7 @@ CLI_COMMANDS = {
     'linker': linker.cli.cli,
     'validator': validator.cli.cli,
     'wikidata': wikidata.cli.cli,
-    'pipeline': pipeline.pipeline.pipeline
+    'run': pipeline.cli
 }
 
 # Avoid verbose requests logging

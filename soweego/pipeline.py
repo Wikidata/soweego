@@ -14,7 +14,7 @@ from soweego.validator.checks import (check_existence_cli, check_links_cli,
 @click.option('--upload/--no-upload', default=True, help='Upload the results on wikidata. Default: yes.')
 @click.option('-c', '--credentials-path', type=click.Path(file_okay=True), default=None,
               help="default: None")
-def pipeline(target: str, validator: bool, importer: bool, linker: bool, upload: bool, credentials_path: str):
+def cli(target: str, validator: bool, importer: bool, linker: bool, upload: bool, credentials_path: str):
     """Executes importer/linker and optionally validator for a target"""
 
     if credentials_path:

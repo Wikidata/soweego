@@ -19,4 +19,4 @@ COPY . /app/soweego
 WORKDIR /app/soweego
 
 # Defines the entry point of the image
-ENTRYPOINT [ "python", "-m", "soweego", "pipeline" ]
+ENTRYPOINT [ "python", "-m", "soweego", "run" ]
