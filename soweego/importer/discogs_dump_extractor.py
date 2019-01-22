@@ -195,6 +195,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         # Required fields
         entity.catalog_id = identifier
         entity.name = name
+        entity.tokens = ' '.join(text_utils.tokenize(name))
         # Real name
         real_name = artist_node.findtext('realname')
         if real_name:
@@ -221,6 +222,8 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             variation_entity = entity_class()
             variation_entity.catalog_id = main_entity.catalog_id
             variation_entity.name = name_variation
+            variation_entity.tokens = ' '.join(
+                text_utils.tokenize(name_variation))
             variation_entity.real_name = main_entity.real_name
             variation_entity.data_quality = main_entity.data_quality
             self.total_entities += 1
