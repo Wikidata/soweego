@@ -1,3 +1,3 @@
-from soweego import cli
+from soweego import cli, pipeline
 
 cli.cli(obj={})

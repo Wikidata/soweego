@@ -11,10 +11,10 @@ __copyright__ = 'Copyleft 2018, lenzi.edoardo'
 
 import logging
 import ssl
-import urllib.parse
-import urllib.request
+import urllib
 
 import requests
+import urllib3
 
 LOGGER = logging.getLogger(__name__)
 
@@ -26,6 +26,7 @@ def http_call(base_url, method='GET', parameters=None, headers=list()):
         base_url = '{0}?{1}'.format(base_url, params)
 
     # TODO headers implementation
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     ssl._create_default_https_context = ssl._create_unverified_context
     req = urllib.request.Request(base_url, method=method)
     return urllib.request.urlopen(req)
