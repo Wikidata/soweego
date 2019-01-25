@@ -12,7 +12,7 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import logging
 import re
 from functools import lru_cache
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 import regex
 import requests.exceptions
@@ -161,7 +161,14 @@ def tokenize(url, domain_only=False) -> set:
         LOGGER.debug('URL: %s - Domain-only tokens: %s', url, domain_tokens)
         return domain_tokens
     path_tokens = set(filter(None, split.path.split('/')))
-    tokens = domain_tokens.union(path_tokens)
+
+    tokens = domain_tokens
+    for path_token in path_tokens:
+        decoded = unquote(path_token)
+        split = re.split(r'\W+', decoded)
+        filtered = filter(lambda token: len(token) > 1, split)
+        tokens = tokens.union(filtered)
+
     LOGGER.debug('URL: %s - Tokens: %s', url, tokens)
     return tokens
 

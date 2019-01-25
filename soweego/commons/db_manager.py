@@ -13,14 +13,14 @@ import json
 import logging
 from pkgutil import get_data
 
-from soweego.commons import constants as const
-from soweego.commons import localizations as loc
-from soweego.importer.models.musicbrainz_entity import MusicbrainzArtistEntity
-from sqlalchemy import Index, create_engine, text
+from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import configure_mappers, sessionmaker
 from sqlalchemy.pool import NullPool
+
+from soweego.commons import constants
+from soweego.commons import localizations as loc
 
 BASE = declarative_base()
 LOGGER = logging.getLogger(__name__)
@@ -32,15 +32,15 @@ class DBManager():
     """Exposes some primitives for the DB access"""
 
     __engine: object
+    __credentials = None
 
     def __init__(self):
-        credentials = json.loads(
-            get_data('soweego.importer.resources', 'db_credentials.json'))
-        db_engine = credentials[const.DB_ENGINE]
-        db_name = credentials[const.PROD_DB]
-        user = credentials[const.USER]
-        password = credentials[const.PASSWORD]
-        host = credentials[const.HOST]
+        credentials = DBManager.get_credentials()
+        db_engine = credentials[constants.DB_ENGINE]
+        db_name = credentials[constants.PROD_DB]
+        user = credentials[constants.USER]
+        password = credentials[constants.PASSWORD]
+        host = credentials[constants.HOST]
         try:
             # Disable connection pooling, as per Wikimedia policy
             # https://wikitech.wikimedia.org/wiki/Help:Toolforge/Database#Connection_handling_policy
@@ -74,3 +74,16 @@ class DBManager():
         db_manager = DBManager()
         session = db_manager.new_session()
         return session
+
+    @staticmethod
+    def get_credentials():
+        if DBManager.__credentials:
+            return DBManager.__credentials
+        else:
+            return json.loads(
+                get_data('soweego.importer.resources', 'db_credentials.json'))
+
+    @staticmethod
+    def set_credentials_from_path(path: str):
+        with open(path) as file:
+            DBManager.__credentials = json.load(file)
