@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""MusicBrainz SQL Alchemy ORM model"""
+"""IMDB SQL Alchemy ORM model"""
 
 __author__ = 'Andrea Tupini'
 __email__ = 'tupini07@gmail.com'
