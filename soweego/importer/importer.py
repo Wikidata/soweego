@@ -19,6 +19,7 @@ from soweego.commons import constants as const
 from soweego.commons import http_client as client
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.discogs_dump_extractor import DiscogsDumpExtractor
+from soweego.importer.imdb_dump_extractor import ImdbDumpExtractor
 from soweego.importer.musicbrainz_dump_extractor import \
     MusicBrainzDumpExtractor
 
@@ -26,7 +27,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
-@click.argument('catalog', type=click.Choice(['discogs', 'musicbrainz']))
+@click.argument('catalog', type=click.Choice(['discogs', 'musicbrainz', 'imdb']))
 @click.option('--download-url', '-du', default=None)
 @click.option('--output', '-o', default='/app/shared', type=click.Path())
 def import_cli(catalog: str, download_url: str, output: str) -> None:
@@ -38,6 +39,8 @@ def import_cli(catalog: str, download_url: str, output: str) -> None:
         extractor = DiscogsDumpExtractor()
     elif catalog == 'musicbrainz':
         extractor = MusicBrainzDumpExtractor()
+    elif catalog == "imdb":
+        extractor = ImdbDumpExtractor()
 
     importer.refresh_dump(
         output, download_url, extractor)

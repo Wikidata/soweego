@@ -61,7 +61,6 @@ class ImdbMovieEntity(BASE):
 
 
 class ImdbPersonEntity(BaseEntity):
-    __abstract__ = True
     __tablename__ = BASE_PERSON_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
@@ -71,10 +70,13 @@ class ImdbPersonEntity(BaseEntity):
     born_precision = Column(Integer, default=9, nullable=False)
     died_precision = Column(Integer, default=9, nullable=False)
 
-    # Maybe we should create another table to hold the movie/person relations?
-    known_for_titles = Column(String(255), nullable=True)
-
     # primaryProfession (array of strings)– the top-3 professions of the person
+    # how do we want to model this? is better to leave it implicit in the type of entity?
+    # or, which i think is better, should we still add the list of professions?
+    # 
+    # If a person is director + actor, we create one entry in each table right? 
+
+    __abstract__ = True
 
 
 class ImdbActorEntity(ImdbPersonEntity):
