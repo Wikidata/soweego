@@ -3,7 +3,7 @@
 
 """Constants"""
 
-from soweego.importer.models import discogs_entity, musicbrainz_entity
+from soweego.importer.models import discogs_entity, musicbrainz_entity, imdb_entity
 from soweego.wikidata import vocabulary
 
 # Keys
@@ -46,25 +46,25 @@ TARGET_CATALOGS = {
     'imdb': {
         'actor': {
             'qid': vocabulary.ACTOR,
-            'entity': None,
+            'entity': imdb_entity.ImdbActorEntity,
             'link_entity': None,
             'nlp_entity': None
         },
         'director': {
             'qid': vocabulary.FILM_DIRECTOR,
-            'entity': None,
+            'entity': imdb_entity.ImdbDirectorEntity,
             'link_entity': None,
             'nlp_entity': None
         },
         'producer': {
             'qid': vocabulary.FILM_PRODUCER,
-            'entity': None,
+            'entity': imdb_entity.ImdbProducerEntity,
             'link_entity': None,
             'nlp_entity': None
         },
         'writer': {
             'qid': vocabulary.FILM_WRITER,
-            'entity': None,
+            'entity': imdb_entity.ImdbWriterEntity,
             'link_entity': None,
             'nlp_entity': None
         }
