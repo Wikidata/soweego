@@ -32,10 +32,10 @@ class DBManager():
     """Exposes some primitives for the DB access"""
 
     __engine: object
+    __credentials = None
 
     def __init__(self):
-        credentials = json.loads(
-            get_data('soweego.importer.resources', 'db_credentials.json'))
+        credentials = DBManager.get_credentials()
         db_engine = credentials[const.DB_ENGINE_KEY]
         db_name = credentials[const.PROD_DB_KEY]
         user = credentials[const.USER_KEY]
@@ -74,3 +74,16 @@ class DBManager():
         db_manager = DBManager()
         session = db_manager.new_session()
         return session
+
+    @staticmethod
+    def get_credentials():
+        if DBManager.__credentials:
+            return DBManager.__credentials
+        else:
+            return json.loads(
+                get_data('soweego.importer.resources', 'db_credentials.json'))
+
+    @staticmethod
+    def set_credentials_from_path(path: str):
+        with open(path) as file:
+            DBManager.__credentials = json.load(file)

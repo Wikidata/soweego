@@ -34,35 +34,58 @@ LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
-@click.argument('wikidata_query', type=click.Choice(['class', 'occupation']))
-@click.argument('class_qid')
-@click.argument('catalog_pid')
-@click.argument('catalog', type=click.Choice(target_database.available_targets()))
-@click.argument('entity_type', type=click.Choice(target_database.available_types()))
-@click.option('-o', '--outfile', type=click.File('w'), default='output/non_existent_ids.json', help="default: 'output/non_existent_ids.json'")
-def check_existence_cli(wikidata_query, class_qid, catalog_pid, catalog, entity_type, outfile):
+@click.argument('entity', type=click.Choice(HANDLED_ENTITIES.keys()))
+@click.argument('catalog', type=click.Choice(TARGET_CATALOGS.keys()))
+@click.option('--wikidata-dump/--no-wikidata-dump', default=False, help='Dump links gathered from Wikidata. Default: no.')
+@click.option('--upload/--no-upload', default=True, help='Upload check results to Wikidata. Default: yes.')
+@click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
+@click.option('-c', '--cache', type=click.File(), default=None, help="Load Wikidata links previously dumped via '-w'. Default: no.")
+@click.option('-d', '--deprecated', type=click.File('w'), default='/app/shared/entities_deprecated_ids.json', help="Default: '/app/shared/entities_deprecated_ids.json'")
+@click.option('-w', '--wikidata', type=click.File('w'), default='/app/shared/wikidata_entities.json', help="Default: '/app/shared/wikidata_entities.json'")
+def check_existence_cli(entity, catalog, wikidata_dump, upload, sandbox, cache, deprecated, wikidata):
     """Check the existence of identifier statements.
 
     Dump a JSON file of invalid ones ``{identifier: QID}``
     """
-    try:
-        entity = target_database.get_entity(catalog, entity_type)
-    except:
-        LOGGER.error('Not able to retrive entity for given database_table')
 
-    invalid = check_existence(wikidata_query, class_qid,
-                              catalog_pid, entity)
-    json.dump(invalid, outfile, indent=2)
+    if cache is None:
+        invalid, wikidata_cache = check_existence(entity, catalog)
+    else:
+        wikidata_cache = _load_wikidata_cache(cache)
+        invalid, wikidata = check_existence(
+            entity, catalog, wikidata_cache=wikidata_cache)
+
+    if wikidata_dump:
+        json.dump({qid: {data_type: list(values) for data_type, values in data.items()}
+                   for qid, data in wikidata_cache.items()}, wikidata, indent=2, ensure_ascii=False)
+        LOGGER.info('Wikidata metadata dumped to %s', wikidata.name)
+
+    if upload:
+        _upload_links(catalog, invalid, None, None, sandbox)
+
+    invalid = {target_id: list(qids) for target_id, qids in invalid.items()}
+    json.dump(invalid, deprecated, indent=2)
+    LOGGER.info('Result dumped to %s', deprecated.name)
 
 
-def check_existence(class_or_occupation_query, class_qid, catalog_pid, entity: BaseEntity):
-    query_type = 'identifier', class_or_occupation_query
+def check_existence(entity, catalog, wikidata_cache=None):
+
+    if wikidata_cache is None:
+        wikidata = {}
+
+        pid = target_database.get_pid(catalog)
+        gather_identifiers(entity, catalog, pid, wikidata)
+    else:
+        wikidata = wikidata_cache
+
     session = DBManager.connect_to_db()
     invalid = defaultdict(set)
     count = 0
+    entity = target_database.get_entity(catalog, entity)
 
-    for result in sparql_queries.run_identifier_or_links_query(query_type, class_qid, catalog_pid, 0):
-        for qid, target_id in result.items():
+    for qid in wikidata:
+        identifiers = wikidata[qid]['identifiers']
+        for target_id in identifiers:
             results = session.query(entity).filter(
                 entity.catalog_id == target_id).all()
             if not results:
@@ -73,7 +96,7 @@ def check_existence(class_or_occupation_query, class_qid, catalog_pid, entity: B
 
     LOGGER.info('Total invalid identifiers = %d', count)
     # Sets are not serializable to JSON, so cast them to lists
-    return {target_id: list(qids) for target_id, qids in invalid.items()}
+    return invalid, wikidata
 
 
 @click.command()
@@ -83,10 +106,10 @@ def check_existence(class_or_occupation_query, class_qid, catalog_pid, entity: B
 @click.option('--upload/--no-upload', default=True, help='Upload check results to Wikidata. Default: yes.')
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
 @click.option('-c', '--cache', type=click.File(), default=None, help="Load Wikidata links previously dumped via '-w'. Default: no.")
-@click.option('-d', '--deprecated', type=click.File('w'), default='output/links_deprecated_ids.json', help="Default: 'output/links_deprecated_ids.json'")
-@click.option('-e', '--ext-ids', type=click.File('w'), default='output/external_ids_to_be_added.tsv', help="Default: 'output/external_ids_to_be_added.tsv'")
-@click.option('-u', '--urls', type=click.File('w'), default='output/urls_to_be_added.tsv', help="Default: 'output/urls_to_be_added.tsv'")
-@click.option('-w', '--wikidata', type=click.File('w'), default='output/wikidata_links.json', help="Default: 'output/wikidata_links.json'")
+@click.option('-d', '--deprecated', type=click.File('w'), default='/app/shared/links_deprecated_ids.json', help="Default: '/app/shared/links_deprecated_ids.json'")
+@click.option('-e', '--ext-ids', type=click.File('w'), default='/app/shared/external_ids_to_be_added.tsv', help="Default: '/app/shared/external_ids_to_be_added.tsv'")
+@click.option('-u', '--urls', type=click.File('w'), default='/app/shared/urls_to_be_added.tsv', help="Default: '/app/shared/urls_to_be_added.tsv'")
+@click.option('-w', '--wikidata', type=click.File('w'), default='/app/shared/wikidata_links.json', help="Default: '/app/shared/wikidata_links.json'")
 def check_links_cli(entity, catalog, wikidata_dump, upload, sandbox, cache, deprecated, ext_ids, urls, wikidata):
     """Check the validity of identifier statements based on the available links.
 
@@ -125,7 +148,7 @@ def check_links_cli(entity, catalog, wikidata_dump, upload, sandbox, cache, depr
 
 
 def check_links(entity, catalog, wikidata_cache=None):
-    catalog_terms = _get_vocabulary(catalog)
+    pid = target_database.get_pid(catalog)
 
     # Target links
     target = gather_target_links(entity, catalog)
@@ -140,7 +163,7 @@ def check_links(entity, catalog, wikidata_cache=None):
         wikidata = {}
 
         # Wikidata links
-        gather_identifiers(entity, catalog, catalog_terms['pid'], wikidata)
+        gather_identifiers(entity, catalog, pid, wikidata)
         url_pids, ext_id_pids_to_urls = gather_relevant_pids()
         gather_wikidata_links(wikidata, url_pids, ext_id_pids_to_urls)
     else:
@@ -166,9 +189,9 @@ def check_links(entity, catalog, wikidata_cache=None):
 @click.option('--upload/--no-upload', default=True, help='Upload check results to Wikidata. Default: yes.')
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
 @click.option('-c', '--cache', type=click.File(), default=None, help="Load Wikidata metadata previously dumped via '-w'. Default: no.")
-@click.option('-d', '--deprecated', type=click.File('w'), default='output/metadata_deprecated_ids.json', help="Default: 'output/metadata_deprecated_ids.json'")
-@click.option('-a', '--added', type=click.File('w'), default='output/statements_to_be_added.tsv', help="Default: 'output/statements_to_be_added.tsv'")
-@click.option('-w', '--wikidata', type=click.File('w'), default='output/wikidata_metadata.json', help="Default: 'output/wikidata_metadata.json'")
+@click.option('-d', '--deprecated', type=click.File('w'), default='/app/shared/metadata_deprecated_ids.json', help="Default: '/app/shared/metadata_deprecated_ids.json'")
+@click.option('-a', '--added', type=click.File('w'), default='/app/shared/statements_to_be_added.tsv', help="Default: '/app/shared/statements_to_be_added.tsv'")
+@click.option('-w', '--wikidata', type=click.File('w'), default='/app/shared/wikidata_metadata.json', help="Default: '/app/shared/wikidata_metadata.json'")
 def check_metadata_cli(entity, catalog, wikidata_dump, upload, sandbox, cache, deprecated, added, wikidata):
     """Check the validity of identifier statements based on the availability
     of the following metadata: birth/death date, birth/death place, gender.
