@@ -61,6 +61,12 @@ TARGET_CATALOGS = {
             'entity': None,
             'link_entity': None,
             'nlp_entity': None
+        },
+        'writer': {
+            'qid': vocabulary.FILM_WRITER,
+            'entity': None,
+            'link_entity': None,
+            'nlp_entity': None
         }
     },
     'musicbrainz': {
