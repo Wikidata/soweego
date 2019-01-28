@@ -24,6 +24,8 @@ ACTOR_TABLE = "imdb_actor"
 DIRECTOR_TABLE = "imdb_director"
 PRODUCER_TABLE = "imdb_producer"
 WRITER_TABLE = "imdb_writer"
+BASE_PERSON_TABLE = "imdb_base_person"
+PERSON_MOVIE_RELATIONSHIP_TABLE = "imdb_person_movie_relationship"
 
 # actor, director, producer e writer
 
@@ -58,98 +60,57 @@ class ImdbMovieEntity(BASE):
         return f"<ImdbMovieEntity(catalog_id='{self.catalog_id}', title='{self.original_title}')>"
 
 
-class ImdbActorEntity(BaseEntity):
+class ImdbPersonEntity(BaseEntity):
+    __abstract__ = True
+    __tablename__ = BASE_PERSON_TABLE
+    __mapper_args__ = {
+        'polymorphic_identity': __tablename__,
+        'concrete': True}
+
+    # base imdb person entity
+    born_precision = Column(Integer, default=9, nullable=False)
+    died_precision = Column(Integer, default=9, nullable=False)
+
+    # Maybe we should create another table to hold the movie/person relations?
+    known_for_titles = Column(String(255), nullable=True)
+
+    # primaryProfession (array of strings)– the top-3 professions of the person
+
+
+class ImdbActorEntity(ImdbPersonEntity):
     __tablename__ = ACTOR_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
         'concrete': True}
 
 
-class ImdbDirectorEntity(BaseEntity):
+class ImdbDirectorEntity(ImdbPersonEntity):
     __tablename__ = DIRECTOR_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
         'concrete': True}
 
 
-class ImdbProducerEntity(BaseEntity):
+class ImdbProducerEntity(ImdbPersonEntity):
     __tablename__ = PRODUCER_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
         'concrete': True}
 
 
-class ImdbWriterEntity(BaseEntity):
+class ImdbWriterEntity(ImdbPersonEntity):
     __tablename__ = WRITER_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
         'concrete': True}
 
 
-class ImdbPersonEntity(BaseEntity):
-    __tablename__ = "imdb_person"
+class ImdbPersonMovieRelationship(BaseRelationship):
+    __tablename__ = PERSON_MOVIE_RELATIONSHIP_TABLE
+
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
         'concrete': True}
 
-    # born_precision = Column(Integer, default=9, nullable=False)
-    # died_precision = Column(Integer, default=9, nullable=False)
-
-    # birthYear – in YYYY format
-    # deathYear – in YYYY format if applicable, else '\N'
-
-    # = nconst (string) - alphanumeric unique identifier of the name/person
-    # = primaryName (string)– name by which the person is most often credited
-
-    is_actor = Column(Boolean, default=False)
-    known_for_titles = Column(String(255), nullable=True)
-
-    # primaryProfession (array of strings)– the top-3 professions of the person
-
-    # No mapping:
-    # art_department => ???? most people on wikidata have more specific occupations (art director, graphic desginer, etc)
-    # camera_department =>  ?? Q1208175 Camera operator
-    # casting_department =>
-    # costume_department =>
-    # editorial_department =>
-    # electrical_department =>
-    # legal =>
-    # location_management =>
-    # make_up_department =>
-    # music_department =>
-    # production_department =>
-    # script_department =>
-    # sound_department =>
-    # soundtrack =>
-    # transportation_department =>
-
-    # Unsure:
-    # animation_department => Q266569 ?animator (maker of animated films)
-    # assistant => Q23835475 (nearest I could find, helper)
-    # miscellaneous => ??? Maybe extra=> Q658371  <<< think about ignoring
-    # visual_effects => Q1364080 VFX producer, Q1224742 digital image technician, Q28122965 effects animator
-
-    # Ambiguous:
-    # editor => Q7042855 film editor, Q23016178 tv editor (migth need to use both)
-
-    # Direct mapping
-    # actor => Q33999
-    # actress => Q33999 (same ^)
-    # art_director => Q706364
-    # assistant_director => Q1757008
-    # casting_director => Q1049296
-    # cinematographer => Q222344
-    # composer => Q36834
-    # costume_designer => Q1323191
-    # director => Q3455803
-    # executive => Q978044
-    # manager => Q2462658
-    # producer => Q13235160
-    # production_designer => Q2962070
-    # production_manager => Q21292974
-    # publicist => Q4178004
-    # set_decorator => Q6409989
-    # special_effects => Q21560152
-    # stunts => Q465501
-    # talent_agent => Q1344174
-    # writer => Q28389
+    def __repr__(self):
+        return super().__repr__()
