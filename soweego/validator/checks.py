@@ -17,8 +17,8 @@ import click
 from soweego.commons import target_database
 from soweego.commons.constants import HANDLED_ENTITIES, TARGET_CATALOGS
 from soweego.commons.data_gathering import (extract_ids_from_urls,
-                                            gather_identifiers,
                                             gather_relevant_pids,
+                                            gather_target_ids,
                                             gather_target_links,
                                             gather_target_metadata,
                                             gather_wikidata_links,
