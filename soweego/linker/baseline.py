@@ -35,7 +35,7 @@ WD_IO_FILENAME = 'wikidata_%s_dataset.jsonl.gz'
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
 @click.option('-o', '--output-dir', type=click.Path(file_okay=False), default='/app/shared',
               help="default: '/app/shared'")
-def baseline(target, target_type, strategy, upload, sandbox, output_dir):
+def cli(target, target_type, strategy, upload, sandbox, output_dir):
     """Rule-based matching strategies.
 
     SOURCE must be {string: identifier} JSON files.

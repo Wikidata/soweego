@@ -2,7 +2,7 @@ import click
 from soweego.linker import baseline, edit_distance
 
 CLI_COMMANDS = {
-    'baseline': baseline.baseline,
+    'baseline': baseline.cli,
     'edit-distance': edit_distance.cli
 }
 
