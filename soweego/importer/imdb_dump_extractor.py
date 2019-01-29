@@ -14,6 +14,7 @@ import csv
 import gzip
 import logging
 import datetime
+from typing import Dict
 
 import requests
 
@@ -34,27 +35,25 @@ DUMP_URL_MOVIE_INFO = "https://datasets.imdbws.com/title.basics.tsv.gz"
 class ImdbDumpExtractor(BaseDumpExtractor):
 
     # Counters
-    total_entities = 0
-    musicians = 0
-    musician_links = 0
-    musician_nlp = 0
-    bands = 0
-    band_links = 0
-    band_nlp = 0
-    valid_links = 0
-    dead_links = 0
+    n_total_entities = 0
+    n_movies = 0
+    n_actors = 0
+    n_directors = 0
+    n_producers = 0
+    n_writers = 0
 
     def get_dump_download_url(self) -> str:
         return DUMP_URL_PERSON_INFO
 
     def _download_movies_dataset(self, dump_file_path: str):
-        
+
         filename = DUMP_URL_MOVIE_INFO.split("/")[-1]
 
         # the files get updated once each day, so we downloa the file for today
         filename = datetime.date.today().strftime('%d-%m-%Y-') + filename
 
-        path_to_download = "/".join(dump_file_path.split("/")[:-1]) + "/" + filename
+        path_to_download = "/".join(dump_file_path.split("/")
+                                    [:-1]) + "/" + filename
 
         # Check if the current dump is up-to-date
         if not os.path.isfile(path_to_download):
@@ -62,12 +61,22 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
         return path_to_download
 
+    def _normalize_null(self, entity: Dict):
+        """
+        IMDB represents a null entry with \\N , we want to convert
+        all \\N to None so that they're saved as null in the database
+        """
+
+        for k, v in entity.items():
+            if v == "\\N":
+                entity[k] = None
+
     def extract_and_populate(self, dump_file_path: str):
 
         start = datetime.datetime.now()
 
         tables = [
-            imdb_entity.ImdbMovieEntity,
+            # imdb_entity.ImdbMovieEntity,
             imdb_entity.ImdbActorEntity,
             imdb_entity.ImdbDirectorEntity,
             imdb_entity.ImdbProducerEntity,
@@ -76,243 +85,109 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         ]
 
         db_manager = DBManager()
-        LOGGER.info(f"Connected to database: {db_manager.get_engine().url}")
+        LOGGER.info("Connected to database: %s", db_manager.get_engine().url)
 
         db_manager.drop(tables)
         db_manager.create(tables)
 
-        LOGGER.info(
-            f"SQL tables dropped and re-created: {[table.__tablename__ for table in tables]}")
+        LOGGER.info("SQL tables dropped and re-created: %s",
+                    [table.__tablename__ for table in tables])
+
         LOGGER.info("Downloading movie dataset")
 
         movies_file_path = self._download_movies_dataset(dump_file_path)
 
-        LOGGER.info(
-            f"Movie dataset has been downloaded to '{movies_file_path}'")
+        LOGGER.info("Movie dataset has been downloaded to '%s'",
+                    movies_file_path)
 
         LOGGER.info("Starting to import movies from imdb dump")
 
         with gzip.open(movies_file_path, "rt") as mdump:
             reader = csv.DictReader(mdump, delimiter="\t")
-            for movie in reader:
+            for movie_info in reader:
+                self._normalize_null(movie_info)
+
+                session = db_manager.new_session()
+
                 movie_entity = imdb_entity.ImdbMovieEntity()
-                movie_entity.catalog_id = movie.get("nconst")
-                # movie_entity.title_type = movie.get()
+                movie_entity.catalog_id = movie_info.get("tconst")
+                movie_entity.title_type = movie_info.get("titleType")
+                movie_entity.primary_title = movie_info.get("primaryTitle")
+                movie_entity.original_title = movie_info.get("originalTitle")
+                movie_entity.is_adult = True if movie_info.get(
+                    "isAdult") == "1" else False
+                movie_entity.start_year = movie_info.get("startYear")
+                movie_entity.end_year = movie_info.get("endYear")
+                movie_entity.runtime_minutes = movie_info.get("runtimeMinutes")
 
+                if movie_info.get("genres"):  # if movie has a genre specified
+                    movie_entity.genres = movie_info.get("genres").split(",")
 
-        LOGGER.info(
-            f"Starting import persons from IMDB dump '{dump_file_path}'")
+                session.add(movie_entity)
+                session.commit()
+
+                self.n_movies += 1
+
+        LOGGER.info("Starting import persons from IMDB dump '%s'",
+                    dump_file_path)
 
         with gzip.open(dump_file_path, "rt") as pdump:
             reader = csv.DictReader(pdump, delimiter="\t")
+            for person_info in reader:
+                self._normalize_null(person_info)
 
-            for person in reader:
-                print(person)
-                raise Exception
+                professions = person_info.get("primaryProfession")
 
-    #     with gzip.open(dump_file_path, 'rt') as dump:
-    #         for _, node in et.iterparse(dump):
-    #             if not node.tag == 'artist':
-    #                 continue
+                # if person has no professions then ignore it
+                if not professions:
+                    continue
 
-    #             # Skip nodes without required fields
-    #             identifier = node.findtext('id')
-    #             if not identifier:
-    #                 LOGGER.warning(
-    #                     'Skipping import for artist node with no identifier: %s', node)
-    #                 continue
-    #             name = node.findtext('name')
-    #             if not name:
-    #                 LOGGER.warning(
-    #                     'Skipping import for identifier with no name: %s', identifier)
-    #                 continue
+                professions = professions.split(",")
 
-    #             living_links = self._extract_living_links(node, identifier)
+                session = db_manager.new_session()
 
-    #             session = db_manager.new_session()
+                types_of_entities = []
+                if "actor" in professions or "actress" in professions:
+                    types_of_entities.append(imdb_entity.ImdbActorEntity())
 
-    #             # Musician
-    #             groups = node.find('groups')
-    #             members = node.find('members')
-    #             if groups:
-    #                 entity = discogs_entity.DiscogsMusicianEntity()
-    #                 self._populate_musician(
-    #                     entity, identifier, name, living_links, node, session)
-    #             # Band
-    #             elif members:
-    #                 entity = discogs_entity.DiscogsGroupEntity()
-    #                 self._populate_band(entity, identifier,
-    #                                     name, living_links, node, session)
-    #             # Can't infer the entity type, so populate both
-    #             else:
-    #                 LOGGER.debug(
-    #                     'Unknown artist type. Will add it to both musicians and bands: %s', identifier)
-    #                 entity = discogs_entity.DiscogsMusicianEntity()
-    #                 self._populate_musician(
-    #                     entity, identifier, name, living_links, node, session)
-    #                 entity = discogs_entity.DiscogsGroupEntity()
-    #                 self._populate_band(entity, identifier,
-    #                                     name, living_links, node, session)
+                if "director" in professions:
+                    types_of_entities.append(imdb_entity.ImdbDirectorEntity())
 
-    #             session.commit()
-    #             LOGGER.debug('%d entities imported so far: %d musicians with %d links, %d bands with %d links, %d discarded dead links.',
-    #                          self.total_entities, self.musicians, self.musician_links, self.bands, self.band_links, self.dead_links)
+                if "producer" in professions:
+                    types_of_entities.append(imdb_entity.ImdbProducerEntity())
 
-    #     end = datetime.now()
-    #     LOGGER.info('Import completed in %s. Total entities: %d - %d musicians with %d links - %d bands with %d links - %d discarded dead links.',
-    #                 end - start, self.total_entities, self.musicians, self.musician_links, self.bands, self.band_links, self.dead_links)
+                if "writer" in professions:
+                    types_of_entities.append(imdb_entity.ImdbWriterEntity())
 
-    # def _populate_band(self, entity: discogs_entity.DiscogsGroupEntity, identifier, name, links, node, session):
-    #     # Main entity
-    #     self._fill_entity(entity, identifier, name, node)
-    #     session.add(entity)
-    #     self.bands += 1
-    #     self.total_entities += 1
-    #     # Textual data
-    #     self._populate_nlp_entity(
-    #         session, node, discogs_entity.DiscogsGroupNlpEntity, identifier)
-    #     # Denormalized name variations
-    #     self._populate_name_variations(session, node, entity, identifier)
-    #     # Links
-    #     self._populate_links(
-    #         session, links, discogs_entity.DiscogsGroupLinkEntity, identifier)
-    #     # TODO populate group -> musicians relationship table
-    #     #  for member in list(members):
-    #     #      get member.attrib['id']
+                for etype in types_of_entities:
+                    self._populate_person(etype, person_info, session)
 
-    # def _populate_musician(self, entity: discogs_entity.DiscogsMusicianEntity, identifier, name, links, node, session):
-    #     # Main entity
-    #     self._fill_entity(entity, identifier, name, node)
-    #     session.add(entity)
-    #     self.musicians += 1
-    #     self.total_entities += 1
-    #     # Textual data
-    #     self._populate_nlp_entity(
-    #         session, node, discogs_entity.DiscogsMusicianNlpEntity, identifier)
-    #     # Denormalized name variations
-    #     self._populate_name_variations(session, node, entity, identifier)
-    #     # Links
-    #     self._populate_links(
-    #         session, links, discogs_entity.DiscogsMusicianLinkEntity, identifier)
-    #     # TODO populate musician -> groups relationship table
-    #     #  for group in list(groups):
-    #     #      get group.attrib['id']
+                if person_info.get("knownForTitles"):
+                    self._populate_person_movie_relations(person_info, session)
 
-    # def _populate_links(self, session, links, entity_class, identifier):
-    #     for link in links:
-    #         link_entity = entity_class()
-    #         self._fill_link_entity(link_entity, identifier, link)
-    #         session.add(link_entity)
+                session.commit()
 
-    # def _populate_name_variations(self, session, artist_node, current_entity, identifier):
-    #     name_variations_node = artist_node.find('namevariations')
-    #     if name_variations_node:
-    #         children = list(name_variations_node)
-    #         if children:
-    #             session.add_all(self._denormalize_name_variation_entities(
-    #                 current_entity, children))
-    #         else:
-    #             LOGGER.debug(
-    #                 'Artist %s has an empty <namevariations/> tag', identifier)
-    #     else:
-    #         LOGGER.debug(
-    #             'Artist %s has no <namevariations> tag', identifier)
+    def _populate_person(self, person_entity: imdb_entity.ImdbPersonEntity, person_info: Dict, session: object):
+        person_entity.catalog_id = person_info.get("nconst")
+        person_entity.name = person_info.get("primaryName")
+        person_entity.tokens = " ".join(
+            text_utils.tokenize(person_entity.name))
 
-    # def _populate_nlp_entity(self, session, artist_node, entity_class, identifier):
-    #     profile = artist_node.findtext('profile')
-    #     if profile:
-    #         nlp_entity = entity_class()
-    #         nlp_entity.catalog_id = identifier
-    #         nlp_entity.description = profile
-    #         nlp_entity.tokens = ' '.join(text_utils.tokenize(profile))
-    #         session.add(nlp_entity)
-    #         self.total_entities += 1
-    #         if 'Musician' in entity_class.__name__:
-    #             self.musician_nlp += 1
-    #         else:
-    #             self.band_nlp += 1
-    #     else:
-    #         LOGGER.debug('Artist %s has an empty <profile/> tag', identifier)
+        person_entity.born = person_info.get("birthYear")
+        person_entity.died = person_info.get("deathYear")
 
-    # def _fill_entity(self, entity: discogs_entity.DiscogsBaseEntity, identifier, name, artist_node):
-    #     # Required fields
-    #     entity.catalog_id = identifier
-    #     entity.name = name
-    #     entity.tokens = ' '.join(text_utils.tokenize(name))
-    #     # Real name
-    #     real_name = artist_node.findtext('realname')
-    #     if real_name:
-    #         entity.real_name = real_name
-    #     else:
-    #         LOGGER.debug(
-    #             'Artist %s has an empty <realname/> tag', identifier)
-    #     # Data quality
-    #     data_quality = artist_node.findtext('data_quality')
-    #     if data_quality:
-    #         entity.data_quality = data_quality
-    #     else:
-    #         LOGGER.debug(
-    #             'Artist %s has an empty <data_quality/> tag', identifier)
+        if person_info.get("primaryProfession"):
+            person_entity.occupations = person_info.get(
+                "primaryProfession").split()
 
-    # def _denormalize_name_variation_entities(self, main_entity: discogs_entity.DiscogsBaseEntity, name_variation_nodes):
-    #     entity_class = type(main_entity)
-    #     for node in name_variation_nodes:
-    #         name_variation = node.text
-    #         if not name_variation:
-    #             LOGGER.debug(
-    #                 'Artist %s: skipping empty <name> tag in <namevariations>', main_entity.catalog_id)
-    #             continue
-    #         variation_entity = entity_class()
-    #         variation_entity.catalog_id = main_entity.catalog_id
-    #         variation_entity.name = name_variation
-    #         variation_entity.tokens = ' '.join(
-    #             text_utils.tokenize(name_variation))
-    #         variation_entity.real_name = main_entity.real_name
-    #         variation_entity.data_quality = main_entity.data_quality
-    #         self.total_entities += 1
-    #         if 'Musician' in entity_class.__name__:
-    #             self.musicians += 1
-    #         else:
-    #             self.bands += 1
-    #         yield variation_entity
+        session.add(person_entity)
 
-    # def _extract_living_links(self, artist_node, identifier):
-    #     LOGGER.debug('Extracting living links from artist %s', identifier)
-    #     urls = artist_node.find('urls')
-    #     if urls:
-    #         for url_element in urls.iterfind('url'):
-    #             url = url_element.text
-    #             if not url:
-    #                 LOGGER.debug(
-    #                     'Artist %s: skipping empty <url> tag', identifier)
-    #                 continue
-    #             for alive_link in self._check_link(url):
-    #                 yield alive_link
+    def _populate_person_movie_relations(self, person_info: Dict, session: object):
+        know_for_titles = person_info.get(
+            "knownForTitles").split(",")
 
-    # def _check_link(self, link):
-    #     LOGGER.debug('Processing link <%s>', link)
-    #     clean_parts = url_utils.clean(link)
-    #     LOGGER.debug('Clean link: %s', clean_parts)
-    #     for part in clean_parts:
-    #         valid = url_utils.validate(part)
-    #         if not valid:
-    #             self.dead_links += 1
-    #             continue
-    #         LOGGER.debug('Valid URL: <%s>', valid)
-    #         alive = url_utils.resolve(valid)
-    #         if not alive:
-    #             self.dead_links += 1
-    #             continue
-    #         LOGGER.debug('Living URL: <%s>', alive)
-    #         self.valid_links += 1
-    #         yield alive
-
-    # def _fill_link_entity(self, entity: BaseLinkEntity, identifier, url):
-    #     entity.catalog_id = identifier
-    #     entity.url = url
-    #     entity.is_wiki = url_utils.is_wiki_link(url)
-    #     entity.tokens = '|'.join(url_utils.tokenize(url))
-    #     if isinstance(entity, discogs_entity.DiscogsMusicianLinkEntity):
-    #         self.musician_links += 1
-    #     elif isinstance(entity, discogs_entity.DiscogsGroupLinkEntity):
-    #         self.band_links += 1
+        for title in know_for_titles:
+            session.add(imdb_entity.ImdbPersonMovieRelationship(
+                from_id=person_info.get("nconst"),
+                to_id=title
+            ))
