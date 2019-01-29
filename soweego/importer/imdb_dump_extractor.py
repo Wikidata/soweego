@@ -95,8 +95,10 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         with gzip.open(movies_file_path, "rt") as mdump:
             reader = csv.DictReader(mdump, delimiter="\t")
             for movie in reader:
-                print(movie)
-                raise Exception
+                movie_entity = imdb_entity.ImdbMovieEntity()
+                movie_entity.catalog_id = movie.get("nconst")
+                # movie_entity.title_type = movie.get()
+
 
         LOGGER.info(
             f"Starting import persons from IMDB dump '{dump_file_path}'")
