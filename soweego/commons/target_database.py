@@ -7,11 +7,11 @@ def available_targets():
 
 
 def available_types():
-    result = set()
+    result = []
     for key in TARGET_CATALOGS:
         for k in TARGET_CATALOGS[key].keys():
-            result.add(k)
-    return list(result)
+            result.append(k)
+    return list(set(result))
 
 
 def available_types_for_target(target):
