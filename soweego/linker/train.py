@@ -9,163 +9,141 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+import gzip
 import logging
 import os
 
 import click
 import recordlinkage as rl
-from pandas import DataFrame, read_json
+from pandas import read_json
+from sklearn.externals import joblib
 
-from soweego.commons import (constants, data_gathering, target_database,
-                             text_utils, url_utils)
-from soweego.linker.feature_extraction import StringList, UrlList
-from soweego.validator.checks import get_vocabulary
+from soweego.commons import constants, data_gathering, target_database
+from soweego.linker import workflow
+from soweego.wikidata.api_requests import get_data_for_linker
 
 LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
+@click.argument('classifier', type=click.Choice(constants.CLASSIFIERS))
 @click.argument('target', type=click.Choice(target_database.available_targets()))
 @click.argument('target_type', type=click.Choice(target_database.available_types()))
-@click.option('-c', '--cache', type=click.File(), default=None, help="Load dumped Wikidata training set. Default: no.")
-@click.option('-o', '--output-dir', type=click.Path(file_okay=False), default='/app/shared')
-def cli(target, target_type, cache, output_dir):
-    """Build the training set."""
-    wikidata_df, target_df = build(target, target_type, cache)
-    wikidata_df.to_json(os.path.join(
-        output_dir, 'wikidata_%s_training_set.json' % target))
-    target_df.to_json(os.path.join(output_dir, '%s_training_set' % target))
+@click.option('-b', '--binarize', default=0.1, help="Default: 0.1")
+@click.option('-o', '--output-dir', type=click.Path(file_okay=False), default='/app/shared', help="Default: '/app/shared'")
+def cli(classifier, target, target_type, binarize, output_dir):
+    """Train a supervised classifier for probabilistic linking."""
+
+    model = execute(
+        constants.CLASSIFIERS[classifier], target, target_type, binarize, output_dir)
+    outfile = os.path.join(
+        output_dir, constants.LINKER_MODEL % (target, classifier))
+    joblib.dump(model, outfile)
+    LOGGER.info("%s model dumped to '%s'", classifier, outfile)
 
 
-def train(catalog, entity, classifier, wikidata_cache=None):
-    wikidata, target = build(catalog, entity, wikidata_cache)
-    preprocess(wikidata, target)
-    candidate_pairs = block(wikidata, target)
-    feature_vectors = extract_features(candidate_pairs, wikidata, target)
-    classifier.fit(feature_vectors, candidate_pairs)
+def execute(classifier, catalog, entity, binarize, dir_io):
+    wd_reader, target_reader = _build(catalog, entity, dir_io)
+    wd, target = workflow.preprocess(wd_reader, target_reader)
+    candidate_pairs = _block(wd, target)
+    feature_vectors = workflow.extract_features(candidate_pairs, wd, target)
+    return _train(classifier, feature_vectors, candidate_pairs, binarize)
 
 
-def build(catalog, entity, wikidata_cache):
-    catalog_terms = get_vocabulary(catalog)
+def _train(classifier, feature_vectors, candidate_pairs, binarize):
+    # TODO expose other useful parameters
+    if classifier is rl.NaiveBayesClassifier:
+        model = classifier(binarize=binarize)
+    elif classifier is rl.SVMClassifier:
+        # TODO implement SVM
+        raise NotImplementedError
+    LOGGER.info('Training a %s', classifier.__name__)
+    model.fit(feature_vectors, candidate_pairs)
+    LOGGER.info('Training done')
+    return model
+
+
+def _build(catalog, entity, dir_io):
+    LOGGER.info("Building %s %s training set, I/O directory: '%s'",
+                catalog, entity, dir_io)
+
+    catalog_pid = target_database.get_pid(catalog)
+    qids_and_tids = {}
+
+    data_gathering.gather_target_ids(
+        entity, catalog, catalog_pid, qids_and_tids)
 
     # Wikidata
-    if wikidata_cache is None:
-        wikidata = {}
-
-        data_gathering.gather_target_ids(
-            entity, catalog, catalog_terms['pid'], wikidata)
+    wd_io_path = os.path.join(dir_io, constants.WD_TRAINING % catalog)
+    if os.path.exists(wd_io_path):
+        LOGGER.info(
+            "Will reuse existing Wikidata training set: '%s'", wd_io_path)
+    else:
+        LOGGER.info(
+            "Building Wikidata training set, output file '%s' ...", wd_io_path)
         url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
-        data_gathering.gather_wikidata_dataset(
-            wikidata, url_pids, ext_id_pids_to_urls)
-        wikidata_df = DataFrame.from_dict(wikidata, orient='index')
-    else:
-        wikidata_df = read_json(wikidata_cache)
+        with gzip.open(wd_io_path, 'wt') as wd_io:
+            get_data_for_linker(qids_and_tids.keys(
+            ), url_pids, ext_id_pids_to_urls, wd_io, qids_and_tids=qids_and_tids)
+
+    wd_df_reader = read_json(wd_io_path, lines=True, chunksize=1000)
+
+    LOGGER.info('Wikidata training set built')
 
     # Target
-    target_ids = get_target_ids(wikidata_cache, wikidata, wikidata_df)
-    target = data_gathering.gather_target_dataset(
-        entity, catalog, target_ids, False)
-    target_df = DataFrame.from_dict(target, orient='index')
-
-    return wikidata_df, target_df
-
-
-def get_target_ids(wikidata_cache, wikidata, wikidata_df):
-    identifiers = set()
-    if wikidata_cache is None:
-        for data in wikidata.values():
-            for identifier in data['identifiers']:
-                identifiers.add(identifier)
+    target_io_path = os.path.join(
+        dir_io, constants.TARGET_TRAINING % catalog)
+    if os.path.exists(target_io_path):
+        LOGGER.info("Will reuse existing %s training set: '%s'",
+                    catalog, target_io_path)
     else:
-        ids_series = wikidata_df.identifiers.to_dict()
-        for array in ids_series.values():
-            for identifier in array:
-                identifiers.add(identifier)
-    return identifiers
+        LOGGER.info(
+            "Building target training set, output file '%s' ...", target_io_path)
+        tids = set()
+        for data in qids_and_tids.values():
+            for identifier in data[constants.TID]:
+                tids.add(identifier)
+        # Dataset
+        with gzip.open(target_io_path, 'wt') as target_io:
+            data_gathering.gather_target_dataset(
+                entity, catalog, tids, target_io, for_linking=False)
+
+    # Enforce target id as a string
+    target_df_reader = read_json(
+        target_io_path, lines=True, chunksize=1000, dtype={constants.TID: str})
+
+    LOGGER.info('Target training set built')
+
+    return wd_df_reader, target_df_reader
 
 
-def preprocess(wikidata_df, target_df):
-    # Wikidata
-    # Tokenize & join strings lists columns
-    for column in (constants.DF_LABEL, constants.DF_ALIAS, constants.DF_PSEUDONYM):
-        wikidata_df['%s_tokens' % column] = wikidata_df[column].map(
-            _preprocess_strings_list, na_action='ignore')
-    # Tokenize & join URLs lists
-    wikidata_df['%s_tokens' % constants.DF_URL] = wikidata_df[constants.DF_URL].map(
-        _preprocess_urls_list, na_action='ignore')
-    # Join the list of descriptions
-    # TODO It certainly doesn't make sense to compare descriptions in different languages
-    wikidata_df[constants.DF_DESCRIPTION] = wikidata_df[constants.DF_DESCRIPTION].map(
-        lambda row: ' '.join(row), na_action='ignore')
+def _block(wikidata_df, target_df):
+    on_column = constants.TID
 
-    # Target
-    target_df[constants.DF_DESCRIPTION] = target_df[constants.DF_DESCRIPTION].map(
-        lambda row: ' '.join(row), na_action='ignore')
+    LOGGER.info("Blocking on column '%s'", on_column)
 
-
-def _preprocess_strings_list(strings_list):
-    joined = []
-    for value in strings_list:
-        tokens = text_utils.tokenize(value)
-        if tokens:
-            joined.append(' '.join(tokens))
-    return joined
-
-
-def _preprocess_urls_list(urls_list):
-    joined = []
-    for value in urls_list:
-        tokens = url_utils.tokenize(value)
-        if tokens:
-            joined.append(' '.join(tokens))
-    return joined
-
-
-def block(wikidata_df, target_df):
-    """Block on target identifiers"""
-    # Join the list of identifiers
-    # TODO in this way, we can't block on QIDs that have multiple target IDs
-    wikidata_df['identifiers'] = wikidata_df['identifiers'].map(
-        lambda row: ' '.join(row))
-    # Make a target ID column from the row labels
-    target_df['identifier'] = target_df.index.to_series().astype(str)
     idx = rl.Index()
-    idx.block('identifiers', 'identifier')
-    return idx.index(wikidata_df, target_df)
+    idx.block(on_column)
+    candidate_pairs = idx.index(wikidata_df, target_df)
 
+    LOGGER.info('Blocking index built')
 
-def extract_features(candidate_pairs, wikidata_df, target_df):
-    compare = rl.Compare()
-    # TODO similar name match as a feature
-    # TODO feature engineering on more fields
-    # wikidata columns = Index(['identifiers', 'label', 'alias', 'description', 'url', 'given_name',
-    #    'date_of_birth', 'date_of_death', 'place_of_death', 'birth_name',
-    #    'place_of_birth', 'sex_or_gender', 'family_name', 'pseudonym'],
-    # discogs columns = Index(['description_tokens', 'name_tokens', 'description', 'url', 'url_tokens',
-    #    'name', 'born', 'born_precision', 'real_name', 'is_wiki',
-    #    'data_quality', 'died', 'died_precision', 'identifier'],
-    # Feature 1: exact match on URLs
-    compare.add(UrlList('url', 'url', label='url_exact'))
-    # Feature 2: dates
-    # TODO parse dates
-    # compare.date('date_of_birth', 'born', label='birth_date')
-    # compare.date('date_of_death', 'died', label='death_date')
-    # Feature 3: Levenshtein distance on names
-    compare.add(StringList('label_tokens',
-                           'name_tokens', label='name_levenshtein'))
-    # Feture 4: cosine similarity on descriptions
-    compare.add(StringList('description', 'description',
-                           algorithm='cosine', analyzer='soweego', label='description_cosine'))
-    return compare.compute(candidate_pairs, wikidata_df, target_df)
+    return candidate_pairs
 
 
 if __name__ == "__main__":
-    wd = read_json(
-        '/tmp/soweego_shared/wikidata_discogs_training_set.json')
-    t = read_json('/tmp/soweego_shared/discogs_training_set')
-    preprocess(wd, t)
-    cp = block(wd, t)
-    fv = extract_features(cp, wd, t)
-    nb = rl.NaiveBayesClassifier(binarize=0.1)
-    nb.fit(fv, cp)
-    print()
+    pass
+    # wd = read_json(
+    #     '/tmp/soweego_shared/wikidata_discogs_training_set.json')
+    # t = read_json('/tmp/soweego_shared/discogs_training_set')
+    # workflow.clean(wd, t)
+    # cp = block(wd, t)
+    # fv = workflow.extract_features(cp, wd, t)
+    # nb = rl.NaiveBayesClassifier(binarize=0.1)
+    # nb.fit(fv, cp)
+    # build('discogs', 'musician', '.')
+    # tracemalloc.start()
+    # execute('discogs', 'musician', '/Users/focs/soweego')
+    # snapshot = tracemalloc.take_snapshot()
+    # for stat in snapshot.statistics('lineno')[:10]:
+    # print(stat)
