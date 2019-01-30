@@ -9,6 +9,8 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+from recordlinkage import NaiveBayesClassifier, SVMClassifier
+
 from soweego.importer.models import discogs_entity, musicbrainz_entity
 from soweego.wikidata import vocabulary
 
@@ -96,11 +98,28 @@ TARGET_CATALOGS = {
     }
 }
 
-# DataFrame column names
-DF_QID = 'qid'
-DF_TID = 'tid'
-DF_LABEL = 'label'
-DF_ALIAS = 'alias'
-DF_PSEUDONYM = 'pseudonym'
-DF_DESCRIPTION = 'description'
-DF_URL = 'url'
+# Wikidata & target field names
+QID = 'qid'
+TID = 'tid'
+LABEL = 'label'
+ALIAS = 'alias'
+PSEUDONYM = 'pseudonym'
+DESCRIPTION = 'description'
+URL = 'url'
+
+# File names
+WD_DATASET_IO = 'wikidata_%s_dataset.jsonl.gz'
+TARGET_DATASET_IO = '%s_dataset.jsonl.gz'
+WD_DATASET_DATAFRAME_OUT = 'wikidata_%s_dataset.pkl.gz'
+WD_TRAINING = 'wikidata_%s_training_set.jsonl.gz'
+TARGET_TRAINING = '%s_training_set.jsonl.gz'
+LINKER_MODEL = '%s_%s_model.pkl'
+LINKER_RESULT = '%s_linker_result.jsonl.gz'
+
+# Supervised classification algorithms
+CLASSIFIERS = {
+    'naive_bayes': NaiveBayesClassifier,
+    'support_vector_machines': SVMClassifier,
+    'nb': NaiveBayesClassifier,  # Shorthand
+    'svm': SVMClassifier  # Shorthand
+}
