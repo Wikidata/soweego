@@ -65,7 +65,7 @@ class StringList(BaseCompareFeature):
 
     # Adapted from https://github.com/J535D165/recordlinkage/blob/master/recordlinkage/algorithms/string.py
     # Average the edit distance among the list of values
-    # TODO issue 1: it doesn't makes sense to compare names in different languages
+    # TODO issue 1: it doesn't make sense to compare names in different languages
     # TODO issue 2: low scores if name is swapped with surname
     def levenshtein_similarity(self, source_column, target_column):
         concatenated = pandas.Series(list(zip(source_column, target_column)))
