@@ -14,35 +14,47 @@ import logging
 import os
 
 import click
-from pandas import read_json
+import recordlinkage as rl
+from pandas import DataFrame, concat, read_json
+from sklearn.externals import joblib
 
-from soweego.commons import data_gathering, target_database
-from soweego.validator.checks import get_vocabulary
+from soweego.commons import constants, data_gathering, target_database
+from soweego.linker import workflow
 from soweego.wikidata.api_requests import get_data_for_linker
 
 LOGGER = logging.getLogger(__name__)
-WD_IO_FILENAME = 'wikidata_%s_dataset.jsonl.gz'
-TARGET_IO_FILENAME = '%s_dataset.jsonl.gz'
-WD_DF_FILEOUT = 'wikidata_%s_dataset.pkl.gz'
 
-
-# TODO how to get the whole dataframe: wd_df = pd.concat([pd.DataFrame(chunk) for chunk in wd_df_reader], ignore_index=True, sort=False)
 
 @click.command()
 @click.argument('target', type=click.Choice(target_database.available_targets()))
 @click.argument('target_type', type=click.Choice(target_database.available_types()))
+@click.argument('model', type=click.File())
 @click.option('-o', '--output-dir', type=click.Path(file_okay=False), default='/app/shared', help="Default: '/app/shared'")
-def cli(target, target_type, output_dir):
-    """Supervised linking."""
-    wikidata_df, target_df = build(target, target_type, output_dir)
+def cli(target, target_type, model, output_dir):
+    """Run a probabilistic linker."""
+    result = execute(target, target_type, model, output_dir)
+    result.to_json(os.path.join(
+        output_dir, constants.LINKER_RESULT % target), lines=True)
 
 
-def build(catalog, entity, dirout):
-    catalog_terms = get_vocabulary(catalog)
-    catalog_pid = catalog_terms['pid']
+def execute(catalog, entity, model, dir_io):
+    wd_reader, target_reader = build(catalog, entity, dir_io)
+    wd = concat([DataFrame(chunk)
+                 for chunk in wd_reader], ignore_index=True, sort=False)
+    target = concat([DataFrame(chunk)
+                     for chunk in target_reader], ignore_index=True, sort=False)
+    workflow.preprocess(wd, target)
+    candidate_pairs = block(wd, target)
+    feature_vectors = workflow.extract_features(candidate_pairs, wd, target)
+    classifier = joblib.load(model)
+    return classifier.predict(feature_vectors)
+
+
+def build(catalog, entity, dir_io):
+    catalog_pid = target_database.get_pid(catalog)
 
     # Wikidata
-    wd_io_path = os.path.join(dirout, WD_IO_FILENAME % catalog)
+    wd_io_path = os.path.join(dir_io, constants.WD_DATASET_IO % catalog)
     if not os.path.exists(wd_io_path):
         qids = data_gathering.gather_qids(entity, catalog, catalog_pid)
         url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
@@ -53,15 +65,16 @@ def build(catalog, entity, dirout):
                              chunksize=1000, orient='index')
 
     # Target
-    target_io_path = os.path.join(dirout, TARGET_IO_FILENAME % catalog)
+    target_io_path = os.path.join(
+        dir_io, constants.TARGET_DATASET_IO % catalog)
     if not os.path.exists(target_io_path):
-        # Get ids from Wikidata
-        qids_and_ids = {}
+        # Get target ids from Wikidata
+        qids_and_tids = {}
         data_gathering.gather_target_ids(
-            entity, catalog, catalog_pid, qids_and_ids)
+            entity, catalog, catalog_pid, qids_and_tids)
         target_ids = set()
-        for data in qids_and_ids.values():
-            for identifier in data['identifiers']:
+        for data in qids_and_tids.values():
+            for identifier in data[constants.TID]:
                 target_ids.add(identifier)
         # Dataset
         with gzip.open(target_io_path, 'wt') as target_io:
@@ -74,6 +87,13 @@ def build(catalog, entity, dirout):
     return wd_df_reader, target_df_reader
 
 
+def block(wikidata_df, target_df):
+    # TODO blocking with full-text index query, right now just on WD birth name and Discogs real name
+    idx = rl.Index()
+    idx.block('birth_name', 'real_name')
+    return idx.index(wikidata_df, target_df)
+
+
 if __name__ == "__main__":
-    build('imdb', 'actor', '.')
-    # data_gathering.gather_target_identifiers('actor', 'imdb', 'P345', {})
+    results = execute('discogs', 'musician', 'discogs_model.pkl', '.')
+    print()
