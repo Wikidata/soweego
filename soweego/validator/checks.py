@@ -15,34 +15,16 @@ from collections import defaultdict
 
 import click
 
-from soweego.commons import constants, target_database
-from soweego.commons.data_gathering import (extract_ids_from_urls,
-                                            gather_relevant_pids,
-                                            gather_target_ids,
-                                            gather_target_links,
-                                            gather_target_metadata,
-                                            gather_wikidata_links,
-                                            gather_wikidata_metadata)
+from soweego.commons import constants, data_gathering, target_database
 from soweego.commons.db_manager import DBManager
-from soweego.importer.models.base_entity import BaseEntity
 from soweego.ingestor import wikidata_bot
-from soweego.wikidata import sparql_queries
 
 LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
-<<<<<<< HEAD
-@click.argument('wikidata_query', type=click.Choice(constants.SUPPORTED_QUERY_TYPES))
-@click.argument('class_qid')
-@click.argument('catalog_pid')
-@click.argument('catalog', type=click.Choice(target_database.available_targets()))
-@click.argument('entity_type', type=click.Choice(target_database.available_types()))
-@click.option('-o', '--outfile', type=click.File('w'), default='output/non_existent_ids.json', help="default: 'output/non_existent_ids.json'")
-def check_existence_cli(wikidata_query, class_qid, catalog_pid, catalog, entity_type, outfile):
-=======
-@click.argument('entity', type=click.Choice(HANDLED_ENTITIES.keys()))
-@click.argument('catalog', type=click.Choice(TARGET_CATALOGS.keys()))
+@click.argument('entity', type=click.Choice(constants.HANDLED_ENTITIES.keys()))
+@click.argument('catalog', type=click.Choice(constants.TARGET_CATALOGS.keys()))
 @click.option('--wikidata-dump/--no-wikidata-dump', default=False, help='Dump links gathered from Wikidata. Default: no.')
 @click.option('--upload/--no-upload', default=True, help='Upload check results to Wikidata. Default: yes.')
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
@@ -50,12 +32,10 @@ def check_existence_cli(wikidata_query, class_qid, catalog_pid, catalog, entity_
 @click.option('-d', '--deprecated', type=click.File('w'), default='/app/shared/entities_deprecated_ids.json', help="Default: '/app/shared/entities_deprecated_ids.json'")
 @click.option('-w', '--wikidata', type=click.File('w'), default='/app/shared/wikidata_entities.json', help="Default: '/app/shared/wikidata_entities.json'")
 def check_existence_cli(entity, catalog, wikidata_dump, upload, sandbox, cache, deprecated, wikidata):
->>>>>>> 4e1e2ecf2cb4c87a3a5ec6c77d080e5aaed8d8de
     """Check the existence of identifier statements.
 
     Dump a JSON file of invalid ones ``{identifier: QID}``
     """
-
     if cache is None:
         invalid, wikidata_cache = check_existence(entity, catalog)
     else:
@@ -82,41 +62,24 @@ def check_existence(entity, catalog, wikidata_cache=None):
         wikidata = {}
 
         pid = target_database.get_pid(catalog)
-        gather_identifiers(entity, catalog, pid, wikidata)
+        data_gathering.gather_target_ids(entity, catalog, pid, wikidata)
     else:
         wikidata = wikidata_cache
 
-<<<<<<< HEAD
-def check_existence(class_or_occupation_query, class_qid, catalog_pid, entity: BaseEntity):
-    query_type = constants.IDENTIFIER, class_or_occupation_query
-=======
->>>>>>> 4e1e2ecf2cb4c87a3a5ec6c77d080e5aaed8d8de
     session = DBManager.connect_to_db()
     invalid = defaultdict(set)
     count = 0
     entity = target_database.get_entity(catalog, entity)
 
-<<<<<<< HEAD
-    for qid, target_id in sparql_queries.run_query(query_type, class_qid, catalog_pid, 0):
-        results = session.query(entity).filter(
-            entity.catalog_id == target_id).all()
-        if not results:
-            LOGGER.warning(
-                '%s identifier %s is invalid', qid, target_id)
-            invalid[target_id].add(qid)
-            count += 1
-=======
     for qid in wikidata:
-        identifiers = wikidata[qid]['identifiers']
+        identifiers = wikidata[qid][constants.TID]
         for target_id in identifiers:
             results = session.query(entity).filter(
                 entity.catalog_id == target_id).all()
             if not results:
-                LOGGER.warning(
-                    '%s identifier %s is invalid', qid, target_id)
+                LOGGER.info('%s %s identifier %s is invalid', qid, catalog, target_id)
                 invalid[target_id].add(qid)
                 count += 1
->>>>>>> 4e1e2ecf2cb4c87a3a5ec6c77d080e5aaed8d8de
 
     LOGGER.info('Total invalid identifiers = %d', count)
     # Sets are not serializable to JSON, so cast them to lists
@@ -175,14 +138,10 @@ def check_links_cli(entity, catalog, wikidata_dump, upload, sandbox, cache, depr
 
 
 def check_links(entity, catalog, wikidata_cache=None):
-<<<<<<< HEAD
-    catalog_terms = get_vocabulary(catalog)
-=======
     pid = target_database.get_pid(catalog)
->>>>>>> 4e1e2ecf2cb4c87a3a5ec6c77d080e5aaed8d8de
 
     # Target links
-    target = gather_target_links(entity, catalog)
+    target = data_gathering.gather_target_links(entity, catalog)
     # Early stop in case of no target links
     if target is None:
         return None, None, None, None
@@ -194,14 +153,10 @@ def check_links(entity, catalog, wikidata_cache=None):
         wikidata = {}
 
         # Wikidata links
-<<<<<<< HEAD
-        gather_target_ids(
-            entity, catalog, catalog_terms['pid'], wikidata)
-=======
-        gather_identifiers(entity, catalog, pid, wikidata)
->>>>>>> 4e1e2ecf2cb4c87a3a5ec6c77d080e5aaed8d8de
-        url_pids, ext_id_pids_to_urls = gather_relevant_pids()
-        gather_wikidata_links(wikidata, url_pids, ext_id_pids_to_urls)
+        data_gathering.gather_target_ids(entity, catalog, pid, wikidata)
+        url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
+        data_gathering.gather_wikidata_links(
+            wikidata, url_pids, ext_id_pids_to_urls)
     else:
         wikidata = wikidata_cache
 
@@ -209,7 +164,7 @@ def check_links(entity, catalog, wikidata_cache=None):
     _assess('links', wikidata, target, to_deprecate, to_add)
 
     # Separate external IDs from URLs
-    ext_ids_to_add, urls_to_add = extract_ids_from_urls(
+    ext_ids_to_add, urls_to_add = data_gathering.extract_ids_from_urls(
         to_add, ext_id_pids_to_urls)
 
     LOGGER.info('Validation completed. %d %s IDs to be deprecated, %d external IDs to be added, %d URL statements to be added', len(
@@ -269,7 +224,7 @@ def check_metadata_cli(entity, catalog, wikidata_dump, upload, sandbox, cache, d
 
 def check_metadata(entity, catalog, wikidata_cache=None):
     # Target metadata
-    target = gather_target_metadata(entity, catalog)
+    target = data_gathering.gather_target_metadata(entity, catalog)
     # Early stop in case of no target metadata
     if target is None:
         return None, None, None
@@ -281,8 +236,9 @@ def check_metadata(entity, catalog, wikidata_cache=None):
         wikidata = {}
 
         # Wikidata metadata
-        gather_target_ids(entity, catalog, target_database.get_pid(catalog), wikidata)
-        gather_wikidata_metadata(wikidata)
+        data_gathering.gather_target_ids(
+            entity, catalog, target_database.get_pid(catalog), wikidata)
+        data_gathering.gather_wikidata_metadata(wikidata)
     else:
         wikidata = wikidata_cache
 
@@ -325,7 +281,7 @@ def _assess(criterion, source, target_iterator, to_deprecate, to_add):
             LOGGER.warning(
                 'Skipping check: no %s available in QID %s', criterion, qid)
             continue
-        identifiers = data['identifiers']
+        identifiers = data[constants.TID]
         # 1 or tiny loop size = # of identifiers per Wikidata item (should always be 1)
         for target_id in identifiers:
             if target_id in target.keys():
