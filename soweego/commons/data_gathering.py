@@ -18,7 +18,7 @@ from typing import Iterable, TypeVar
 import regex
 from sqlalchemy import or_
 
-from soweego.commons import constants, url_utils
+from soweego.commons import constants, target_database, url_utils
 from soweego.commons.cache import cached
 from soweego.commons.db_manager import DBManager
 from soweego.wikidata import api_requests, sparql_queries, vocabulary
@@ -108,10 +108,8 @@ def perfect_name_search(target_entity: T, to_search: str) -> Iterable[T]:
 
 
 def gather_target_dataset(entity_type, catalog, identifiers, fileout, for_linking=True):
-    # TODO similar functions in constants
-    catalog_constants = _get_catalog_constants(catalog)
-    catalog_entity = _get_catalog_entity(entity_type, catalog_constants)
-    base, link, nlp = catalog_entity['entity'], catalog_entity['link_entity'], catalog_entity['nlp_entity']
+    base, link, nlp = target_database.get_entity(catalog, entity_type), target_database.get_link_entity(
+        catalog, entity_type), target_database.get_nlp_entity(catalog, entity_type)
     if for_linking:
         condition = ~base.catalog_id.in_(identifiers)
         to_log = 'dataset'
@@ -154,23 +152,22 @@ def _build_dataset_relevant_fields(base, link, nlp):
 
 def _dump_target_dataset_query_result(result_set, relevant_fields, fileout):
     for base, link, nlp in result_set:
-        parsed = defaultdict(set)
-        parsed[constants.DF_TID] = base.catalog_id
+        parsed = {constants.TID: base.catalog_id}
         for field in relevant_fields:
             try:
-                parsed[field].add(getattr(base, field))
+                parsed[field] = getattr(base, field)
             except AttributeError:
                 pass
             try:
-                parsed[field].add(getattr(link, field))
+                parsed[field] = getattr(link, field)
             except AttributeError:
                 pass
             try:
-                parsed[field].add(getattr(nlp, field))
+                parsed[field] = getattr(nlp, field)
             except AttributeError:
                 pass
-        fileout.write(json.dumps({field: list(values) for field, values in parsed.items(
-        ) if field != constants.DF_TID}, ensure_ascii=False) + '\n')
+
+        fileout.write(json.dumps(parsed, ensure_ascii=False) + '\n')
         fileout.flush()
 
 
@@ -301,9 +298,9 @@ def gather_wikidata_dataset(wikidata, url_pids, ext_id_pids_to_urls):
     for entity in api_requests.get_data_for_linker(wikidata.keys(), url_pids, ext_id_pids_to_urls, None):
         for qid, *data in entity:
             if len(data) == 1:  # URLs
-                if not wikidata[qid].get(constants.DF_URL):
-                    wikidata[qid][constants.DF_URL] = set()
-                wikidata[qid][constants.DF_URL].add(data.pop())
+                if not wikidata[qid].get(constants.URL):
+                    wikidata[qid][constants.URL] = set()
+                wikidata[qid][constants.URL].add(data.pop())
             elif len(data) == 2:  # Statements
                 pid, value = data
                 pid_label = vocabulary.LINKER_PIDS.get(pid)
@@ -319,21 +316,21 @@ def gather_wikidata_dataset(wikidata, url_pids, ext_id_pids_to_urls):
             elif len(data) == 3:  # Strings
                 # TODO what to do with language codes?
                 language, value, value_type = data
-                if value_type == constants.DF_LABEL:
-                    if not wikidata[qid].get(constants.DF_LABEL):
-                        wikidata[qid][constants.DF_LABEL] = set()
-                    wikidata[qid][constants.DF_LABEL].add(value)
-                elif value_type == constants.DF_ALIAS:
-                    if not wikidata[qid].get(constants.DF_ALIAS):
-                        wikidata[qid][constants.DF_ALIAS] = set()
-                    wikidata[qid][constants.DF_ALIAS].add(value)
-                elif value_type == constants.DF_DESCRIPTION:
-                    if not wikidata[qid].get(constants.DF_DESCRIPTION):
-                        wikidata[qid][constants.DF_DESCRIPTION] = set()
-                    wikidata[qid][constants.DF_DESCRIPTION].add(value)
+                if value_type == constants.LABEL:
+                    if not wikidata[qid].get(constants.LABEL):
+                        wikidata[qid][constants.LABEL] = set()
+                    wikidata[qid][constants.LABEL].add(value)
+                elif value_type == constants.ALIAS:
+                    if not wikidata[qid].get(constants.ALIAS):
+                        wikidata[qid][constants.ALIAS] = set()
+                    wikidata[qid][constants.ALIAS].add(value)
+                elif value_type == constants.DESCRIPTION:
+                    if not wikidata[qid].get(constants.DESCRIPTION):
+                        wikidata[qid][constants.DESCRIPTION] = set()
+                    wikidata[qid][constants.DESCRIPTION].add(value)
                 else:
                     expected_value_types = (
-                        constants.DF_LABEL, constants.DF_ALIAS, constants.DF_DESCRIPTION)
+                        constants.LABEL, constants.ALIAS, constants.DESCRIPTION)
                     LOGGER.critical(
                         'Bad value type for Wikidata API result: %s. It should be one of %s', value_type, expected_value_types)
                     raise ValueError('Bad value type for Wikidata API result: %s. It should be one of %s' % (
@@ -406,8 +403,8 @@ def gather_target_ids(entity, catalog, catalog_pid, aggregated):
     query_type = constants.IDENTIFIER, constants.HANDLED_ENTITIES.get(entity)
     for qid, target_id in sparql_queries.run_query(query_type, catalog_constants[entity]['qid'], catalog_pid, 0):
         if not aggregated.get(qid):
-            aggregated[qid] = {'identifiers': set()}
-        aggregated[qid]['identifiers'].add(target_id)
+            aggregated[qid] = {constants.TID: set()}
+        aggregated[qid][constants.TID].add(target_id)
     LOGGER.info('Got %d %s identifiers', len(aggregated), catalog)
 
 
