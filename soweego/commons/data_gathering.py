@@ -107,10 +107,10 @@ def perfect_name_search(target_entity: T, to_search: str) -> Iterable[T]:
         session.close()
 
 
-def gather_target_dataset(entity_type, catalog, identifiers, fileout, for_linking=True):
+def gather_target_dataset(entity_type, catalog, identifiers, fileout, for_classification):
     base, link, nlp = target_database.get_entity(catalog, entity_type), target_database.get_link_entity(
         catalog, entity_type), target_database.get_nlp_entity(catalog, entity_type)
-    if for_linking:
+    if for_classification:
         condition = ~base.catalog_id.in_(identifiers)
         to_log = 'dataset'
     else:
