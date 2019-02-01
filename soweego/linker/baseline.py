@@ -22,6 +22,7 @@ from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.base_link_entity import BaseLinkEntity
 from soweego.ingestor import wikidata_bot
 from soweego.wikidata.api_requests import get_data_for_linker
+from sqlalchemy.exc import ProgrammingError
 
 LOGGER = logging.getLogger(__name__)
 WD_IO_FILENAME = 'wikidata_%s_dataset.jsonl.gz'
@@ -37,8 +38,6 @@ WD_IO_FILENAME = 'wikidata_%s_dataset.jsonl.gz'
               help="default: '/app/shared'")
 def cli(target, target_type, strategy, upload, sandbox, output_dir):
     """Rule-based matching strategies.
-
-    SOURCE must be {string: identifier} JSON files.
 
     NOTICE: not all the entity types are available for all the targets
 
@@ -71,11 +70,11 @@ def cli(target, target_type, strategy, upload, sandbox, output_dir):
             result = perfect_name_match(
                 wd_io, target_entity, target_pid)
         elif strategy == 'links':
-            result = similar_tokens_match(
-                wd_io, target_link_entity, target_pid, url_utils.tokenize)
+            result = similar_link_tokens_match(
+                wd_io, target_link_entity, target_pid)
         elif strategy == 'names':
-            result = similar_tokens_match(
-                wd_io, target_entity, target_pid, text_utils.tokenize)
+            result = similar_name_tokens_match(
+                wd_io, target_entity, target_pid)
 
         if upload:
             wikidata_bot.add_statements(
@@ -105,7 +104,7 @@ def perfect_name_match(source_dataset, target_entity: BaseEntity, target_pid: st
                 yield (qid, target_pid, res.catalog_id)
 
 
-def similar_tokens_match(source, target, target_pid: str, tokenize: Callable[[str], Iterable[str]]) -> Iterable[Tuple[str, str, str]]:
+def similar_name_tokens_match(source, target, target_pid: str) -> Iterable[Tuple[str, str, str]]:
     """Given a dictionary ``{string: identifier}``, a BaseEntity and a tokenization function and a PID,
     match similar tokens and return a dataset ``[(source_id, PID, target_id), ...]``.
 
@@ -122,7 +121,7 @@ def similar_tokens_match(source, target, target_pid: str, tokenize: Callable[[st
 
             to_exclude.clear()
 
-            tokenized = tokenize(label)
+            tokenized = text_utils.tokenize(label)
             if len(tokenized) <= 1:
                 continue
 
@@ -132,7 +131,46 @@ def similar_tokens_match(source, target, target_pid: str, tokenize: Callable[[st
                 yield (qid, target_pid, res.catalog_id)
                 to_exclude.add(res.catalog_id)
             # Looks for sets contained in our set of tokens
-            for res in data_gathering.tokens_fulltext_search(target, False, tokenized):
+            where_clause = target.catalog_id.notin_(to_exclude)
+            for res in data_gathering.tokens_fulltext_search(target, False, tokenized, where_clause=where_clause):
                 res_tokenized = set(res.tokens.split())
                 if len(res_tokenized) > 1 and res_tokenized.issubset(tokenized):
                     yield (qid, target_pid, res.catalog_id)
+
+
+def similar_link_tokens_match(source, target, target_pid: str) -> Iterable[Tuple[str, str, str]]:
+    """Given a dictionary ``{string: identifier}``, a BaseEntity and a tokenization function and a PID,
+    match similar tokens and return a dataset ``[(source_id, PID, target_id), ...]``.
+
+    Similar tokens match means that if a set of tokens is contained in another one, it's a match.
+    """
+    to_exclude = set()
+
+    for row_entity in source:
+        entity = json.loads(row_entity)
+        qid = entity['qid']
+        for url in entity['url']:
+            if not url:
+                continue
+
+            to_exclude.clear()
+
+            tokenized = url_utils.tokenize(url)
+            if len(tokenized) <= 1:
+                continue
+
+            try:
+                # NOTICE: sets of size 1 are always exluded
+                # Looks for sets equal or bigger containing our tokens
+                for res in data_gathering.tokens_fulltext_search(target, True, tokenized):
+                    yield (qid, target_pid, res.catalog_id)
+                    to_exclude.add(res.catalog_id)
+                # Looks for sets contained in our set of tokens
+                where_clause = target.catalog_id.notin_(to_exclude)
+                for res in data_gathering.tokens_fulltext_search(target, False, tokenized, where_clause):
+                    res_tokenized = set(res.tokens.split())
+                    if len(res_tokenized) > 1 and res_tokenized.issubset(tokenized):
+                        yield (qid, target_pid, res.catalog_id)
+            except ProgrammingError as ex:
+                LOGGER.error(ex)
+                LOGGER.error(f'Issues searching tokens {tokenized} of {url}')
