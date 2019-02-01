@@ -54,7 +54,7 @@ def gather_target_metadata(entity_type, catalog):
     return result
 
 
-def tokens_fulltext_search(target_entity: T, boolean_mode: bool, tokens: Iterable[str]) -> Iterable[T]:
+def tokens_fulltext_search(target_entity: T, boolean_mode: bool, tokens: Iterable[str], where_clause: filter = None) -> Iterable[T]:
     query = None
     if boolean_mode:
         query = ' '.join(map('+{0}'.format, tokens))
@@ -66,7 +66,12 @@ def tokens_fulltext_search(target_entity: T, boolean_mode: bool, tokens: Iterabl
     session = DBManager.connect_to_db()
     result = []
     try:
-        result = session.query(target_entity).filter(ft_search).all()
+        if not None:
+            result = session.query(target_entity).filter(
+                ft_search).filter(where_clause).all()
+        else:
+            result = session.query(target_entity).filter(
+                ft_search).all()
         session.commit()
     except:
         session.rollback()
