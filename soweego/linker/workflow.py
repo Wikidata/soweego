@@ -9,22 +9,112 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+import gzip
 import logging
+import os
 from io import StringIO
 from typing import Tuple
 
 import recordlinkage as rl
-from pandas import DataFrame, MultiIndex, concat
+from pandas import DataFrame, MultiIndex, concat, read_json
 from pandas.io.json.json import JsonReader
 
-from soweego.commons import constants, text_utils, url_utils
+from soweego.commons import (constants, data_gathering, target_database,
+                             text_utils, url_utils)
 from soweego.linker.feature_extraction import StringList, UrlList
+from soweego.wikidata import api_requests
 
 LOGGER = logging.getLogger(__name__)
 
 
-def preprocess(wikidata_reader: JsonReader, target_reader: JsonReader) -> Tuple[DataFrame, DataFrame]:
-    return _preprocess_wikidata(wikidata_reader), _preprocess_target(target_reader)
+def build_wikidata(goal, catalog, entity, dir_io):
+    if goal == 'training':
+        wd_io_path = os.path.join(dir_io, constants.WD_TRAINING_SET % catalog)
+        qids_and_tids = {}
+    elif goal == 'classification':
+        wd_io_path = os.path.join(
+            dir_io, constants.WD_CLASSIFICATION_SET % catalog)
+        qids_and_tids = None
+    else:
+        raise ValueError(
+            "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'" % goal)
+
+    catalog_pid = target_database.get_pid(catalog)
+
+    if os.path.exists(wd_io_path):
+        LOGGER.info(
+            "Will reuse existing Wikidata %s set: '%s'", goal, wd_io_path)
+    else:
+        LOGGER.info(
+            "Building Wikidata %s set, output file '%s' ...", goal, wd_io_path)
+
+        if goal == 'training':
+            data_gathering.gather_target_ids(
+                entity, catalog, catalog_pid, qids_and_tids)
+            qids = qids_and_tids.keys()
+        elif goal == 'classification':
+            qids = data_gathering.gather_qids(entity, catalog, catalog_pid)
+
+        url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
+        with gzip.open(wd_io_path, 'wt') as wd_io:
+            api_requests.get_data_for_linker(
+                qids, url_pids, ext_id_pids_to_urls, wd_io, qids_and_tids)
+
+    wd_df_reader = read_json(wd_io_path, lines=True, chunksize=1000)
+
+    LOGGER.info('Wikidata training set built')
+    return wd_df_reader, qids_and_tids
+
+
+def build_target(goal, catalog, entity, qids_and_tids, dir_io):
+    if goal == 'training':
+        target_io_path = os.path.join(
+            dir_io, constants.TARGET_TRAINING_SET % catalog)
+    elif goal == 'classification':
+        target_io_path = os.path.join(
+            dir_io, constants.TARGET_CLASSIFICATION_SET % catalog)
+    else:
+        raise ValueError(
+            "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'" % goal)
+
+    if os.path.exists(target_io_path):
+        LOGGER.info("Will reuse existing %s %s set: '%s'",
+                    catalog, goal, target_io_path)
+    else:
+        LOGGER.info("Building %s %s set, output file '%s' ...",
+                    catalog, goal, target_io_path)
+
+        if goal == 'training':
+            for_classification = False
+        elif goal == 'classification':
+            if qids_and_tids:
+                raise ValueError(
+                    "Invalid 'qids_and_tids' parameter: it should be None when 'goal' is 'classification'")
+            for_classification = True
+            qids_and_tids = {}
+            data_gathering.gather_target_ids(
+                entity, catalog, target_database.get_pid(catalog), qids_and_tids)
+
+        tids = set()
+        for data in qids_and_tids.values():
+            for identifier in data[constants.TID]:
+                tids.add(identifier)
+
+        # Dataset
+        with gzip.open(target_io_path, 'wt') as target_io:
+            data_gathering.gather_target_dataset(
+                entity, catalog, tids, target_io, for_classification)
+
+    # Enforce target ID as a string
+    target_df_reader = read_json(
+        target_io_path, lines=True, chunksize=1000, dtype={constants.TID: str})
+
+    LOGGER.info('Target training set built')
+    return target_df_reader
+
+
+def preprocess(goal, wikidata_reader: JsonReader, target_reader: JsonReader) -> Tuple[DataFrame, DataFrame]:
+    return _preprocess_wikidata(goal, wikidata_reader), _preprocess_target(target_reader)
 
 
 def _preprocess_target(target_reader):
@@ -42,11 +132,10 @@ def _preprocess_target(target_reader):
                  debug_buffer.getvalue())
 
     # 2. Aggregate denormalized data on target ID
-    target = target.groupby(constants.TID, as_index=False).agg(
-        lambda x: list(set(x)))
+    target = target.groupby(constants.TID).agg(lambda x: list(set(x)))
     debug_buffer = StringIO()
     target.info(buf=debug_buffer)
-    LOGGER.debug('Aggregated data on %s: %s',
+    LOGGER.debug('Data indexed and aggregated on %s: %s',
                  constants.TID, debug_buffer.getvalue())
 
     # 3. Pull out the value from lists with a single value
@@ -67,28 +156,36 @@ def _preprocess_target(target_reader):
     return target
 
 
-def _preprocess_wikidata(wikidata_reader):
+def _preprocess_wikidata(goal, wikidata_reader):
+    if goal not in ('training', 'classification'):
+        raise ValueError(
+            "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'" % goal)
+
     wd_chunks = []
     LOGGER.info('Preprocessing Wikidata ...')
 
     for i, chunk in enumerate(wikidata_reader, 1):
-        # 1. Pull out the value from lists with a single value
+        # 1. QID as index
+        chunk.set_index(constants.QID, inplace=True)
+
+        # 2. Pull out the value from lists with a single value
         chunk = _pull_out_from_single_value_list(chunk)
 
-        # 2. Join target ids if multiple
-        chunk[constants.TID] = chunk[constants.TID].map(
-            lambda cell: ' '.join(cell) if isinstance(cell, list) else cell)
+        # 3. Training only: join target ids if multiple
+        if goal == 'training':
+            chunk[constants.TID] = chunk[constants.TID].map(
+                lambda cell: ' '.join(cell) if isinstance(cell, list) else cell)
 
-        # 3. Tokenize & join strings lists columns
+        # 4. Tokenize & join strings lists columns
         for column in (constants.LABEL, constants.PSEUDONYM):
             chunk['%s_tokens' % column] = chunk[column].map(
                 _preprocess_strings_list, na_action='ignore')
 
-        # 4. Tokenize & join URLs lists
+        # 5. Tokenize & join URLs lists
         chunk['%s_tokens' % constants.URL] = chunk[constants.URL].map(
             _preprocess_urls_list, na_action='ignore')
 
-        # 5. Join the list of descriptions
+        # 6. Join the list of descriptions
         _join_descriptions(chunk)
 
         LOGGER.info('Chunk %d done', i)
@@ -96,7 +193,7 @@ def _preprocess_wikidata(wikidata_reader):
         wd_chunks.append(chunk)
 
     LOGGER.info('Wikidata preprocessing done')
-    return concat(wd_chunks, ignore_index=True, sort=False)
+    return concat(wd_chunks, sort=False)
 
 
 def _pull_out_from_single_value_list(df):
