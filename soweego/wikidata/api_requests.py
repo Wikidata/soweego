@@ -48,7 +48,7 @@ def parse_wikidata_value(value):
     return None
 
 
-def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids=None) -> Iterator[tuple]:
+def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> Iterator[tuple]:
     no_labels_count = 0
     no_aliases_count = 0
     no_descriptions_count = 0
