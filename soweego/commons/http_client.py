@@ -40,5 +40,6 @@ def download_file(url, filePath):
             for chunk in stream.iter_content(chunk_size=1024):
                 if chunk:
                     f.write(chunk)
+                    f.flush()
     except Exception as e:
         LOGGER.warning('Unable to download %s \n %s', url, str(e))
