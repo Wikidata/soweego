@@ -31,7 +31,7 @@ WD_IO_FILENAME = 'wikidata_%s_dataset.jsonl.gz'
 @click.command()
 @click.argument('target', type=click.Choice(target_database.available_targets()))
 @click.argument('target_type', type=click.Choice(target_database.available_types()))
-@click.option('-s', '--strategy', type=click.Choice(['perfect', 'links', 'names']), default='perfect')
+@click.option('-s', '--strategy', type=click.Choice(['perfect', 'links', 'names', 'all']), default='perfect')
 @click.option('--upload/--no-upload', default=False, help='Upload check results to Wikidata. Default: no.')
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
 @click.option('-o', '--output-dir', type=click.Path(file_okay=False), default='/app/shared',
@@ -48,7 +48,8 @@ def cli(target, target_type, strategy, upload, sandbox, output_dir):
 
     Run all of them by default.
     """
-
+    LOGGER.info(
+        f"Starts baseline {strategy} strategy for {target} {target_type}")
     # Wikidata
     wd_io_path = path.join(output_dir, WD_IO_FILENAME % target)
     if not path.exists(wd_io_path):
@@ -66,27 +67,38 @@ def cli(target, target_type, strategy, upload, sandbox, output_dir):
     result = None
 
     with gzip.open(wd_io_path, "rt") as wd_io:
-        if strategy == 'perfect':
+        if strategy == 'perfect' or strategy == 'all':
+            LOGGER.info("Starting perfect name match")
             result = perfect_name_match(
                 wd_io, target_entity, target_pid)
-        elif strategy == 'links':
+            _write_or_upload_result(
+                strategy, target, result, output_dir, "baseline_perfect_name.csv", upload, sandbox)
+        if strategy == 'links' or strategy == 'all':
+            LOGGER.info("Starting similar links match")
             result = similar_link_tokens_match(
                 wd_io, target_link_entity, target_pid)
-        elif strategy == 'names':
+            _write_or_upload_result(
+                strategy, target, result, output_dir, "baseline_similar_links.csv", upload, sandbox)
+        if strategy == 'names' or strategy == 'all':
+            LOGGER.info("Starting similar names match")
             result = similar_name_tokens_match(
                 wd_io, target_entity, target_pid)
+            _write_or_upload_result(
+                strategy, target, result, output_dir, "baseline_similar_names.csv", upload, sandbox)
 
-        if upload:
-            wikidata_bot.add_statements(
-                result, target_database.get_qid(target), sandbox)
-        else:
-            filepath = path.join(output_dir, 'baseline_output.csv')
-            with open(filepath, 'w') as filehandle:
-                for res in result:
-                    filehandle.write('%s\n' % ";".join(res))
-                    filehandle.flush()
-            LOGGER.info('Baseline %s strategy against %s dumped to %s',
-                        strategy, target, filepath)
+
+def _write_or_upload_result(strategy, target, result: Iterable, output_dir: str, filename: str, upload: bool, sandbox: bool):
+    if upload:
+        wikidata_bot.add_statements(
+            result, target_database.get_qid(target), sandbox)
+    else:
+        filepath = path.join(output_dir, filename)
+        with open(filepath, 'w') as filehandle:
+            for res in result:
+                filehandle.write('%s\n' % ";".join(res))
+                filehandle.flush()
+        LOGGER.info('Baseline %s strategy against %s dumped to %s',
+                    strategy, target, filepath)
 
 
 def perfect_name_match(source_dataset, target_entity: BaseEntity, target_pid: str) -> Iterable[Tuple[str, str, str]]:
