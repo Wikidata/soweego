@@ -10,6 +10,7 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import gzip
+import json
 import logging
 import os
 from io import StringIO
@@ -44,6 +45,14 @@ def build_wikidata(goal, catalog, entity, dir_io):
     if os.path.exists(wd_io_path):
         LOGGER.info(
             "Will reuse existing Wikidata %s set: '%s'", goal, wd_io_path)
+        with gzip.open(wd_io_path, 'rt') as wd_io:
+            for line in wd_io:
+                entity = json.loads(line.rstrip())
+                qids_and_tids[entity[constants.QID]] = {
+                    constants.TID: entity[constants.TID]}
+        LOGGER.debug(
+            "Reconstructed dictionary with QIDS and target IDs from '%s': %s", wd_io_path, qids_and_tids)
+
     else:
         LOGGER.info(
             "Building Wikidata %s set, output file '%s' ...", goal, wd_io_path)
@@ -101,6 +110,7 @@ def build_target(goal, catalog, entity, qids_and_tids, dir_io):
                 tids.add(identifier)
 
         # Dataset
+        # TODO how to avoid an empty file in case of no query results (see data_gathering#)? Perhaps lazy creation of file?
         with gzip.open(target_io_path, 'wt') as target_io:
             data_gathering.gather_target_dataset(
                 entity, catalog, tids, target_io, for_classification)
@@ -114,10 +124,12 @@ def build_target(goal, catalog, entity, qids_and_tids, dir_io):
 
 
 def preprocess(goal, wikidata_reader: JsonReader, target_reader: JsonReader) -> Tuple[DataFrame, DataFrame]:
-    return _preprocess_wikidata(goal, wikidata_reader), _preprocess_target(target_reader)
+    return _preprocess_wikidata(goal, wikidata_reader), _preprocess_target(goal, target_reader)
 
 
-def _preprocess_target(target_reader):
+def _preprocess_target(goal, target_reader):
+    _handle_goal_value(goal)
+
     LOGGER.info('Preprocessing target ...')
 
     # 1. Load into a DataFrame
@@ -138,14 +150,18 @@ def _preprocess_target(target_reader):
     LOGGER.debug('Data indexed and aggregated on %s: %s',
                  constants.TID, debug_buffer.getvalue())
 
-    # 3. Pull out the value from lists with a single value
+    # 3. Training only: target ID column for blocking
+    if goal == 'training':
+        target[constants.TID] = target.index
+
+    # 4. Pull out the value from lists with a single value
     target = _pull_out_from_single_value_list(target)
     debug_buffer = StringIO()
     target.info(buf=debug_buffer)
     LOGGER.debug('Stringified lists with a single value: %s',
                  debug_buffer.getvalue())
 
-    # 4. Join the list of descriptions
+    # 5. Join the list of descriptions
     _join_descriptions(target)
     debug_buffer = StringIO()
     target.info(buf=debug_buffer)
@@ -157,12 +173,10 @@ def _preprocess_target(target_reader):
 
 
 def _preprocess_wikidata(goal, wikidata_reader):
-    if goal not in ('training', 'classification'):
-        raise ValueError(
-            "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'" % goal)
+    _handle_goal_value(goal)
 
-    wd_chunks = []
     LOGGER.info('Preprocessing Wikidata ...')
+    wd_chunks = []
 
     for i, chunk in enumerate(wikidata_reader, 1):
         # 1. QID as index
@@ -194,6 +208,12 @@ def _preprocess_wikidata(goal, wikidata_reader):
 
     LOGGER.info('Wikidata preprocessing done')
     return concat(wd_chunks, sort=False)
+
+
+def _handle_goal_value(goal):
+    if goal not in ('training', 'classification'):
+        raise ValueError(
+            "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'" % goal)
 
 
 def _pull_out_from_single_value_list(df):
@@ -254,3 +274,42 @@ def extract_features(candidate_pairs: MultiIndex, wikidata: DataFrame, target: D
 
     LOGGER.info('Feature extraction done')
     return feature_vectors
+
+
+def train_test_build(catalog, entity, dir_io):
+    LOGGER.info("Building %s %s dataset for training and test, I/O directory: '%s'",
+                catalog, entity, dir_io)
+
+    # Wikidata
+    wd_df_reader, qids_and_tids = build_wikidata(
+        'training', catalog, entity, dir_io)
+
+    # Target
+    target_df_reader = build_target(
+        'training', catalog, entity, qids_and_tids, dir_io)
+
+    return wd_df_reader, target_df_reader
+
+
+def train_test_block(wikidata_df, target_df):
+    on_column = constants.TID
+
+    LOGGER.info("Blocking on column '%s'", on_column)
+
+    idx = rl.Index()
+    idx.block(on_column)
+    candidate_pairs = idx.index(wikidata_df, target_df)
+
+    LOGGER.info('Blocking index built')
+
+    return candidate_pairs
+
+
+def init_model(classifier, binarize):
+    # TODO expose other useful parameters
+    if classifier is rl.NaiveBayesClassifier:
+        model = classifier(binarize=binarize)
+    elif classifier is rl.SVMClassifier:
+        # TODO implement SVM
+        raise NotImplementedError
+    return model

@@ -29,7 +29,7 @@ LOGGER = logging.getLogger(__name__)
 @click.option('-b', '--binarize', default=0.1, help="Default: 0.1")
 @click.option('-o', '--output-dir', type=click.Path(file_okay=False), default='/app/shared', help="Default: '/app/shared'")
 def cli(classifier, target, target_type, binarize, output_dir):
-    """Train a supervised classifier for probabilistic linking."""
+    """Train a probabilistic linker."""
 
     model = execute(
         constants.CLASSIFIERS[classifier], target, target_type, binarize, output_dir)
@@ -40,55 +40,23 @@ def cli(classifier, target, target_type, binarize, output_dir):
 
 
 def execute(classifier, catalog, entity, binarize, dir_io):
-    wd_reader, target_reader = _build(catalog, entity, dir_io)
+    wd_reader, target_reader = workflow.train_test_build(
+        catalog, entity, dir_io)
     wd, target = workflow.preprocess('training', wd_reader, target_reader)
-    candidate_pairs = _block(wd, target)
+    candidate_pairs = workflow.train_test_block(wd, target)
     feature_vectors = workflow.extract_features(candidate_pairs, wd, target)
     return _train(classifier, feature_vectors, candidate_pairs, binarize)
 
 
 def _train(classifier, feature_vectors, candidate_pairs, binarize):
-    # TODO expose other useful parameters
-    if classifier is rl.NaiveBayesClassifier:
-        model = classifier(binarize=binarize)
-    elif classifier is rl.SVMClassifier:
-        # TODO implement SVM
-        raise NotImplementedError
+    model = workflow.init_model(classifier, binarize)
     LOGGER.info('Training a %s', classifier.__name__)
     model.fit(feature_vectors, candidate_pairs)
     LOGGER.info('Training done')
     return model
 
 
-def _build(catalog, entity, dir_io):
-    LOGGER.info("Building %s %s training set, I/O directory: '%s'",
-                catalog, entity, dir_io)
-
-    # Wikidata
-    wd_df_reader, qids_and_tids = workflow.build_wikidata(
-        'training', catalog, entity, dir_io)
-
-    # Target
-    target_df_reader = workflow.build_target(
-        'training', catalog, entity, qids_and_tids, dir_io)
-
-    return wd_df_reader, target_df_reader
-
-
-def _block(wikidata_df, target_df):
-    on_column = constants.TID
-
-    LOGGER.info("Blocking on column '%s'", on_column)
-
-    idx = rl.Index()
-    idx.block(on_column)
-    candidate_pairs = idx.index(wikidata_df, target_df)
-
-    LOGGER.info('Blocking index built')
-
-    return candidate_pairs
-
-
 if __name__ == "__main__":
-    wid, t = _build('discogs', 'musician', '/Users/focs/soweego/output')
+    wid, t = workflow.train_test_build(
+        'discogs', 'musician', '/Users/focs/soweego/output')
     print()
