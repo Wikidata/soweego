@@ -15,7 +15,6 @@ import xml.etree.ElementTree as et
 from datetime import date, datetime
 
 from requests import get
-
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
@@ -268,7 +267,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         entity.catalog_id = identifier
         entity.url = url
         entity.is_wiki = url_utils.is_wiki_link(url)
-        entity.tokens = '|'.join(url_utils.tokenize(url))
+        entity.tokens = ' '.join(url_utils.tokenize(url))
         if isinstance(entity, discogs_entity.DiscogsMusicianLinkEntity):
             self.musician_links += 1
         elif isinstance(entity, discogs_entity.DiscogsGroupLinkEntity):

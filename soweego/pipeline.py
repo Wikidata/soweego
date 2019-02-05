@@ -4,6 +4,7 @@ import click
 from soweego.commons import target_database
 from soweego.commons.db_manager import DBManager
 from soweego.importer.importer import import_cli
+from soweego.linker import baseline
 from soweego.validator.checks import (check_existence_cli, check_links_cli,
                                       check_metadata_cli)
 
@@ -32,7 +33,7 @@ def cli(target: str, validator: bool, importer: bool, linker: bool, upload: bool
         LOGGER.info("Skipping importer")
 
     if linker:
-        _linker(target)
+        _linker(target, upload)
     else:
         LOGGER.info("Skipping linker")
 
@@ -47,9 +48,11 @@ def _importer(target: str):
     import_cli([target])
 
 
-def _linker(target: str):
+def _linker(target: str, upload: bool):
     LOGGER.info("Running linker for target: %s" % target)
-    return
+    upload_option = "--upload" if upload else "--no-upload"
+    for target_type in target_database.available_types_for_target(target):
+        baseline.cli([target, target_type, '-s', 'all', upload_option])
 
 
 def _validator(target: str, upload: bool):

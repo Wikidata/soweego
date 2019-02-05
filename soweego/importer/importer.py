@@ -14,7 +14,6 @@ import logging
 import os
 
 import click
-
 from soweego.commons import constants as const
 from soweego.commons import http_client as client
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
@@ -51,11 +50,11 @@ class Importer():
 
         try:
             last_modified = client.http_call(download_url,
-                                             'HEAD').headers[const.LAST_MODIFIED_KEY]
+                                             'HEAD').headers[const.LAST_MODIFIED]
 
         except ValueError:
             last_modified = client.http_call(downloader.get_dump_download_url(),
-                                             'HEAD').headers[const.LAST_MODIFIED_KEY]
+                                             'HEAD').headers[const.LAST_MODIFIED]
             download_url = downloader.get_dump_download_url()
 
         last_modified = datetime.datetime.strptime(
