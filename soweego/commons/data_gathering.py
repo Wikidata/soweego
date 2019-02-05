@@ -73,13 +73,15 @@ def tokens_fulltext_search(target_entity: T, boolean_mode: bool, tokens: Iterabl
             result = session.query(target_entity).filter(
                 ft_search).limit(limit).all()
         session.commit()
+
+        for res in result:
+            yield res
+
     except:
         session.rollback()
         raise
-
-    if not result:
-        return []
-    return result
+    finally:
+        session.close()
 
 
 def name_fulltext_search(target_entity: T, query: str) -> Iterable[T]:
