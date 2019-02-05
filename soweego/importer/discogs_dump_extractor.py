@@ -49,7 +49,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         for child in latest:
             if 'Key' in child.tag:
                 dump_file_name = child.text
-        return DUMP_BASE_URL + dump_file_name
+        return [DUMP_BASE_URL + dump_file_name]
 
     def extract_and_populate(self, dump_file_paths: Iterable[str]):
         dump_file_path = dump_file_paths[0]
