@@ -16,6 +16,7 @@ import tarfile
 from collections import defaultdict
 from csv import DictReader
 from datetime import date
+from typing import Iterable
 
 import requests
 from soweego.commons import text_utils, url_utils
@@ -36,12 +37,13 @@ LOGGER = logging.getLogger(__name__)
 
 class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
-    def get_dump_download_url(self) -> str:
+    def get_dump_download_urls(self) -> Iterable[str]:
         latest_version = requests.get(
             'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/LATEST').text.rstrip()
-        return 'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/%s/mbdump.tar.bz2' % latest_version
+        return ['http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/%s/mbdump.tar.bz2']
 
-    def extract_and_populate(self, dump_file_path):
+    def extract_and_populate(self, dump_file_paths: Iterable[str]):
+        dump_file_path = dump_file_paths[0]
         dump_path = os.path.join(os.path.dirname(
             os.path.abspath(dump_file_path)), "%s_%s" % (os.path.basename(dump_file_path), 'extracted'))
 
