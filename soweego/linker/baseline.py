@@ -49,7 +49,7 @@ def cli(target, target_type, strategy, upload, sandbox, output_dir):
     Run all of them by default.
     """
     LOGGER.info(
-        f"Starts baseline {strategy} strategy for {target} {target_type}")
+        'Starting baseline %s strategy for %s %s ...', strategy, target, target_type)
     # Wikidata
     wd_io_path = path.join(output_dir, WD_IO_FILENAME % target)
     if not path.exists(wd_io_path):
