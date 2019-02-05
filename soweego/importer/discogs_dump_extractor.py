@@ -13,9 +13,9 @@ import gzip
 import logging
 import xml.etree.ElementTree as et
 from datetime import date, datetime
+from typing import Iterable
 
 from requests import get
-
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
@@ -41,7 +41,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
     valid_links = 0
     dead_links = 0
 
-    def get_dump_download_url(self) -> str:
+    def get_dump_download_urls(self) -> Iterable[str]:
         response = get(DUMP_LIST_URL_TEMPLATE.format(date.today().year))
         root = et.fromstring(response.text)
         # 4 dump files, sorted alphabetically: artists, labels, masters, releases
@@ -51,7 +51,8 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                 dump_file_name = child.text
         return DUMP_BASE_URL + dump_file_name
 
-    def extract_and_populate(self, dump_file_path: str):
+    def extract_and_populate(self, dump_file_paths: Iterable[str]):
+        dump_file_path = dump_file_paths[0]
         LOGGER.info(
             "Starting import of musicians and bands from Discogs dump '%s'", dump_file_path)
         start = datetime.now()
