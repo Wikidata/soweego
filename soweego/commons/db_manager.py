@@ -13,14 +13,14 @@ import json
 import logging
 from pkgutil import get_data
 
-from soweego.commons import constants as const
-from soweego.commons import localizations as loc
-from soweego.importer.models.musicbrainz_entity import MusicbrainzArtistEntity
-from sqlalchemy import Index, create_engine, text
+from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import configure_mappers, sessionmaker
 from sqlalchemy.pool import NullPool
+
+from soweego.commons import constants
+from soweego.commons import localizations as loc
 
 BASE = declarative_base()
 LOGGER = logging.getLogger(__name__)
@@ -36,16 +36,16 @@ class DBManager():
 
     def __init__(self):
         credentials = DBManager.get_credentials()
-        db_engine = credentials[const.DB_ENGINE_KEY]
-        db_name = credentials[const.PROD_DB_KEY]
-        user = credentials[const.USER_KEY]
-        password = credentials[const.PASSWORD_KEY]
-        host = credentials[const.HOST_KEY]
+        db_engine = credentials[constants.DB_ENGINE]
+        db_name = credentials[constants.PROD_DB]
+        user = credentials[constants.USER]
+        password = credentials[constants.PASSWORD]
+        host = credentials[constants.HOST]
         try:
             # Disable connection pooling, as per Wikimedia policy
             # https://wikitech.wikimedia.org/wiki/Help:Toolforge/Database#Connection_handling_policy
             self.__engine = create_engine(
-                '{0}://{1}:{2}@{3}/{4}'.format(db_engine, user, password, host, db_name), poolclass=NullPool)
+                '{0}://{1}:{2}@{3}/{4}'.format(db_engine, user, password, host, db_name))
         except Exception as error:
             LOGGER.critical(loc.FAIL_CREATE_ENGINE, error)
 

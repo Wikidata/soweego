@@ -1,9 +1,13 @@
 import click
-from soweego.linker import baseline
+
+from soweego.linker import baseline, classify, edit_distance, evaluate, train
 
 CLI_COMMANDS = {
-    'baseline': baseline.baseline
-}
+    'baseline': baseline.cli,
+    'edit-distance': edit_distance.cli,
+    'train': train.cli,
+    'classify': classify.cli,
+    'evaluate': evaluate.cli
 
 
 @click.group(name='linker', commands=CLI_COMMANDS)

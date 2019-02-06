@@ -45,7 +45,6 @@ class Importer():
     def refresh_dump(self, output_folder: str, downloader: BaseDumpExtractor):
         """Downloads the dump, if necessary,
         and calls the handler over the dump file"""
-
         filepaths = []
 
         for download_url in downloader.get_dump_download_urls():

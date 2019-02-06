@@ -55,7 +55,7 @@ def handle(file_path: str, mappings: dict, entity_type, link_type):
                 if current_field == 'url':
                     link = link_type()
                     link.url = row_chunks[2]
-                    link.tokens = row_chunks[2].replace("/", " ")  # TODO
+                    link.url_tokens = row_chunks[2].replace("/", " ")  # TODO
                     link.catalog_id = current_entity.catalog_id
                     session.add(link)
 

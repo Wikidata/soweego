@@ -22,6 +22,7 @@ from typing import Iterator
 import click
 from requests import get
 
+from soweego.commons import constants
 from soweego.commons.logging import log_request_data
 from soweego.wikidata import vocabulary
 
@@ -43,28 +44,24 @@ FORMATTER_REGEX_BINDING = '?formatter_regex'
 
 URL_PID_TERMS = ' '.join(['wdt:%s' % pid for pid in vocabulary.URL_PIDS])
 
-IDENTIFIER_CLASS_BASED_QUERY_TEMPLATE = 'SELECT DISTINCT ' + ITEM_BINDING + ' ' + IDENTIFIER_BINDING + \
+IDENTIFIER_QUERY_TEMPLATE = 'SELECT DISTINCT ' + ITEM_BINDING + ' ' + IDENTIFIER_BINDING + \
     ' WHERE { ' + ITEM_BINDING + \
-    ' wdt:' + vocabulary.INSTANCE_OF + \
-    '/wdt:P279* wd:%s ; wdt:%s ' + IDENTIFIER_BINDING + ' . }'
-IDENTIFIER_OCCUPATION_BASED_QUERY_TEMPLATE = 'SELECT DISTINCT ' + ITEM_BINDING + ' ' + IDENTIFIER_BINDING + \
-    ' WHERE { ' + ITEM_BINDING + \
-    ' wdt:' + vocabulary.OCCUPATION + \
-    '/wdt:P279* wd:%s ; wdt:%s ' + IDENTIFIER_BINDING + ' . }'
+    ' wdt:%s/wdt:P279* wd:%s ; wdt:%s ' + IDENTIFIER_BINDING + ' . }'
+LINKS_QUERY_TEMPLATE = 'SELECT DISTINCT ' + ITEM_BINDING + ' ' + LINK_BINDING + \
+    ' WHERE { VALUES ' + PROPERTY_BINDING + ' { ' + URL_PID_TERMS + ' } . ' + ITEM_BINDING + ' wdt:%s/wdt:P279* wd:%s ; wdt:%s ' + IDENTIFIER_BINDING + \
+    ' ; ' + PROPERTY_BINDING + ' ' + LINK_BINDING + ' . }'
+DATASET_QUERY_TEMPLATE = 'SELECT DISTINCT ' + ITEM_BINDING + \
+    ' WHERE { ' + ITEM_BINDING + ' wdt:%s/wdt:P279* wd:%s . FILTER NOT EXISTS { ' + \
+    ITEM_BINDING + ' wdt:%s ' + IDENTIFIER_BINDING + ' . } . }'
+
 VALUES_QUERY_TEMPLATE = 'SELECT * WHERE { VALUES ' + \
     ITEM_BINDING + ' { %s } . ' + ITEM_BINDING + ' %s }'
-PROPERTIES_WITH_URL_DATATYPE_QUERY = 'SELECT ' + PROPERTY_BINDING + \
-    ' WHERE { ' + PROPERTY_BINDING + \
-    ' a wikibase:Property ; wikibase:propertyType wikibase:Url . }'
-LINKS_CLASS_BASED_QUERY_TEMPLATE = 'SELECT DISTINCT ' + ITEM_BINDING + ' ' + LINK_BINDING + \
-    ' WHERE { VALUES ' + PROPERTY_BINDING + ' { ' + URL_PID_TERMS + ' } . ' + ITEM_BINDING + ' wdt:' + vocabulary.INSTANCE_OF + '/wdt:P279* wd:%s ; wdt:%s ' + IDENTIFIER_BINDING + \
-    ' ; ' + PROPERTY_BINDING + ' ' + LINK_BINDING + ' . }'
-LINKS_OCCUPATION_BASED_QUERY_TEMPLATE = 'SELECT DISTINCT ' + ITEM_BINDING + ' ' + LINK_BINDING + \
-    ' WHERE { VALUES ' + PROPERTY_BINDING + ' { ' + URL_PID_TERMS + ' } . ' + ITEM_BINDING + ' wdt:' + vocabulary.OCCUPATION + '/wdt:P279* wd:%s ; wdt:%s ' + IDENTIFIER_BINDING + \
-    ' ; ' + PROPERTY_BINDING + ' ' + LINK_BINDING + ' . }'
 CATALOG_QID_QUERY_TEMPLATE = 'SELECT ' + ITEM_BINDING + \
     ' WHERE { wd:%s wdt:P1629 ' + ITEM_BINDING + ' . }'
 
+PROPERTIES_WITH_URL_DATATYPE_QUERY = 'SELECT ' + PROPERTY_BINDING + \
+    ' WHERE { ' + PROPERTY_BINDING + \
+    ' a wikibase:Property ; wikibase:propertyType wikibase:Url . }'
 URL_PIDS_QUERY = 'SELECT ?property WHERE { ?property a wikibase:Property ; wikibase:propertyType wikibase:Url . }'
 EXT_ID_PIDS_AND_URLS_QUERY = 'SELECT * WHERE { ' + PROPERTY_BINDING + \
     ' a wikibase:Property ; wikibase:propertyType wikibase:ExternalId ; wdt:P1630 ' + \
@@ -96,37 +93,48 @@ def identifier_class_based_query_cli(ontology_class, identifier_property, result
 
 
 @lru_cache()
-def run_identifier_or_links_query(query_type: tuple, class_qid: str, catalog_pid: str, result_per_page: int) -> Iterator[dict]:
+def run_query(query_type: tuple, class_qid: str, catalog_pid: str, result_per_page: int) -> Iterator:
     """Run a filled SPARQL query template against the Wikidata endpoint with eventual paging.
 
-    :param query_type: pair with one of ``identifier``, ``links``, ``metadata``, and either ``occupation`` or ``class``
-    "type query_type: tuple
+    :param query_type: pair with one of ``identifier``, ``links``, ``dataset``, ``metadata``, and either ``class`` or ``occupation``
+    :type query_type: tuple
     :param class_qid: Wikidata ontology class like ``Q5`` (human)
     :type class_qid: str
     :param catalog_pid: Wikidata property for identifiers, like ``P1953`` (Discogs artist ID)
     :type catalog_pid: str
     :param result_per_page: page size. Use ``0`` to switch paging off
     :type result_per_page: int
-    :return: query result generator yielding ``{QID: identifier_or_URL}``
-    :rtype: Iterator[dict]
+    :return: query result generator yielding ``QID, identifier_or_URL`` or ``QID`` only
+    :rtype: Iterator
     """
-    if query_type[0] == 'identifier':
-        if query_type[1] == 'class':
-            query_template = IDENTIFIER_CLASS_BASED_QUERY_TEMPLATE
-        elif query_type[1] == 'occupation':
-            query_template = IDENTIFIER_OCCUPATION_BASED_QUERY_TEMPLATE
-        query = query_template % (class_qid, catalog_pid)
-        return _parse_query_result('identifier', _run_paged_query(result_per_page, query))
-    elif query_type[0] == 'links':
-        if query_type[1] == 'class':
-            query_template = LINKS_CLASS_BASED_QUERY_TEMPLATE
-        elif query_type[1] == 'occupation':
-            query_template = LINKS_OCCUPATION_BASED_QUERY_TEMPLATE
-        query = query_template % (class_qid, catalog_pid)
-        return _parse_query_result('links', _run_paged_query(result_per_page, query))
-    elif query_type[0] == 'metadata':
-        # TODO
+    what, how = query_type
+
+    if how not in constants.SUPPORTED_QUERY_TYPES:
+        LOGGER.critical(
+            'Bad query type: %s. It should be one of %s', how, constants.SUPPORTED_QUERY_TYPES)
+        raise ValueError('Bad query type: %s. It should be one of %s' %
+                         (how, constants.SUPPORTED_QUERY_TYPES))
+
+    if what == constants.IDENTIFIER:
+        query = IDENTIFIER_QUERY_TEMPLATE % (vocabulary.INSTANCE_OF, class_qid, catalog_pid) if how == constants.CLASS else IDENTIFIER_QUERY_TEMPLATE % (
+            vocabulary.OCCUPATION, class_qid, catalog_pid)
+        return _parse_query_result(constants.IDENTIFIER, _run_paged_query(result_per_page, query))
+    elif what == constants.LINKS:
+        query = LINKS_QUERY_TEMPLATE % (vocabulary.INSTANCE_OF, class_qid, catalog_pid) if how == constants.CLASS else LINKS_QUERY_TEMPLATE % (
+            vocabulary.OCCUPATION, class_qid, catalog_pid)
+        return _parse_query_result(constants.LINKS, _run_paged_query(result_per_page, query))
+    elif what == constants.DATASET:
+        query = DATASET_QUERY_TEMPLATE % (vocabulary.INSTANCE_OF, class_qid, catalog_pid) if how == constants.CLASS else DATASET_QUERY_TEMPLATE % (
+            vocabulary.OCCUPATION, class_qid, catalog_pid)
+        return _parse_query_result(constants.DATASET, _run_paged_query(result_per_page, query))
+    elif what == constants.METADATA:
+        # TODO implement metadata query
         raise NotImplementedError
+    else:
+        LOGGER.critical('Bad query type: %s. It should be one of %s',
+                        what, constants.SUPPORTED_QUERY_SELECTORS)
+        raise ValueError('Bad query type: %s. It should be one of %s' % (
+            what, constants.SUPPORTED_QUERY_SELECTORS))
 
 
 def catalog_qid_query(catalog_pid):
@@ -211,29 +219,36 @@ def _get_valid_pid(result):
 
 
 def identifier_class_based_query(ontology_class, identifier_property, results_per_page):
-    query = IDENTIFIER_CLASS_BASED_QUERY_TEMPLATE % (
-        ontology_class, identifier_property)
-    return _parse_query_result('identifier', _run_paged_query(results_per_page, query))
+    query = IDENTIFIER_QUERY_TEMPLATE % (
+        vocabulary.INSTANCE_OF, ontology_class, identifier_property)
+    return _parse_query_result(constants.IDENTIFIER, _run_paged_query(results_per_page, query))
 
 
 def _parse_query_result(query_type, result_set):
     # Paranoid checks for malformed results:
     # it should never happen, but it actually does
+    identifier_or_link = False
     for result in result_set:
-        if query_type == 'identifier':
+        if query_type == constants.IDENTIFIER:
             identifier_or_link = result.get(IDENTIFIER_BINDING)
             to_be_logged = 'external identifier'
-        elif query_type == 'links':
+        elif query_type == constants.LINKS:
             identifier_or_link = result.get(LINK_BINDING)
             to_be_logged = 'third-party URL'
-        if not identifier_or_link:
+
+        if identifier_or_link is None:
             LOGGER.warning(
                 'Skipping malformed query result: no %s in %s', to_be_logged, result)
             continue
+
         valid_qid = _get_valid_qid(result)
         if not valid_qid:
             continue
-        yield {valid_qid.group(): identifier_or_link}
+
+        if query_type == constants.DATASET:
+            yield valid_qid.group()
+        else:
+            yield valid_qid.group(), identifier_or_link
 
 
 def _get_valid_qid(result):
@@ -308,9 +323,9 @@ def identifier_occupation_based_query_cli(identifier_property, occupation_class,
 
 
 def identifier_occupation_based_query(occupation_class, identifier_property, results_per_page):
-    query = IDENTIFIER_OCCUPATION_BASED_QUERY_TEMPLATE % (
-        occupation_class, identifier_property)
-    return _parse_query_result('identifier', _run_paged_query(results_per_page, query))
+    query = IDENTIFIER_QUERY_TEMPLATE % (
+        vocabulary.OCCUPATION, occupation_class, identifier_property)
+    return _parse_query_result(constants.IDENTIFIER, _run_paged_query(results_per_page, query))
 
 
 @click.command()
