@@ -298,59 +298,6 @@ def _get_catalog_constants(catalog):
     return catalog_constants
 
 
-def gather_wikidata_dataset(wikidata, url_pids, ext_id_pids_to_urls):
-    LOGGER.info(
-        'Gathering Wikidata dataset from the Web API. This will take a while ...')
-    total = 0
-
-    for entity in api_requests.get_data_for_linker(wikidata.keys(), url_pids, ext_id_pids_to_urls, None):
-        for qid, *data in entity:
-            if len(data) == 1:  # URLs
-                if not wikidata[qid].get(constants.DF_URL):
-                    wikidata[qid][constants.DF_URL] = set()
-                wikidata[qid][constants.DF_URL].add(data.pop())
-            elif len(data) == 2:  # Statements
-                pid, value = data
-                pid_label = vocabulary.LINKER_PIDS.get(pid)
-                if not pid_label:
-                    LOGGER.critical('PID label lookup failed: %s. The PID should be one of %s',
-                                    pid, vocabulary.LINKER_PIDS.keys())
-                    raise ValueError('PID label lookup failed: %s. The PID should be one of %s' % (
-                        pid, vocabulary.LINKER_PIDS.keys()))
-                parsed_value = api_requests.parse_wikidata_value(value)
-                if not wikidata[qid].get(pid_label):
-                    wikidata[qid][pid_label] = set()
-                wikidata[qid][pid_label].add(parsed_value)
-            elif len(data) == 3:  # Strings
-                # TODO what to do with language codes?
-                language, value, value_type = data
-                if value_type == constants.DF_LABEL:
-                    if not wikidata[qid].get(constants.DF_LABEL):
-                        wikidata[qid][constants.DF_LABEL] = set()
-                    wikidata[qid][constants.DF_LABEL].add(value)
-                elif value_type == constants.DF_ALIAS:
-                    if not wikidata[qid].get(constants.DF_ALIAS):
-                        wikidata[qid][constants.DF_ALIAS] = set()
-                    wikidata[qid][constants.DF_ALIAS].add(value)
-                elif value_type == constants.DF_DESCRIPTION:
-                    if not wikidata[qid].get(constants.DF_DESCRIPTION):
-                        wikidata[qid][constants.DF_DESCRIPTION] = set()
-                    wikidata[qid][constants.DF_DESCRIPTION].add(value)
-                else:
-                    expected_value_types = (
-                        constants.DF_LABEL, constants.DF_ALIAS, constants.DF_DESCRIPTION)
-                    LOGGER.critical(
-                        'Bad value type for Wikidata API result: %s. It should be one of %s', value_type, expected_value_types)
-                    raise ValueError('Bad value type for Wikidata API result: %s. It should be one of %s' % (
-                        value_type, expected_value_types))
-            else:
-                LOGGER.critical(
-                    'Bad size for Wikidata API result tuple: %d. It should be between 2 and 4. Tuple: %s', len(data) + 1, (qid, data))
-                raise ValueError(
-                    'Bad size for Wikidata API result tuple: %d. It should be between 2 and 4. Tuple: %s' % (len(data) + 1, (qid, data)))
-            total += 1
-
-
 def gather_wikidata_metadata(wikidata):
     LOGGER.info(
         'Gathering Wikidata birth/death dates/places and gender metadata from the Web API. This will take a while ...')
