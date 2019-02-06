@@ -61,8 +61,8 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         person_file_path = dump_file_paths[0]
         movies_file_path = dump_file_paths[1]
 
-        LOGGER.debug("Path to person info dump: " % person_file_path)
-        LOGGER.debug("Path to movie info dump: " % movies_file_path)
+        LOGGER.debug("Path to person info dump: %s" % person_file_path)
+        LOGGER.debug("Path to movie info dump: %s" % movies_file_path)
 
         start = datetime.datetime.now()
 
@@ -80,6 +80,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
         db_manager.drop(tables)
         db_manager.create(tables)
+        raise Exception
 
         LOGGER.info("SQL tables dropped and re-created: %s",
                     [table.__tablename__ for table in tables])
@@ -117,10 +118,9 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
                 self.n_movies += 1
 
-        LOGGER.info("Starting import persons from IMDB dump '%s'",
-                    dump_file_path)
+        LOGGER.info("Starting import persons from IMDB dump")
 
-        with gzip.open(dump_file_path, "rt") as pdump:
+        with gzip.open(person_file_path, "rt") as pdump:
             reader = csv.DictReader(pdump, delimiter="\t")
             for person_info in reader:
                 self._normalize_null(person_info)
