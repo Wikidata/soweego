@@ -42,7 +42,7 @@ class ImdbMovieEntity(BASE):
     original_title = Column(String(255))
     is_adult = Column(Boolean)
 
-    start_year = Column(Integer, nullable=False)
+    start_year = Column(Integer, nullable=True)
     end_year = Column(Integer, nullable=True)
 
     runtime_minutes = Column(Integer)
@@ -70,11 +70,15 @@ class ImdbPersonEntity(BaseEntity):
     born_precision = Column(Integer, default=9, nullable=False)
     died_precision = Column(Integer, default=9, nullable=False)
 
-    # primaryProfession (array of strings)– the top-3 professions of the person
-    # how do we want to model this? is better to leave it implicit in the type of entity?
-    # or, which i think is better, should we still add the list of professions?
-    # 
-    # If a person is director + actor, we create one entry in each table right? 
+    _occupations = Column("occupations", String(255), nullable=True)
+    @hybrid_property
+    def occupations(self):
+        return self._occupations.split(" ") if self._occupations else []
+
+    @occupations.setter
+    def occupations(self, occupations_):
+        self._occupations = " ".join(occupations_)
+
 
     __abstract__ = True
 
