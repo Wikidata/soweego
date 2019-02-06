@@ -18,7 +18,7 @@ from sklearn.externals import joblib
 
 from soweego.commons import constants, target_database
 from soweego.ingestor import wikidata_bot
-from soweego.linker import workflow
+from soweego.linker import evaluate, workflow
 
 LOGGER = logging.getLogger(__name__)
 
@@ -86,10 +86,3 @@ def _block(wikidata_df, target_df):
         lambda cell: ' '.join(cell) if isinstance(cell, list) else cell)
     idx.block('birth_name', 'real_name')
     return idx.index(wikidata_df, target_df)
-
-
-if __name__ == "__main__":
-    results = execute('discogs', 'musician',
-                      '/Users/focs/soweego/output/discogs_nb_model.pkl', 0.5, '/Users/focs/soweego/output')
-    # wid, t = _build('discogs', 'musician', '/Users/focs/soweego/output')
-    print()

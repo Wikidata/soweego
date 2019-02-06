@@ -54,9 +54,3 @@ def _train(classifier, feature_vectors, candidate_pairs, binarize):
     model.fit(feature_vectors, candidate_pairs)
     LOGGER.info('Training done')
     return model
-
-
-if __name__ == "__main__":
-    wid, t = workflow.train_test_build(
-        'discogs', 'musician', '/Users/focs/soweego/output')
-    print()
