@@ -155,7 +155,7 @@ def tokenize(url, domain_only=False) -> set:
         LOGGER.warning('Invalid URL: %s. Reason: %s',
                        url, value_error, exc_info=1)
         return None
-    domain_tokens = set(split.netloc.split('.'))
+    domain_tokens = set(re.split(r'\W+', split.netloc))
     domain_tokens.difference_update(TOP_LEVEL_DOMAINS, DOMAIN_PREFIXES)
     if domain_only:
         LOGGER.debug('URL: %s - Domain-only tokens: %s', url, domain_tokens)
@@ -165,9 +165,13 @@ def tokenize(url, domain_only=False) -> set:
     tokens = domain_tokens
     for path_token in path_tokens:
         decoded = unquote(path_token)
-        split = re.split(r'\W+', decoded)
-        filtered = filter(lambda token: len(token) > 1, split)
+        path_split = re.split(r'\W+', decoded)
+        filtered = filter(lambda token: len(token) > 1, path_split)
         tokens = tokens.union(filtered)
+
+    for query_token in re.split(r'\W+', unquote(split.query)):
+        if query_token:
+            tokens.add(query_token)
 
     LOGGER.debug('URL: %s - Tokens: %s', url, tokens)
     return tokens

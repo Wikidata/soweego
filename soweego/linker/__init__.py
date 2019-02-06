@@ -1,1 +1,1 @@
-from soweego.linker import baseline, cli
+from soweego.linker import baseline, cli, edit_distance
