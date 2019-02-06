@@ -9,21 +9,21 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, tupini07'
 
-import os
 import csv
+import datetime
 import gzip
 import logging
-import datetime
+import os
+from typing import List
 
 import requests
 
+from soweego.commons import http_client as client
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models import imdb_entity
 from soweego.importer.models.base_link_entity import BaseLinkEntity
-from soweego.commons import http_client as client
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -44,25 +44,16 @@ class ImdbDumpExtractor(BaseDumpExtractor):
     valid_links = 0
     dead_links = 0
 
-    def get_dump_download_url(self) -> str:
-        return DUMP_URL_PERSON_INFO
+    def get_dump_download_urls(self) -> List[str]:
+        return [DUMP_URL_PERSON_INFO, DUMP_URL_MOVIE_INFO]
 
-    def _download_movies_dataset(self, dump_file_path: str):
-        
-        filename = DUMP_URL_MOVIE_INFO.split("/")[-1]
+    def extract_and_populate(self, dump_file_paths: List[str]):
 
-        # the files get updated once each day, so we downloa the file for today
-        filename = datetime.date.today().strftime('%d-%m-%Y-') + filename
+        person_file_path = dump_file_paths[0]
+        movies_file_path = dump_file_paths[1]
 
-        path_to_download = "/".join(dump_file_path.split("/")[:-1]) + "/" + filename
-
-        # Check if the current dump is up-to-date
-        if not os.path.isfile(path_to_download):
-            client.download_file(DUMP_URL_MOVIE_INFO, path_to_download)
-
-        return path_to_download
-
-    def extract_and_populate(self, dump_file_path: str):
+        LOGGER.debug("Path to person info dump: " % person_file_path)
+        LOGGER.debug("Path to movie info dump: " % movies_file_path)
 
         start = datetime.datetime.now()
 
@@ -85,8 +76,6 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             f"SQL tables dropped and re-created: {[table.__tablename__ for table in tables]}")
         LOGGER.info("Downloading movie dataset")
 
-        movies_file_path = self._download_movies_dataset(dump_file_path)
-
         LOGGER.info(
             f"Movie dataset has been downloaded to '{movies_file_path}'")
 
@@ -99,9 +88,8 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 movie_entity.catalog_id = movie.get("nconst")
                 # movie_entity.title_type = movie.get()
 
-
         LOGGER.info(
-            f"Starting import persons from IMDB dump '{dump_file_path}'")
+            f"Starting import persons from IMDB dump")
 
         with gzip.open(dump_file_path, "rt") as pdump:
             reader = csv.DictReader(pdump, delimiter="\t")
