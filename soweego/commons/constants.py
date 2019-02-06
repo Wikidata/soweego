@@ -115,6 +115,7 @@ WD_TRAINING_SET = 'wikidata_%s_training_set.jsonl.gz'
 TARGET_TRAINING_SET = '%s_training_set.jsonl.gz'
 LINKER_MODEL = '%s_%s_model.pkl'
 LINKER_RESULT = '%s_linker_result.csv.gz'
+LINKER_EVALUATION = '%s_%s_linker_evaluation.txt'
 
 # Supervised classification
 CLASSIFIERS = {
