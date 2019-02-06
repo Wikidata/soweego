@@ -8,6 +8,7 @@ CLI_COMMANDS = {
     'train': train.cli,
     'classify': classify.cli,
     'evaluate': evaluate.cli
+}
 
 
 @click.group(name='linker', commands=CLI_COMMANDS)
