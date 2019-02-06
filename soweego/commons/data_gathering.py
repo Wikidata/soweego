@@ -12,6 +12,7 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import json
 import logging
 import re
+import sys
 from collections import defaultdict
 from typing import Iterable, TypeVar
 
@@ -124,9 +125,10 @@ def gather_target_dataset(entity_type, catalog, identifiers, fileout, for_classi
     query = session.query(base, link, nlp).join(link, base.catalog_id == link.catalog_id).join(
         nlp, base.catalog_id == nlp.catalog_id).filter(condition)
 
-    result = None
     try:
         raw_result = _run_query(query, catalog, entity_type)
+        if raw_result is None:
+            sys.exit(1)
         relevant_fields = _build_dataset_relevant_fields(base, link, nlp)
         _dump_target_dataset_query_result(
             raw_result, relevant_fields, fileout)
@@ -136,7 +138,6 @@ def gather_target_dataset(entity_type, catalog, identifiers, fileout, for_classi
         raise
     finally:
         session.close()
-    return result
 
 
 def _build_dataset_relevant_fields(base, link, nlp):
@@ -288,59 +289,6 @@ def _get_catalog_constants(catalog):
         raise ValueError('Bad catalog: %s. It should be one of %s' %
                          (catalog, constants.TARGET_CATALOGS.keys()))
     return catalog_constants
-
-
-def gather_wikidata_dataset(wikidata, url_pids, ext_id_pids_to_urls):
-    LOGGER.info(
-        'Gathering Wikidata dataset from the Web API. This will take a while ...')
-    total = 0
-
-    for entity in api_requests.get_data_for_linker(wikidata.keys(), url_pids, ext_id_pids_to_urls, None):
-        for qid, *data in entity:
-            if len(data) == 1:  # URLs
-                if not wikidata[qid].get(constants.URL):
-                    wikidata[qid][constants.URL] = set()
-                wikidata[qid][constants.URL].add(data.pop())
-            elif len(data) == 2:  # Statements
-                pid, value = data
-                pid_label = vocabulary.LINKER_PIDS.get(pid)
-                if not pid_label:
-                    LOGGER.critical('PID label lookup failed: %s. The PID should be one of %s',
-                                    pid, vocabulary.LINKER_PIDS.keys())
-                    raise ValueError('PID label lookup failed: %s. The PID should be one of %s' % (
-                        pid, vocabulary.LINKER_PIDS.keys()))
-                parsed_value = api_requests.parse_wikidata_value(value)
-                if not wikidata[qid].get(pid_label):
-                    wikidata[qid][pid_label] = set()
-                wikidata[qid][pid_label].add(parsed_value)
-            elif len(data) == 3:  # Strings
-                # TODO what to do with language codes?
-                language, value, value_type = data
-                if value_type == constants.LABEL:
-                    if not wikidata[qid].get(constants.LABEL):
-                        wikidata[qid][constants.LABEL] = set()
-                    wikidata[qid][constants.LABEL].add(value)
-                elif value_type == constants.ALIAS:
-                    if not wikidata[qid].get(constants.ALIAS):
-                        wikidata[qid][constants.ALIAS] = set()
-                    wikidata[qid][constants.ALIAS].add(value)
-                elif value_type == constants.DESCRIPTION:
-                    if not wikidata[qid].get(constants.DESCRIPTION):
-                        wikidata[qid][constants.DESCRIPTION] = set()
-                    wikidata[qid][constants.DESCRIPTION].add(value)
-                else:
-                    expected_value_types = (
-                        constants.LABEL, constants.ALIAS, constants.DESCRIPTION)
-                    LOGGER.critical(
-                        'Bad value type for Wikidata API result: %s. It should be one of %s', value_type, expected_value_types)
-                    raise ValueError('Bad value type for Wikidata API result: %s. It should be one of %s' % (
-                        value_type, expected_value_types))
-            else:
-                LOGGER.critical(
-                    'Bad size for Wikidata API result tuple: %d. It should be between 2 and 4. Tuple: %s', len(data) + 1, (qid, data))
-                raise ValueError(
-                    'Bad size for Wikidata API result tuple: %d. It should be between 2 and 4. Tuple: %s' % (len(data) + 1, (qid, data)))
-            total += 1
 
 
 def gather_wikidata_metadata(wikidata):
