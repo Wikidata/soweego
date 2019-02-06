@@ -28,13 +28,14 @@ class BaseLinkEntity(AbstractConcreteBase, BASE):
     # Whether the URL is a Wiki link
     is_wiki = Column(Boolean)
     # Tokenized URL
-    tokens = Column(String(255))
+    url_tokens = Column(String(255))
 
+    # Full-text index over 'url_tokens'
     @declared_attr
     def __table_args__(cls):
         return (
-            Index('ftix_tokens_%s' % cls.__tablename__,
-                  "tokens", mysql_prefix="FULLTEXT"),
+            Index('ftix_url_tokens_%s' % cls.__tablename__,
+                  "url_tokens", mysql_prefix="FULLTEXT"),
             {'mysql_charset': 'utf8mb4'}
         )
 

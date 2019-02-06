@@ -79,11 +79,39 @@ URL_PIDS = set([
     'P4997', 'P5178', 'P5195', 'P5282', 'P5305', 'P5715'
 ])
 
-# Properties for metadata-based validation: gender, birth/death date/place
+# Validator metadata & linker properties: gender, birth/death date/place
+SEX_OR_GENDER = 'P21'
 PLACE_OF_BIRTH = 'P19'
 PLACE_OF_DEATH = 'P20'
-SEX_OR_GENDER = 'P21'
 DATE_OF_BIRTH = 'P569'
 DATE_OF_DEATH = 'P570'
-METADATA_PIDS = set([PLACE_OF_BIRTH, PLACE_OF_DEATH,
-                     SEX_OR_GENDER, DATE_OF_BIRTH, DATE_OF_DEATH])
+METADATA_PIDS = set([SEX_OR_GENDER, PLACE_OF_BIRTH,
+                     PLACE_OF_DEATH, DATE_OF_BIRTH, DATE_OF_DEATH])
+
+# Additional linker properties
+BIRTH_NAME = 'P1477'
+FAMILY_NAME = 'P734'
+GIVEN_NAME = 'P735'
+PSEUDONYM = 'P742'
+
+LINKER_PIDS = {
+    SEX_OR_GENDER: 'sex_or_gender',
+    PLACE_OF_BIRTH: 'place_of_birth',
+    PLACE_OF_DEATH: 'place_of_death',
+    DATE_OF_BIRTH: 'date_of_birth',
+    DATE_OF_DEATH: 'date_of_death',
+    BIRTH_NAME: 'birth_name',
+    FAMILY_NAME: 'family_name',
+    GIVEN_NAME: 'given_name',
+    PSEUDONYM: 'pseudonym'
+}
+
+# Music domain properties for linking
+MEMBER_OF = 'P463'  # Musician -> bands
+HAS_PART = 'P527'  # Band -> musicians
+PERFORMER = 'P175'  # Album -> musician/band
+
+# Movie domain
+CAST_MEMBER = 'P161'  # Movie -> actor
+DIRECTOR = 'P57'  # Movie -> director
+PRODUCER = 'P162'  # Movie -> producer

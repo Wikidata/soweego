@@ -1,12 +1,9 @@
 [[source]]
-
 url = "https://pypi.python.org/simple"
 verify_ssl = true
 name = "pypi"
 
-
 [packages]
-
 requests = "*"
 click = "*"
 jellyfish = "*"
@@ -16,11 +13,10 @@ pywikibot = "*"
 pymysql = "*"
 sqlalchemy = "*"
 regex = "*"
-
+recordlinkage = "*"
 
 [dev-packages]
-
+pylint = "*"
 rope = "*"
 ipython = "*"
-pylint = "*"
 "autopep8" = "*"

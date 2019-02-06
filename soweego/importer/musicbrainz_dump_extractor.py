@@ -16,8 +16,11 @@ import tarfile
 from collections import defaultdict
 from csv import DictReader
 from datetime import date
+from typing import Iterable
 
 import requests
+from sqlalchemy.exc import IntegrityError
+
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
@@ -29,19 +32,19 @@ from soweego.importer.models.musicbrainz_entity import (ARTIST_TABLE,
                                                         MusicbrainzBandEntity,
                                                         MusicbrainzBandLinkEntity)
 from soweego.wikidata.sparql_queries import external_id_pids_and_urls_query
-from sqlalchemy.exc import IntegrityError
 
 LOGGER = logging.getLogger(__name__)
 
 
 class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
-    def get_dump_download_url(self) -> str:
+    def get_dump_download_urls(self) -> Iterable[str]:
         latest_version = requests.get(
             'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/LATEST').text.rstrip()
-        return 'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/%s/mbdump.tar.bz2' % latest_version
+        return ['http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/%s/mbdump.tar.bz2' % latest_version]
 
-    def extract_and_populate(self, dump_file_path):
+    def extract_and_populate(self, dump_file_paths: Iterable[str]):
+        dump_file_path = dump_file_paths[0]
         dump_path = os.path.join(os.path.dirname(
             os.path.abspath(dump_file_path)), "%s_%s" % (os.path.basename(dump_file_path), 'extracted'))
 
@@ -345,7 +348,9 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
     def _fill_entity(self, entity, info, areas):
         entity.catalog_id = info['gid']
         entity.name = info['label']
-        entity.tokens = " ".join(text_utils.tokenize(info['label']))
+        name_tokens = text_utils.tokenize(info['label'])
+        if name_tokens:
+            entity.name_tokens = ' '.join(name_tokens)
         birth_date = self._get_date_and_precision(
             info['b_year'], info['b_month'], info['b_day'])
         death_date = self._get_date_and_precision(
@@ -366,10 +371,10 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
     def _fill_link_entity(self, entity, gid, link):
         entity.catalog_id = gid
         entity.url = link
-        entity.is_wiki = url_utils.is_wiki_link(
-            link)
-        entity.tokens = ' '.join(
-            url_utils.tokenize(link))
+        entity.is_wiki = url_utils.is_wiki_link(link)
+        url_tokens = url_utils.tokenize(link)
+        if url_tokens:
+            entity.url_tokens = ' '.join(url_tokens)
 
     def _alias_entities(self, entity: BaseEntity, aliases_class, aliases: []):
         for alias_label in aliases:
@@ -383,7 +388,9 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             alias_entity.death_place = entity.death_place
 
             alias_entity.name = alias_label
-            alias_entity.tokens = " ".join(url_utils.tokenize(alias_label))
+            name_tokens = text_utils.tokenize(alias_label)
+            if name_tokens:
+                alias_entity.name_tokens = ' '.join(name_tokens)
             yield alias_entity
 
     def _get_date_and_precision(self, year, month, day):

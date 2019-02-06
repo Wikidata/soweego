@@ -13,9 +13,9 @@ import gzip
 import logging
 import xml.etree.ElementTree as et
 from datetime import date, datetime
+from typing import Iterable
 
 from requests import get
-
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
@@ -41,17 +41,23 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
     valid_links = 0
     dead_links = 0
 
-    def get_dump_download_url(self) -> str:
+    def get_dump_download_urls(self) -> Iterable[str]:
         response = get(DUMP_LIST_URL_TEMPLATE.format(date.today().year))
         root = et.fromstring(response.text)
         # 4 dump files, sorted alphabetically: artists, labels, masters, releases
         latest = list(root)[-4]  # Take the 4th from last child
+        dump_file_name = None
         for child in latest:
             if 'Key' in child.tag:
                 dump_file_name = child.text
-        return DUMP_BASE_URL + dump_file_name
+        if dump_file_name is None:
+            LOGGER.error(
+                "Failed to get the Discogs dump download URL: are we at the very start of the year?")
+            return None
+        return [DUMP_BASE_URL + dump_file_name]
 
-    def extract_and_populate(self, dump_file_path: str):
+    def extract_and_populate(self, dump_file_paths: Iterable[str]):
+        dump_file_path = dump_file_paths[0]
         LOGGER.info(
             "Starting import of musicians and bands from Discogs dump '%s'", dump_file_path)
         start = datetime.now()
@@ -181,7 +187,9 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             nlp_entity = entity_class()
             nlp_entity.catalog_id = identifier
             nlp_entity.description = profile
-            nlp_entity.tokens = ' '.join(text_utils.tokenize(profile))
+            description_tokens = text_utils.tokenize(profile)
+            if description_tokens:
+                nlp_entity.description_tokens = ' '.join(description_tokens)
             session.add(nlp_entity)
             self.total_entities += 1
             if 'Musician' in entity_class.__name__:
@@ -192,10 +200,12 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             LOGGER.debug('Artist %s has an empty <profile/> tag', identifier)
 
     def _fill_entity(self, entity: discogs_entity.DiscogsBaseEntity, identifier, name, artist_node):
-        # Required fields
+        # Base fields
         entity.catalog_id = identifier
         entity.name = name
-        entity.tokens = ' '.join(text_utils.tokenize(name))
+        name_tokens = text_utils.tokenize(name)
+        if name_tokens:
+            entity.name_tokens = ' '.join(name_tokens)
         # Real name
         real_name = artist_node.findtext('realname')
         if real_name:
@@ -222,8 +232,9 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             variation_entity = entity_class()
             variation_entity.catalog_id = main_entity.catalog_id
             variation_entity.name = name_variation
-            variation_entity.tokens = ' '.join(
-                text_utils.tokenize(name_variation))
+            name_tokens = text_utils.tokenize(name_variation)
+            if name_tokens:
+                variation_entity.name_tokens = ' '.join(name_tokens)
             variation_entity.real_name = main_entity.real_name
             variation_entity.data_quality = main_entity.data_quality
             self.total_entities += 1
@@ -268,7 +279,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         entity.catalog_id = identifier
         entity.url = url
         entity.is_wiki = url_utils.is_wiki_link(url)
-        entity.tokens = '|'.join(url_utils.tokenize(url))
+        entity.url_tokens = ' '.join(url_utils.tokenize(url))
         if isinstance(entity, discogs_entity.DiscogsMusicianLinkEntity):
             self.musician_links += 1
         elif isinstance(entity, discogs_entity.DiscogsGroupLinkEntity):
