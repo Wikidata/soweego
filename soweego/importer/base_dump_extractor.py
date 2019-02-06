@@ -9,10 +9,12 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+from typing import Iterable
+
 
 class BaseDumpExtractor:
 
-    def extract_and_populate(self, dump_file_path: str):
+    def extract_and_populate(self, dump_file_path: Iterable[str]):
         """Extract relevant data and populate SQL Alchemy entities accordingly.
 
         :param dump_file_path: path to a downloaded dump file
@@ -21,7 +23,7 @@ class BaseDumpExtractor:
         """
         raise NotImplementedError
 
-    def get_dump_download_url(self) -> str:
+    def get_dump_download_urls(self) -> Iterable[str]:
         """Get the dump download URL.
         Useful if there is a way to compute the latest dump URL.
 
