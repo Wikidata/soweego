@@ -48,7 +48,7 @@ def parse_wikidata_value(value):
     return None
 
 
-def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO) -> Iterator[tuple]:
+def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> Iterator[tuple]:
     no_labels_count = 0
     no_aliases_count = 0
     no_descriptions_count = 0
@@ -66,6 +66,12 @@ def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fil
 
         for qid in response_body['entities']:
             to_write = {}
+            # Stick target ids if given
+            if qids_and_tids:
+                tids = qids_and_tids.get(qid)
+                if tids:
+                    to_write[constants.TID] = list(tids[constants.TID])
+
             entity = response_body['entities'][qid]
             claims = entity.get('claims')
             if not claims:
@@ -79,15 +85,15 @@ def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fil
                 LOGGER.info('Skipping QID with no labels: %s', qid)
                 no_labels_count += 1
                 continue
-            to_write[constants.DF_QID] = qid
-            to_write[constants.DF_LABEL] = _return_monolingual_strings(
+            to_write[constants.QID] = qid
+            to_write[constants.LABEL] = _return_monolingual_strings(
                 qid, labels)
 
             # Aliases
             aliases = entity.get('aliases')
             if aliases:
                 # Merge them into labels
-                to_write[constants.DF_LABEL].update(
+                to_write[constants.LABEL].update(
                     _return_aliases(qid, aliases))
             else:
                 LOGGER.debug('%s has no aliases', qid)
@@ -96,7 +102,7 @@ def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fil
             # Descriptions
             descriptions = entity.get('descriptions')
             if descriptions:
-                to_write[constants.DF_DESCRIPTION] = _return_monolingual_strings(
+                to_write[constants.DESCRIPTION] = _return_monolingual_strings(
                     qid, descriptions)
             else:
                 LOGGER.debug('%s has no descriptions', qid)
@@ -105,21 +111,21 @@ def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fil
             # Sitelinks
             sitelinks = entity.get('sitelinks')
             if sitelinks:
-                to_write[constants.DF_URL] = _return_sitelinks(sitelinks)
+                to_write[constants.URL] = _return_sitelinks(sitelinks)
             else:
                 LOGGER.debug('%s has no sitelinks', qid)
-                to_write[constants.DF_URL] = set()
+                to_write[constants.URL] = set()
                 no_sitelinks_count += 1
 
             # Third-party URLs
-            to_write[constants.DF_URL].update(
+            to_write[constants.URL].update(
                 _return_third_party_urls(qid, claims, url_pids, no_links_count))
 
             # External ID URLs
-            to_write[constants.DF_URL].update(_return_ext_id_urls(
+            to_write[constants.URL].update(_return_ext_id_urls(
                 qid, claims, ext_id_pids_to_urls, no_ext_ids_count))
             # Convert set to list for JSON serialization
-            to_write[constants.DF_URL] = list(to_write[constants.DF_URL])
+            to_write[constants.URL] = list(to_write[constants.URL])
 
             # Expected claims
             to_write.update(_return_claims_for_linker(
@@ -308,7 +314,7 @@ def _yield_aliases(qid, aliases):
                 LOGGER.warning(
                     'Skipping malformed alias with no value for %s: %s', qid, data)
                 continue
-            yield qid, language_code, alias, constants.DF_ALIAS
+            yield qid, language_code, alias, constants.ALIAS
 
 
 def _yield_sitelinks(entity, qid, no_sitelinks_count):

@@ -12,15 +12,17 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import json
 import logging
 import re
+import sys
 from collections import defaultdict
 from typing import Iterable, TypeVar
 
 import regex
-from soweego.commons import constants, url_utils
+from sqlalchemy import or_
+
+from soweego.commons import constants, target_database, url_utils
 from soweego.commons.cache import cached
 from soweego.commons.db_manager import DBManager
 from soweego.wikidata import api_requests, sparql_queries, vocabulary
-from sqlalchemy import or_
 
 LOGGER = logging.getLogger(__name__)
 T = TypeVar('T')
@@ -113,12 +115,10 @@ def perfect_name_search(target_entity: T, to_search: str) -> Iterable[T]:
         session.close()
 
 
-def gather_target_dataset(entity_type, catalog, identifiers, fileout, for_linking=True):
-    # TODO similar functions in constants
-    catalog_constants = _get_catalog_constants(catalog)
-    catalog_entity = _get_catalog_entity(entity_type, catalog_constants)
-    base, link, nlp = catalog_entity['entity'], catalog_entity['link_entity'], catalog_entity['nlp_entity']
-    if for_linking:
+def gather_target_dataset(entity_type, catalog, identifiers, fileout, for_classification):
+    base, link, nlp = target_database.get_entity(catalog, entity_type), target_database.get_link_entity(
+        catalog, entity_type), target_database.get_nlp_entity(catalog, entity_type)
+    if for_classification:
         condition = ~base.catalog_id.in_(identifiers)
         to_log = 'dataset'
     else:
@@ -132,9 +132,10 @@ def gather_target_dataset(entity_type, catalog, identifiers, fileout, for_linkin
     query = session.query(base, link, nlp).join(link, base.catalog_id == link.catalog_id).join(
         nlp, base.catalog_id == nlp.catalog_id).filter(condition)
 
-    result = None
     try:
         raw_result = _run_query(query, catalog, entity_type)
+        if raw_result is None:
+            sys.exit(1)
         relevant_fields = _build_dataset_relevant_fields(base, link, nlp)
         _dump_target_dataset_query_result(
             raw_result, relevant_fields, fileout)
@@ -144,7 +145,6 @@ def gather_target_dataset(entity_type, catalog, identifiers, fileout, for_linkin
         raise
     finally:
         session.close()
-    return result
 
 
 def _build_dataset_relevant_fields(base, link, nlp):
@@ -160,23 +160,22 @@ def _build_dataset_relevant_fields(base, link, nlp):
 
 def _dump_target_dataset_query_result(result_set, relevant_fields, fileout):
     for base, link, nlp in result_set:
-        parsed = defaultdict(set)
-        parsed[constants.DF_TID] = base.catalog_id
+        parsed = {constants.TID: base.catalog_id}
         for field in relevant_fields:
             try:
-                parsed[field].add(getattr(base, field))
+                parsed[field] = getattr(base, field)
             except AttributeError:
                 pass
             try:
-                parsed[field].add(getattr(link, field))
+                parsed[field] = getattr(link, field)
             except AttributeError:
                 pass
             try:
-                parsed[field].add(getattr(nlp, field))
+                parsed[field] = getattr(nlp, field)
             except AttributeError:
                 pass
-        fileout.write(json.dumps({field: list(values) for field, values in parsed.items(
-        ) if field != constants.DF_TID}, ensure_ascii=False) + '\n')
+
+        fileout.write(json.dumps(parsed, ensure_ascii=False) + '\n')
         fileout.flush()
 
 
@@ -412,8 +411,8 @@ def gather_target_ids(entity, catalog, catalog_pid, aggregated):
     query_type = constants.IDENTIFIER, constants.HANDLED_ENTITIES.get(entity)
     for qid, target_id in sparql_queries.run_query(query_type, catalog_constants[entity]['qid'], catalog_pid, 0):
         if not aggregated.get(qid):
-            aggregated[qid] = {'identifiers': set()}
-        aggregated[qid]['identifiers'].add(target_id)
+            aggregated[qid] = {constants.TID: set()}
+        aggregated[qid][constants.TID].add(target_id)
     LOGGER.info('Got %d %s identifiers', len(aggregated), catalog)
 
 

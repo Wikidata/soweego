@@ -80,6 +80,8 @@ def tokenize(text, stopwords=STOPWORDS_ENG):
             tokens.add(token)
     LOGGER.debug('Tokenization pipeline: INPUT --> %s --> ASCII --> %s --> LOWERCASE --> %s --> SPLIT --> %s --> NO 0/1-GRAMS + NO STOPWORDS --> %s',
                  text, ascii_only, ascii_lowercase, split, tokens)
+    if not tokens:
+        LOGGER.debug("No tokens from text '%s'", text)
     return tokens
 
 

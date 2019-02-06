@@ -112,6 +112,8 @@ def add_identifiers(matches: dict, catalog_name: str, sandbox: bool) -> None:
         LOGGER.info('Processing %s match: %s -> %s',
                     catalog_name, qid, catalog_id)
         if sandbox:
+            LOGGER.info(
+                'Using Wikidata sandbox item %s as subject, instead of %s', vocabulary.SANDBOX_1, qid)
             _add_or_reference(vocabulary.SANDBOX_1,
                               catalog_terms['pid'], catalog_id, catalog_terms['qid'])
         else:

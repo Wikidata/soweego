@@ -16,10 +16,10 @@ from os import path
 from typing import Callable, Iterable, Tuple
 
 import click
+
 from soweego.commons import (data_gathering, target_database, text_utils,
                              url_utils)
 from soweego.importer.models.base_entity import BaseEntity
-from soweego.importer.models.base_link_entity import BaseLinkEntity
 from soweego.ingestor import wikidata_bot
 from soweego.wikidata.api_requests import get_data_for_linker
 from sqlalchemy.exc import ProgrammingError
