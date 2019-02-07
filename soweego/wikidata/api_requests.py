@@ -32,23 +32,46 @@ BUCKET_SIZE = 50
 
 def parse_wikidata_value(value):
     # Values: plain strings, monolingual strings, birth/death DATES, gender, birth/death places QIDs
-    if isinstance(value, str):
-        return value  # String
-    date_value = value.get('time')
+    if isinstance(value, str):  # String
+        return value
+
+    monolingual_string_value = value.get('text')  # Language string
+    if monolingual_string_value:
+        return monolingual_string_value
+
+    date_value = value.get('time')  # Date
     if date_value:
         # +1180-01-01T00:00:00Z -> 1180-01-01
+        # TODO parse into a date object and precision
         parsed = date_value[1:].split('T')[0]
-        return f"{parsed}/{value['precision']}"  # Date
-    item_value = value.get('id')
+        return f"{parsed}/{value['precision']}"
+
+    item_value = value.get('id')  # QID
     if item_value:
-        return item_value  # QID
-    monolingual_string_value = value.get('text')
-    if monolingual_string_value:
-        return monolingual_string_value  # Language string
+        return _lookup_label(item_value)
+
+    LOGGER.warning('Failed parsing value: %s', value)
     return None
 
 
-def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> Iterator[tuple]:
+def _lookup_label(item_value):
+    request_params = {
+        'action': 'wbgetentities',
+        'format': 'json',
+        'props': 'labels'
+    }
+    response_body = _make_request([item_value], request_params)
+    if not response_body:
+        LOGGER.warning('Failed label lookup for %s', item_value)
+        return None
+    labels = response_body['entities'][item_value].get('labels')
+    if not labels:
+        LOGGER.info('No label for %s', item_value)
+        return None
+    return _return_monolingual_strings(item_value, labels)
+
+
+def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> None:
     no_labels_count = 0
     no_aliases_count = 0
     no_descriptions_count = 0
@@ -98,12 +121,14 @@ def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fil
             else:
                 LOGGER.debug('%s has no aliases', qid)
                 no_aliases_count += 1
+            # Convert set to list for JSON serialization
+            to_write[constants.LABEL] = list(to_write[constants.LABEL])
 
             # Descriptions
             descriptions = entity.get('descriptions')
             if descriptions:
-                to_write[constants.DESCRIPTION] = _return_monolingual_strings(
-                    qid, descriptions)
+                to_write[constants.DESCRIPTION] = list(
+                    _return_monolingual_strings(qid, descriptions))
             else:
                 LOGGER.debug('%s has no descriptions', qid)
                 no_descriptions_count += 1
@@ -201,28 +226,34 @@ def get_links(qids: set, url_pids: set, ext_id_pids_to_urls: dict) -> Iterator[t
 
 
 def _return_monolingual_strings(qid, strings):
-    to_return = defaultdict(set)
-    for language_code, data in strings.items():
+    # Language codes are discarded, since we opt for
+    # language-agnostic feature extraction.
+    # See soweego.linker.workflow#extract_features
+    to_return = set()
+    for data in strings.values():
         string = data.get('value')
         if not string:
             LOGGER.warning(
                 'Skipping malformed monolingual string with no value for %s: %s', qid, data)
             continue
-        to_return[string].add(language_code)
-    return {field: list(values) for field, values in to_return.items()}
+        to_return.add(string)
+    return to_return
 
 
 def _return_aliases(qid, aliases):
-    to_return = defaultdict(set)
-    for language_code, values in aliases.items():
+    # Language codes are discarded, since we opt for
+    # language-agnostic feature extraction.
+    # See soweego.linker.workflow#extract_features
+    to_return = set()
+    for values in aliases.values():
         for data in values:
             alias = data.get('value')
             if not alias:
                 LOGGER.warning(
                     'Skipping malformed alias with no value for %s: %s', qid, data)
                 continue
-            to_return[alias].add(language_code)
-    return {field: list(values) for field, values in to_return.items()}
+            to_return.add(alias)
+    return to_return
 
 
 def _return_sitelinks(sitelinks):
@@ -244,6 +275,8 @@ def _return_third_party_urls(qid, claims, url_pids, no_count):
                 if not value:
                     continue
                 parsed_value = parse_wikidata_value(value)
+                if not parsed_value:
+                    continue
                 to_return.add(parsed_value)
     else:
         LOGGER.debug('No third-party URLs for %s', qid)
@@ -263,13 +296,18 @@ def _return_claims_for_linker(qid, claims, no_count):
                 if not value:
                     continue
                 pid_label = vocabulary.LINKER_PIDS.get(pid)
-                parsed_value = parse_wikidata_value(value)
                 if not pid_label:
                     LOGGER.critical('PID label lookup failed: %s. The PID should be one of %s',
                                     pid, expected_pids)
                     raise ValueError('PID label lookup failed: %s. The PID should be one of %s' % (
                         pid, expected_pids))
-                to_return[pid_label].add(parsed_value)
+                parsed_value = parse_wikidata_value(value)
+                if not parsed_value:
+                    continue
+                if isinstance(parsed_value, set):
+                    to_return[pid_label].update(parsed_value)
+                else:
+                    to_return[pid_label].add(parsed_value)
     else:
         LOGGER.debug('No %s expected claims for %s', expected_pids, qid)
         no_count += 1
@@ -470,3 +508,10 @@ def _make_buckets(qids):
     LOGGER.info('Made %d buckets of size %d out of %d QIDs to comply with the Wikidata API limits',
                 len(buckets), BUCKET_SIZE, len(qids))
     return buckets
+
+
+if __name__ == "__main__":
+    import io
+    # def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> Iterator[tuple]:
+    get_data_for_linker(
+        set(['Q400', 'Q15020877', 'Q77010']), set(), dict(), io.StringIO(), dict())
