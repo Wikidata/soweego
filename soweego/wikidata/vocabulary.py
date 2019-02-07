@@ -97,8 +97,8 @@ LINKER_PIDS = {
     SEX_OR_GENDER: 'sex_or_gender',
     PLACE_OF_BIRTH: 'place_of_birth',
     PLACE_OF_DEATH: 'place_of_death',
-    DATE_OF_BIRTH: 'date_of_birth',
-    DATE_OF_DEATH: 'date_of_death',
+    DATE_OF_BIRTH: 'born',  # Consistent with BaseEntity.born
+    DATE_OF_DEATH: 'died',  # Consistent with BaseEntity.died
     BIRTH_NAME: 'birth_name',
     FAMILY_NAME: 'family_name',
     GIVEN_NAME: 'given_name',
