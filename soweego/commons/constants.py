@@ -106,6 +106,9 @@ ALIAS = 'alias'
 PSEUDONYM = 'pseudonym'
 DESCRIPTION = 'description'
 URL = 'url'
+DATE_OF_BIRTH = vocabulary.LINKER_PIDS[vocabulary.DATE_OF_BIRTH]
+DATE_OF_DEATH = vocabulary.LINKER_PIDS[vocabulary.DATE_OF_DEATH]
+
 
 # File names
 WD_CLASSIFICATION_SET = 'wikidata_%s_dataset.jsonl.gz'

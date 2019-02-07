@@ -69,7 +69,8 @@ def build_wikidata(goal, catalog, entity, dir_io):
             api_requests.get_data_for_linker(
                 qids, url_pids, ext_id_pids_to_urls, wd_io, qids_and_tids)
 
-    wd_df_reader = read_json(wd_io_path, lines=True, chunksize=1000)
+    wd_df_reader = read_json(wd_io_path, lines=True, chunksize=1000, convert_dates=[
+                             constants.DATE_OF_BIRTH, constants.DATE_OF_DEATH])
 
     LOGGER.info('Wikidata training set built')
     return wd_df_reader, qids_and_tids
@@ -116,8 +117,8 @@ def build_target(goal, catalog, entity, qids_and_tids, dir_io):
                 entity, catalog, tids, target_io, for_classification)
 
     # Enforce target ID as a string
-    target_df_reader = read_json(
-        target_io_path, lines=True, chunksize=1000, dtype={constants.TID: str})
+    target_df_reader = read_json(target_io_path, lines=True, chunksize=1000, dtype={
+                                 constants.TID: str}, convert_dates=[constants.DATE_OF_BIRTH, constants.DATE_OF_DEATH])
 
     LOGGER.info('Target training set built')
     return target_df_reader
