@@ -30,25 +30,31 @@ WIKIDATA_API_URL = 'https://www.wikidata.org/w/api.php'
 BUCKET_SIZE = 50
 
 
+# Values: plain strings (includes URLs), monolingual strings,
+# birth/death dates, QIDs (gender, birth/death places)
 def parse_wikidata_value(value):
-    # Values: plain strings, monolingual strings, birth/death DATES, gender, birth/death places QIDs
-    if isinstance(value, str):  # String
+    # Plain string
+    if isinstance(value, str):
         return value
 
-    monolingual_string_value = value.get('text')  # Language string
+    # Monolingual string
+    monolingual_string_value = value.get('text')
     if monolingual_string_value:
         return monolingual_string_value
 
-    date_value = value.get('time')  # Date
+    # Date: return tuple (date, precision)
+    date_value = value.get('time')
+    if date_value and date_value.startswith('-'):  # Drop BC support
+        LOGGER.warning(
+            'Cannot parse BC (Before Christ) date, Python does not support it: %s', date_value)
+        return None
     if date_value:
-        # +1180-01-01T00:00:00Z -> 1180-01-01
-        # TODO parse into a date object and precision
-        parsed = date_value[1:].split('T')[0]
-        return f"{parsed}/{value['precision']}"
+        return date_value[1:], value['precision']  # Get rid of leading '+'
 
-    item_value = value.get('id')  # QID
-    if item_value:
-        return _lookup_label(item_value)
+    # QID: return set of labels
+    qid_value = value.get('id')
+    if qid_value:
+        return _lookup_label(qid_value)
 
     LOGGER.warning('Failed parsing value: %s', value)
     return None
@@ -304,8 +310,12 @@ def _return_claims_for_linker(qid, claims, no_count):
                 parsed_value = parse_wikidata_value(value)
                 if not parsed_value:
                     continue
-                if isinstance(parsed_value, set):
+                if isinstance(parsed_value, set):  # Labels
                     to_return[pid_label].update(parsed_value)
+                elif isinstance(parsed_value, tuple):  # Dates
+                    date, precision = parsed_value
+                    to_return[pid_label].add(date)
+                    to_return[f'{pid_label}_precision'].add(precision)
                 else:
                     to_return[pid_label].add(parsed_value)
     else:
@@ -514,4 +524,4 @@ if __name__ == "__main__":
     import io
     # def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> Iterator[tuple]:
     get_data_for_linker(
-        set(['Q400', 'Q15020877', 'Q77010']), set(), dict(), io.StringIO(), dict())
+        set(['Q1409', 'Q1405', 'Q1407']), set(), dict(), io.StringIO(), dict())
