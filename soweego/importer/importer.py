@@ -52,7 +52,7 @@ class Importer():
             LOGGER.info("Retrieving last modified of %s" % download_url)
 
             last_modified = client.http_call(download_url,
-                                             'HEAD').headers[const.LAST_MODIFIED_KEY]
+                                             'HEAD').headers[const.LAST_MODIFIED]
 
             try:
                 last_modified = datetime.datetime.strptime(
