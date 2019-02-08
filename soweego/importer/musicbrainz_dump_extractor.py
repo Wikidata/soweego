@@ -69,9 +69,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         artist_count = 0
         for artist in self._artist_generator(dump_path):
             artist_count = artist_count + 1
-            session = db_manager.new_session()
-            session.add(artist)
-            session.commit()
+            self._commit_entity(db_manager, artist)
 
         LOGGER.debug("Added %s artist records" % artist_count)
 
@@ -86,9 +84,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         link_count = 0
         for link in self._link_generator(dump_path):
             link_count = link_count + 1
-            session = db_manager.new_session()
-            session.add(link)
-            session.commit()
+            self._commit_entity(db_manager, link)
 
         LOGGER.debug("Added %s link records" % link_count)
         LOGGER.info("Importing ISNIs")
@@ -96,9 +92,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         isni_link_count = 0
         for link in self._isni_link_generator(dump_path):
             isni_link_count = isni_link_count + 1
-            session = db_manager.new_session()
-            session.add(link)
-            session.commit()
+            self._commit_entity(db_manager, link)
 
         LOGGER.debug("Added %s ISNI link records" % isni_link_count)
 
@@ -112,9 +106,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         for relationship in self._artist_band_relationship_generator(dump_path):
             try:
                 relationships_total = relationships_total + 1
-                session = db_manager.new_session()
-                session.add(relationship)
-                session.commit()
+                self._commit_entity(db_manager, relationship)
                 relationships_count = relationships_count + 1
             except IntegrityError as i:
                 LOGGER.warning(str(i))
@@ -139,7 +131,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                         'Url with ID %s has multiple artists, only one will be stored' % relationship[3])
                 else:
                     urlid_artistid_relationship[relationship[3]
-                                                ] = relationship[2]
+                    ] = relationship[2]
 
         url_artistid = {}
         url_path = os.path.join(dump_path, 'mbdump', 'url')
@@ -170,7 +162,9 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         # Translates ARTIST ID to the relative ARTIST
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
         with open(artist_path, 'r') as artistfile:
-            for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day', 'd_year', 'd_month', 'd_day', 'type_id']):
+            for artist in DictReader(artistfile, delimiter='\t',
+                                     fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
+                                                 'd_year', 'd_month', 'd_day', 'type_id']):
                 if artist['id'] in artistid_url:
                     for link in artistid_url[artist['id']]:
                         if self._check_person(artist['type_id']):
@@ -216,7 +210,9 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
         with open(artist_path, 'r') as artistfile:
-            for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day', 'd_year', 'd_month', 'd_day', 'type_id']):
+            for artist in DictReader(artistfile, delimiter='\t',
+                                     fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
+                                                 'd_year', 'd_month', 'd_day', 'type_id']):
                 try:
                     # Checks if artist has isni
                     link = artist_link[artist['id']]
@@ -244,7 +240,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         # Key is the entity id which has a list of aliases
         with open(artist_alias_path, 'r') as aliasesfile:
             for alias in DictReader(aliasesfile, delimiter='\t', fieldnames=[
-                    'id', 'parent_id', 'label']):
+                'id', 'parent_id', 'label']):
                 aliases[alias['parent_id']].append(alias['label'])
 
         # Key is the area internal id, value is the name
@@ -253,7 +249,10 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 areas[area['id']] = area['name'].lower()
 
         with open(artist_path, 'r') as artistfile:
-            for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day', 'd_year', 'd_month', 'd_day', 'type_id', 'area', 'gender', 'ND1', 'ND2', 'ND3', 'ND4', 'b_place', 'd_place']):
+            for artist in DictReader(artistfile, delimiter='\t',
+                                     fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
+                                                 'd_year', 'd_month', 'd_day', 'type_id', 'area', 'gender', 'ND1',
+                                                 'ND2', 'ND3', 'ND4', 'b_place', 'd_place']):
                 if self._check_person(artist['type_id']):
                     current_entity = MusicbrainzArtistEntity()
 
@@ -265,13 +264,13 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                         LOGGER.error('Wrong date: %s', artist)
                         continue
 
-                    yield current_entity
-
                     # Creates an entity foreach available alias
                     for alias in self._alias_entities(
                             current_entity, MusicbrainzArtistEntity, aliases[artist['id']]):
                         alias.gender = current_entity.gender
                         yield alias
+
+                    yield current_entity
 
                 if self._check_band(artist['type_id']):
                     current_entity = MusicbrainzBandEntity()
@@ -282,12 +281,12 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                         LOGGER.error('Wrong date: %s', artist)
                         continue
 
-                    yield current_entity
-
                     # Creates an entity foreach available alias
                     for alias in self._alias_entities(
                             current_entity, MusicbrainzBandEntity, aliases[artist['id']]):
                         yield alias
+
+                    yield current_entity
 
     def _artist_band_relationship_generator(self, dump_path):
         link_types = set(['855', '103', '305', '965', '895'])
@@ -310,7 +309,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         relationships = []
         with open(artists_relationship_file) as relfile:
             reader = DictReader(relfile, delimiter='\t', fieldnames=[
-                                'id', 'link_id', 'entity0', 'entity1'])
+                'id', 'link_id', 'entity0', 'entity1'])
             for row in reader:
                 link_id = row['link_id']
                 if link_id in links:
@@ -334,7 +333,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         for relation in relationships:
             translation0, translation1 = ids_translator[relation[0]
-                                                        ], ids_translator[relation[1]]
+                                         ], ids_translator[relation[1]]
 
             if translation0 and translation1:
                 if relation in to_invert:
