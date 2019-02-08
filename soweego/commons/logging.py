@@ -50,7 +50,7 @@ DEFAULT_CONFIG = {
         'debug_file_handler': {
             'formatter': 'soweego',
             'level': 'DEBUG',
-            'filename': 'debug.log',
+            'filename': '/app/shared/debug.log',
             'mode': 'w',
             'class': 'logging.FileHandler',
             'encoding': 'utf8'
