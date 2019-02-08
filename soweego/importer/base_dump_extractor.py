@@ -32,3 +32,18 @@ class BaseDumpExtractor:
         :rtype: str
         """
         raise NotImplementedError
+
+    def _commit_entity(self, db_manager, entity):
+        success = True
+        session = db_manager.new_session()
+        try:
+            session.add(entity)
+            session.commit()
+        except:
+            session.rollback()
+            success = False
+        finally:
+            session.close()
+
+        if not success:
+            self._commit_entity(db_manager, entity)
