@@ -13,14 +13,13 @@ import json
 import logging
 from pkgutil import get_data
 
+from soweego.commons import constants
+from soweego.commons import localizations as loc
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import configure_mappers, sessionmaker
 from sqlalchemy.pool import NullPool
-
-from soweego.commons import constants
-from soweego.commons import localizations as loc
 
 BASE = declarative_base()
 LOGGER = logging.getLogger(__name__)
@@ -42,10 +41,10 @@ class DBManager():
         password = credentials[constants.PASSWORD]
         host = credentials[constants.HOST]
         try:
-            # Disable connection pooling, as per Wikimedia policy
+            # Should disable connection pooling, as per Wikimedia policy
             # https://wikitech.wikimedia.org/wiki/Help:Toolforge/Database#Connection_handling_policy
             self.__engine = create_engine(
-                '{0}://{1}:{2}@{3}/{4}'.format(db_engine, user, password, host, db_name))
+                '{0}://{1}:{2}@{3}/{4}'.format(db_engine, user, password, host, db_name), pool_recycle=1800)
         except Exception as error:
             LOGGER.critical(loc.FAIL_CREATE_ENGINE, error)
 
