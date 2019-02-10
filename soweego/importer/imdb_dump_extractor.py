@@ -149,11 +149,22 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 if "writer" in professions:
                     types_of_entities.append(imdb_entity.ImdbWriterEntity())
 
+                # if the only profession a person has is `miscellaneous` then we
+                # add it to all 4 tables
+                if professions == "miscellaneous":
+                    types_of_entities = [
+                        imdb_entity.ImdbActorEntity(),
+                        imdb_entity.ImdbDirectorEntity(),
+                        imdb_entity.ImdbProducerEntity(),
+                        imdb_entity.ImdbWriterEntity(),
+                    ]
+
                 # add person to every matching table
                 for etype in types_of_entities:
                     self._populate_person(etype, person_info, session)
 
-                # if person is known for any movies then add these to the databse as well
+                # if person is known for any movies then add these to the
+                # databse as well
                 if person_info.get("knownForTitles"):
                     self._populate_person_movie_relations(person_info, session)
 
