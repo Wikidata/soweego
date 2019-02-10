@@ -24,6 +24,7 @@ from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models import imdb_entity
 from soweego.importer.models.base_link_entity import BaseLinkEntity
+from soweego.wikidata import vocabulary as vocab
 
 LOGGER = logging.getLogger(__name__)
 
@@ -158,7 +159,59 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
                 session.commit()
 
+    def _translate_professions(self, professions: List[str]) -> List[str]:
+        """
+        Gets the list of professions (as a list of strings) directly from IMDB
+        and translates these to a list of QIDs for each specific profession.
+
+        Unmappable professions (like `miscellaneous` are removed)
+
+        :param professions: list of profession names, given by IMDB
+
+        :returns: list of QIDs for said professions
+        """
+        qids = []
+
+        # TODO: finish mapping
+        # ? TODO: Should all these "QIDs" actually be in vocabulary.py?
+        mappings = {
+            "actor": vocab.ACTOR,
+            "actress": vocab.ACTOR,
+            "art_director": "Q706364",
+            "assistant_director": "Q1757008",
+            "casting_director": "Q1049296",
+            "cinematographer": "Q222344",
+            "composer": "Q36834",
+            "costume_designer": "Q1323191",
+            "director": vocab.DIRECTOR,
+            "executive": "Q978044",
+            "manager": "Q2462658",
+            # TODO: The producer QID is not the same as the one used in vocabulary.py
+            "producer": "Q13235160",
+            "production_designer": "Q2962070",
+            "production_manager": "Q21292974",
+            "publicist": "Q4178004",
+            "set_decorator": "Q6409989",
+            "special_effects": "Q21560152",
+            "stunts": "Q465501",
+            "talent_agent": "Q1344174",
+            "writer": vocab.SCREENWRITER,
+            "music_department": vocab.MUSICIAN,
+            "sound_department": "Q128124",
+            "soundtrack": vocab.MUSICIAN,
+        }
+
+        for prof in professions:
+            qid = mappings.get(prof, None)
+            if qid:
+                qids.append(qid)
+
+        return qids
+
     def _populate_person(self, person_entity: imdb_entity.ImdbPersonEntity, person_info: Dict, session: object):
+
+        # we can distinguish genre for actor and actress
+
         person_entity.catalog_id = person_info.get("nconst")
         person_entity.name = person_info.get("primaryName")
         person_entity.tokens = " ".join(
@@ -168,8 +221,9 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         person_entity.died = person_info.get("deathYear")
 
         if person_info.get("primaryProfession"):
-            person_entity.occupations = person_info.get(
-                "primaryProfession").split()
+            person_entity.occupations = self._translate_professions(
+                person_info.get("primaryProfession").split()
+            )
 
         session.add(person_entity)
 

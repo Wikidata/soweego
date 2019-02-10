@@ -45,7 +45,6 @@ HANDLED_ENTITIES = {
     'producer': OCCUPATION
 }
 
-# TODO add IMDb entities
 # DB entities and their Wikidata class QID
 TARGET_CATALOGS = {
     'discogs': {
