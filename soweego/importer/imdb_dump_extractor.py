@@ -146,6 +146,13 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 if "producer" in professions:
                     types_of_entities.append(imdb_entity.ImdbProducerEntity())
 
+                # TODO: there possibly is a nicer way to do this
+                if ("sound_department" in professions or
+                        "composer" in professions or
+                        "music_department" in professions or
+                        "soundtrack" in professions):
+                    types_of_entities.append(imdb_entity.ImdbMusicianEntity())
+
                 if "writer" in professions:
                     types_of_entities.append(imdb_entity.ImdbWriterEntity())
 
@@ -155,6 +162,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                     types_of_entities = [
                         imdb_entity.ImdbActorEntity(),
                         imdb_entity.ImdbDirectorEntity(),
+                        imdb_entity.ImdbMusicianEntity(),
                         imdb_entity.ImdbProducerEntity(),
                         imdb_entity.ImdbWriterEntity(),
                     ]
