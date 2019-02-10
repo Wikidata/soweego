@@ -46,15 +46,19 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
     def _normalize_null(self, entity: Dict):
         """
-        IMDB represents a null entry with \\N , we want to convert
-        all \\N to None so that they're saved as null in the database
+        IMDB represents a null entry with \\N , this method converts
+        all \\N to None so that they're saved as null in the database.
+        This is done for all "entries" of a given entity. 
+
+        The normalization process is done in place, so this  method 
+        has no return value. 
+
+        :param entity: represents the entity we want to *normalize*
         """
 
         for k, v in entity.items():
             if v == "\\N":
                 entity[k] = None
-
-
 
     def extract_and_populate(self, dump_file_paths: List[str]):
 
@@ -67,7 +71,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         start = datetime.datetime.now()
 
         tables = [
-            # imdb_entity.ImdbMovieEntity,
+            imdb_entity.ImdbMovieEntity,
             imdb_entity.ImdbActorEntity,
             imdb_entity.ImdbDirectorEntity,
             imdb_entity.ImdbProducerEntity,
@@ -80,15 +84,9 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
         db_manager.drop(tables)
         db_manager.create(tables)
-        raise Exception
 
         LOGGER.info("SQL tables dropped and re-created: %s",
                     [table.__tablename__ for table in tables])
-
-        LOGGER.info("Downloading movie dataset")
-
-        LOGGER.info("Movie dataset has been downloaded to '%s'",
-                    movies_file_path)
 
         LOGGER.info("Starting to import movies from imdb dump")
 
@@ -135,7 +133,9 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
                 session = db_manager.new_session()
 
+                # each person can be added to multiple tables in the DB
                 types_of_entities = []
+
                 if "actor" in professions or "actress" in professions:
                     types_of_entities.append(imdb_entity.ImdbActorEntity())
 
@@ -148,9 +148,11 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 if "writer" in professions:
                     types_of_entities.append(imdb_entity.ImdbWriterEntity())
 
+                # add person to every matching table
                 for etype in types_of_entities:
                     self._populate_person(etype, person_info, session)
 
+                # if person is known for any movies then add these to the databse as well
                 if person_info.get("knownForTitles"):
                     self._populate_person_movie_relations(person_info, session)
 
