@@ -19,13 +19,14 @@ from sqlalchemy.orm import relationship
 
 BASE = declarative_base()
 
-MOVIE_TABLE = "imdb_movie"
 ACTOR_TABLE = "imdb_actor"
+BASE_PERSON_TABLE = "imdb_base_person"
 DIRECTOR_TABLE = "imdb_director"
+MOVIE_TABLE = "imdb_movie"
+MUSICIAN_TABLE = "imdb_musician"
+PERSON_MOVIE_RELATIONSHIP_TABLE = "imdb_person_movie_relationship"
 PRODUCER_TABLE = "imdb_producer"
 WRITER_TABLE = "imdb_writer"
-BASE_PERSON_TABLE = "imdb_base_person"
-PERSON_MOVIE_RELATIONSHIP_TABLE = "imdb_person_movie_relationship"
 
 # actor, director, producer e writer
 
@@ -71,6 +72,7 @@ class ImdbPersonEntity(BaseEntity):
     died_precision = Column(Integer, default=9, nullable=False)
 
     _occupations = Column("occupations", String(255), nullable=True)
+
     @hybrid_property
     def occupations(self):
         return self._occupations.split(" ") if self._occupations else []
@@ -78,7 +80,6 @@ class ImdbPersonEntity(BaseEntity):
     @occupations.setter
     def occupations(self, occupations_):
         self._occupations = " ".join(occupations_)
-
 
     __abstract__ = True
 
@@ -92,6 +93,13 @@ class ImdbActorEntity(ImdbPersonEntity):
 
 class ImdbDirectorEntity(ImdbPersonEntity):
     __tablename__ = DIRECTOR_TABLE
+    __mapper_args__ = {
+        'polymorphic_identity': __tablename__,
+        'concrete': True}
+
+
+class ImdbMusicianEntity(ImdbPersonEntity):
+    __tablename__ = MUSICIAN_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
         'concrete': True}
