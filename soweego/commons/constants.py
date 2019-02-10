@@ -82,7 +82,7 @@ TARGET_CATALOGS = {
             'nlp_entity': None
         },
         'writer': {
-            'qid': vocabulary.FILM_WRITER,
+            'qid': vocabulary.SCREENWRITER,
             'entity': imdb_entity.ImdbWriterEntity,
             'link_entity': None,
             'nlp_entity': None
