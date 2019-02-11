@@ -45,13 +45,14 @@ def build_wikidata(goal, catalog, entity, dir_io):
     if os.path.exists(wd_io_path):
         LOGGER.info(
             "Will reuse existing Wikidata %s set: '%s'", goal, wd_io_path)
-        with gzip.open(wd_io_path, 'rt') as wd_io:
-            for line in wd_io:
-                entity = json.loads(line.rstrip())
-                qids_and_tids[entity[constants.QID]] = {
-                    constants.TID: entity[constants.TID]}
-        LOGGER.debug(
-            "Reconstructed dictionary with QIDS and target IDs from '%s': %s", wd_io_path, qids_and_tids)
+        if goal == 'training':
+            with gzip.open(wd_io_path, 'rt') as wd_io:
+                for line in wd_io:
+                    entity = json.loads(line.rstrip())
+                    qids_and_tids[entity[constants.QID]] = {
+                        constants.TID: entity[constants.TID]}
+            LOGGER.debug(
+                "Reconstructed dictionary with QIDS and target IDs from '%s': %s", wd_io_path, qids_and_tids)
 
     else:
         LOGGER.info(
@@ -155,18 +156,18 @@ def _preprocess_target(goal, target_reader):
     if goal == 'training':
         target[constants.TID] = target.index
 
-    # 4. Pull out the value from lists with a single value
+    # 4. Join the list of descriptions
+    _join_descriptions(target)
+    debug_buffer = StringIO()
+    target.info(buf=debug_buffer)
+    LOGGER.debug('Joined descriptions: %s', debug_buffer.getvalue())
+
+    # 5. Pull out the value from lists with a single value
     target = _pull_out_from_single_value_list(target)
     debug_buffer = StringIO()
     target.info(buf=debug_buffer)
     LOGGER.debug('Stringified lists with a single value: %s',
                  debug_buffer.getvalue())
-
-    # 5. Join the list of descriptions
-    _join_descriptions(target)
-    debug_buffer = StringIO()
-    target.info(buf=debug_buffer)
-    LOGGER.debug('Joined descriptions: %s', debug_buffer.getvalue())
 
     LOGGER.info('Target preprocessing done')
 
@@ -183,25 +184,25 @@ def _preprocess_wikidata(goal, wikidata_reader):
         # 1. QID as index
         chunk.set_index(constants.QID, inplace=True)
 
-        # 2. Pull out the value from lists with a single value
+        # 2. Join the list of descriptions
+        _join_descriptions(chunk)
+
+        # 3. Pull out the value from lists with a single value
         chunk = _pull_out_from_single_value_list(chunk)
 
-        # 3. Training only: join target ids if multiple
+        # 4. Training only: join target ids if multiple
         if goal == 'training':
             chunk[constants.TID] = chunk[constants.TID].map(
                 lambda cell: ' '.join(cell) if isinstance(cell, list) else cell)
 
-        # 4. Tokenize & join strings lists columns
-        for column in (constants.LABEL, constants.PSEUDONYM):
+        # 5. Tokenize & join strings lists columns
+        for column in (constants.NAME, constants.PSEUDONYM):
             chunk['%s_tokens' % column] = chunk[column].map(
                 _preprocess_strings_list, na_action='ignore')
 
-        # 5. Tokenize & join URLs lists
+        # 6. Tokenize & join URLs lists
         chunk['%s_tokens' % constants.URL] = chunk[constants.URL].map(
             _preprocess_urls_list, na_action='ignore')
-
-        # 6. Join the list of descriptions
-        _join_descriptions(chunk)
 
         LOGGER.info('Chunk %d done', i)
 
@@ -225,8 +226,7 @@ def _pull_out_from_single_value_list(df):
 
 def _join_descriptions(df):
     # TODO It certainly doesn't make sense to compare descriptions in different languages
-    df[constants.DESCRIPTION] = df[constants.DESCRIPTION].map(
-        ' '.join, na_action='ignore')
+    df[constants.DESCRIPTION] = df[constants.DESCRIPTION].str.join(' ')
 
 
 def _preprocess_strings_list(strings_list):
@@ -260,16 +260,16 @@ def extract_features(candidate_pairs: MultiIndex, wikidata: DataFrame, target: D
     #    'name', 'born', 'born_precision', 'real_name', 'is_wiki',
     #    'data_quality', 'died', 'died_precision', 'identifier'],
     # Feature 1: exact match on URLs
-    compare.add(UrlList('url', 'url', label='url_exact'))
+    compare.add(UrlList(constants.URL, constants.URL, label='url_exact'))
     # Feature 2: dates
     # TODO parse dates
     # compare.date('date_of_birth', 'born', label='birth_date')
     # compare.date('date_of_death', 'died', label='death_date')
     # Feature 3: Levenshtein distance on names
-    compare.add(StringList('label_tokens',
-                           'name_tokens', label='name_levenshtein'))
+    compare.add(StringList(constants.NAME_TOKENS,
+                           constants.NAME_TOKENS, label='name_levenshtein'))
     # Feture 4: cosine similarity on descriptions
-    compare.add(StringList('description', 'description',
+    compare.add(StringList(constants.DESCRIPTION, constants.DESCRIPTION,
                            algorithm='cosine', analyzer='soweego', label='description_cosine'))
     feature_vectors = compare.compute(candidate_pairs, wikidata, target)
 
