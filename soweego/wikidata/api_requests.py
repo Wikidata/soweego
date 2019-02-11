@@ -115,20 +115,20 @@ def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fil
                 no_labels_count += 1
                 continue
             to_write[constants.QID] = qid
-            to_write[constants.LABEL] = _return_monolingual_strings(
+            to_write[constants.NAME] = _return_monolingual_strings(
                 qid, labels)
 
             # Aliases
             aliases = entity.get('aliases')
             if aliases:
                 # Merge them into labels
-                to_write[constants.LABEL].update(
+                to_write[constants.NAME].update(
                     _return_aliases(qid, aliases))
             else:
                 LOGGER.debug('%s has no aliases', qid)
                 no_aliases_count += 1
             # Convert set to list for JSON serialization
-            to_write[constants.LABEL] = list(to_write[constants.LABEL])
+            to_write[constants.NAME] = list(to_write[constants.NAME])
 
             # Descriptions
             descriptions = entity.get('descriptions')

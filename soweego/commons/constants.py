@@ -101,7 +101,8 @@ TARGET_CATALOGS = {
 # Wikidata & target field names
 QID = 'qid'
 TID = 'tid'
-LABEL = 'label'
+NAME = 'name'
+NAME_TOKENS = 'name_tokens'
 ALIAS = 'alias'
 PSEUDONYM = 'pseudonym'
 DESCRIPTION = 'description'
