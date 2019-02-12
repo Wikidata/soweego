@@ -13,16 +13,16 @@ import gzip
 import json
 import logging
 from os import path
-from typing import Callable, Iterable, Tuple
+from typing import Iterable, Tuple
 
 import click
+from sqlalchemy.exc import ProgrammingError
 
 from soweego.commons import (data_gathering, target_database, text_utils,
                              url_utils)
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.ingestor import wikidata_bot
 from soweego.wikidata.api_requests import get_data_for_linker
-from sqlalchemy.exc import ProgrammingError
 
 LOGGER = logging.getLogger(__name__)
 WD_IO_FILENAME = 'wikidata_%s_dataset.jsonl.gz'
