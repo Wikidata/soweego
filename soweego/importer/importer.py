@@ -26,8 +26,10 @@ LOGGER = logging.getLogger(__name__)
 
 @click.command()
 @click.argument('catalog', type=click.Choice(['discogs', 'musicbrainz']))
+@click.option('--resolve/--no-resolve', default=True,
+              help='Resolves all the links to check if they are valid. Default: yes.')
 @click.option('--output', '-o', default='/app/shared', type=click.Path())
-def import_cli(catalog: str, output: str) -> None:
+def import_cli(catalog: str, resolve: bool, output: str) -> None:
     """Download, extract and import an available catalog."""
     importer = Importer()
     extractor = BaseDumpExtractor()
@@ -37,12 +39,12 @@ def import_cli(catalog: str, output: str) -> None:
     elif catalog == 'musicbrainz':
         extractor = MusicBrainzDumpExtractor()
 
-    importer.refresh_dump(output, extractor)
+    importer.refresh_dump(output, extractor, resolve)
 
 
 class Importer():
 
-    def refresh_dump(self, output_folder: str, downloader: BaseDumpExtractor):
+    def refresh_dump(self, output_folder: str, downloader: BaseDumpExtractor, resolve: bool):
         """Downloads the dump, if necessary,
         and calls the handler over the dump file"""
         filepaths = []
@@ -52,7 +54,7 @@ class Importer():
             LOGGER.info("Retrieving last modified of %s" % download_url)
 
             last_modified = client.http_call(download_url,
-                                             'HEAD').headers[const.LAST_MODIFIED_KEY]
+                                             'HEAD').headers[const.LAST_MODIFIED]
 
             try:
                 last_modified = datetime.datetime.strptime(
@@ -75,7 +77,7 @@ class Importer():
                 self._update_dump(download_url, file_full_path)
             filepaths.append(file_full_path)
 
-        downloader.extract_and_populate(filepaths)
+        downloader.extract_and_populate(filepaths, resolve)
 
     def _update_dump(self, dump_url: str, file_output_path: str) -> None:
         """Download the dump"""

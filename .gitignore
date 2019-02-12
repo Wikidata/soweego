@@ -120,3 +120,5 @@ throttle.ctrl
 # soweego dev dir
 output
 
+# Jetbrains pycharm
+.idea/*

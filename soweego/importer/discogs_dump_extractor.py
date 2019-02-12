@@ -29,7 +29,6 @@ DUMP_LIST_URL_TEMPLATE = DUMP_BASE_URL + '?delimiter=/&prefix=data/{}/'
 
 
 class DiscogsDumpExtractor(BaseDumpExtractor):
-
     # Counters
     total_entities = 0
     musicians = 0
@@ -56,14 +55,16 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             return None
         return [DUMP_BASE_URL + dump_file_name]
 
-    def extract_and_populate(self, dump_file_paths: Iterable[str]):
+    def extract_and_populate(self, dump_file_paths: Iterable[str], resolve: bool):
         dump_file_path = dump_file_paths[0]
         LOGGER.info(
             "Starting import of musicians and bands from Discogs dump '%s'", dump_file_path)
         start = datetime.now()
 
-        tables = [discogs_entity.DiscogsMusicianEntity, discogs_entity.DiscogsMusicianNlpEntity, discogs_entity.DiscogsMusicianLinkEntity,
-                  discogs_entity.DiscogsGroupEntity, discogs_entity.DiscogsGroupNlpEntity, discogs_entity.DiscogsGroupLinkEntity]
+        tables = [discogs_entity.DiscogsMusicianEntity, discogs_entity.DiscogsMusicianNlpEntity,
+                  discogs_entity.DiscogsMusicianLinkEntity,
+                  discogs_entity.DiscogsGroupEntity, discogs_entity.DiscogsGroupNlpEntity,
+                  discogs_entity.DiscogsGroupLinkEntity]
 
         db_manager = DBManager()
         LOGGER.info('Connected to database: %s', db_manager.get_engine().url)
@@ -90,7 +91,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                         'Skipping import for identifier with no name: %s', identifier)
                     continue
 
-                living_links = self._extract_living_links(node, identifier)
+                living_links = self._extract_living_links(node, identifier, resolve)
 
                 session = db_manager.new_session()
 
@@ -118,12 +119,16 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                                         name, living_links, node, session)
 
                 session.commit()
-                LOGGER.debug('%d entities imported so far: %d musicians with %d links, %d bands with %d links, %d discarded dead links.',
-                             self.total_entities, self.musicians, self.musician_links, self.bands, self.band_links, self.dead_links)
+                LOGGER.debug(
+                    '%d entities imported so far: %d musicians with %d links, %d bands with %d links, %d discarded dead links.',
+                    self.total_entities, self.musicians, self.musician_links, self.bands, self.band_links,
+                    self.dead_links)
 
         end = datetime.now()
-        LOGGER.info('Import completed in %s. Total entities: %d - %d musicians with %d links - %d bands with %d links - %d discarded dead links.',
-                    end - start, self.total_entities, self.musicians, self.musician_links, self.bands, self.band_links, self.dead_links)
+        LOGGER.info(
+            'Import completed in %s. Total entities: %d - %d musicians with %d links - %d bands with %d links - %d discarded dead links.',
+            end - start, self.total_entities, self.musicians, self.musician_links, self.bands, self.band_links,
+            self.dead_links)
 
     def _populate_band(self, entity: discogs_entity.DiscogsGroupEntity, identifier, name, links, node, session):
         # Main entity
@@ -244,7 +249,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                 self.bands += 1
             yield variation_entity
 
-    def _extract_living_links(self, artist_node, identifier):
+    def _extract_living_links(self, artist_node, identifier, resolve: bool):
         LOGGER.debug('Extracting living links from artist %s', identifier)
         urls = artist_node.find('urls')
         if urls:
@@ -254,10 +259,10 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                     LOGGER.debug(
                         'Artist %s: skipping empty <url> tag', identifier)
                     continue
-                for alive_link in self._check_link(url):
+                for alive_link in self._check_link(url, resolve):
                     yield alive_link
 
-    def _check_link(self, link):
+    def _check_link(self, link, resolve: bool):
         LOGGER.debug('Processing link <%s>', link)
         clean_parts = url_utils.clean(link)
         LOGGER.debug('Clean link: %s', clean_parts)
@@ -267,6 +272,9 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                 self.dead_links += 1
                 continue
             LOGGER.debug('Valid URL: <%s>', valid)
+            if not resolve:
+                yield valid
+                continue
             alive = url_utils.resolve(valid)
             if not alive:
                 self.dead_links += 1
