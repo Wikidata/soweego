@@ -27,14 +27,14 @@ LOGGER = logging.getLogger(__name__)
 @click.argument('target', type=click.Choice(target_database.available_targets()))
 @click.argument('target_type', type=click.Choice(target_database.available_types()))
 @click.option('-b', '--binarize', default=0.1, help="Default: 0.1")
-@click.option('-o', '--output-dir', type=click.Path(file_okay=False), default='/app/shared', help="Default: '/app/shared'")
-def cli(classifier, target, target_type, binarize, output_dir):
+@click.option('-d', '--dir-io', type=click.Path(file_okay=False), default='/app/shared', help="Input/output directory, default: '/app/shared'.")
+def cli(classifier, target, target_type, binarize, dir_io):
     """Train a probabilistic linker."""
 
     model = execute(
-        constants.CLASSIFIERS[classifier], target, target_type, binarize, output_dir)
+        constants.CLASSIFIERS[classifier], target, target_type, binarize, dir_io)
     outfile = os.path.join(
-        output_dir, constants.LINKER_MODEL % (target, classifier))
+        dir_io, constants.LINKER_MODEL % (target, classifier))
     joblib.dump(model, outfile)
     LOGGER.info("%s model dumped to '%s'", classifier, outfile)
 
@@ -42,7 +42,8 @@ def cli(classifier, target, target_type, binarize, output_dir):
 def execute(classifier, catalog, entity, binarize, dir_io):
     wd_reader, target_reader = workflow.train_test_build(
         catalog, entity, dir_io)
-    wd, target = workflow.preprocess('training', wd_reader, target_reader)
+    wd, target = workflow.preprocess(
+        'training', catalog, wd_reader, target_reader, dir_io)
     candidate_pairs = workflow.train_test_block(wd, target)
     feature_vectors = workflow.extract_features(candidate_pairs, wd, target)
     return _train(classifier, feature_vectors, candidate_pairs, binarize)
@@ -54,3 +55,8 @@ def _train(classifier, feature_vectors, candidate_pairs, binarize):
     model.fit(feature_vectors, candidate_pairs)
     LOGGER.info('Training done')
     return model
+
+
+if __name__ == "__main__":
+    m = execute(rl.NaiveBayesClassifier, 'discogs',
+                'musician', 0.3, '/Users/focs/soweego/output')
