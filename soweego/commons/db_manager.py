@@ -41,10 +41,10 @@ class DBManager():
         password = credentials[constants.PASSWORD]
         host = credentials[constants.HOST]
         try:
-            # Should disable connection pooling, as per Wikimedia policy
+            # Disable connection pooling, as per Wikimedia policy
             # https://wikitech.wikimedia.org/wiki/Help:Toolforge/Database#Connection_handling_policy
             self.__engine = create_engine(
-                '{0}://{1}:{2}@{3}/{4}'.format(db_engine, user, password, host, db_name), pool_recycle=1800)
+                '{0}://{1}:{2}@{3}/{4}'.format(db_engine, user, password, host, db_name), poolclass=NullPool)
         except Exception as error:
             LOGGER.critical(loc.FAIL_CREATE_ENGINE, error)
 
