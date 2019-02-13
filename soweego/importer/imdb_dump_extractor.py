@@ -45,7 +45,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
     def get_dump_download_urls(self) -> List[str]:
         """
         :returns: the urls from which to download the data dumps
-        the first URL is the one for the **person dump**, the 
+        the first URL is the one for the **person dump**, the
         second downloads the **movie dump**
         """
         return [DUMP_URL_PERSON_INFO, DUMP_URL_MOVIE_INFO]
@@ -54,10 +54,10 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         """
         IMDB represents a null entry with \\N , this method converts
         all \\N to None so that they're saved as null in the database.
-        This is done for all "entries" of a given entity. 
+        This is done for all "entries" of a given entity.
 
-        The normalization process is done in place, so this  method 
-        has no return value. 
+        The normalization process is done in place, so this  method
+        has no return value.
 
         :param entity: represents the entity we want to *normalize*
         """
@@ -160,11 +160,9 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 if "producer" in professions:
                     types_of_entities.append(imdb_entity.ImdbProducerEntity())
 
-                # TODO: there possibly is a nicer way to do this
-                if ("sound_department" in professions or
-                        "composer" in professions or
-                        "music_department" in professions or
-                        "soundtrack" in professions):
+                if any(prof in ["sound_department", "composer",
+                                "music_department", "soundtrack"]
+                       for prof in professions):
                     types_of_entities.append(imdb_entity.ImdbMusicianEntity())
 
                 if "writer" in professions:
@@ -277,7 +275,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
     def _populate_person_movie_relations(self, person_info: Dict,
                                          session: object):
-        
+
         know_for_titles = person_info.get(
             "knownForTitles").split(",")
 
