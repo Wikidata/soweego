@@ -204,31 +204,29 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         qids = []
 
         # TODO: finish mapping
-        # ? TODO: Should all these "QIDs" actually be in vocabulary.py?
         mappings = {
             "actor": vocab.ACTOR,
             "actress": vocab.ACTOR,
-            "art_director": "Q706364",
-            "assistant_director": "Q1757008",
-            "casting_director": "Q1049296",
-            "cinematographer": "Q222344",
-            "composer": "Q36834",
-            "costume_designer": "Q1323191",
+            "art_director": vocab.ART_DIRECTOR,
+            "assistant_director": vocab.ASSISTANT_DIRECTOR,
+            "casting_director": vocab.CASTING_DIRECTOR,
+            "cinematographer": vocab.CINEMATOGRAPHER,
+            "composer": vocab.COMPOSER,
+            "costume_designer": vocab.COSTUME_DESIGNER,
             "director": vocab.DIRECTOR,
-            "executive": "Q978044",
-            "manager": "Q2462658",
-            # TODO: The producer QID is not the same as the one used in vocabulary.py
-            "producer": "Q13235160",
-            "production_designer": "Q2962070",
-            "production_manager": "Q21292974",
-            "publicist": "Q4178004",
-            "set_decorator": "Q6409989",
-            "special_effects": "Q21560152",
-            "stunts": "Q465501",
-            "talent_agent": "Q1344174",
+            "executive": vocab.EXECUTIVE,
+            "manager": vocab.MANAGER,
+            "producer": vocab.FILM_PRODUCER,
+            "production_designer": vocab.PRODUCTION_DESIGNER,
+            "production_manager": vocab.PRODUCTION_MANAGER,
+            "publicist": vocab.PUBLICIST,
+            "set_decorator": vocab.SET_DECORATOR,
+            "special_effects": vocab.SPECIAL_EFFECTS,
+            "stunts": vocab.STUNTS,
+            "talent_agent": vocab.TALENT_AGENT,
             "writer": vocab.SCREENWRITER,
             "music_department": vocab.MUSICIAN,
-            "sound_department": "Q128124",
+            "sound_department": vocab.SOUND_DEPARTMENT,
             "soundtrack": vocab.MUSICIAN,
         }
 
@@ -256,7 +254,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         add the entity once it is populated.
         """
 
-        # TODO: we can distinguish genre for actor and actress
+        # TODO: we can distinguish gender for actor and actress
 
         person_entity.catalog_id = person_info.get("nconst")
         person_entity.name = person_info.get("primaryName")
