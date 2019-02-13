@@ -4,6 +4,8 @@
 """Dump extractor abstract class"""
 import time
 
+from soweego.commons import logging
+
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
 __version__ = '1.0'
@@ -11,6 +13,8 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
 from typing import Iterable
+
+LOGGER = logging.getLogger(__name__)
 
 
 class BaseDumpExtractor:
@@ -40,7 +44,8 @@ class BaseDumpExtractor:
         try:
             session.add(entity)
             session.commit()
-        except:
+        except Exception as ex:
+            LOGGER.error("Failed to commit % s due to %s" % (entity, ex))
             session.rollback()
             success = False
         finally:

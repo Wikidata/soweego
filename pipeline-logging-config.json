@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "disable_existing_loggers": false,
+  "loggers": {
+    "": {
+      "level": "WARNING",
+      "handlers": [
+        "console",
+        "debug_file_handler"
+      ]
+    },
+    "soweego": {
+      "level": "INFO"
+    }
+  },
+  "formatters": {
+    "soweego": {
+      "format": "%(asctime)s [%(levelname)s] %(module)s.%(funcName)s #%(lineno)d - %(message)s"
+    }
+  },
+  "handlers": {
+    "console": {
+      "formatter": "soweego",
+      "class": "logging.StreamHandler",
+      "level": "INFO"
+    },
+    "debug_file_handler": {
+      "formatter": "soweego",
+      "filename": "/app/shared/soweego.log",
+      "mode": "w",
+      "class": "logging.FileHandler",
+      "encoding": "utf8"
+    }
+  }
+}
