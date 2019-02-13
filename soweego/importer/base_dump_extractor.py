@@ -14,14 +14,15 @@ from typing import Iterable
 
 class BaseDumpExtractor:
 
-    def extract_and_populate(self, dump_file_path: Iterable[str]):
+    def extract_and_populate(self, dump_file_path: Iterable[str], resolve: bool):
         """Extract relevant data and populate SQL Alchemy entities accordingly.
 
-        :param dump_file_path: path to a downloaded dump file
-        :type dump_file_path: str
+        :param dump_file_path: Iterable of paths where downloaded dumps are placed.
+        :param resolve: Tells if the system will resolve the urls to validate them
         :raises NotImplementedError: you have to override this method
         """
         raise NotImplementedError
+
 
     def get_dump_download_urls(self) -> Iterable[str]:
         """Get the dump download URL.
