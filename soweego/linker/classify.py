@@ -79,8 +79,8 @@ def _build(catalog, entity, dir_io):
 
 def _block(wikidata_df, target_df):
     idx = rl.Index()
-    # TODO blocking with full-text index query, right now hack on WD birth name and Discogs real name
-    # Also consider blocking on URLs
+    # TODO Blocking with full-text index query, right now hack on WD birth name and Discogs real name
+    # TODO Also consider blocking on URLs
     # There are 15 items with multiple birth names, and blocking won't work
     wikidata_df['birth_name'] = wikidata_df['birth_name'].map(
         lambda cell: ' '.join(cell) if isinstance(cell, list) else cell)
