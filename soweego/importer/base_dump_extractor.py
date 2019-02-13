@@ -4,7 +4,7 @@
 """Dump extractor abstract class"""
 import time
 
-from soweego.commons import logging
+import logging
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
