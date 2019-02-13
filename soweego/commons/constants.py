@@ -101,18 +101,28 @@ TARGET_CATALOGS = {
 # Wikidata & target field names
 QID = 'qid'
 TID = 'tid'
-LABEL = 'label'
+NAME = 'name'
+NAME_TOKENS = 'name_tokens'
 ALIAS = 'alias'
 PSEUDONYM = 'pseudonym'
 DESCRIPTION = 'description'
 URL = 'url'
+URL_TOKENS = 'url_tokens'
+DATE_OF_BIRTH = vocabulary.LINKER_PIDS[vocabulary.DATE_OF_BIRTH]
+DATE_OF_DEATH = vocabulary.LINKER_PIDS[vocabulary.DATE_OF_DEATH]
+BIRTH_PRECISION = 'born_precision'  # Consistent with BaseEntity.born_precision
+DEATH_PRECISION = 'died_precision'  # Consistent with BaseEntity.died_precision
+
 
 # File names
-WD_CLASSIFICATION_SET = 'wikidata_%s_dataset.jsonl.gz'
-TARGET_CLASSIFICATION_SET = '%s_dataset.jsonl.gz'
-WD_DATASET_DATAFRAME_OUT = 'wikidata_%s_dataset.pkl.gz'
 WD_TRAINING_SET = 'wikidata_%s_training_set.jsonl.gz'
+WD_CLASSIFICATION_SET = 'wikidata_%s_dataset.jsonl.gz'
+WD_TRAINING_DATAFRAME = 'wikidata_%s_training_dataframe.pkl.gz'
+WD_CLASSIFICATION_DATAFRAME = 'wikidata_%s_classification_dataframe.pkl.gz'
 TARGET_TRAINING_SET = '%s_training_set.jsonl.gz'
+TARGET_CLASSIFICATION_SET = '%s_dataset.jsonl.gz'
+TARGET_TRAINING_DATAFRAME = '%s_training_dataframe.pkl.gz'
+TARGET_CLASSIFICATION_DATAFRAME = '%s_classification_dataframe.pkl.gz'
 LINKER_MODEL = '%s_%s_model.pkl'
 LINKER_RESULT = '%s_linker_result.csv.gz'
 LINKER_EVALUATION = '%s_%s_linker_evaluation.txt'
