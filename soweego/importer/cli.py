@@ -14,7 +14,8 @@ import click
 from soweego.importer import importer
 
 CLI_COMMANDS = {
-    'import': importer.import_cli
+    'import': importer.import_cli,
+    'validate_links': importer.validate_links_cli
 }
 
 

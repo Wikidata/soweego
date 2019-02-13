@@ -65,8 +65,7 @@ class StringList(BaseCompareFeature):
 
     # Adapted from https://github.com/J535D165/recordlinkage/blob/master/recordlinkage/algorithms/string.py
     # Average the edit distance among the list of values
-    # TODO issue 1: it doesn't make sense to compare names in different languages
-    # TODO issue 2: low scores if name is swapped with surname
+    # TODO low scores if name is swapped with surname, see https://github.com/Wikidata/soweego/issues/175
     def levenshtein_similarity(self, source_column, target_column):
         concatenated = pandas.Series(list(zip(source_column, target_column)))
 
@@ -93,7 +92,9 @@ class StringList(BaseCompareFeature):
         if len(source_column) != len(target_column):
             raise ValueError('Columns must have the same length')
         if len(source_column) == len(target_column) == 0:
-            return []
+            LOGGER.warning(
+                'Cannot compute cosine similarity, columns are empty')
+            return pandas.Series(numpy.nan)
 
         # No analyzer means input underwent commons.text_utils#tokenize
         if self.analyzer is None:
@@ -112,13 +113,17 @@ class StringList(BaseCompareFeature):
                 'Bad text analyzer: %s. Please use one of %s' % (self.analyzer, ('soweego', 'word', 'char', 'char_wb')))
 
         data = source_column.append(target_column).fillna('')
-        vectors = vectorizer.fit_transform(data)
+        try:
+            vectors = vectorizer.fit_transform(data)
+        except ValueError as ve:
+            LOGGER.warning(
+                'Failed transforming text into vectors, reason: %s. Text: %s', ve, data)
+            return pandas.Series(numpy.nan)
 
         def _metric_sparse_cosine(u, v):
             a = numpy.sqrt(u.multiply(u).sum(axis=1))
             b = numpy.sqrt(v.multiply(v).sum(axis=1))
             ab = v.multiply(u).sum(axis=1)
-            # TODO looks like some values are NaN
             cosine = numpy.divide(ab, numpy.multiply(a, b)).A1
             return cosine
 

@@ -43,7 +43,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/LATEST').text.rstrip()
         return ['http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/%s/mbdump.tar.bz2' % latest_version]
 
-    def extract_and_populate(self, dump_file_paths: Iterable[str]):
+    def extract_and_populate(self, dump_file_paths: Iterable[str], resolve: bool):
         dump_file_path = dump_file_paths[0]
         dump_path = os.path.join(os.path.dirname(
             os.path.abspath(dump_file_path)), "%s_%s" % (os.path.basename(dump_file_path), 'extracted'))
@@ -84,7 +84,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         LOGGER.info("Importing links")
 
         link_count = 0
-        for link in self._link_generator(dump_path):
+        for link in self._link_generator(dump_path, resolve):
             link_count = link_count + 1
             session = db_manager.new_session()
             session.add(link)
@@ -94,7 +94,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         LOGGER.info("Importing ISNIs")
 
         isni_link_count = 0
-        for link in self._isni_link_generator(dump_path):
+        for link in self._isni_link_generator(dump_path, resolve):
             isni_link_count = isni_link_count + 1
             session = db_manager.new_session()
             session.add(link)
@@ -122,7 +122,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         LOGGER.debug("Added %s/%s relationships records" %
                      (relationships_count, relationships_total))
 
-    def _link_generator(self, dump_path):
+    def _link_generator(self, dump_path: str, resolve: bool):
         l_artist_url_path = os.path.join(dump_path, 'mbdump', 'l_artist_url')
 
         # Loads all the relationships between URL ID and ARTIST ID
@@ -139,7 +139,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                         'Url with ID %s has multiple artists, only one will be stored' % relationship[3])
                 else:
                     urlid_artistid_relationship[relationship[3]
-                                                ] = relationship[2]
+                    ] = relationship[2]
 
         url_artistid = {}
         url_path = os.path.join(dump_path, 'mbdump', 'url')
@@ -154,7 +154,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                     for candidate_url in url_utils.clean(url_record[2]):
                         if not url_utils.validate(candidate_url):
                             continue
-                        if not url_utils.resolve(candidate_url):
+                        if resolve and not url_utils.resolve(candidate_url):
                             continue
                         url_artistid[candidate_url] = urlid_artistid_relationship[urlid]
                         del urlid_artistid_relationship[urlid]
@@ -170,7 +170,9 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         # Translates ARTIST ID to the relative ARTIST
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
         with open(artist_path, 'r') as artistfile:
-            for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day', 'd_year', 'd_month', 'd_day', 'type_id']):
+            for artist in DictReader(artistfile, delimiter='\t',
+                                     fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
+                                                 'd_year', 'd_month', 'd_day', 'type_id']):
                 if artist['id'] in artistid_url:
                     for link in artistid_url[artist['id']]:
                         if self._check_person(artist['type_id']):
@@ -184,7 +186,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                                 current_entity, artist['gid'], link)
                             yield current_entity
 
-    def _isni_link_generator(self, dump_path):
+    def _isni_link_generator(self, dump_path: str, resolve: bool):
         isni_file_path = os.path.join(dump_path, 'mbdump', 'artist_isni')
 
         artist_link = {}
@@ -209,14 +211,16 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                                 for candidate_url in url_utils.clean(link):
                                     if not url_utils.validate(candidate_url):
                                         continue
-                                    if not url_utils.resolve(candidate_url):
+                                    if resolve and not url_utils.resolve(candidate_url):
                                         continue
                                     artist_link[artistid] = candidate_url
                     done = True
 
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
         with open(artist_path, 'r') as artistfile:
-            for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day', 'd_year', 'd_month', 'd_day', 'type_id']):
+            for artist in DictReader(artistfile, delimiter='\t',
+                                     fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
+                                                 'd_year', 'd_month', 'd_day', 'type_id']):
                 try:
                     # Checks if artist has isni
                     link = artist_link[artist['id']]
@@ -244,7 +248,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         # Key is the entity id which has a list of aliases
         with open(artist_alias_path, 'r') as aliasesfile:
             for alias in DictReader(aliasesfile, delimiter='\t', fieldnames=[
-                    'id', 'parent_id', 'label']):
+                'id', 'parent_id', 'label']):
                 aliases[alias['parent_id']].append(alias['label'])
 
         # Key is the area internal id, value is the name
@@ -253,7 +257,10 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 areas[area['id']] = area['name'].lower()
 
         with open(artist_path, 'r') as artistfile:
-            for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day', 'd_year', 'd_month', 'd_day', 'type_id', 'area', 'gender', 'ND1', 'ND2', 'ND3', 'ND4', 'b_place', 'd_place']):
+            for artist in DictReader(artistfile, delimiter='\t',
+                                     fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
+                                                 'd_year', 'd_month', 'd_day', 'type_id', 'area', 'gender', 'ND1',
+                                                 'ND2', 'ND3', 'ND4', 'b_place', 'd_place']):
                 if self._check_person(artist['type_id']):
                     current_entity = MusicbrainzArtistEntity()
 
@@ -262,7 +269,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                         current_entity.gender = self._artist_gender(
                             artist['gender'])
                     except ValueError:
-                        LOGGER.error('Wrong date: %s', artist)
+                        LOGGER.error('Wrong gender code: %s', artist)
                         continue
 
                     yield current_entity
@@ -310,7 +317,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         relationships = []
         with open(artists_relationship_file) as relfile:
             reader = DictReader(relfile, delimiter='\t', fieldnames=[
-                                'id', 'link_id', 'entity0', 'entity1'])
+                'id', 'link_id', 'entity0', 'entity1'])
             for row in reader:
                 link_id = row['link_id']
                 if link_id in links:
@@ -334,7 +341,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         for relation in relationships:
             translation0, translation1 = ids_translator[relation[0]
-                                                        ], ids_translator[relation[1]]
+                                         ], ids_translator[relation[1]]
 
             if translation0 and translation1:
                 if relation in to_invert:
