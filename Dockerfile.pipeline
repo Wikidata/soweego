@@ -22,4 +22,4 @@ WORKDIR /app/soweego
 RUN mv pipeline-logging-config.json logging.json
 
 # Defines the entry point of the image
-ENTRYPOINT [ "python", "-m", "soweego", "run" ]
+ENTRYPOINT [ "python", "-m", "soweego", "-l", "soweego", "DEBUG", "run" ]
