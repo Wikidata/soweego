@@ -16,6 +16,7 @@ from datetime import date, datetime
 from typing import Iterable
 
 from requests import get
+
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
@@ -55,7 +56,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             return None
         return [DUMP_BASE_URL + dump_file_name]
 
-    def extract_and_populate(self, dump_file_paths: Iterable[str]):
+    def extract_and_populate(self, dump_file_paths: Iterable[str], resolve: bool):
         dump_file_path = dump_file_paths[0]
         LOGGER.info(
             "Starting import of musicians and bands from Discogs dump '%s'", dump_file_path)
@@ -91,7 +92,8 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                         'Skipping import for identifier with no name: %s', identifier)
                     continue
 
-                living_links = self._extract_living_links(node, identifier)
+                living_links = self._extract_living_links(
+                    node, identifier, resolve)
 
                 # Musician
                 groups = node.find('groups')
@@ -133,11 +135,13 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         self.bands += 1
         self.total_entities += 1
         # Textual data
-        self._populate_nlp_entity(db_manager, node, discogs_entity.DiscogsGroupNlpEntity, identifier)
+        self._populate_nlp_entity(
+            db_manager, node, discogs_entity.DiscogsGroupNlpEntity, identifier)
         # Denormalized name variations
         self._populate_name_variations(db_manager, node, entity, identifier)
         # Links
-        self._populate_links(db_manager, links, discogs_entity.DiscogsGroupLinkEntity, identifier)
+        self._populate_links(
+            db_manager, links, discogs_entity.DiscogsGroupLinkEntity, identifier)
 
         self._commit_entity(db_manager, entity)
         # TODO populate group -> musicians relationship table
@@ -151,11 +155,13 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         self.musicians += 1
         self.total_entities += 1
         # Textual data
-        self._populate_nlp_entity(db_manager, node, discogs_entity.DiscogsMusicianNlpEntity, identifier)
+        self._populate_nlp_entity(
+            db_manager, node, discogs_entity.DiscogsMusicianNlpEntity, identifier)
         # Denormalized name variations
         self._populate_name_variations(db_manager, node, entity, identifier)
         # Links
-        self._populate_links(db_manager, links, discogs_entity.DiscogsMusicianLinkEntity, identifier)
+        self._populate_links(
+            db_manager, links, discogs_entity.DiscogsMusicianLinkEntity, identifier)
 
         self._commit_entity(db_manager, entity)
         # TODO populate musician -> groups relationship table
@@ -246,7 +252,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                 self.bands += 1
             yield variation_entity
 
-    def _extract_living_links(self, artist_node, identifier):
+    def _extract_living_links(self, artist_node, identifier, resolve: bool):
         LOGGER.debug('Extracting living links from artist %s', identifier)
         urls = artist_node.find('urls')
         if urls:
@@ -256,10 +262,10 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                     LOGGER.debug(
                         'Artist %s: skipping empty <url> tag', identifier)
                     continue
-                for alive_link in self._check_link(url):
+                for alive_link in self._check_link(url, resolve):
                     yield alive_link
 
-    def _check_link(self, link):
+    def _check_link(self, link, resolve: bool):
         LOGGER.debug('Processing link <%s>', link)
         clean_parts = url_utils.clean(link)
         LOGGER.debug('Clean link: %s', clean_parts)
@@ -269,6 +275,9 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                 self.dead_links += 1
                 continue
             LOGGER.debug('Valid URL: <%s>', valid)
+            if not resolve:
+                yield valid
+                continue
             alive = url_utils.resolve(valid)
             if not alive:
                 self.dead_links += 1

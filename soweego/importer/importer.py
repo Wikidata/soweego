@@ -14,20 +14,24 @@ import logging
 import os
 
 import click
+from soweego.commons import target_database, url_utils
 from soweego.commons import constants as const
 from soweego.commons import http_client as client
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.discogs_dump_extractor import DiscogsDumpExtractor
 from soweego.importer.musicbrainz_dump_extractor import \
     MusicBrainzDumpExtractor
+from soweego.commons.db_manager import DBManager
 
 LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
-@click.argument('catalog', type=click.Choice(['discogs', 'musicbrainz']))
+@click.argument('catalog', type=click.Choice(target_database.available_targets()))
+@click.option('--resolve/--no-resolve', default=True,
+              help='Resolves all the links to check if they are valid. Default: yes.')
 @click.option('--output', '-o', default='/app/shared', type=click.Path())
-def import_cli(catalog: str, output: str) -> None:
+def import_cli(catalog: str, resolve: bool, output: str) -> None:
     """Download, extract and import an available catalog."""
     importer = Importer()
     extractor = BaseDumpExtractor()
@@ -37,12 +41,37 @@ def import_cli(catalog: str, output: str) -> None:
     elif catalog == 'musicbrainz':
         extractor = MusicBrainzDumpExtractor()
 
-    importer.refresh_dump(output, extractor)
+    importer.refresh_dump(output, extractor, resolve)
+
+
+@click.command()
+@click.argument('catalog', type=click.Choice(target_database.available_targets()))
+def validate_links_cli(catalog: str):
+    for entity_type in target_database.available_types_for_target(catalog):
+
+        LOGGER.info("Validating %s %s links..." % (catalog, entity_type))
+        entity = target_database.get_link_entity(catalog, entity_type)
+
+        session = DBManager.connect_to_db()
+        total = 0
+        removed = 0
+
+        # Validate each link
+        for res in session.query(entity):
+            total += 1
+            if not url_utils.resolve(res.url):
+                # if not valid delete
+                session.delete(res)
+                session.commit()
+                removed += 1
+
+        session.close()
+        LOGGER.info("Removed %s/%s from %s %s" % (removed, total, catalog, entity_type))
 
 
 class Importer():
 
-    def refresh_dump(self, output_folder: str, downloader: BaseDumpExtractor):
+    def refresh_dump(self, output_folder: str, downloader: BaseDumpExtractor, resolve: bool):
         """Downloads the dump, if necessary,
         and calls the handler over the dump file"""
         filepaths = []
@@ -75,7 +104,7 @@ class Importer():
                 self._update_dump(download_url, file_full_path)
             filepaths.append(file_full_path)
 
-        downloader.extract_and_populate(filepaths)
+        downloader.extract_and_populate(filepaths, resolve)
 
     def _update_dump(self, dump_url: str, file_output_path: str) -> None:
         """Download the dump"""

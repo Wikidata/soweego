@@ -43,7 +43,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/LATEST').text.rstrip()
         return ['http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/%s/mbdump.tar.bz2' % latest_version]
 
-    def extract_and_populate(self, dump_file_paths: Iterable[str]):
+    def extract_and_populate(self, dump_file_paths: Iterable[str], resolve: bool):
         dump_file_path = dump_file_paths[0]
         dump_path = os.path.join(os.path.dirname(
             os.path.abspath(dump_file_path)), "%s_%s" % (os.path.basename(dump_file_path), 'extracted'))
@@ -82,7 +82,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         LOGGER.info("Importing links")
 
         link_count = 0
-        for link in self._link_generator(dump_path):
+        for link in self._link_generator(dump_path, resolve):
             link_count = link_count + 1
             self._commit_entity(db_manager, link)
 
@@ -90,7 +90,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         LOGGER.info("Importing ISNIs")
 
         isni_link_count = 0
-        for link in self._isni_link_generator(dump_path):
+        for link in self._isni_link_generator(dump_path, resolve):
             isni_link_count = isni_link_count + 1
             self._commit_entity(db_manager, link)
 
@@ -114,7 +114,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         LOGGER.debug("Added %s/%s relationships records" %
                      (relationships_count, relationships_total))
 
-    def _link_generator(self, dump_path):
+    def _link_generator(self, dump_path: str, resolve: bool):
         l_artist_url_path = os.path.join(dump_path, 'mbdump', 'l_artist_url')
 
         # Loads all the relationships between URL ID and ARTIST ID
@@ -146,7 +146,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                     for candidate_url in url_utils.clean(url_record[2]):
                         if not url_utils.validate(candidate_url):
                             continue
-                        if not url_utils.resolve(candidate_url):
+                        if resolve and not url_utils.resolve(candidate_url):
                             continue
                         url_artistid[candidate_url] = urlid_artistid_relationship[urlid]
                         del urlid_artistid_relationship[urlid]
@@ -178,7 +178,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                                 current_entity, artist['gid'], link)
                             yield current_entity
 
-    def _isni_link_generator(self, dump_path):
+    def _isni_link_generator(self, dump_path: str, resolve: bool):
         isni_file_path = os.path.join(dump_path, 'mbdump', 'artist_isni')
 
         artist_link = {}
@@ -203,7 +203,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                                 for candidate_url in url_utils.clean(link):
                                     if not url_utils.validate(candidate_url):
                                         continue
-                                    if not url_utils.resolve(candidate_url):
+                                    if resolve and not url_utils.resolve(candidate_url):
                                         continue
                                     artist_link[artistid] = candidate_url
                     done = True
@@ -261,7 +261,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                         current_entity.gender = self._artist_gender(
                             artist['gender'])
                     except ValueError:
-                        LOGGER.error('Wrong date: %s', artist)
+                        LOGGER.error('Wrong gender code: %s', artist)
                         continue
 
                     # Creates an entity foreach available alias
