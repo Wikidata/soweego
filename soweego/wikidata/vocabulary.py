@@ -114,3 +114,38 @@ PERFORMER = 'P175'  # Album -> musician/band
 CAST_MEMBER = 'P161'  # Movie -> actor
 DIRECTOR = 'P57'  # Movie -> director
 PRODUCER = 'P162'  # Movie -> producer
+
+# Date precision
+# See https://www.wikidata.org/wiki/Special:ListDatatypes
+BILLION_YEARS = 0
+HUNDRED_MILLION_YEARS = 1
+TEN_MILLION_YEARS = 2
+MILLION_YEARS = 3
+HUNDRED_THOUSAND_YEARS = 4
+TEN_THOUSAND_YEARS = 5
+MILLENNIUM = 6
+CENTURY = 7
+DECADE = 8
+YEAR = 9
+MONTH = 10
+DAY = 11
+HOUR = 12
+MINUTE = 13
+SECOND = 14
+DATE_PRECISION = {
+    BILLION_YEARS: 'billion years',
+    HUNDRED_MILLION_YEARS: 'hundred million years',
+    TEN_MILLION_YEARS: 'ten million years',
+    MILLION_YEARS: 'million years',
+    HUNDRED_THOUSAND_YEARS: 'hundred thousand years',
+    TEN_THOUSAND_YEARS: 'ten thousand years',
+    MILLENNIUM: 'millennium',
+    CENTURY: 'century',
+    DECADE: 'decade',
+    YEAR: 'year',
+    MONTH: 'month',
+    DAY: 'day',
+    HOUR: 'hour',
+    MINUTE: 'minute',
+    SECOND: 'second'
+}
