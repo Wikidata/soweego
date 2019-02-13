@@ -18,7 +18,6 @@ from typing import Tuple
 
 import pandas as pd
 import recordlinkage as rl
-from numpy import nan
 from pandas.io.json.json import JsonReader
 
 from soweego.commons import (constants, data_gathering, target_database,
@@ -307,7 +306,7 @@ def _parse_dates_list(dates_list):
                 continue
 
     if not dates:
-        return nan
+        return pd.NaT
     return dates
 
 
