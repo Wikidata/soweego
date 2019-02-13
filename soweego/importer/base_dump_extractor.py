@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """Dump extractor abstract class"""
+import time
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -23,7 +24,6 @@ class BaseDumpExtractor:
         """
         raise NotImplementedError
 
-
     def get_dump_download_urls(self) -> Iterable[str]:
         """Get the dump download URL.
         Useful if there is a way to compute the latest dump URL.
@@ -34,7 +34,7 @@ class BaseDumpExtractor:
         """
         raise NotImplementedError
 
-    def _commit_entity(self, db_manager, entity):
+    def _commit_entity(self, db_manager, entity, delay: int = 0):
         success = True
         session = db_manager.new_session()
         try:
@@ -47,4 +47,6 @@ class BaseDumpExtractor:
             session.close()
 
         if not success:
-            self._commit_entity(db_manager, entity)
+            time.sleep(delay)
+            delay += 5
+            self._commit_entity(db_manager, entity, delay)
