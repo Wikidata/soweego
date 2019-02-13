@@ -38,7 +38,7 @@ class BaseDumpExtractor:
         """
         raise NotImplementedError
 
-    def _commit_entity(self, db_manager, entity, delay: int = 0):
+    def _commit_entity(self, db_manager, entity, delay: int = 10):
         success = True
         session = db_manager.new_session()
         try:
@@ -52,6 +52,8 @@ class BaseDumpExtractor:
             session.close()
 
         if not success:
+            LOGGER.info("Sleeping for %s seconds before retrying commit" % delay)
             time.sleep(delay)
-            delay += 5
+            delay *= 2
+            LOGGER.info("Commit retry for %s..." % entity)
             self._commit_entity(db_manager, entity, delay)
