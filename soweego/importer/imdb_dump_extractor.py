@@ -43,6 +43,11 @@ class ImdbDumpExtractor(BaseDumpExtractor):
     n_writers = 0
 
     def get_dump_download_urls(self) -> List[str]:
+        """
+        :returns: the urls from which to download the data dumps
+        the first URL is the one for the **person dump**, the 
+        second downloads the **movie dump**
+        """
         return [DUMP_URL_PERSON_INFO, DUMP_URL_MOVIE_INFO]
 
     def _normalize_null(self, entity: Dict):
@@ -62,6 +67,15 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 entity[k] = None
 
     def extract_and_populate(self, dump_file_paths: List[str]):
+        """
+        Extracts the data in the dumps (person and movie) and processes them.
+        It then proceeds to add the appropiate data to the database. See
+        :ref:`soweego.importer.models.imdb_entity` module to see the SQLAlchemy
+        definition of the entities we use to save IMDB data.
+
+        :param dump_file_paths: the absolute paths of the already downloaded dump
+        files.
+        """
 
         person_file_path = dump_file_paths[0]
         movies_file_path = dump_file_paths[1]
@@ -227,9 +241,24 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
         return qids
 
-    def _populate_person(self, person_entity: imdb_entity.ImdbPersonEntity, person_info: Dict, session: object):
+    def _populate_person(self, person_entity: imdb_entity.ImdbPersonEntity,
+                         person_info: Dict,
+                         session: object):
+        """
+        Given an instance of
+        :ref:`soweego.importer.models.imdb_entity.ImdbPersonEntity`
+        this function populates its attributes according to
+        the provided `person_info` dictionary. It then adds
+        said instance to the SQLAlchemy session.
 
-        # we can distinguish genre for actor and actress
+        :param person_entity: the entity which we want to populate
+        :param person_info: the data we want to populate the
+        entity with
+        :param session: the SQLAlchemy session to which we will
+        add the entity once it is populated.
+        """
+
+        # TODO: we can distinguish genre for actor and actress
 
         person_entity.catalog_id = person_info.get("nconst")
         person_entity.name = person_info.get("primaryName")
@@ -246,7 +275,9 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
         session.add(person_entity)
 
-    def _populate_person_movie_relations(self, person_info: Dict, session: object):
+    def _populate_person_movie_relations(self, person_info: Dict,
+                                         session: object):
+        
         know_for_titles = person_info.get(
             "knownForTitles").split(",")
 
