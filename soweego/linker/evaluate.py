@@ -30,9 +30,12 @@ LOGGER = logging.getLogger(__name__)
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default='/app/shared', help="Input/output directory, default: '/app/shared'.")
 def cli(classifier, target, target_type, binarize, dir_io):
     """Evaluate the performance of a probabilistic linker."""
-    precision, recall, fscore, confusion_matrix = evaluate(
+    predictions, (precision, recall, fscore, confusion_matrix) = evaluate(
         constants.CLASSIFIERS[classifier], target, target_type, binarize, dir_io)
-    with open(os.path.join(dir_io, constants.LINKER_EVALUATION % (target, classifier)), 'w') as fileout:
+
+    predictions.to_series().to_csv(os.path.join(dir_io, constants.LINKER_EVALUATION_PREDICTIONS %
+                                                (target, classifier)), columns=[], header=True)
+    with open(os.path.join(dir_io, constants.LINKER_PERFORMANCE % (target, classifier)), 'w') as fileout:
         fileout.write(
             f'Precision: {precision}\nRecall: {recall}\nF-score: {fscore}\nConfusion matrix:\n{confusion_matrix}\n')
 
@@ -58,7 +61,8 @@ def evaluate(classifier, catalog, entity, binarize, dir_io):
     # Build
     wd_reader, target_reader = workflow.train_test_build(
         catalog, entity, dir_io)
-    wd, target = workflow.preprocess('training', wd_reader, target_reader)
+    wd, target = workflow.preprocess(
+        'training', catalog, wd_reader, target_reader, dir_io)
 
     # Split (2/3 train, 1/3 test)
     wd_train, wd_test = train_test_split(wd, test_size=0.33)
@@ -76,4 +80,4 @@ def evaluate(classifier, catalog, entity, binarize, dir_io):
     test_vectors = workflow.extract_features(test_index, wd_test, target_test)
     predictions = model.predict(test_vectors)
 
-    return _compute_performance(test_index, predictions, len(test_vectors))
+    return predictions, _compute_performance(test_index, predictions, len(test_vectors))
