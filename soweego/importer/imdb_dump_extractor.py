@@ -228,6 +228,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             "music_department": vocab.MUSICIAN,
             "sound_department": vocab.SOUND_DEPARTMENT,
             "soundtrack": vocab.MUSICIAN,
+            "editor": vocab.FILM_EDITOR,
         }
 
         for prof in professions:
