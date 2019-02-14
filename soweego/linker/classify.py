@@ -18,7 +18,7 @@ from sklearn.externals import joblib
 
 from soweego.commons import constants, target_database
 from soweego.ingestor import wikidata_bot
-from soweego.linker import evaluate, workflow
+from soweego.linker import workflow
 
 LOGGER = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ def _upload(predictions, catalog, sandbox):
 def execute(catalog, entity, model, threshold, dir_io):
     wd_reader, target_reader = _build(catalog, entity, dir_io)
     wd, target = workflow.preprocess(
-        'classification', wd_reader, target_reader)
+        'classification', catalog, wd_reader, target_reader, dir_io)
     candidate_pairs = _block(wd, target)
     feature_vectors = workflow.extract_features(candidate_pairs, wd, target)
     predictions = _classify(model, feature_vectors)
