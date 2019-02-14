@@ -324,32 +324,34 @@ def _parse_dates_list(dates_list):
             if precision < vocabulary.YEAR:  # From decades to billion years
                 LOGGER.debug('Date precision: %s. Falling back to YEAR, due to lack of support in Python pandas.Period',
                              vocabulary.DATE_PRECISION[precision])
-                dates.append(pd.Period(date[:4]))
+                _build_date_object(date, 4, dates)
             elif precision is vocabulary.YEAR:
-                dates.append(pd.Period(date[:4]))
+                _build_date_object(date, 4, dates)
             elif precision is vocabulary.MONTH:
-                dates.append(pd.Period(date[:7]))
+                _build_date_object(date, 7, dates)
             elif precision is vocabulary.DAY:
-                dates.append(pd.Period(date[:10]))
+                _build_date_object(date, 10, dates)
             elif precision is vocabulary.HOUR:
-                dates.append(pd.Period(date[:13]))
+                _build_date_object(date, 13, dates)
             elif precision is vocabulary.MINUTE:
-                dates.append(pd.Period(date[:16]))
+                _build_date_object(date, 16, dates)
             elif precision is vocabulary.SECOND:
-                dates.append(pd.Period(date))
+                _build_date_object(date, len(date), dates)
         else:
             LOGGER.warning(
                 'Unexpected date precision: %s. Will try to parse the date anyway', precision)
-            try:
-                dates.append(pd.Period(date))
-            except ValueError as ve:
-                LOGGER.warning(
-                    "Skipping date that can't be parsed: %s. Reason: %s", date, ve)
-                continue
-
+            _build_date_object(date, len(date), dates)
     if not dates:
         return pd.NaT
     return dates
+
+
+def _build_date_object(value, slice_index, to_dates_list):
+    try:
+        to_dates_list.append(pd.Period(value[:slice_index]))
+    except ValueError as ve:
+        LOGGER.warning(
+            "Skipping date that can't be parsed: %s. Reason: %s", value, ve)
 
 
 def _handle_goal_value(goal):
