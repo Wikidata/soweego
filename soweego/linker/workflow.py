@@ -18,7 +18,6 @@ from typing import Tuple
 
 import pandas as pd
 import recordlinkage as rl
-from numpy import nan
 from pandas.io.json.json import JsonReader
 
 from soweego.commons import (constants, data_gathering, target_database,
@@ -53,7 +52,7 @@ def build_wikidata(goal, catalog, entity, dir_io):
                     qids_and_tids[entity[constants.QID]] = {
                         constants.TID: entity[constants.TID]}
             LOGGER.debug(
-                "Reconstructed dictionary with QIDS and target IDs from '%s': %s", wd_io_path, qids_and_tids)
+                "Reconstructed dictionary with QIDS and target IDs from '%s'", wd_io_path)
 
     else:
         LOGGER.info(
@@ -172,52 +171,76 @@ def _preprocess_target(goal, target_reader):
     # Needed to avoid inconsistent aggregations
     # if we run step 2 on chunks
     # TODO Segfault when running in Docker container
+    LOGGER.info('Loading target into a pandas DataFrame ...')
     target = pd.concat([chunk for chunk in target_reader],
                        ignore_index=True, sort=False)
-    debug_buffer = StringIO()
-    target.info(buf=debug_buffer)
-    LOGGER.debug('Target loaded into a pandas DataFrame: %s',
-                 debug_buffer.getvalue())
+    _log_preprocessing_step(
+        target, 'Target loaded into a pandas DataFrame: %s')
 
-    # 2. Merge dates with their precision & drop precision columns
-    target[constants.DATE_OF_BIRTH] = list(
-        zip(target[constants.DATE_OF_BIRTH], target[constants.BIRTH_PRECISION]))
-    target[constants.DATE_OF_DEATH] = list(
-        zip(target[constants.DATE_OF_DEATH], target[constants.DEATH_PRECISION]))
-    target.drop(columns=[constants.BIRTH_PRECISION,
-                         constants.DEATH_PRECISION], inplace=True)
+    # 2. Drop columns with null values only
+    LOGGER.info('Dropping columns with null values only ...')
+    _drop_null_columns(target)
 
-    # 3. Aggregate denormalized data on target ID
+    will_handle_dates = _will_handle_dates(target)
+
+    # 3. Pair dates with their precision & drop precision columns
+    if will_handle_dates:
+        LOGGER.info('Pairing date columns with precision ones ...')
+        dob_column = list(zip(dob_column, target[constants.BIRTH_PRECISION]))
+        dod_column = list(zip(dod_column, target[constants.DEATH_PRECISION]))
+        target.drop(columns=[constants.BIRTH_PRECISION,
+                             constants.DEATH_PRECISION], inplace=True)
+        _log_preprocessing_step(
+            target, 'Paired date columns with precision ones: %s')
+
+    # 4. Aggregate denormalized data on target ID
     # TODO Token lists may contain duplicate tokens
+    LOGGER.info("Aggregating denormalized data on '%s' column ...",
+                constants.TID)
     target = target.groupby(constants.TID).agg(lambda x: list(set(x)))
-    debug_buffer = StringIO()
-    target.info(buf=debug_buffer)
-    LOGGER.debug('Data indexed and aggregated on %s: %s',
-                 constants.TID, debug_buffer.getvalue())
+    _log_preprocessing_step(
+        target, f"Data indexed and aggregated on '{constants.TID}' column: %s")
 
-    # 4. Training only: target ID column for blocking
+    # 5. Training only: target ID column for blocking
     if goal == 'training':
+        LOGGER.info(
+            "Making '%s' column from the index for blocking ...", constants.TID)
         target[constants.TID] = target.index
+        _log_preprocessing_step(
+            target, f"Made '{constants.TID}' column from the index for blocking: %s")
 
-    # 5. Join the list of descriptions
-    _join_descriptions(target)
-    debug_buffer = StringIO()
-    target.info(buf=debug_buffer)
-    LOGGER.debug('Joined descriptions: %s', debug_buffer.getvalue())
-
-    # 6. Handle dates
-    _handle_dates(target)
-
-    # 7. Pull out the value from lists with a single value
-    target = _pull_out_from_single_value_list(target)
-    debug_buffer = StringIO()
-    target.info(buf=debug_buffer)
-    LOGGER.debug('Stringified lists with a single value: %s',
-                 debug_buffer.getvalue())
+    # 6. Shared preprocessing
+    target = _shared_preprocessing(target, will_handle_dates)
 
     LOGGER.info('Target preprocessing done')
 
     return target
+
+
+def _shared_preprocessing(df, will_handle_dates):
+    LOGGER.info('Joining descriptions ...')
+    _join_descriptions(df)
+
+    if will_handle_dates:
+        LOGGER.info('Handling dates ...')
+        _handle_dates(df)
+
+    LOGGER.info('Stringifying lists with a single value ...')
+    df = _pull_out_from_single_value_list(df)
+
+    return df
+
+
+def _drop_null_columns(target):
+    target.dropna(axis=1, how='all', inplace=True)
+    _log_preprocessing_step(
+        target, 'Dropped columns with null values only: %s')
+
+
+def _log_preprocessing_step(df, message):
+    debug_buffer = StringIO()
+    df.info(buf=debug_buffer)
+    LOGGER.debug(message, debug_buffer.getvalue())
 
 
 def _preprocess_wikidata(goal, wikidata_reader):
@@ -229,29 +252,28 @@ def _preprocess_wikidata(goal, wikidata_reader):
     for i, chunk in enumerate(wikidata_reader, 1):
         # 1. QID as index
         chunk.set_index(constants.QID, inplace=True)
+        _log_preprocessing_step(
+            chunk, f"Built index from '{constants.QID}' column: %s")
 
-        # 2. Join the list of descriptions
-        _join_descriptions(chunk)
+        # 2. Drop columns with null values only
+        _drop_null_columns(chunk)
 
-        # 3. Handle dates
-        _handle_dates(chunk)
-
-        # 4. Training only: join target ids if multiple
+        # 3. Training only: join target ids if multiple
         if goal == 'training':
             chunk[constants.TID] = chunk[constants.TID].map(
                 lambda cell: ' '.join(cell) if isinstance(cell, list) else cell)
 
-        # 5. Tokenize & join strings lists columns
+        # 4. Tokenize & join strings lists columns
         for column in (constants.NAME, constants.PSEUDONYM):
             chunk['%s_tokens' % column] = chunk[column].map(
                 _preprocess_strings_list, na_action='ignore')
 
-        # 6. Tokenize & join URLs lists
+        # 5. Tokenize & join URLs lists
         chunk[constants.URL_TOKENS] = chunk[constants.URL].map(
             _preprocess_urls_list, na_action='ignore')
 
-        # 7. Pull out the value from lists with a single value
-        chunk = _pull_out_from_single_value_list(chunk)
+        # 6. Shared preprocessing
+        chunk = _shared_preprocessing(chunk, _will_handle_dates(chunk))
 
         LOGGER.info('Chunk %d done', i)
 
@@ -267,8 +289,27 @@ def _handle_dates(df):
     # Parse into Period instead, see
     # http://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-oob
     for column in (constants.DATE_OF_BIRTH, constants.DATE_OF_DEATH):
+        if column is None:
+            LOGGER.warning(
+                "No '%s' column in DataFrame, won't handle its dates. Perhaps it was dropped because it contained null values only", column)
+            continue
+
         df[column] = df[column].map(
             _parse_dates_list, na_action='ignore')
+
+    _log_preprocessing_step(df, 'Parsed dates: %s')
+
+
+def _will_handle_dates(df):
+    dob_column = df.get(constants.DATE_OF_BIRTH)
+    dod_column = df.get(constants.DATE_OF_DEATH)
+
+    if dob_column is None and dod_column is None:
+        LOGGER.warning("Neither '%s' nor '%s' column in DataFrame, won't handle dates. Perhaps they were dropped because they contained null values only",
+                       constants.DATE_OF_BIRTH, constants.DATE_OF_DEATH)
+        return False
+
+    return True
 
 
 def _parse_dates_list(dates_list):
@@ -307,7 +348,7 @@ def _parse_dates_list(dates_list):
                 continue
 
     if not dates:
-        return nan
+        return pd.NaT
     return dates
 
 
@@ -318,14 +359,23 @@ def _handle_goal_value(goal):
 
 
 def _pull_out_from_single_value_list(df):
-    # TODO this produces columns with either strings or lists: feature_extraction.StringList#levenshtein_similarity assumes lists as input. so it won't work properly
-    return df.applymap(
-        lambda cell: cell[0] if isinstance(cell, list) and len(cell) == 1 else cell)
+    # TODO this produces columns with either strings or lists, probably not ideal
+    df = df.applymap(lambda cell: cell[0] if isinstance(
+        cell, list) and len(cell) == 1 else cell)
+    _log_preprocessing_step(df, 'Stringified lists with a single value: %s')
+    return df
 
 
 def _join_descriptions(df):
     # TODO It certainly doesn't make sense to compare descriptions in different languages
+    column = df.get(constants.DESCRIPTION)
+    if column is None:
+        LOGGER.warning(
+            "No '%s' column in DataFrame, won't join values. Perhaps it was dropped because it contained null values only", constants.DESCRIPTION)
+        return
+
     df[constants.DESCRIPTION] = df[constants.DESCRIPTION].str.join(' ')
+    _log_preprocessing_step(df, 'Joined descriptions: %s')
 
 
 def _preprocess_strings_list(strings_list):
