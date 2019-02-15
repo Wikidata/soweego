@@ -209,6 +209,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             "actress": vocab.ACTOR,
             "art_director": vocab.ART_DIRECTOR,
             "assistant_director": vocab.ASSISTANT_DIRECTOR,
+            "animation_department": vocab.ANIMATOR,
             "camera_department": vocab.CAMERA_OPERATOR,
             "casting_director": vocab.CASTING_DIRECTOR,
             "cinematographer": vocab.CINEMATOGRAPHER,
