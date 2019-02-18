@@ -67,11 +67,22 @@ class StringList(BaseCompareFeature):
     # Average the edit distance among the list of values
     # TODO low scores if name is swapped with surname, see https://github.com/Wikidata/soweego/issues/175
     def levenshtein_similarity(self, source_column, target_column):
-        concatenated = pandas.Series(list(zip(source_column, target_column)))
+        paired = pandas.Series(list(zip(source_column, target_column)))
 
         def _levenshtein_apply(pair):
-            source_values, target_values = pair
+            if not all(pair):
+                LOGGER.warning(
+                    "Can't compute Levenshtein distance, the pair contains null values: %s", pair)
+                return numpy.nan
+
             scores = []
+            source_values, target_values = pair
+            # Paranoid checks to ensure we work on lists
+            if isinstance(source_values, str):
+                source_values = [source_values]
+            if isinstance(target_values, str):
+                target_values = [target_values]
+
             for source in source_values:
                 for target in target_values:
                     try:
@@ -86,14 +97,15 @@ class StringList(BaseCompareFeature):
             avg = numpy.average(scores)
             return avg
 
-        return concatenated.apply(_levenshtein_apply)
+        return paired.apply(_levenshtein_apply)
 
+    # TODO move this method to another class: the measure doesn't actually work on LISTS, it assumes joined descriptions as per workflow#_join_descriptions
     def cosine_similarity(self, source_column, target_column):
         if len(source_column) != len(target_column):
             raise ValueError('Columns must have the same length')
         if len(source_column) == len(target_column) == 0:
             LOGGER.warning(
-                'Cannot compute cosine similarity, columns are empty')
+                "Can't compute cosine similarity, columns are empty")
             return pandas.Series(numpy.nan)
 
         # No analyzer means input underwent commons.text_utils#tokenize
