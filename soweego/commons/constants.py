@@ -101,17 +101,21 @@ TARGET_CATALOGS = {
 # Wikidata & target field names
 QID = 'qid'
 TID = 'tid'
-NAME = 'name'
-NAME_TOKENS = 'name_tokens'
 ALIAS = 'alias'
 PSEUDONYM = 'pseudonym'
-DESCRIPTION = 'description'
-URL = 'url'
-URL_TOKENS = 'url_tokens'
 DATE_OF_BIRTH = vocabulary.LINKER_PIDS[vocabulary.DATE_OF_BIRTH]
 DATE_OF_DEATH = vocabulary.LINKER_PIDS[vocabulary.DATE_OF_DEATH]
-BIRTH_PRECISION = 'born_precision'  # Consistent with BaseEntity.born_precision
-DEATH_PRECISION = 'died_precision'  # Consistent with BaseEntity.died_precision
+# Consistent with BaseEntity
+NAME = 'name'
+NAME_TOKENS = 'name_tokens'
+BIRTH_PRECISION = 'born_precision'
+DEATH_PRECISION = 'died_precision'
+# Consistent with BaseLinkEntity
+URL = 'url'
+URL_TOKENS = 'url_tokens'
+# Consistent with BaseNlpEntity
+DESCRIPTION = 'description'
+DESCRIPTION_TOKENS = 'description_tokens'
 
 
 # File names
