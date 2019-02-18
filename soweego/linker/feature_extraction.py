@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Set of classes to compare field pairs and extract features for supervised linking."""
+"""Set of techniques to compare record pairs (read extract features) for probabilistic linking."""
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
