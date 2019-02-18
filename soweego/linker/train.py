@@ -44,9 +44,13 @@ def execute(classifier, catalog, entity, binarize, dir_io):
         catalog, entity, dir_io)
     wd, target = workflow.preprocess(
         'training', catalog, wd_reader, target_reader, dir_io)
-    candidate_pairs = workflow.train_test_block(wd, target)
-    feature_vectors = workflow.extract_features(candidate_pairs, wd, target)
-    return _train(classifier, feature_vectors, candidate_pairs, binarize)
+    # positive_samples = workflow.train_test_block(wd, target)
+    # positive_vectors = workflow.extract_features(positive_samples, wd, target)
+    samples = workflow.full_text_query_block(
+        wd, target_database.get_entity(catalog, entity))
+    feature_vectors = workflow.extract_features(samples, wd, target)
+    # TODO vectors = pd.concat([positive_vectors, negative_vectors], sort=False)
+    return _train(classifier, feature_vectors, samples, binarize)
 
 
 def _train(classifier, feature_vectors, candidate_pairs, binarize):
