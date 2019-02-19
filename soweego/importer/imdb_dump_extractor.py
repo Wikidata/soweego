@@ -121,6 +121,8 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             for movie_info in tqdm(reader, total=n_rows):
                 self._normalize_null(movie_info)
 
+                # TODO: If runtime_minutes value is string then set it to None
+
                 movie_entity = imdb_entity.ImdbMovieEntity()
                 movie_entity.catalog_id = movie_info.get("tconst")
                 movie_entity.title_type = movie_info.get("titleType")
@@ -304,7 +306,8 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             "knownForTitles").split(",")
 
         for title in know_for_titles:
+            
             session.add(imdb_entity.ImdbPersonMovieRelationship(
-                from_id=person_info.get("nconst"),
-                to_id=title
+                from_catalog_id=person_info.get("nconst"),
+                to_catalog_id=title
             ))
