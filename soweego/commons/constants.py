@@ -125,7 +125,8 @@ TARGET_TRAINING_DATAFRAME = '%s_training_dataframe.pkl.gz'
 TARGET_CLASSIFICATION_DATAFRAME = '%s_classification_dataframe.pkl.gz'
 LINKER_MODEL = '%s_%s_model.pkl'
 LINKER_RESULT = '%s_linker_result.csv.gz'
-LINKER_EVALUATION = '%s_%s_linker_evaluation.txt'
+LINKER_EVALUATION_PREDICTIONS = '%s_%s_linker_evaluation_predictions.csv.gz'
+LINKER_PERFORMANCE = '%s_%s_linker_performance.txt'
 
 # Supervised classification
 CLASSIFIERS = {

@@ -312,10 +312,6 @@ def _return_claims_for_linker(qid, claims, no_count):
                     continue
                 if isinstance(parsed_value, set):  # Labels
                     to_return[pid_label].update(parsed_value)
-                elif isinstance(parsed_value, tuple):  # Dates
-                    date, precision = parsed_value
-                    to_return[pid_label].add(date)
-                    to_return[f'{pid_label}_precision'].add(precision)
                 else:
                     to_return[pid_label].add(parsed_value)
     else:
