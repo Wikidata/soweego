@@ -17,8 +17,8 @@ import os
 from typing import Dict, List
 
 import requests
+from tqdm import tqdm
 
-from soweego.commons import http_client as client
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
@@ -41,6 +41,9 @@ class ImdbDumpExtractor(BaseDumpExtractor):
     n_directors = 0
     n_producers = 0
     n_writers = 0
+    n_persons = 0
+
+    _sqlalchemy_commit_every = 700
 
     def get_dump_download_urls(self) -> List[str]:
         """
@@ -62,28 +65,28 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         :param entity: represents the entity we want to *normalize*
         """
 
-        for k, v in entity.items():
-            if v == "\\N":
-                entity[k] = None
+        for key, value in entity.items():
+            if value == "\\N":
+                entity[key] = None
 
-    def extract_and_populate(self, dump_file_paths: List[str]):
+    def extract_and_populate(self, dump_file_paths: List[str], resolve: bool):
         """
         Extracts the data in the dumps (person and movie) and processes them.
         It then proceeds to add the appropiate data to the database. See
         :ref:`soweego.importer.models.imdb_entity` module to see the SQLAlchemy
         definition of the entities we use to save IMDB data.
 
-        :param dump_file_paths: the absolute paths of the already downloaded dump
-        files.
+        :param dump_file_paths: the absolute paths of the already downloaded
+        dump files.
         """
 
         person_file_path = dump_file_paths[0]
         movies_file_path = dump_file_paths[1]
 
-        LOGGER.debug("Path to person info dump: %s" % person_file_path)
-        LOGGER.debug("Path to movie info dump: %s" % movies_file_path)
+        LOGGER.debug("Path to person info dump: %s", person_file_path)
+        LOGGER.debug("Path to movie info dump: %s", movies_file_path)
 
-        start = datetime.datetime.now()
+        # start = datetime.datetime.now()
 
         tables = [
             imdb_entity.ImdbMovieEntity,
@@ -107,10 +110,16 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
         with gzip.open(movies_file_path, "rt") as mdump:
             reader = csv.DictReader(mdump, delimiter="\t")
-            for movie_info in reader:
-                self._normalize_null(movie_info)
 
-                session = db_manager.new_session()
+            n_rows = sum(1 for line in mdump)
+            mdump.seek(0)
+
+            LOGGER.debug("Movies dump has %d entries", n_rows)
+
+            session = db_manager.new_session()
+
+            for movie_info in tqdm(reader, total=n_rows):
+                self._normalize_null(movie_info)
 
                 movie_entity = imdb_entity.ImdbMovieEntity()
                 movie_entity.catalog_id = movie_info.get("tconst")
@@ -127,15 +136,26 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                     movie_entity.genres = movie_info.get("genres").split(",")
 
                 session.add(movie_entity)
-                session.commit()
+                if self.n_movies % self._sqlalchemy_commit_every == 0:
+                    session.commit()
 
                 self.n_movies += 1
+
+            session.commit()
 
         LOGGER.info("Starting import persons from IMDB dump")
 
         with gzip.open(person_file_path, "rt") as pdump:
             reader = csv.DictReader(pdump, delimiter="\t")
-            for person_info in reader:
+
+            n_rows = sum(1 for line in pdump)
+            pdump.seek(0)
+
+            LOGGER.debug("Persons dump has %d entries", n_rows)
+
+            session = db_manager.new_session()
+
+            for person_info in tqdm(reader, total=n_rows):
                 self._normalize_null(person_info)
 
                 professions = person_info.get("primaryProfession")
@@ -145,8 +165,6 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                     continue
 
                 professions = professions.split(",")
-
-                session = db_manager.new_session()
 
                 # each person can be added to multiple tables in the DB
                 types_of_entities = []
@@ -188,7 +206,12 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 if person_info.get("knownForTitles"):
                     self._populate_person_movie_relations(person_info, session)
 
-                session.commit()
+                if self.n_persons % self._sqlalchemy_commit_every == 0:
+                    session.commit()
+
+                self.n_persons += 1
+
+            session.commit()
 
     def _translate_professions(self, professions: List[str]) -> List[str]:
         """
