@@ -14,7 +14,7 @@ import logging
 import re
 import sys
 from collections import defaultdict
-from typing import Iterable, TypeVar
+from typing import Iterable
 
 import regex
 from sqlalchemy import or_
@@ -28,7 +28,6 @@ from soweego.importer.models.base_nlp_entity import BaseNlpEntity
 from soweego.wikidata import api_requests, sparql_queries, vocabulary
 
 LOGGER = logging.getLogger(__name__)
-T = TypeVar('T')
 
 
 def gather_target_metadata(entity_type, catalog):
@@ -59,7 +58,7 @@ def gather_target_metadata(entity_type, catalog):
     return result
 
 
-def tokens_fulltext_search(target_entity: T, boolean_mode: bool, tokens: Iterable[str], where_clause: filter = None, limit: int = 10) -> Iterable[T]:
+def tokens_fulltext_search(target_entity: constants.DB_ENTITY, boolean_mode: bool, tokens: Iterable[str], where_clause: filter = None, limit: int = 10) -> Iterable[constants.DB_ENTITY]:
     if issubclass(target_entity, BaseEntity):
         column = target_entity.name_tokens
     elif issubclass(target_entity, BaseLinkEntity):
@@ -99,7 +98,7 @@ def tokens_fulltext_search(target_entity: T, boolean_mode: bool, tokens: Iterabl
         session.close()
 
 
-def name_fulltext_search(target_entity: T, query: str) -> Iterable[T]:
+def name_fulltext_search(target_entity: constants.DB_ENTITY, query: str) -> Iterable[constants.DB_ENTITY]:
     ft_search = target_entity.name.match(query)
 
     session = DBManager.connect_to_db()
@@ -114,7 +113,7 @@ def name_fulltext_search(target_entity: T, query: str) -> Iterable[T]:
         session.close()
 
 
-def perfect_name_search(target_entity: T, to_search: str) -> Iterable[T]:
+def perfect_name_search(target_entity: constants.DB_ENTITY, to_search: str) -> Iterable[constants.DB_ENTITY]:
     session = DBManager.connect_to_db()
     try:
         for r in session.query(target_entity).filter(
@@ -200,7 +199,7 @@ def _run_query(query, catalog, entity_type):
         return None
     LOGGER.info('Got %d entries with data from %s %s',
                 count, catalog, entity_type)
-    # TODO is this a generator?
+    # TODO just return 'query', can be used as a generator
     result_set = query.all()
     return result_set
 

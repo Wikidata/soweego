@@ -11,7 +11,6 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import logging
 import os
-from typing import TypeVar
 
 import pandas as pd
 from numpy import nan
@@ -19,11 +18,8 @@ from recordlinkage import Index
 
 from soweego.commons import constants
 from soweego.commons.data_gathering import tokens_fulltext_search
-from soweego.importer import models
 
 LOGGER = logging.getLogger(__name__)
-DB_ENTITY = TypeVar('DB_ENTITY', models.base_entity.BaseEntity,
-                    models.base_link_entity.BaseLinkEntity, models.base_nlp_entity.BaseNlpEntity)
 
 
 def train_test_block(wikidata_df: pd.DataFrame, target_df: pd.DataFrame) -> pd.MultiIndex:
@@ -40,7 +36,7 @@ def train_test_block(wikidata_df: pd.DataFrame, target_df: pd.DataFrame) -> pd.M
     return positive_index
 
 
-def full_text_query_block(wikidata_df: pd.DataFrame, catalog: str, target_entity: DB_ENTITY, dir_io: str) -> pd.MultiIndex:
+def full_text_query_block(wikidata_df: pd.DataFrame, catalog: str, target_entity: constants.DB_ENTITY, dir_io: str) -> pd.MultiIndex:
     samples_path = os.path.join(dir_io, constants.TRAINING_SAMPLES % catalog)
 
     if os.path.exists(samples_path):
@@ -73,7 +69,7 @@ def full_text_query_block(wikidata_df: pd.DataFrame, catalog: str, target_entity
     return samples_index
 
 
-def _run_full_text_query(terms: set, target_entity: DB_ENTITY, boolean_mode=False, limit=5):
+def _run_full_text_query(terms: set, target_entity: constants.DB_ENTITY, boolean_mode=False, limit=5):
     if not terms:
         return nan
 
