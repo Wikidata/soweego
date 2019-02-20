@@ -32,13 +32,15 @@ DUMP_URL_MOVIE_INFO = "https://datasets.imdbws.com/title.basics.tsv.gz"
 class ImdbDumpExtractor(BaseDumpExtractor):
 
     # Counters
-    n_total_entities = 0
-    n_movies = 0
     n_actors = 0
     n_directors = 0
+    n_movies = 0
+    n_musicians = 0
+    n_persons = 0
     n_producers = 0
     n_writers = 0
-    n_persons = 0
+    n_misc = 0
+    n_person_movie_links = 0
 
     _sqlalchemy_commit_every = 700
 
@@ -106,9 +108,13 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
         LOGGER.info("Starting to import movies from imdb dump")
 
+        # Here we open the movie dump file, and add everything to the DB
         with gzip.open(movies_file_path, "rt") as mdump:
             reader = csv.DictReader(mdump, delimiter="\t")
 
+            # count number of rows for TQDM (so we can display how)
+            # much is missing to complete the process. Then go back
+            # to the start of the file with `.seek(0)`
             n_rows = sum(1 for line in mdump)
             mdump.seek(0)
 
@@ -119,6 +125,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             for movie_info in tqdm(reader, total=n_rows):
                 self._normalize_null(movie_info)
 
+                # create the movie SQLAlchemy entity and populate it
                 movie_entity = imdb_entity.ImdbMovieEntity()
                 movie_entity.catalog_id = movie_info.get("tconst")
                 movie_entity.title_type = movie_info.get("titleType")
@@ -134,18 +141,28 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                     movie_entity.genres = movie_info.get("genres").split(",")
 
                 session.add(movie_entity)
+
+                # every `_sqlalchemy_commit_every` loops we commit the session to
+                # the DB. This is more efficient than commiting every loop, and
+                # is not so hard on the memory requirements as would be
+                # adding everything to session and commiting once the for loop
+                # is done
                 if self.n_movies % self._sqlalchemy_commit_every == 0:
                     session.commit()
 
                 self.n_movies += 1
 
+            # commit remaining entities
             session.commit()
 
         LOGGER.info("Starting import persons from IMDB dump")
 
+        # read person dump and add everything to DB
         with gzip.open(person_file_path, "rt") as pdump:
             reader = csv.DictReader(pdump, delimiter="\t")
 
+            # get number of rows for proper TQDM process display, then
+            # go back to the start of the file
             n_rows = sum(1 for line in pdump)
             pdump.seek(0)
 
@@ -156,6 +173,8 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             for person_info in tqdm(reader, total=n_rows):
                 self._normalize_null(person_info)
 
+                # imdb saves the list of provession as a comma separated
+                # string
                 professions = person_info.get("primaryProfession")
 
                 # if person has no professions then ignore it
@@ -164,29 +183,36 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
                 professions = professions.split(",")
 
-                # each person can be added to multiple tables in the DB
+                # each person can be added to multiple tables in the DB,
+                # each table stands for a profession
                 types_of_entities = []
 
                 if "actor" in professions or "actress" in professions:
+                    self.n_actors += 1
                     types_of_entities.append(imdb_entity.ImdbActorEntity())
 
                 if "director" in professions:
+                    self.n_directors += 1
                     types_of_entities.append(imdb_entity.ImdbDirectorEntity())
 
                 if "producer" in professions:
+                    self.n_producers += 1
                     types_of_entities.append(imdb_entity.ImdbProducerEntity())
 
                 if any(prof in ["sound_department", "composer",
                                 "music_department", "soundtrack"]
                        for prof in professions):
+                    self.n_musicians += 1
                     types_of_entities.append(imdb_entity.ImdbMusicianEntity())
 
                 if "writer" in professions:
+                    self.n_writers += 1
                     types_of_entities.append(imdb_entity.ImdbWriterEntity())
 
                 # if the only profession a person has is `miscellaneous` then we
-                # add it to all 4 tables
+                # add it to all tables
                 if professions == "miscellaneous":
+                    self.n_misc += 1
                     types_of_entities = [
                         imdb_entity.ImdbActorEntity(),
                         imdb_entity.ImdbDirectorEntity(),
@@ -202,13 +228,16 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 # if person is known for any movies then add these to the
                 # databse as well
                 if person_info.get("knownForTitles"):
+                    self.n_person_movie_links += 1
                     self._populate_person_movie_relations(person_info, session)
 
+                # commit results to the database every `_sqlalchemy_commit_every` loops
                 if self.n_persons % self._sqlalchemy_commit_every == 0:
                     session.commit()
 
                 self.n_persons += 1
 
+            # finally commit remaining entities
             session.commit()
 
     def _populate_person(self, person_entity: imdb_entity.ImdbPersonEntity,
@@ -250,6 +279,8 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         if death_year:
             person_entity.died = datetime.date(int(death_year), 1, 1)
 
+        # The array of primary professions gets translated to a list
+        # of the QIDs that represent said professions in Wikidata
         if person_info.get("primaryProfession"):
             person_entity.occupations = self._translate_professions(
                 person_info.get("primaryProfession").split()
@@ -259,6 +290,19 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
     def _populate_person_movie_relations(self, person_info: Dict,
                                          session: object) -> None:
+        """
+        Given a `person_info` we extract the ID that the person has
+        in IMDB and the IDs of the movies for which this person is
+        known (which also come from IMDB). We add a
+        :ref:`soweego.importer.models.imdb_entity.ImdbPersonMovieRelationship`
+        entity to the session for each realtion.
+
+        :param person_info: dictionary that contains the IMDB person ID and
+        the IMDB movie IDs (for movies the specific person is known). The movie
+        IDs are a comma separated string
+        :param session: the SQLAlchemy session to which we will
+        add the relation entities.
+        """
 
         know_for_titles = person_info.get(
             "knownForTitles").split(",")
@@ -273,9 +317,11 @@ class ImdbDumpExtractor(BaseDumpExtractor):
     def _translate_professions(self, professions: List[str]) -> List[str]:
         """
         Gets the list of professions (as a list of strings) directly from IMDB
-        and translates these to a list of QIDs for each specific profession.
+        and translates these to a list of Wikidata QIDs for each specific 
+        profession. Unmappable professions (like `miscellaneous` are removed)
 
-        Unmappable professions (like `miscellaneous` are removed)
+        The actual QIDs can be found in
+        :ref:`soweego.wikidata.vocabulary`
 
         :param professions: list of profession names, given by IMDB
 
