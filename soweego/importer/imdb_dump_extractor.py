@@ -85,7 +85,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         LOGGER.debug("Path to movie info dump: %s", movies_file_path)
         LOGGER.debug("Path to person info dump: %s", person_file_path)
 
-        # start = datetime.datetime.now()
+        start = datetime.datetime.now()
 
         tables = [
             imdb_entity.ImdbActorEntity,
@@ -154,6 +154,11 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
             # commit remaining entities
             session.commit()
+
+        end = datetime.datetime.now()
+        LOGGER.info("Movie import completed in %s. "
+                    "Total movies imported: %d",
+                    end - start, self.n_movies)
 
         LOGGER.info("Starting import persons from IMDB dump")
 
@@ -239,6 +244,15 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
             # finally commit remaining entities
             session.commit()
+
+        end = datetime.datetime.now()
+        LOGGER.info("Person import completed in %s. "
+                    "Total people imported: %d - "
+                    "Actors: %d - Directors: %d - Musicians: %d - "
+                    "Producers: %d - Writers: %d - Misc: %d",
+                    end - start, self.n_persons, self.n_actors,
+                    self.n_directors, self.n_musicians, self.n_producers,
+                    self.n_writers, self.n_misc)
 
     def _populate_person(self, person_entity: imdb_entity.ImdbPersonEntity,
                          person_info: Dict,
