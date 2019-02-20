@@ -13,15 +13,16 @@ import gzip
 import json
 import logging
 import os
-from io import StringIO
 from typing import Tuple
 
 import pandas as pd
 import recordlinkage as rl
+from numpy import nan
 from pandas.io.json.json import JsonReader
 
 from soweego.commons import (constants, data_gathering, target_database,
                              text_utils, url_utils)
+from soweego.commons.logging import log_dataframe_info
 from soweego.linker.feature_extraction import StringList, UrlList
 from soweego.wikidata import api_requests, vocabulary
 
@@ -48,9 +49,9 @@ def build_wikidata(goal, catalog, entity, dir_io):
         if goal == 'training':
             with gzip.open(wd_io_path, 'rt') as wd_io:
                 for line in wd_io:
-                    entity = json.loads(line.rstrip())
-                    qids_and_tids[entity[constants.QID]] = {
-                        constants.TID: entity[constants.TID]}
+                    item = json.loads(line.rstrip())
+                    qids_and_tids[item[constants.QID]] = {
+                        constants.TID: item[constants.TID]}
             LOGGER.debug(
                 "Reconstructed dictionary with QIDS and target IDs from '%s'", wd_io_path)
 
@@ -124,6 +125,21 @@ def build_target(goal, catalog, entity, qids_and_tids, dir_io):
     return target_df_reader
 
 
+def train_test_build(catalog, entity, dir_io):
+    LOGGER.info("Building %s %s dataset for training and test, I/O directory: '%s'",
+                catalog, entity, dir_io)
+
+    # Wikidata
+    wd_df_reader, qids_and_tids = build_wikidata(
+        'training', catalog, entity, dir_io)
+
+    # Target
+    target_df_reader = build_target(
+        'training', catalog, entity, qids_and_tids, dir_io)
+
+    return wd_df_reader, target_df_reader
+
+
 def preprocess(goal: str, catalog: str, wikidata_reader: JsonReader, target_reader: JsonReader, dir_io: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
     if goal == 'training':
         wd_io_path = os.path.join(
@@ -162,6 +178,86 @@ def preprocess(goal: str, catalog: str, wikidata_reader: JsonReader, target_read
     return wd_preprocessed_df, target_preprocessed_df
 
 
+def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, target: pd.DataFrame) -> pd.DataFrame:
+    LOGGER.info('Extracting features ...')
+
+    compare = rl.Compare()
+    # TODO similar name match as a feature
+    # TODO feature engineering on more fields
+    # wikidata columns = Index(['tid', 'label', 'alias', 'description', 'url', 'given_name',
+    #    'date_of_birth', 'date_of_death', 'place_of_death', 'birth_name',
+    #    'place_of_birth', 'sex_or_gender', 'family_name', 'pseudonym'],
+    # discogs columns = Index(['description_tokens', 'name_tokens', 'description', 'url', 'url_tokens',
+    #    'name', 'born', 'born_precision', 'real_name', 'is_wiki',
+    #    'data_quality', 'died', 'died_precision', 'identifier'],
+    # Feature 1: exact match on URLs
+    compare.add(UrlList(constants.URL, constants.URL, label='url_exact'))
+    # Feature 2: dates
+    # TODO parse dates
+    # compare.date('date_of_birth', 'born', label='birth_date')
+    # compare.date('date_of_death', 'died', label='death_date')
+    # Feature 3: Levenshtein distance on names
+    compare.add(StringList(constants.NAME_TOKENS,
+                           constants.NAME_TOKENS, label='name_levenshtein'))
+    # Feture 4: cosine similarity on descriptions
+    compare.add(StringList(constants.DESCRIPTION, constants.DESCRIPTION,
+                           algorithm='cosine', analyzer='soweego', label='description_cosine'))
+    feature_vectors = compare.compute(candidate_pairs, wikidata, target)
+
+    LOGGER.info('Feature extraction done')
+    return feature_vectors
+
+
+def init_model(classifier, binarize):
+    # TODO expose other useful parameters
+    if classifier is rl.NaiveBayesClassifier:
+        model = classifier(binarize=binarize)
+    elif classifier is rl.SVMClassifier:
+        # TODO implement SVM
+        raise NotImplementedError
+    return model
+
+
+def _preprocess_wikidata(goal, wikidata_reader):
+    _handle_goal_value(goal)
+
+    LOGGER.info('Preprocessing Wikidata ...')
+    wd_chunks = []
+
+    for i, chunk in enumerate(wikidata_reader, 1):
+        # 1. QID as index
+        chunk.set_index(constants.QID, inplace=True)
+        log_dataframe_info(
+            LOGGER, chunk, f"Built index from '{constants.QID}' column")
+
+        # 2. Drop columns with null values only
+        _drop_null_columns(chunk)
+
+        # 3. Training only: join target ids if multiple
+        if goal == 'training':
+            chunk[constants.TID] = chunk[constants.TID].map(
+                lambda cell: ' '.join(cell) if isinstance(cell, list) else cell)
+
+        # 4. Tokenize & join strings lists columns
+        for column in (constants.NAME, constants.PSEUDONYM):
+            chunk[f'{column}_tokens'] = chunk[column].apply(
+                _tokenize_values, args=(text_utils.tokenize,))
+
+        # 5. Tokenize & join URLs lists
+        chunk[constants.URL_TOKENS] = chunk[constants.URL].apply(
+            _tokenize_values, args=(url_utils.tokenize,))
+
+        # 6. Shared preprocessing
+        chunk = _shared_preprocessing(chunk, _will_handle_dates(chunk))
+
+        LOGGER.info('Chunk %d done', i)
+
+        wd_chunks.append(chunk)
+
+    LOGGER.info('Wikidata preprocessing done')
+    return pd.concat(wd_chunks, sort=False)
+
+
 def _preprocess_target(goal, target_reader):
     _handle_goal_value(goal)
 
@@ -174,8 +270,8 @@ def _preprocess_target(goal, target_reader):
     LOGGER.info('Loading target into a pandas DataFrame ...')
     target = pd.concat([chunk for chunk in target_reader],
                        ignore_index=True, sort=False)
-    _log_preprocessing_step(
-        target, 'Target loaded into a pandas DataFrame: %s')
+    log_dataframe_info(
+        LOGGER, target, 'Target loaded into a pandas DataFrame')
 
     # 2. Drop columns with null values only
     LOGGER.info('Dropping columns with null values only ...')
@@ -190,24 +286,24 @@ def _preprocess_target(goal, target_reader):
         dod_column = list(zip(dod_column, target[constants.DEATH_PRECISION]))
         target.drop(columns=[constants.BIRTH_PRECISION,
                              constants.DEATH_PRECISION], inplace=True)
-        _log_preprocessing_step(
-            target, 'Paired date columns with precision ones: %s')
+        log_dataframe_info(
+            LOGGER, target, 'Paired date columns with precision ones')
 
     # 4. Aggregate denormalized data on target ID
     # TODO Token lists may contain duplicate tokens
     LOGGER.info("Aggregating denormalized data on '%s' column ...",
                 constants.TID)
     target = target.groupby(constants.TID).agg(lambda x: list(set(x)))
-    _log_preprocessing_step(
-        target, f"Data indexed and aggregated on '{constants.TID}' column: %s")
+    log_dataframe_info(
+        LOGGER, target, f"Data indexed and aggregated on '{constants.TID}' column")
 
     # 5. Training only: target ID column for blocking
     if goal == 'training':
         LOGGER.info(
             "Making '%s' column from the index for blocking ...", constants.TID)
         target[constants.TID] = target.index
-        _log_preprocessing_step(
-            target, f"Made '{constants.TID}' column from the index for blocking: %s")
+        log_dataframe_info(
+            LOGGER, target, f"Made '{constants.TID}' column from the index for blocking")
 
     # 6. Shared preprocessing
     target = _shared_preprocessing(target, will_handle_dates)
@@ -233,54 +329,8 @@ def _shared_preprocessing(df, will_handle_dates):
 
 def _drop_null_columns(target):
     target.dropna(axis=1, how='all', inplace=True)
-    _log_preprocessing_step(
-        target, 'Dropped columns with null values only: %s')
-
-
-def _log_preprocessing_step(df, message):
-    debug_buffer = StringIO()
-    df.info(buf=debug_buffer)
-    LOGGER.debug(message, debug_buffer.getvalue())
-
-
-def _preprocess_wikidata(goal, wikidata_reader):
-    _handle_goal_value(goal)
-
-    LOGGER.info('Preprocessing Wikidata ...')
-    wd_chunks = []
-
-    for i, chunk in enumerate(wikidata_reader, 1):
-        # 1. QID as index
-        chunk.set_index(constants.QID, inplace=True)
-        _log_preprocessing_step(
-            chunk, f"Built index from '{constants.QID}' column: %s")
-
-        # 2. Drop columns with null values only
-        _drop_null_columns(chunk)
-
-        # 3. Training only: join target ids if multiple
-        if goal == 'training':
-            chunk[constants.TID] = chunk[constants.TID].map(
-                lambda cell: ' '.join(cell) if isinstance(cell, list) else cell)
-
-        # 4. Tokenize & join strings lists columns
-        for column in (constants.NAME, constants.PSEUDONYM):
-            chunk['%s_tokens' % column] = chunk[column].map(
-                _preprocess_strings_list, na_action='ignore')
-
-        # 5. Tokenize & join URLs lists
-        chunk[constants.URL_TOKENS] = chunk[constants.URL].map(
-            _preprocess_urls_list, na_action='ignore')
-
-        # 6. Shared preprocessing
-        chunk = _shared_preprocessing(chunk, _will_handle_dates(chunk))
-
-        LOGGER.info('Chunk %d done', i)
-
-        wd_chunks.append(chunk)
-
-    LOGGER.info('Wikidata preprocessing done')
-    return pd.concat(wd_chunks, sort=False)
+    log_dataframe_info(
+        LOGGER, target, 'Dropped columns with null values only')
 
 
 def _handle_dates(df):
@@ -297,7 +347,7 @@ def _handle_dates(df):
         df[column] = df[column].map(
             _parse_dates_list, na_action='ignore')
 
-    _log_preprocessing_step(df, 'Parsed dates: %s')
+    log_dataframe_info(LOGGER, df, 'Parsed dates')
 
 
 def _will_handle_dates(df):
@@ -364,7 +414,7 @@ def _pull_out_from_single_value_list(df):
     # TODO this produces columns with either strings or lists, probably not ideal
     df = df.applymap(lambda cell: cell[0] if isinstance(
         cell, list) and len(cell) == 1 else cell)
-    _log_preprocessing_step(df, 'Stringified lists with a single value: %s')
+    log_dataframe_info(LOGGER, df, 'Stringified lists with a single value')
     return df
 
 
@@ -377,98 +427,18 @@ def _join_descriptions(df):
         return
 
     df[constants.DESCRIPTION] = df[constants.DESCRIPTION].str.join(' ')
-    _log_preprocessing_step(df, 'Joined descriptions: %s')
+    log_dataframe_info(LOGGER, df, 'Joined descriptions')
 
 
-def _preprocess_strings_list(strings_list):
-    # TODO use a set to merge duplicate tokens before joining
-    joined = []
-    for value in strings_list:
-        tokens = text_utils.tokenize(value)
-        if tokens:
-            joined.append(' '.join(tokens))
-    if not joined:
-        LOGGER.debug('No tokens from list of strings: %s', strings_list)
-        return None
-    return joined
-
-
-def _preprocess_urls_list(urls_list):
-    joined = []
-    for value in urls_list:
-        tokens = url_utils.tokenize(value)
-        if tokens:
-            joined.append(' '.join(tokens))
-    if not joined:
-        LOGGER.debug('No tokens from list of URLs: %s', urls_list)
-        return None
-    return joined
-
-
-def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, target: pd.DataFrame) -> pd.DataFrame:
-    LOGGER.info('Extracting features ...')
-
-    compare = rl.Compare()
-    # TODO similar name match as a feature
-    # TODO feature engineering on more fields
-    # wikidata columns = Index(['tid', 'label', 'alias', 'description', 'url', 'given_name',
-    #    'date_of_birth', 'date_of_death', 'place_of_death', 'birth_name',
-    #    'place_of_birth', 'sex_or_gender', 'family_name', 'pseudonym'],
-    # discogs columns = Index(['description_tokens', 'name_tokens', 'description', 'url', 'url_tokens',
-    #    'name', 'born', 'born_precision', 'real_name', 'is_wiki',
-    #    'data_quality', 'died', 'died_precision', 'identifier'],
-    # Feature 1: exact match on URLs
-    compare.add(UrlList(constants.URL, constants.URL, label='url_exact'))
-    # Feature 2: dates
-    # TODO parse dates
-    # compare.date('date_of_birth', 'born', label='birth_date')
-    # compare.date('date_of_death', 'died', label='death_date')
-    # Feature 3: Levenshtein distance on names
-    compare.add(StringList(constants.NAME_TOKENS,
-                           constants.NAME_TOKENS, label='name_levenshtein'))
-    # Feture 4: cosine similarity on descriptions
-    compare.add(StringList(constants.DESCRIPTION, constants.DESCRIPTION,
-                           algorithm='cosine', analyzer='soweego', label='description_cosine'))
-    feature_vectors = compare.compute(candidate_pairs, wikidata, target)
-
-    LOGGER.info('Feature extraction done')
-    return feature_vectors
-
-
-def train_test_build(catalog, entity, dir_io):
-    LOGGER.info("Building %s %s dataset for training and test, I/O directory: '%s'",
-                catalog, entity, dir_io)
-
-    # Wikidata
-    wd_df_reader, qids_and_tids = build_wikidata(
-        'training', catalog, entity, dir_io)
-
-    # Target
-    target_df_reader = build_target(
-        'training', catalog, entity, qids_and_tids, dir_io)
-
-    return wd_df_reader, target_df_reader
-
-
-def train_test_block(wikidata_df, target_df):
-    on_column = constants.TID
-
-    LOGGER.info("Blocking on column '%s'", on_column)
-
-    idx = rl.Index()
-    idx.block(on_column)
-    candidate_pairs = idx.index(wikidata_df, target_df)
-
-    LOGGER.info('Blocking index built')
-
-    return candidate_pairs
-
-
-def init_model(classifier, binarize):
-    # TODO expose other useful parameters
-    if classifier is rl.NaiveBayesClassifier:
-        model = classifier(binarize=binarize)
-    elif classifier is rl.SVMClassifier:
-        # TODO implement SVM
-        raise NotImplementedError
-    return model
+def _tokenize_values(values, tokenize_func):
+    if pd.isna(values):
+        return nan
+    all_tokens = set()
+    for value in values:
+        value_tokens = tokenize_func(value)
+        if value_tokens:
+            all_tokens.update(value_tokens)
+    if not all_tokens:
+        LOGGER.debug('No tokens from list of values: %s', values)
+        return nan
+    return list(all_tokens)

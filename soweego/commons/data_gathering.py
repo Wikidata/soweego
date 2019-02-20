@@ -14,7 +14,7 @@ import logging
 import re
 import sys
 from collections import defaultdict
-from typing import Iterable, TypeVar
+from typing import Iterable
 
 import regex
 from sqlalchemy import or_
@@ -22,10 +22,10 @@ from sqlalchemy import or_
 from soweego.commons import constants, target_database, url_utils
 from soweego.commons.cache import cached
 from soweego.commons.db_manager import DBManager
+from soweego.importer import models
 from soweego.wikidata import api_requests, sparql_queries, vocabulary
 
 LOGGER = logging.getLogger(__name__)
-T = TypeVar('T')
 
 
 def gather_target_metadata(entity_type, catalog):
@@ -56,29 +56,39 @@ def gather_target_metadata(entity_type, catalog):
     return result
 
 
-def tokens_fulltext_search(target_entity: T, boolean_mode: bool, tokens: Iterable[str], where_clause: filter = None, limit: int = 10) -> Iterable[T]:
-    query = None
-    if boolean_mode:
-        query = ' '.join(map('+{0}'.format, tokens))
+def tokens_fulltext_search(target_entity: constants.DB_ENTITY, boolean_mode: bool, tokens: Iterable[str], where_clause: filter = None, limit: int = 10) -> Iterable[constants.DB_ENTITY]:
+    if issubclass(target_entity, models.base_entity.BaseEntity):
+        column = target_entity.name_tokens
+    elif issubclass(target_entity, models.base_link_entity.BaseLinkEntity):
+        column = target_entity.url_tokens
+    elif issubclass(target_entity, models.base_nlp_entity.BaseNlpEntity):
+        column = target_entity.description_tokens
     else:
-        query = ' '.join(tokens)
+        LOGGER.critical('Bad target entity class: %s', target_entity)
+        raise ValueError('Bad target entity class: %s' % target_entity)
 
-    ft_search = target_entity.tokens.match(query)
+    terms = ' '.join(map('+{0}'.format, tokens)
+                     ) if boolean_mode else ' '.join(tokens)
+    ft_search = column.match(terms)
 
     session = DBManager.connect_to_db()
-    result = []
     try:
-        if where_clause is not None:
-            result = session.query(target_entity).filter(
-                ft_search).filter(where_clause).limit(limit).all()
+        if where_clause:
+            query = session.query(target_entity).filter(
+                ft_search).filter(where_clause).limit(limit)
         else:
-            result = session.query(target_entity).filter(
-                ft_search).limit(limit).all()
-        session.commit()
+            query = session.query(target_entity).filter(
+                ft_search).limit(limit)
 
-        for res in result:
-            yield res
-
+        count = query.count()
+        if count == 0:
+            LOGGER.debug(
+                "No result from full-text index query to %s. Terms: '%s'", target_entity.__name__, terms)
+            session.commit()
+        else:
+            for row in query:
+                yield row
+            session.commit()
     except:
         session.rollback()
         raise
@@ -86,7 +96,7 @@ def tokens_fulltext_search(target_entity: T, boolean_mode: bool, tokens: Iterabl
         session.close()
 
 
-def name_fulltext_search(target_entity: T, query: str) -> Iterable[T]:
+def name_fulltext_search(target_entity: constants.DB_ENTITY, query: str) -> Iterable[constants.DB_ENTITY]:
     ft_search = target_entity.name.match(query)
 
     session = DBManager.connect_to_db()
@@ -101,7 +111,7 @@ def name_fulltext_search(target_entity: T, query: str) -> Iterable[T]:
         session.close()
 
 
-def perfect_name_search(target_entity: T, to_search: str) -> Iterable[T]:
+def perfect_name_search(target_entity: constants.DB_ENTITY, to_search: str) -> Iterable[constants.DB_ENTITY]:
     session = DBManager.connect_to_db()
     try:
         for r in session.query(target_entity).filter(
@@ -187,7 +197,7 @@ def _run_query(query, catalog, entity_type):
         return None
     LOGGER.info('Got %d entries with data from %s %s',
                 count, catalog, entity_type)
-    # TODO is this a generator?
+    # TODO just return 'query', can be used as a generator
     result_set = query.all()
     return result_set
 
