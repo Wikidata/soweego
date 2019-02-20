@@ -74,6 +74,12 @@ TARGET_CATALOGS = {
             'link_entity': None,
             'nlp_entity': None
         },
+        'musician': {
+            'qid': vocabulary.MUSICIAN,
+            'entity': imdb_entity.ImdbMusicianEntity,
+            'link_entity': None,
+            'nlp_entity': None
+        },
         'producer': {
             'qid': vocabulary.FILM_PRODUCER,
             'entity': imdb_entity.ImdbProducerEntity,
