@@ -10,72 +10,86 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import logging
+import os
+from typing import TypeVar
 
 import pandas as pd
 from numpy import nan
-from recordlinkage.base import BaseIndexAlgorithm
+from recordlinkage import Index
 
 from soweego.commons import constants
 from soweego.commons.data_gathering import tokens_fulltext_search
-from soweego.commons.logging import log_dataframe_info
+from soweego.importer import models
 
 LOGGER = logging.getLogger(__name__)
+DB_ENTITY = TypeVar('DB_ENTITY', models.base_entity.BaseEntity,
+                    models.base_link_entity.BaseLinkEntity, models.base_nlp_entity.BaseNlpEntity)
 
 
-# FIXME probabilmente non serve mettere la logica dentro a classi recordlinkage: mettilo in workflow e basta
-class FullTextQueryBlock(BaseIndexAlgorithm):
-    """Blocking through a full-text query against the given target database."""
+def train_test_block(wikidata_df: pd.DataFrame, target_df: pd.DataFrame) -> pd.MultiIndex:
+    blocking_column = constants.TID
 
-    def __init__(self, left_on, target_db_entity, boolean_mode=False, limit=5):
-        super(FullTextQueryBlock, self).__init__()
-        self.left_on = left_on
-        self.target_db_entity = target_db_entity
-        self.boolean_mode = boolean_mode
-        self.limit = limit
+    LOGGER.info("Blocking on column '%s'", blocking_column)
 
-    def __repr__(self):
-        return f'<{self.__class__.__name__} left_on={self.left_on}>'
+    idx = Index()
+    idx.block(blocking_column)
+    positive_index = idx.index(wikidata_df, target_df)
 
-    def _link_index(self, df_a, df_b):
-        tids = df_a[self.left_on].map(
-            self._run_full_text_query, na_action='ignore')
-        LOGGER.debug('Candidate target IDs sample: %s', tids.sample(5))
-        # FIXME remove pickles after test run on VPS box
-        pd.to_pickle(tids, '/app/shared/discogs_training_samples_series.pkl')
+    LOGGER.info('Blocking index built')
 
-        tids_df = pd.DataFrame(tids.values.tolist(), index=tids.index)
-        log_dataframe_info(
-            LOGGER, tids_df, f"DataFrame with 1 target ID per column")
-        pd.to_pickle(tids_df, '/app/shared/discogs_training_samples_df.pkl')
+    return positive_index
 
-        index = pd.MultiIndex.from_frame(
-            tids_df, names=[constants.QID, constants.TID])
-        LOGGER.debug('Built candidate target IDs index: %s', index)
-        pd.to_pickle(
-            tids, '/app/shared/discogs_training_samples_multiindex.pkl')
 
-        return index
+def full_text_query_block(wikidata_df: pd.DataFrame, catalog: str, target_entity: DB_ENTITY, dir_io: str) -> pd.MultiIndex:
+    samples_path = os.path.join(dir_io, constants.TRAINING_SAMPLES % catalog)
 
-    def _run_full_text_query(self, queries):
-        tids = set()
-        # FIXME butta le prossime righe nel cesso una volta ricostruito il DF preprocessato
-        query = set()
-        if isinstance(queries, str):
-            query.add(queries)
-        else:
-            for q in queries:
-                query.update(set(q.split()))
-        #
-        LOGGER.debug("Full-text query terms: %s", query)
-        for result in tokens_fulltext_search(self.target_db_entity, self.boolean_mode, query):
-            tids.add(result.catalog_id)
-            LOGGER.debug('%s result: %s',
-                         self.target_db_entity.__name__, result)
+    if os.path.exists(samples_path):
+        LOGGER.info("Will reuse existing %s training samples: '%s'",
+                    catalog, samples_path)
+        tids = pd.read_pickle(samples_path)
+    else:
+        blocking_column = constants.NAME_TOKENS
+        LOGGER.info("Blocking on column '%s' via full-text query ...",
+                    blocking_column)
 
-        if not tids:
-            LOGGER.info('No target candidates for source query: %s', query)
-            return nan
+        tids = wikidata_df[blocking_column].apply(
+            _run_full_text_query, args=(target_entity,))
+        tids.dropna(inplace=True)
 
-        top = list(tids)[:self.limit]
-        LOGGER.debug('Top %d target candidates: %s', self.limit, top)
-        return top
+        LOGGER.debug('Candidate target IDs sample:\n%s', tids.sample(5))
+
+    qids_and_tids = []
+    for qid, tids in tids.to_dict().items():
+        for tid in tids:
+            qids_and_tids.append((qid, tid))
+
+    samples_index = pd.MultiIndex.from_tuples(
+        qids_and_tids, names=[constants.QID, constants.TID])
+
+    LOGGER.debug('Candidate target IDs index sample:\n%s',
+                 samples_index.to_series().sample(5))
+    LOGGER.info('Blocking index built')
+
+    return samples_index
+
+
+def _run_full_text_query(terms: set, target_entity: DB_ENTITY, boolean_mode=False, limit=5):
+    if not terms:
+        return nan
+
+    tids = set()
+    LOGGER.debug("Full-text query terms: %s", terms)
+
+    for result in tokens_fulltext_search(target_entity, boolean_mode, terms):
+        tids.add(result.catalog_id)
+        LOGGER.debug('%s result: %s',
+                     target_entity.__name__, result)
+
+    if not tids:
+        LOGGER.info('No target candidates for source query: %s', terms)
+        return nan
+
+    top = list(tids)[:limit]
+    LOGGER.debug('Top %d target candidates: %s', limit, top)
+
+    return top
