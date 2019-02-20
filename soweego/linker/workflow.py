@@ -17,12 +17,12 @@ from typing import Tuple
 
 import pandas as pd
 import recordlinkage as rl
+from numpy import nan
 from pandas.io.json.json import JsonReader
 
 from soweego.commons import (constants, data_gathering, target_database,
                              text_utils, url_utils)
 from soweego.commons.logging import log_dataframe_info
-from soweego.linker.blocking import FullTextQueryBlock
 from soweego.linker.feature_extraction import StringList, UrlList
 from soweego.wikidata import api_requests, vocabulary
 
@@ -49,9 +49,9 @@ def build_wikidata(goal, catalog, entity, dir_io):
         if goal == 'training':
             with gzip.open(wd_io_path, 'rt') as wd_io:
                 for line in wd_io:
-                    entity = json.loads(line.rstrip())
-                    qids_and_tids[entity[constants.QID]] = {
-                        constants.TID: entity[constants.TID]}
+                    item = json.loads(line.rstrip())
+                    qids_and_tids[item[constants.QID]] = {
+                        constants.TID: item[constants.TID]}
             LOGGER.debug(
                 "Reconstructed dictionary with QIDS and target IDs from '%s'", wd_io_path)
 
@@ -176,34 +176,6 @@ def preprocess(goal: str, catalog: str, wikidata_reader: JsonReader, target_read
                     catalog, goal, target_io_path)
 
     return wd_preprocessed_df, target_preprocessed_df
-
-
-def train_test_block(wikidata_df, target_df):
-    on_column = constants.TID
-
-    LOGGER.info("Blocking on column '%s'", on_column)
-
-    idx = rl.Index()
-    idx.block(on_column)
-    positive_index = idx.index(wikidata_df, target_df)
-
-    LOGGER.info('Blocking index built')
-
-    return positive_index
-
-
-def full_text_query_block(wikidata_df, target_entity):
-    on_column = constants.NAME_TOKENS
-
-    LOGGER.info("Blocking on column '%s' via full-text query", on_column)
-
-    indexer = rl.Index()
-    indexer.add(FullTextQueryBlock(on_column, target_entity))
-    samples_index = indexer.index(wikidata_df, pd.DataFrame())
-
-    LOGGER.info('Blocking index built')
-
-    return samples_index
 
 
 def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, target: pd.DataFrame) -> pd.DataFrame:
@@ -460,7 +432,7 @@ def _join_descriptions(df):
 
 def _tokenize_values(values, tokenize_func):
     if pd.isna(values):
-        return
+        return nan
     all_tokens = set()
     for value in values:
         value_tokens = tokenize_func(value)
@@ -468,5 +440,5 @@ def _tokenize_values(values, tokenize_func):
             all_tokens.update(value_tokens)
     if not all_tokens:
         LOGGER.debug('No tokens from list of values: %s', values)
-        return None
+        return nan
     return list(all_tokens)
