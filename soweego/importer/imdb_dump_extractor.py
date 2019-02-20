@@ -13,17 +13,14 @@ import csv
 import datetime
 import gzip
 import logging
-import os
 from typing import Dict, List
 
-import requests
 from tqdm import tqdm
 
-from soweego.commons import text_utils, url_utils
+from soweego.commons import text_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models import imdb_entity
-from soweego.importer.models.base_link_entity import BaseLinkEntity
 from soweego.wikidata import vocabulary as vocab
 
 LOGGER = logging.getLogger(__name__)
@@ -47,19 +44,19 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
     def get_dump_download_urls(self) -> List[str]:
         """
-        :returns: the urls from which to download the data dumps
+        :return: the urls from which to download the data dumps
         the first URL is the one for the **person dump**, the
         second downloads the **movie dump**
         """
         return [DUMP_URL_PERSON_INFO, DUMP_URL_MOVIE_INFO]
 
-    def _normalize_null(self, entity: Dict):
+    def _normalize_null(self, entity: Dict) -> None:
         """
         IMDB represents a null entry with \\N , this method converts
         all \\N to None so that they're saved as null in the database.
         This is done for all "entries" of a given entity.
 
-        The normalization process is done in place, so this  method
+        The normalization process is done *in place*, so this method
         has no return value.
 
         :param entity: represents the entity we want to *normalize*
@@ -69,7 +66,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             if value == "\\N":
                 entity[key] = None
 
-    def extract_and_populate(self, dump_file_paths: List[str], resolve: bool):
+    def extract_and_populate(self, dump_file_paths: List[str], resolve: bool) -> None:
         """
         Extracts the data in the dumps (person and movie) and processes them.
         It then proceeds to add the appropiate data to the database. See
@@ -83,18 +80,19 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         person_file_path = dump_file_paths[0]
         movies_file_path = dump_file_paths[1]
 
-        LOGGER.debug("Path to person info dump: %s", person_file_path)
         LOGGER.debug("Path to movie info dump: %s", movies_file_path)
+        LOGGER.debug("Path to person info dump: %s", person_file_path)
 
         # start = datetime.datetime.now()
 
         tables = [
-            imdb_entity.ImdbMovieEntity,
             imdb_entity.ImdbActorEntity,
             imdb_entity.ImdbDirectorEntity,
+            imdb_entity.ImdbMovieEntity,
+            imdb_entity.ImdbMusicianEntity,
             imdb_entity.ImdbProducerEntity,
             imdb_entity.ImdbWriterEntity,
-            imdb_entity.ImdbPersonMovieRelationship
+            imdb_entity.ImdbPersonMovieRelationship,
         ]
 
         db_manager = DBManager()
@@ -120,8 +118,6 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
             for movie_info in tqdm(reader, total=n_rows):
                 self._normalize_null(movie_info)
-
-                # TODO: If runtime_minutes value is string then set it to None
 
                 movie_entity = imdb_entity.ImdbMovieEntity()
                 movie_entity.catalog_id = movie_info.get("tconst")
@@ -224,7 +220,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
         :param professions: list of profession names, given by IMDB
 
-        :returns: list of QIDs for said professions
+        :return: list of QIDs for said professions
         """
         qids = []
 
@@ -267,7 +263,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
     def _populate_person(self, person_entity: imdb_entity.ImdbPersonEntity,
                          person_info: Dict,
-                         session: object):
+                         session: object) -> None:
         """
         Given an instance of
         :ref:`soweego.importer.models.imdb_entity.ImdbPersonEntity`
@@ -286,11 +282,17 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
         person_entity.catalog_id = person_info.get("nconst")
         person_entity.name = person_info.get("primaryName")
-        person_entity.tokens = " ".join(
+        person_entity.name_tokens = " ".join(
             text_utils.tokenize(person_entity.name))
 
-        person_entity.born = person_info.get("birthYear")
-        person_entity.died = person_info.get("deathYear")
+        # datetime.date(year, month, day)
+        born_year = person_info.get("birthYear")
+        if born_year:
+            person_entity.born = datetime.date(int(born_year), 1, 1)
+
+        death_year = person_info.get("deathYear")
+        if death_year:
+            person_entity.died = datetime.date(int(death_year), 1, 1)
 
         if person_info.get("primaryProfession"):
             person_entity.occupations = self._translate_professions(
@@ -300,13 +302,13 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         session.add(person_entity)
 
     def _populate_person_movie_relations(self, person_info: Dict,
-                                         session: object):
+                                         session: object) -> None:
 
         know_for_titles = person_info.get(
             "knownForTitles").split(",")
 
         for title in know_for_titles:
-            
+
             session.add(imdb_entity.ImdbPersonMovieRelationship(
                 from_catalog_id=person_info.get("nconst"),
                 to_catalog_id=title
