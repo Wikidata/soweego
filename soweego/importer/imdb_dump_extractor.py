@@ -211,6 +211,65 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
             session.commit()
 
+    def _populate_person(self, person_entity: imdb_entity.ImdbPersonEntity,
+                         person_info: Dict,
+                         session: object) -> None:
+        """
+        Given an instance of
+        :ref:`soweego.importer.models.imdb_entity.ImdbPersonEntity`
+        this function populates its attributes according to
+        the provided `person_info` dictionary. It then adds
+        said instance to the SQLAlchemy session.
+
+        :param person_entity: the entity which we want to populate
+        :param person_info: the data we want to populate the
+        entity with
+        :param session: the SQLAlchemy session to which we will
+        add the entity once it is populated.
+        """
+
+        person_entity.catalog_id = person_info.get("nconst")
+        person_entity.name = person_info.get("primaryName")
+        person_entity.name_tokens = " ".join(
+            text_utils.tokenize(person_entity.name))
+
+        # If either `actor` or `actress` in primary profession
+        # (which is a comma separated string of professions)
+        # then we can distinguish the gender
+        if any(prof in person_info.get("primaryProfession")
+               for prof in ["actor", "actress"]):
+            person_entity.gender = "male" if "actor" in person_info.get(
+                "primaryProfession") else "female"
+
+        # datetime.date(year, month, day)
+        born_year = person_info.get("birthYear")
+        if born_year:
+            person_entity.born = datetime.date(int(born_year), 1, 1)
+
+        death_year = person_info.get("deathYear")
+        if death_year:
+            person_entity.died = datetime.date(int(death_year), 1, 1)
+
+        if person_info.get("primaryProfession"):
+            person_entity.occupations = self._translate_professions(
+                person_info.get("primaryProfession").split()
+            )
+
+        session.add(person_entity)
+
+    def _populate_person_movie_relations(self, person_info: Dict,
+                                         session: object) -> None:
+
+        know_for_titles = person_info.get(
+            "knownForTitles").split(",")
+
+        for title in know_for_titles:
+
+            session.add(imdb_entity.ImdbPersonMovieRelationship(
+                from_catalog_id=person_info.get("nconst"),
+                to_catalog_id=title
+            ))
+
     def _translate_professions(self, professions: List[str]) -> List[str]:
         """
         Gets the list of professions (as a list of strings) directly from IMDB
@@ -260,56 +319,3 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 qids.append(qid)
 
         return qids
-
-    def _populate_person(self, person_entity: imdb_entity.ImdbPersonEntity,
-                         person_info: Dict,
-                         session: object) -> None:
-        """
-        Given an instance of
-        :ref:`soweego.importer.models.imdb_entity.ImdbPersonEntity`
-        this function populates its attributes according to
-        the provided `person_info` dictionary. It then adds
-        said instance to the SQLAlchemy session.
-
-        :param person_entity: the entity which we want to populate
-        :param person_info: the data we want to populate the
-        entity with
-        :param session: the SQLAlchemy session to which we will
-        add the entity once it is populated.
-        """
-
-        # TODO: we can distinguish gender for actor and actress
-
-        person_entity.catalog_id = person_info.get("nconst")
-        person_entity.name = person_info.get("primaryName")
-        person_entity.name_tokens = " ".join(
-            text_utils.tokenize(person_entity.name))
-
-        # datetime.date(year, month, day)
-        born_year = person_info.get("birthYear")
-        if born_year:
-            person_entity.born = datetime.date(int(born_year), 1, 1)
-
-        death_year = person_info.get("deathYear")
-        if death_year:
-            person_entity.died = datetime.date(int(death_year), 1, 1)
-
-        if person_info.get("primaryProfession"):
-            person_entity.occupations = self._translate_professions(
-                person_info.get("primaryProfession").split()
-            )
-
-        session.add(person_entity)
-
-    def _populate_person_movie_relations(self, person_info: Dict,
-                                         session: object) -> None:
-
-        know_for_titles = person_info.get(
-            "knownForTitles").split(",")
-
-        for title in know_for_titles:
-
-            session.add(imdb_entity.ImdbPersonMovieRelationship(
-                from_catalog_id=person_info.get("nconst"),
-                to_catalog_id=title
-            ))

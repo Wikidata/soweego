@@ -67,6 +67,8 @@ class ImdbPersonEntity(BaseEntity):
         'polymorphic_identity': __tablename__,
         'concrete': True}
 
+    gender = Column(String(10))
+
     # base imdb person entity
     born_precision = Column(Integer, default=9, nullable=False)
     died_precision = Column(Integer, default=9, nullable=False)
