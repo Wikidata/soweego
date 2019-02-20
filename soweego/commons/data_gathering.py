@@ -22,9 +22,7 @@ from sqlalchemy import or_
 from soweego.commons import constants, target_database, url_utils
 from soweego.commons.cache import cached
 from soweego.commons.db_manager import DBManager
-from soweego.importer.models.base_entity import BaseEntity
-from soweego.importer.models.base_link_entity import BaseLinkEntity
-from soweego.importer.models.base_nlp_entity import BaseNlpEntity
+from soweego.importer import models
 from soweego.wikidata import api_requests, sparql_queries, vocabulary
 
 LOGGER = logging.getLogger(__name__)
@@ -59,11 +57,11 @@ def gather_target_metadata(entity_type, catalog):
 
 
 def tokens_fulltext_search(target_entity: constants.DB_ENTITY, boolean_mode: bool, tokens: Iterable[str], where_clause: filter = None, limit: int = 10) -> Iterable[constants.DB_ENTITY]:
-    if issubclass(target_entity, BaseEntity):
+    if issubclass(target_entity, models.base_entity.BaseEntity):
         column = target_entity.name_tokens
-    elif issubclass(target_entity, BaseLinkEntity):
-        column = target_entity.ulr_tokens
-    elif issubclass(target_entity, BaseNlpEntity):
+    elif issubclass(target_entity, models.base_link_entity.BaseLinkEntity):
+        column = target_entity.url_tokens
+    elif issubclass(target_entity, models.base_nlp_entity.BaseNlpEntity):
         column = target_entity.description_tokens
     else:
         LOGGER.critical('Bad target entity class: %s', target_entity)
