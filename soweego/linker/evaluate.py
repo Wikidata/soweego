@@ -17,7 +17,7 @@ import recordlinkage as rl
 from sklearn.model_selection import train_test_split
 
 from soweego.commons import constants, target_database
-from soweego.linker import workflow
+from soweego.linker import blocking, workflow
 
 LOGGER = logging.getLogger(__name__)
 
@@ -69,14 +69,14 @@ def evaluate(classifier, catalog, entity, binarize, dir_io):
     target_train, target_test = train_test_split(target, test_size=0.33)
 
     # Train
-    train_index = workflow.train_test_block(wd_train, target_train)
+    train_index = blocking.train_test_block(wd_train, target_train)
     train_vectors = workflow.extract_features(
         train_index, wd_train, target_train)
     model = workflow.init_model(classifier, binarize)
     model.fit(train_vectors, train_index)
 
     # Test
-    test_index = workflow.train_test_block(wd_test, target_test)
+    test_index = blocking.train_test_block(wd_test, target_test)
     test_vectors = workflow.extract_features(test_index, wd_test, target_test)
     predictions = model.predict(test_vectors)
 

@@ -18,7 +18,7 @@ from sklearn.externals import joblib
 
 from soweego.commons import constants, target_database
 from soweego.ingestor import wikidata_bot
-from soweego.linker import workflow
+from soweego.linker import blocking, workflow
 
 LOGGER = logging.getLogger(__name__)
 
@@ -50,7 +50,9 @@ def execute(catalog, entity, model, threshold, dir_io):
     wd_reader, target_reader = _build(catalog, entity, dir_io)
     wd, target = workflow.preprocess(
         'classification', catalog, wd_reader, target_reader, dir_io)
-    candidate_pairs = _block(wd, target)
+    # TODO Also consider blocking on URLs
+    candidate_pairs = blocking.full_text_query_block(
+        wd, catalog, target_database.get_entity(catalog, entity), dir_io)
     feature_vectors = workflow.extract_features(candidate_pairs, wd, target)
     predictions = _classify(model, feature_vectors)
     return predictions[predictions >= threshold]
@@ -75,14 +77,3 @@ def _build(catalog, entity, dir_io):
         'classification', catalog, entity, qids_and_tids, dir_io)
 
     return wd_df_reader, target_df_reader
-
-
-def _block(wikidata_df, target_df):
-    idx = rl.Index()
-    # TODO Blocking with full-text index query, right now hack on WD birth name and Discogs real name
-    # TODO Also consider blocking on URLs
-    # There are 15 items with multiple birth names, and blocking won't work
-    wikidata_df['birth_name'] = wikidata_df['birth_name'].map(
-        lambda cell: ' '.join(cell) if isinstance(cell, list) else cell)
-    idx.block('birth_name', 'real_name')
-    return idx.index(wikidata_df, target_df)
