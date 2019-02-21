@@ -36,13 +36,13 @@ def train_test_block(wikidata_df: pd.DataFrame, target_df: pd.DataFrame) -> pd.M
     return positive_index
 
 
-def full_text_query_block(goal: str, catalog: str, wikidata_df: pd.DataFrame, target_entity: constants.DB_ENTITY, dir_io: str) -> pd.MultiIndex:
+def full_text_query_block(goal: str, catalog: str, wikidata_df: pd.DataFrame, chunk_number: int, target_entity: constants.DB_ENTITY, dir_io: str) -> pd.MultiIndex:
     if goal == 'training':
         samples_path = os.path.join(
-            dir_io, constants.TRAINING_SAMPLES % catalog)
+            dir_io, constants.TRAINING_SAMPLES % (catalog, chunk_number))
     elif goal == 'classification':
         samples_path = os.path.join(
-            dir_io, constants.CLASSIFICATION_SAMPLES % catalog)
+            dir_io, constants.CLASSIFICATION_SAMPLES % (catalog, chunk_number))
     else:
         LOGGER.critical(
             "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'", goal)

@@ -14,6 +14,7 @@ import os
 
 import click
 import recordlinkage as rl
+from pandas import concat
 from sklearn.externals import joblib
 
 from soweego.commons import constants, target_database
@@ -48,21 +49,21 @@ def _upload(predictions, catalog, sandbox):
 
 def execute(catalog, entity, model, threshold, dir_io):
     wd_reader, target_reader = _build(catalog, entity, dir_io)
-    wd, target = workflow.preprocess(
+    wd_generator, target = workflow.preprocess(
         'classification', catalog, wd_reader, target_reader, dir_io)
     # TODO Also consider blocking on URLs
     # FIXME con il blocking sui nomi completi funzia!!! provare con il blocking FT
-    candidate_pairs = blocking.full_text_query_block(
-        'classification', catalog, wd, target_database.get_entity(catalog, entity), dir_io)
-    feature_vectors = workflow.extract_features(candidate_pairs, wd, target)
-    predictions = _classify(model, feature_vectors)
-    return predictions[predictions >= threshold]
-
-
-def _classify(model, feature_vectors):
     classifier = joblib.load(model)
     rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
-    return classifier.prob(feature_vectors)
+    predicted_chunks = []
+    for i, chunk in enumerate(wd_generator, 1):
+        samples = blocking.full_text_query_block(
+            'classification', catalog, chunk, i, target_database.get_entity(catalog, entity), dir_io)
+        feature_vectors = workflow.extract_features(samples, chunk, target)
+        predictions = classifier.prob(feature_vectors)
+        predicted_chunks.append(predictions[predictions >= threshold])
+        LOGGER.info('Chunk %d classified', i)
+    return concat(predicted_chunks, sort=False)
 
 
 def _build(catalog, entity, dir_io):

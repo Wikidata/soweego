@@ -222,7 +222,6 @@ def _preprocess_wikidata(goal, wikidata_reader):
     _handle_goal_value(goal)
 
     LOGGER.info('Preprocessing Wikidata ...')
-    wd_chunks = []
 
     for i, chunk in enumerate(wikidata_reader, 1):
         # 1. QID as index
@@ -252,10 +251,9 @@ def _preprocess_wikidata(goal, wikidata_reader):
 
         LOGGER.info('Chunk %d done', i)
 
-        wd_chunks.append(chunk)
+        yield chunk
 
     LOGGER.info('Wikidata preprocessing done')
-    return pd.concat(wd_chunks, sort=False)
 
 
 def _preprocess_target(goal, target_reader):
