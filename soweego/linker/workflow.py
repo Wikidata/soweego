@@ -73,7 +73,7 @@ def build_wikidata(goal, catalog, entity, dir_io):
 
     wd_df_reader = pd.read_json(wd_io_path, lines=True, chunksize=1000)
 
-    LOGGER.info('Wikidata training set built')
+    LOGGER.info('Wikidata %s set built', goal)
     return wd_df_reader, qids_and_tids
 
 
@@ -431,7 +431,7 @@ def _join_descriptions(df):
 
 
 def _tokenize_values(values, tokenize_func):
-    if pd.isna(values):
+    if values is nan:
         return nan
     all_tokens = set()
     for value in values:
