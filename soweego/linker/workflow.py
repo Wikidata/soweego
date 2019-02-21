@@ -265,7 +265,7 @@ def _preprocess_target(goal, target_reader):
 
     # 1. Load into a DataFrame
     # Needed to avoid inconsistent aggregations
-    # if we run step 2 on chunks
+    # if we run step 4 on chunks
     # TODO Segfault when running in Docker container
     LOGGER.info('Loading target into a pandas DataFrame ...')
     target = pd.concat([chunk for chunk in target_reader],
