@@ -50,7 +50,7 @@ def clean(url):
     stripped = url.strip()
     if ' ' in stripped:
         items = stripped.split()
-        LOGGER.info('URL <%s> split into %s', url, items)
+        LOGGER.debug('URL <%s> split into %s', url, items)
         return items
     return [stripped]
 
@@ -86,10 +86,10 @@ def validate(url):
         r'\Z', re.IGNORECASE)
     valid_url = re.search(final_regex, url)
     if not valid_url:
-        LOGGER.info('Dropping invalid URL: <%s>', url)
+        LOGGER.debug('Dropping invalid URL: <%s>', url)
         return None
     if not valid_url.group(1):
-        LOGGER.warning(
+        LOGGER.debug(
             "Adding 'https' to potential URL with missing scheme: <%s>", url)
         return 'https://' + valid_url.group()
     return valid_url.group()

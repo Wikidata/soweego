@@ -16,6 +16,7 @@ from datetime import date, datetime
 from typing import Iterable
 
 from requests import get
+
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
@@ -91,7 +92,8 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                         'Skipping import for identifier with no name: %s', identifier)
                     continue
 
-                living_links = self._extract_living_links(node, identifier, resolve)
+                living_links = self._extract_living_links(
+                    node, identifier, resolve)
 
                 session = db_manager.new_session()
 
@@ -119,7 +121,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                                         name, living_links, node, session)
 
                 session.commit()
-                LOGGER.debug(
+                LOGGER.info(
                     '%d entities imported so far: %d musicians with %d links, %d bands with %d links, %d discarded dead links.',
                     self.total_entities, self.musicians, self.musician_links, self.bands, self.band_links,
                     self.dead_links)
