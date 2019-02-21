@@ -48,7 +48,7 @@ def full_text_query_block(wikidata_df: pd.DataFrame, catalog: str, target_entity
         LOGGER.info("Blocking on column '%s' via full-text query ...",
                     blocking_column)
 
-        tids = wikidata_df[blocking_column].apply(
+        tids = wikidata_df[blocking_column].dropna().apply(
             _run_full_text_query, args=(target_entity,))
         tids.dropna(inplace=True)
 
@@ -69,11 +69,10 @@ def full_text_query_block(wikidata_df: pd.DataFrame, catalog: str, target_entity
     return samples_index
 
 
-def _run_full_text_query(terms: set, target_entity: constants.DB_ENTITY, boolean_mode=False, limit=5):
-    if not terms:
-        return nan
-
+def _run_full_text_query(terms: list, target_entity: constants.DB_ENTITY, boolean_mode=False, limit=5):
     tids = set()
+    if isinstance(terms, str):
+        terms = [terms]
     LOGGER.debug("Full-text query terms: %s", terms)
 
     for result in tokens_fulltext_search(target_entity, boolean_mode, terms):
