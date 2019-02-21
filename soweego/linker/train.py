@@ -44,19 +44,22 @@ def execute(classifier, catalog, entity, binarize, dir_io):
         catalog, entity, dir_io)
     wd, target = workflow.preprocess(
         'training', catalog, wd_reader, target_reader, dir_io)
-    # positive_samples = blocking.train_test_block(wd, target)
-    # positive_vectors = workflow.extract_features(positive_samples, wd, target)
+    positive_samples = blocking.train_test_block(wd, target)
     samples = blocking.full_text_query_block(
         wd, catalog, target_database.get_entity(catalog, entity), dir_io)
+    actual_positive = samples & positive_samples
+    positive_size, actual_size = len(positive_samples), len(actual_positive)
+    if positive_size != actual_size:
+        LOGGER.warning(
+            '%d positive samples are not included in the full set of samples and will not be used', positive_size - actual_size)
     feature_vectors = workflow.extract_features(samples, wd, target)
-    # TODO vectors = pd.concat([positive_vectors, negative_vectors], sort=False)
-    return _train(classifier, feature_vectors, samples, binarize)
+    return _train(classifier, feature_vectors, actual_positive, binarize)
 
 
-def _train(classifier, feature_vectors, candidate_pairs, binarize):
+def _train(classifier, feature_vectors, positive_samples_index, binarize):
     model = workflow.init_model(classifier, binarize)
     LOGGER.info('Training a %s', classifier.__name__)
-    model.fit(feature_vectors, candidate_pairs)
+    model.fit(feature_vectors, positive_samples_index)
     LOGGER.info('Training done')
     return model
 
