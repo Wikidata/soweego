@@ -51,8 +51,9 @@ def execute(catalog, entity, model, threshold, dir_io):
     wd, target = workflow.preprocess(
         'classification', catalog, wd_reader, target_reader, dir_io)
     # TODO Also consider blocking on URLs
+    # FIXME con il blocking sui nomi completi funzia!!! provare con il blocking FT
     candidate_pairs = blocking.full_text_query_block(
-        wd, catalog, target_database.get_entity(catalog, entity), dir_io)
+        'classification', catalog, wd, target_database.get_entity(catalog, entity), dir_io)
     feature_vectors = workflow.extract_features(candidate_pairs, wd, target)
     predictions = _classify(model, feature_vectors)
     return predictions[predictions >= threshold]

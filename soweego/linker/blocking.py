@@ -36,12 +36,22 @@ def train_test_block(wikidata_df: pd.DataFrame, target_df: pd.DataFrame) -> pd.M
     return positive_index
 
 
-def full_text_query_block(wikidata_df: pd.DataFrame, catalog: str, target_entity: constants.DB_ENTITY, dir_io: str) -> pd.MultiIndex:
-    samples_path = os.path.join(dir_io, constants.TRAINING_SAMPLES % catalog)
+def full_text_query_block(goal: str, catalog: str, wikidata_df: pd.DataFrame, target_entity: constants.DB_ENTITY, dir_io: str) -> pd.MultiIndex:
+    if goal == 'training':
+        samples_path = os.path.join(
+            dir_io, constants.TRAINING_SAMPLES % catalog)
+    elif goal == 'classification':
+        samples_path = os.path.join(
+            dir_io, constants.CLASSIFICATION_SAMPLES % catalog)
+    else:
+        LOGGER.critical(
+            "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'", goal)
+        raise ValueError(
+            "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'" % goal)
 
     if os.path.exists(samples_path):
-        LOGGER.info("Will reuse existing %s training samples: '%s'",
-                    catalog, samples_path)
+        LOGGER.info("Will reuse existing %s %s samples: '%s'",
+                    catalog, goal, samples_path)
         tids = pd.read_pickle(samples_path)
     else:
         blocking_column = constants.NAME_TOKENS

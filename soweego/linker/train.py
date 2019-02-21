@@ -46,7 +46,7 @@ def execute(classifier, catalog, entity, binarize, dir_io):
         'training', catalog, wd_reader, target_reader, dir_io)
     positive_samples = blocking.train_test_block(wd, target)
     samples = blocking.full_text_query_block(
-        wd, catalog, target_database.get_entity(catalog, entity), dir_io)
+        'training', catalog, wd, target_database.get_entity(catalog, entity), dir_io)
     actual_positive = samples & positive_samples
     positive_size, actual_size = len(positive_samples), len(actual_positive)
     if positive_size != actual_size:
