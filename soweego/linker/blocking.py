@@ -61,8 +61,12 @@ def full_text_query_block(goal: str, catalog: str, wikidata_df: pd.DataFrame, ta
         tids = wikidata_df[blocking_column].dropna().apply(
             _run_full_text_query, args=(target_entity,))
         tids.dropna(inplace=True)
+        LOGGER.debug('%s %s samples random example:\n%s',
+                     catalog, goal, tids.sample(5))
 
-        LOGGER.debug('Candidate target IDs sample:\n%s', tids.sample(5))
+        pd.to_pickle(tids, samples_path)
+        LOGGER.info("%s %s samples dumped to '%s'",
+                    catalog, goal, samples_path)
 
     qids_and_tids = []
     for qid, tids in tids.to_dict().items():
@@ -72,8 +76,8 @@ def full_text_query_block(goal: str, catalog: str, wikidata_df: pd.DataFrame, ta
     samples_index = pd.MultiIndex.from_tuples(
         qids_and_tids, names=[constants.QID, constants.TID])
 
-    LOGGER.debug('Candidate target IDs index sample:\n%s',
-                 samples_index.to_series().sample(5))
+    LOGGER.debug('%s %s samples index random example:\n%s',
+                 catalog, goal, samples_index.to_series().sample(5))
     LOGGER.info('Blocking index built')
 
     return samples_index
