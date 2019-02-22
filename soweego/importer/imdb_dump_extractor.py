@@ -331,7 +331,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
     def _translate_professions(self, professions: List[str]) -> List[str]:
         """
         Gets the list of professions (as a list of strings) directly from IMDB
-        and translates these to a list of Wikidata QIDs for each specific 
+        and translates these to a list of Wikidata QIDs for each specific
         profession. Unmappable professions (like `miscellaneous` are removed)
 
         The actual QIDs can be found in
@@ -343,33 +343,42 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         """
         qids = []
 
-        # TODO: finish mapping
         mappings = {
             "actor": vocab.ACTOR,
             "actress": vocab.ACTOR,
+            "animation_department": vocab.ANIMATOR,
+            "art_department": vocab.ARTIST,
             "art_director": vocab.ART_DIRECTOR,
             "assistant_director": vocab.ASSISTANT_DIRECTOR,
-            "animation_department": vocab.ANIMATOR,
             "camera_department": vocab.CAMERA_OPERATOR,
+            "casting_department": vocab.CASTING_DIRECTOR,
             "casting_director": vocab.CASTING_DIRECTOR,
             "cinematographer": vocab.CINEMATOGRAPHER,
             "composer": vocab.COMPOSER,
+            "costume_department": vocab.COSTUME_MAKER,
             "costume_designer": vocab.COSTUME_DESIGNER,
-            "director": vocab.DIRECTOR,
+            "director": vocab.FILM_DIRECTOR,
             "editor": vocab.FILM_EDITOR,
+            "electrical_department": vocab.ELECTRICIAN,
             "executive": vocab.EXECUTIVE,
+            "location_management": vocab.LOCATION_MANAGER,
+            "make_up_department": vocab.MAKE_UP_ARTIST,
             "manager": vocab.MANAGER,
             "music_department": vocab.MUSICIAN,
             "producer": vocab.FILM_PRODUCER,
+            "production_department": vocab.PRODUCTION_ASSISTANT,
             "production_designer": vocab.PRODUCTION_DESIGNER,
             "production_manager": vocab.PRODUCTION_MANAGER,
             "publicist": vocab.PUBLICIST,
+            "script_department": vocab.SCRIPT_SUPERVISOR,
             "set_decorator": vocab.SET_DECORATOR,
             "sound_department": vocab.SOUND_DEPARTMENT,
             "soundtrack": vocab.MUSICIAN,
             "special_effects": vocab.SPECIAL_EFFECTS,
             "stunts": vocab.STUNTS,
             "talent_agent": vocab.TALENT_AGENT,
+            "transportation_department": vocab.DRIVER,
+            "visual_effects": vocab.VISUAL_EFFECTS_ARTIST,
             "writer": vocab.SCREENWRITER,
         }
 
