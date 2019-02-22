@@ -9,13 +9,14 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, tupini07'
 
-from soweego.importer.models.base_entity import BaseEntity, BaseRelationship
-from soweego.importer.models.base_link_entity import BaseLinkEntity
-from sqlalchemy import (Column, ForeignKey, Index, String, Table,
-                        UniqueConstraint, Boolean, Integer)
+from sqlalchemy import (Boolean, Column, ForeignKey, Index, Integer, String,
+                        Table, UniqueConstraint)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
+
+from soweego.importer.models.base_entity import BaseEntity, BaseRelationship
+from soweego.importer.models.base_link_entity import BaseLinkEntity
 
 BASE = declarative_base()
 
