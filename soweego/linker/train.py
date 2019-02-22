@@ -17,7 +17,7 @@ import recordlinkage as rl
 from sklearn.externals import joblib
 
 from soweego.commons import constants, target_database
-from soweego.linker import workflow
+from soweego.linker import blocking, workflow
 
 LOGGER = logging.getLogger(__name__)
 
@@ -44,9 +44,13 @@ def execute(classifier, catalog, entity, binarize, dir_io):
         catalog, entity, dir_io)
     wd, target = workflow.preprocess(
         'training', catalog, wd_reader, target_reader, dir_io)
-    candidate_pairs = workflow.train_test_block(wd, target)
-    feature_vectors = workflow.extract_features(candidate_pairs, wd, target)
-    return _train(classifier, feature_vectors, candidate_pairs, binarize)
+    # positive_samples = blocking.train_test_block(wd, target)
+    # positive_vectors = workflow.extract_features(positive_samples, wd, target)
+    samples = blocking.full_text_query_block(
+        wd, catalog, target_database.get_entity(catalog, entity), dir_io)
+    feature_vectors = workflow.extract_features(samples, wd, target)
+    # TODO vectors = pd.concat([positive_vectors, negative_vectors], sort=False)
+    return _train(classifier, feature_vectors, samples, binarize)
 
 
 def _train(classifier, feature_vectors, candidate_pairs, binarize):
