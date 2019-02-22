@@ -297,7 +297,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         # of the QIDs that represent said professions in Wikidata
         if person_info.get("primaryProfession"):
             person_entity.occupations = " ".join(self._translate_professions(
-                person_info.get("primaryProfession").split()
+                person_info.get("primaryProfession").split(",")
             ))
 
         session.add(person_entity)
