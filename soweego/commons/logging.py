@@ -14,6 +14,7 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import logging
 import logging.config
 import os
+from io import StringIO
 from urllib.parse import unquote_plus
 
 LEVELS = {
@@ -89,3 +90,9 @@ def log_request_data(http_response, logger):
     }
     logger.debug("Request sent: %s", sent_request)
     return 0
+
+
+def log_dataframe_info(logger, dataframe, message):
+    debug_buffer = StringIO()
+    dataframe.info(buf=debug_buffer)
+    logger.debug(message + ': %s', debug_buffer.getvalue())

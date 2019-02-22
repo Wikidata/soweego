@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Set of classes to compare field pairs and extract features for supervised linking."""
+"""Set of techniques to compare record pairs (read extract features) for probabilistic linking."""
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -12,8 +12,8 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import logging
 
 import jellyfish
-import numpy
-import pandas
+import numpy as np
+import pandas as pd
 from recordlinkage.base import BaseCompareFeature
 from recordlinkage.utils import fillna
 from sklearn.feature_extraction.text import CountVectorizer
@@ -61,22 +61,23 @@ class StringList(BaseCompareFeature):
 
         if self.threshold is None:
             return compared_filled
-        return (compared_filled >= self.threshold).astype(numpy.float64)
+        return (compared_filled >= self.threshold).astype(np.float64)
 
     # Adapted from https://github.com/J535D165/recordlinkage/blob/master/recordlinkage/algorithms/string.py
     # Average the edit distance among the list of values
     # TODO low scores if name is swapped with surname, see https://github.com/Wikidata/soweego/issues/175
     def levenshtein_similarity(self, source_column, target_column):
-        paired = pandas.Series(list(zip(source_column, target_column)))
+        paired = pd.Series(list(zip(source_column, target_column)))
 
         def _levenshtein_apply(pair):
-            if not all(pair):
+            source_values, target_values = pair
+            if not all(pair) or source_values is np.nan or target_values is np.nan:
                 LOGGER.warning(
                     "Can't compute Levenshtein distance, the pair contains null values: %s", pair)
-                return numpy.nan
+                return np.nan
 
             scores = []
-            source_values, target_values = pair
+
             # Paranoid checks to ensure we work on lists
             if isinstance(source_values, str):
                 source_values = [source_values]
@@ -87,14 +88,14 @@ class StringList(BaseCompareFeature):
                 for target in target_values:
                     try:
                         score = 1 - jellyfish.levenshtein_distance(source, target) \
-                            / numpy.max([len(source), len(target)])
+                            / np.max([len(source), len(target)])
                         scores.append(score)
                     except TypeError:
-                        if pandas.isnull(source) or pandas.isnull(target):
+                        if pd.isnull(source) or pd.isnull(target):
                             scores.append(self.missing_value)
                         else:
                             raise
-            avg = numpy.average(scores)
+            avg = np.average(scores)
             return avg
 
         return paired.apply(_levenshtein_apply)
@@ -106,7 +107,7 @@ class StringList(BaseCompareFeature):
         if len(source_column) == len(target_column) == 0:
             LOGGER.warning(
                 "Can't compute cosine similarity, columns are empty")
-            return pandas.Series(numpy.nan)
+            return pd.Series(np.nan)
 
         # No analyzer means input underwent commons.text_utils#tokenize
         if self.analyzer is None:
@@ -130,13 +131,13 @@ class StringList(BaseCompareFeature):
         except ValueError as ve:
             LOGGER.warning(
                 'Failed transforming text into vectors, reason: %s. Text: %s', ve, data)
-            return pandas.Series(numpy.nan)
+            return pd.Series(np.nan)
 
         def _metric_sparse_cosine(u, v):
-            a = numpy.sqrt(u.multiply(u).sum(axis=1))
-            b = numpy.sqrt(v.multiply(v).sum(axis=1))
+            a = np.sqrt(u.multiply(u).sum(axis=1))
+            b = np.sqrt(v.multiply(v).sum(axis=1))
             ab = v.multiply(u).sum(axis=1)
-            cosine = numpy.divide(ab, numpy.multiply(a, b)).A1
+            cosine = np.divide(ab, np.multiply(a, b)).A1
             return cosine
 
         return _metric_sparse_cosine(vectors[:len(source_column)], vectors[len(source_column):])
@@ -154,20 +155,26 @@ class UrlList(BaseCompareFeature):
         self.missing_value = missing_value
 
     def _compute_vectorized(self, source_column, target_column):
-        concatenated = pandas.Series(list(zip(source_column, target_column)))
+        concatenated = pd.Series(list(zip(source_column, target_column)))
 
         def exact_apply(pair):
             source_urls, target_urls = pair
+
+            if not all(pair) or source_urls is np.nan or target_urls is np.nan:
+                LOGGER.debug(
+                    "Can't compare URLs, the pair contains null values: %s", pair)
+                return np.nan
+
             scores = []
             for source in source_urls:
                 for target in target_urls:
-                    if pandas.isnull(source) or pandas.isnull(target):
+                    if pd.isnull(source) or pd.isnull(target):
                         scores.append(self.missing_value)
                         continue
                     if source == target:
                         scores.append(self.agree_value)
                     else:
                         scores.append(self.disagree_value)
-            return numpy.average(scores)
+            return np.average(scores)
 
-        return concatenated.apply(exact_apply)
+        return fillna(concatenated.apply(exact_apply), self.missing_value)
