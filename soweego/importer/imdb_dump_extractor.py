@@ -138,7 +138,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 movie_entity.runtime_minutes = movie_info.get("runtimeMinutes")
 
                 if movie_info.get("genres"):  # if movie has a genre specified
-                    movie_entity.genres = movie_info.get("genres").split(",")
+                    movie_entity.genres = movie_info.get("genres").replace(",", " ")
 
                 session.add(movie_entity)
 
@@ -296,9 +296,9 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         # The array of primary professions gets translated to a list
         # of the QIDs that represent said professions in Wikidata
         if person_info.get("primaryProfession"):
-            person_entity.occupations = self._translate_professions(
+            person_entity.occupations = " ".join(self._translate_professions(
                 person_info.get("primaryProfession").split()
-            )
+            ))
 
         session.add(person_entity)
 
