@@ -160,7 +160,11 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                     "Total movies imported: %d",
                     end - start, self.n_movies)
 
+
         LOGGER.info("Starting import of people ...")
+
+        # reset timer for persons import
+        start = datetime.datetime.now()
 
         # read person dump and add everything to DB
         with gzip.open(person_file_path, "rt") as pdump:
