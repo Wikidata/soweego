@@ -13,7 +13,7 @@ import csv
 import datetime
 import gzip
 import logging
-from typing import Dict, List
+from typing import Dict, List, Generator
 
 from tqdm import tqdm
 
@@ -79,6 +79,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         dump files.
         """
 
+        # the order of these files is specified in `self.get_dump_download_urls`
         person_file_path = dump_file_paths[0]
         movies_file_path = dump_file_paths[1]
 
@@ -108,148 +109,119 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
         LOGGER.info('Starting import of movies ...')
 
+        movie_session = db_manager.new_session()
+
         # Here we open the movie dump file, and add everything to the DB
-        with gzip.open(movies_file_path, 'rt') as mdump:
+        for movie_info in self._loop_through_entities(movies_file_path,
+                                                      movie_session):
 
-            # count number of rows for TQDM (so we can display how)
-            # much is missing to complete the process. Then go back
-            # to the start of the file with `.seek(0)`
-            n_rows = sum(1 for line in mdump)
-            mdump.seek(0)
+            # create the movie SQLAlchemy entity and populate it
+            movie_entity = imdb_entity.ImdbMovieEntity()
+            movie_entity.catalog_id = movie_info.get('tconst')
+            movie_entity.title_type = movie_info.get('titleType')
+            movie_entity.primary_title = movie_info.get('primaryTitle')
+            movie_entity.original_title = movie_info.get('originalTitle')
+            movie_entity.is_adult = True if movie_info.get(
+                'isAdult') == '1' else False
+            movie_entity.start_year = movie_info.get('startYear')
+            movie_entity.end_year = movie_info.get('endYear')
+            movie_entity.runtime_minutes = movie_info.get('runtimeMinutes')
 
-            LOGGER.debug('Movies dump has %d entries', n_rows)
+            if movie_info.get('genres'):  # if movie has a genre specified
+                movie_entity.genres = movie_info.get(
+                    'genres').replace(',', ' ')
 
-            session = db_manager.new_session()
+            movie_session.add(movie_entity)
 
-            reader = csv.DictReader(mdump, delimiter='\t')
-            for movie_info in tqdm(reader, total=n_rows):
-                self._normalize_null(movie_info)
+            self.n_movies += 1
 
-                # create the movie SQLAlchemy entity and populate it
-                movie_entity = imdb_entity.ImdbMovieEntity()
-                movie_entity.catalog_id = movie_info.get('tconst')
-                movie_entity.title_type = movie_info.get('titleType')
-                movie_entity.primary_title = movie_info.get('primaryTitle')
-                movie_entity.original_title = movie_info.get('originalTitle')
-                movie_entity.is_adult = True if movie_info.get(
-                    'isAdult') == '1' else False
-                movie_entity.start_year = movie_info.get('startYear')
-                movie_entity.end_year = movie_info.get('endYear')
-                movie_entity.runtime_minutes = movie_info.get('runtimeMinutes')
+        # close movie session
+        movie_session.close()
 
-                if movie_info.get('genres'):  # if movie has a genre specified
-                    movie_entity.genres = movie_info.get('genres').replace(',', ' ')
-
-                session.add(movie_entity)
-
-                # every `_sqlalchemy_commit_every` loops we commit the session to
-                # the DB. This is more efficient than commiting every loop, and
-                # is not so hard on the memory requirements as would be
-                # adding everything to session and commiting once the for loop
-                # is done
-                if self.n_movies % self._sqlalchemy_commit_every == 0:
-                    session.commit()
-
-                self.n_movies += 1
-
-            # commit remaining entities
-            session.commit()
-
+        # mark end for movie import process
         end = datetime.datetime.now()
         LOGGER.info('Movie import completed in %s. '
                     'Total movies imported: %d',
                     end - start, self.n_movies)
-
 
         LOGGER.info('Starting import of people ...')
 
         # reset timer for persons import
         start = datetime.datetime.now()
 
-        # read person dump and add everything to DB
-        with gzip.open(person_file_path, 'rt') as pdump:
+        # start a new session for the import of people
+        person_session = db_manager.new_session()
 
-            # get number of rows for proper TQDM process display, then
-            # go back to the start of the file
-            n_rows = sum(1 for line in pdump)
-            pdump.seek(0)
+        for person_info in self._loop_through_entities(person_file_path,
+                                                       person_session):
 
-            LOGGER.debug('People dump has %d entries', n_rows)
+            # IMDb saves the list of professions as a comma separated
+            # string
+            professions = person_info.get('primaryProfession')
 
-            session = db_manager.new_session()
+            # if person has no professions then ignore it
+            if not professions:
+                LOGGER.debug('Person %s has no professions',
+                             person_info.get('nconst'))
+                continue
 
-            reader = csv.DictReader(pdump, delimiter='\t')
-            for person_info in tqdm(reader, total=n_rows):
-                self._normalize_null(person_info)
+            professions = professions.split(',')
 
-                # IMDb saves the list of professions as a comma separated
-                # string
-                professions = person_info.get('primaryProfession')
+            # each person can be added to multiple tables in the DB,
+            # each table stands for one of the main professions
+            types_of_entities = []
 
-                # if person has no professions then ignore it
-                if not professions:
-                    LOGGER.debug('Person %s has no professions', person_info.get('nconst'))
-                    continue
+            if 'actor' in professions or 'actress' in professions:
+                self.n_actors += 1
+                types_of_entities.append(imdb_entity.ImdbActorEntity())
 
-                professions = professions.split(',')
+            if 'director' in professions:
+                self.n_directors += 1
+                types_of_entities.append(imdb_entity.ImdbDirectorEntity())
 
-                # each person can be added to multiple tables in the DB,
-                # each table stands for a profession
-                types_of_entities = []
+            if 'producer' in professions:
+                self.n_producers += 1
+                types_of_entities.append(imdb_entity.ImdbProducerEntity())
 
-                if 'actor' in professions or 'actress' in professions:
-                    self.n_actors += 1
-                    types_of_entities.append(imdb_entity.ImdbActorEntity())
+            if any(prof in ['sound_department', 'composer',
+                            'music_department', 'soundtrack']
+                   for prof in professions):
+                self.n_musicians += 1
+                types_of_entities.append(imdb_entity.ImdbMusicianEntity())
 
-                if 'director' in professions:
-                    self.n_directors += 1
-                    types_of_entities.append(imdb_entity.ImdbDirectorEntity())
+            if 'writer' in professions:
+                self.n_writers += 1
+                types_of_entities.append(imdb_entity.ImdbWriterEntity())
 
-                if 'producer' in professions:
-                    self.n_producers += 1
-                    types_of_entities.append(imdb_entity.ImdbProducerEntity())
+            # if the only profession a person has is `miscellaneous` then we
+            # add it to all tables
+            if professions == 'miscellaneous':
+                self.n_misc += 1
+                types_of_entities = [
+                    imdb_entity.ImdbActorEntity(),
+                    imdb_entity.ImdbDirectorEntity(),
+                    imdb_entity.ImdbMusicianEntity(),
+                    imdb_entity.ImdbProducerEntity(),
+                    imdb_entity.ImdbWriterEntity(),
+                ]
 
-                if any(prof in ['sound_department', 'composer',
-                                'music_department', 'soundtrack']
-                       for prof in professions):
-                    self.n_musicians += 1
-                    types_of_entities.append(imdb_entity.ImdbMusicianEntity())
+            # add person to every matching table
+            for etype in types_of_entities:
+                self._populate_person(etype, person_info, person_session)
 
-                if 'writer' in professions:
-                    self.n_writers += 1
-                    types_of_entities.append(imdb_entity.ImdbWriterEntity())
+            # if person is known for any movies then add these to the
+            # database as well
+            if person_info.get('knownForTitles'):
+                self.n_person_movie_links += 1
+                self._populate_person_movie_relations(
+                    person_info, person_session)
 
-                # if the only profession a person has is `miscellaneous` then we
-                # add it to all tables
-                if professions == 'miscellaneous':
-                    self.n_misc += 1
-                    types_of_entities = [
-                        imdb_entity.ImdbActorEntity(),
-                        imdb_entity.ImdbDirectorEntity(),
-                        imdb_entity.ImdbMusicianEntity(),
-                        imdb_entity.ImdbProducerEntity(),
-                        imdb_entity.ImdbWriterEntity(),
-                    ]
+            self.n_persons += 1
 
-                # add person to every matching table
-                for etype in types_of_entities:
-                    self._populate_person(etype, person_info, session)
+        # close person session
+        person_session.close()
 
-                # if person is known for any movies then add these to the
-                # database as well
-                if person_info.get('knownForTitles'):
-                    self.n_person_movie_links += 1
-                    self._populate_person_movie_relations(person_info, session)
-
-                # commit results to the database every `_sqlalchemy_commit_every` loops
-                if self.n_persons % self._sqlalchemy_commit_every == 0:
-                    session.commit()
-
-                self.n_persons += 1
-
-            # finally commit remaining entities
-            session.commit()
-
+        # mark the end time for the person import process
         end = datetime.datetime.now()
         LOGGER.info('Person import completed in %s. '
                     'Total people imported: %d - '
@@ -258,6 +230,51 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                     end - start, self.n_persons, self.n_actors,
                     self.n_directors, self.n_musicians, self.n_producers,
                     self.n_writers, self.n_misc)
+
+    def _loop_through_entities(self, file_path: str,
+                               session: object) -> Generator[Dict, None, None]:
+        """
+        Generator that given an IMDb dump file (which 
+        should be ".tsv.gz" format) it loops through every 
+        entry and yields it
+        """
+
+        with gzip.open(file_path, 'rt') as ddump:
+
+            # count number of rows for TQDM (so we can display how)
+            # much is missing to complete the process. Then go back
+            # to the start of the file with `.seek(0)`
+            n_rows = sum(1 for line in ddump)
+            ddump.seek(0)
+
+            LOGGER.debug('Dump "%s" has %d entries', file_path, n_rows)
+
+            reader = csv.DictReader(ddump, delimiter='\t')
+
+            # counter to see how often we need to commit the session to
+            # the DB
+            e_coutner = 0
+
+            # for every entry in the file..
+            for entity_info in tqdm(reader, total=n_rows):
+                # clean the entry
+                self._normalize_null(entity_info)
+
+                # yield the cleaned dict
+                yield entity_info
+
+                # every `_sqlalchemy_commit_every` loops we commit the session to
+                # the DB. This is more efficient than commiting every loop, and
+                # is not so hard on the memory requirements as would be
+                # adding everything to session and commiting once the for loop
+                # is done
+                if e_coutner % self._sqlalchemy_commit_every == 0:
+                    session.commit()
+
+                e_coutner += 1
+
+            # commit remaining entities
+            session.commit()
 
     def _populate_person(self, person_entity: imdb_entity.ImdbPersonEntity,
                          person_info: Dict,
