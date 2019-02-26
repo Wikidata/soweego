@@ -25,8 +25,8 @@ from soweego.wikidata import vocabulary as vocab
 
 LOGGER = logging.getLogger(__name__)
 
-DUMP_URL_PERSON_INFO = "https://datasets.imdbws.com/name.basics.tsv.gz"
-DUMP_URL_MOVIE_INFO = "https://datasets.imdbws.com/title.basics.tsv.gz"
+DUMP_URL_PERSON_INFO = 'https://datasets.imdbws.com/name.basics.tsv.gz'
+DUMP_URL_MOVIE_INFO = 'https://datasets.imdbws.com/title.basics.tsv.gz'
 
 
 class ImdbDumpExtractor(BaseDumpExtractor):
@@ -56,7 +56,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         """
         IMDB represents a null entry with \\N , this method converts
         all \\N to None so that they're saved as null in the database.
-        This is done for all "entries" of a given entity.
+        This is done for all 'entries' of a given entity.
 
         The normalization process is done *in place*, so this method
         has no return value.
@@ -65,7 +65,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         """
 
         for key, value in entity.items():
-            if value == "\\N":
+            if value == '\\N':
                 entity[key] = None
 
     def extract_and_populate(self, dump_file_paths: List[str], resolve: bool) -> None:
@@ -82,8 +82,8 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         person_file_path = dump_file_paths[0]
         movies_file_path = dump_file_paths[1]
 
-        LOGGER.debug("Path to movie info dump: %s", movies_file_path)
-        LOGGER.debug("Path to person info dump: %s", person_file_path)
+        LOGGER.debug('Path to movie info dump: %s', movies_file_path)
+        LOGGER.debug('Path to person info dump: %s', person_file_path)
 
         start = datetime.datetime.now()
 
@@ -98,18 +98,18 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         ]
 
         db_manager = DBManager()
-        LOGGER.info("Connected to database: %s", db_manager.get_engine().url)
+        LOGGER.info('Connected to database: %s', db_manager.get_engine().url)
 
         db_manager.drop(tables)
         db_manager.create(tables)
 
-        LOGGER.info("SQL tables dropped and re-created: %s",
+        LOGGER.info('SQL tables dropped and re-created: %s',
                     [table.__tablename__ for table in tables])
 
-        LOGGER.info("Starting import of movies ...")
+        LOGGER.info('Starting import of movies ...')
 
         # Here we open the movie dump file, and add everything to the DB
-        with gzip.open(movies_file_path, "rt") as mdump:
+        with gzip.open(movies_file_path, 'rt') as mdump:
 
             # count number of rows for TQDM (so we can display how)
             # much is missing to complete the process. Then go back
@@ -117,28 +117,28 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             n_rows = sum(1 for line in mdump)
             mdump.seek(0)
 
-            LOGGER.debug("Movies dump has %d entries", n_rows)
+            LOGGER.debug('Movies dump has %d entries', n_rows)
 
             session = db_manager.new_session()
 
-            reader = csv.DictReader(mdump, delimiter="\t")
+            reader = csv.DictReader(mdump, delimiter='\t')
             for movie_info in tqdm(reader, total=n_rows):
                 self._normalize_null(movie_info)
 
                 # create the movie SQLAlchemy entity and populate it
                 movie_entity = imdb_entity.ImdbMovieEntity()
-                movie_entity.catalog_id = movie_info.get("tconst")
-                movie_entity.title_type = movie_info.get("titleType")
-                movie_entity.primary_title = movie_info.get("primaryTitle")
-                movie_entity.original_title = movie_info.get("originalTitle")
+                movie_entity.catalog_id = movie_info.get('tconst')
+                movie_entity.title_type = movie_info.get('titleType')
+                movie_entity.primary_title = movie_info.get('primaryTitle')
+                movie_entity.original_title = movie_info.get('originalTitle')
                 movie_entity.is_adult = True if movie_info.get(
-                    "isAdult") == "1" else False
-                movie_entity.start_year = movie_info.get("startYear")
-                movie_entity.end_year = movie_info.get("endYear")
-                movie_entity.runtime_minutes = movie_info.get("runtimeMinutes")
+                    'isAdult') == '1' else False
+                movie_entity.start_year = movie_info.get('startYear')
+                movie_entity.end_year = movie_info.get('endYear')
+                movie_entity.runtime_minutes = movie_info.get('runtimeMinutes')
 
-                if movie_info.get("genres"):  # if movie has a genre specified
-                    movie_entity.genres = movie_info.get("genres").replace(",", " ")
+                if movie_info.get('genres'):  # if movie has a genre specified
+                    movie_entity.genres = movie_info.get('genres').replace(',', ' ')
 
                 session.add(movie_entity)
 
@@ -156,72 +156,72 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             session.commit()
 
         end = datetime.datetime.now()
-        LOGGER.info("Movie import completed in %s. "
-                    "Total movies imported: %d",
+        LOGGER.info('Movie import completed in %s. '
+                    'Total movies imported: %d',
                     end - start, self.n_movies)
 
 
-        LOGGER.info("Starting import of people ...")
+        LOGGER.info('Starting import of people ...')
 
         # reset timer for persons import
         start = datetime.datetime.now()
 
         # read person dump and add everything to DB
-        with gzip.open(person_file_path, "rt") as pdump:
+        with gzip.open(person_file_path, 'rt') as pdump:
 
             # get number of rows for proper TQDM process display, then
             # go back to the start of the file
             n_rows = sum(1 for line in pdump)
             pdump.seek(0)
 
-            LOGGER.debug("People dump has %d entries", n_rows)
+            LOGGER.debug('People dump has %d entries', n_rows)
 
             session = db_manager.new_session()
 
-            reader = csv.DictReader(pdump, delimiter="\t")
+            reader = csv.DictReader(pdump, delimiter='\t')
             for person_info in tqdm(reader, total=n_rows):
                 self._normalize_null(person_info)
 
                 # IMDb saves the list of professions as a comma separated
                 # string
-                professions = person_info.get("primaryProfession")
+                professions = person_info.get('primaryProfession')
 
                 # if person has no professions then ignore it
                 if not professions:
-                    LOGGER.debug("Person %s has no professions", person_info.get("nconst"))
+                    LOGGER.debug('Person %s has no professions', person_info.get('nconst'))
                     continue
 
-                professions = professions.split(",")
+                professions = professions.split(',')
 
                 # each person can be added to multiple tables in the DB,
                 # each table stands for a profession
                 types_of_entities = []
 
-                if "actor" in professions or "actress" in professions:
+                if 'actor' in professions or 'actress' in professions:
                     self.n_actors += 1
                     types_of_entities.append(imdb_entity.ImdbActorEntity())
 
-                if "director" in professions:
+                if 'director' in professions:
                     self.n_directors += 1
                     types_of_entities.append(imdb_entity.ImdbDirectorEntity())
 
-                if "producer" in professions:
+                if 'producer' in professions:
                     self.n_producers += 1
                     types_of_entities.append(imdb_entity.ImdbProducerEntity())
 
-                if any(prof in ["sound_department", "composer",
-                                "music_department", "soundtrack"]
+                if any(prof in ['sound_department', 'composer',
+                                'music_department', 'soundtrack']
                        for prof in professions):
                     self.n_musicians += 1
                     types_of_entities.append(imdb_entity.ImdbMusicianEntity())
 
-                if "writer" in professions:
+                if 'writer' in professions:
                     self.n_writers += 1
                     types_of_entities.append(imdb_entity.ImdbWriterEntity())
 
                 # if the only profession a person has is `miscellaneous` then we
                 # add it to all tables
-                if professions == "miscellaneous":
+                if professions == 'miscellaneous':
                     self.n_misc += 1
                     types_of_entities = [
                         imdb_entity.ImdbActorEntity(),
@@ -237,7 +237,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
                 # if person is known for any movies then add these to the
                 # database as well
-                if person_info.get("knownForTitles"):
+                if person_info.get('knownForTitles'):
                     self.n_person_movie_links += 1
                     self._populate_person_movie_relations(person_info, session)
 
@@ -251,10 +251,10 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             session.commit()
 
         end = datetime.datetime.now()
-        LOGGER.info("Person import completed in %s. "
-                    "Total people imported: %d - "
-                    "Actors: %d - Directors: %d - Musicians: %d - "
-                    "Producers: %d - Writers: %d - Misc: %d",
+        LOGGER.info('Person import completed in %s. '
+                    'Total people imported: %d - '
+                    'Actors: %d - Directors: %d - Musicians: %d - '
+                    'Producers: %d - Writers: %d - Misc: %d',
                     end - start, self.n_persons, self.n_actors,
                     self.n_directors, self.n_musicians, self.n_producers,
                     self.n_writers, self.n_misc)
@@ -276,33 +276,33 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         add the entity once it is populated.
         """
 
-        person_entity.catalog_id = person_info.get("nconst")
-        person_entity.name = person_info.get("primaryName")
-        person_entity.name_tokens = " ".join(
+        person_entity.catalog_id = person_info.get('nconst')
+        person_entity.name = person_info.get('primaryName')
+        person_entity.name_tokens = ' '.join(
             text_utils.tokenize(person_entity.name))
 
         # If either `actor` or `actress` in primary profession
         # (which is a comma separated string of professions)
         # then we can distinguish the gender
-        if any(prof in person_info.get("primaryProfession")
-               for prof in ["actor", "actress"]):
-            person_entity.gender = "male" if "actor" in person_info.get(
-                "primaryProfession") else "female"
+        if any(prof in person_info.get('primaryProfession')
+               for prof in ['actor', 'actress']):
+            person_entity.gender = 'male' if 'actor' in person_info.get(
+                'primaryProfession') else 'female'
 
         # datetime.date(year, month, day)
-        born_year = person_info.get("birthYear")
+        born_year = person_info.get('birthYear')
         if born_year:
             person_entity.born = datetime.date(int(born_year), 1, 1)
 
-        death_year = person_info.get("deathYear")
+        death_year = person_info.get('deathYear')
         if death_year:
             person_entity.died = datetime.date(int(death_year), 1, 1)
 
         # The array of primary professions gets translated to a list
         # of the QIDs that represent said professions in Wikidata
-        if person_info.get("primaryProfession"):
-            person_entity.occupations = " ".join(self._translate_professions(
-                person_info.get("primaryProfession").split(",")
+        if person_info.get('primaryProfession'):
+            person_entity.occupations = ' '.join(self._translate_professions(
+                person_info.get('primaryProfession').split(',')
             ))
 
         session.add(person_entity)
@@ -324,12 +324,12 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         """
 
         know_for_titles = person_info.get(
-            "knownForTitles").split(",")
+            'knownForTitles').split(',')
 
         for title in know_for_titles:
 
             session.add(imdb_entity.ImdbPersonMovieRelationship(
-                from_catalog_id=person_info.get("nconst"),
+                from_catalog_id=person_info.get('nconst'),
                 to_catalog_id=title
             ))
 

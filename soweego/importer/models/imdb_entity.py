@@ -20,14 +20,14 @@ from soweego.importer.models.base_link_entity import BaseLinkEntity
 
 BASE = declarative_base()
 
-ACTOR_TABLE = "imdb_actor"
-BASE_PERSON_TABLE = "imdb_base_person"
-DIRECTOR_TABLE = "imdb_director"
-MOVIE_TABLE = "imdb_movie"
-MUSICIAN_TABLE = "imdb_musician"
-PERSON_MOVIE_RELATIONSHIP_TABLE = "imdb_person_movie_relationship"
-PRODUCER_TABLE = "imdb_producer"
-WRITER_TABLE = "imdb_writer"
+ACTOR_TABLE = 'imdb_actor'
+BASE_PERSON_TABLE = 'imdb_base_person'
+DIRECTOR_TABLE = 'imdb_director'
+MOVIE_TABLE = 'imdb_movie'
+MUSICIAN_TABLE = 'imdb_musician'
+PERSON_MOVIE_RELATIONSHIP_TABLE = 'imdb_person_movie_relationship'
+PRODUCER_TABLE = 'imdb_producer'
+WRITER_TABLE = 'imdb_writer'
 
 # actor, director, producer e writer
 
@@ -51,7 +51,7 @@ class ImdbMovieEntity(BASE):
     genres = Column(String(255), nullable=True)
 
     def __repr__(self) -> str:
-        return f"<ImdbMovieEntity(catalog_id='{self.catalog_id}', title='{self.original_title}')>"
+        return f'<ImdbMovieEntity(catalog_id="{self.catalog_id}", title="{self.original_title}")>'
 
 
 class ImdbPersonEntity(BaseEntity):
