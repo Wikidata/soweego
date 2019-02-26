@@ -110,7 +110,6 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
         # Here we open the movie dump file, and add everything to the DB
         with gzip.open(movies_file_path, "rt") as mdump:
-            reader = csv.DictReader(mdump, delimiter="\t")
 
             # count number of rows for TQDM (so we can display how)
             # much is missing to complete the process. Then go back
@@ -122,6 +121,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
             session = db_manager.new_session()
 
+            reader = csv.DictReader(mdump, delimiter="\t")
             for movie_info in tqdm(reader, total=n_rows):
                 self._normalize_null(movie_info)
 
@@ -168,7 +168,6 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
         # read person dump and add everything to DB
         with gzip.open(person_file_path, "rt") as pdump:
-            reader = csv.DictReader(pdump, delimiter="\t")
 
             # get number of rows for proper TQDM process display, then
             # go back to the start of the file
@@ -179,6 +178,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
             session = db_manager.new_session()
 
+            reader = csv.DictReader(pdump, delimiter="\t")
             for person_info in tqdm(reader, total=n_rows):
                 self._normalize_null(person_info)
 
@@ -335,11 +335,12 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
     def _translate_professions(self, professions: List[str]) -> List[str]:
         """
-        Gets the list of professions (as a list of strings) directly from IMDB
+        Gets the list of professions (as a list of strings) directly from IMDb
         and translates these to a list of Wikidata QIDs for each specific
         profession. Unmappable professions (like `miscellaneous` are removed)
 
-        The actual QIDs can be found in
+        The actual QIDs and the dictionary where this mapping is
+        encoded can both be found in
         :ref:`soweego.wikidata.vocabulary`
 
         :param professions: list of profession names, given by IMDB
@@ -348,47 +349,8 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         """
         qids = []
 
-        mappings = {
-            "actor": vocab.ACTOR,
-            "actress": vocab.ACTOR,
-            "animation_department": vocab.ANIMATOR,
-            "art_department": vocab.ARTIST,
-            "art_director": vocab.ART_DIRECTOR,
-            "assistant_director": vocab.ASSISTANT_DIRECTOR,
-            "camera_department": vocab.CAMERA_OPERATOR,
-            "casting_department": vocab.CASTING_DIRECTOR,
-            "casting_director": vocab.CASTING_DIRECTOR,
-            "cinematographer": vocab.CINEMATOGRAPHER,
-            "composer": vocab.COMPOSER,
-            "costume_department": vocab.COSTUME_MAKER,
-            "costume_designer": vocab.COSTUME_DESIGNER,
-            "director": vocab.FILM_DIRECTOR,
-            "editor": vocab.FILM_EDITOR,
-            "electrical_department": vocab.ELECTRICIAN,
-            "executive": vocab.EXECUTIVE,
-            "location_management": vocab.LOCATION_MANAGER,
-            "make_up_department": vocab.MAKE_UP_ARTIST,
-            "manager": vocab.MANAGER,
-            "music_department": vocab.MUSICIAN,
-            "producer": vocab.FILM_PRODUCER,
-            "production_department": vocab.PRODUCTION_ASSISTANT,
-            "production_designer": vocab.PRODUCTION_DESIGNER,
-            "production_manager": vocab.PRODUCTION_MANAGER,
-            "publicist": vocab.PUBLICIST,
-            "script_department": vocab.SCRIPT_SUPERVISOR,
-            "set_decorator": vocab.SET_DECORATOR,
-            "sound_department": vocab.SOUND_DEPARTMENT,
-            "soundtrack": vocab.MUSICIAN,
-            "special_effects": vocab.SPECIAL_EFFECTS,
-            "stunts": vocab.STUNTS,
-            "talent_agent": vocab.TALENT_AGENT,
-            "transportation_department": vocab.DRIVER,
-            "visual_effects": vocab.VISUAL_EFFECTS_ARTIST,
-            "writer": vocab.SCREENWRITER,
-        }
-
         for prof in professions:
-            qid = mappings.get(prof, None)
+            qid = vocab.IMDB_PROFESSIONS_MAPPINGS.get(prof, None)
             if qid:
                 qids.append(qid)
 
