@@ -106,7 +106,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         LOGGER.info("SQL tables dropped and re-created: %s",
                     [table.__tablename__ for table in tables])
 
-        LOGGER.info("Starting to import movies from imdb dump")
+        LOGGER.info("Starting import of movies ...")
 
         # Here we open the movie dump file, and add everything to the DB
         with gzip.open(movies_file_path, "rt") as mdump:
@@ -160,7 +160,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                     "Total movies imported: %d",
                     end - start, self.n_movies)
 
-        LOGGER.info("Starting import persons from IMDB dump")
+        LOGGER.info("Starting import of people ...")
 
         # read person dump and add everything to DB
         with gzip.open(person_file_path, "rt") as pdump:
@@ -171,14 +171,14 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             n_rows = sum(1 for line in pdump)
             pdump.seek(0)
 
-            LOGGER.debug("Persons dump has %d entries", n_rows)
+            LOGGER.debug("People dump has %d entries", n_rows)
 
             session = db_manager.new_session()
 
             for person_info in tqdm(reader, total=n_rows):
                 self._normalize_null(person_info)
 
-                # imdb saves the list of provession as a comma separated
+                # IMDb saves the list of professions as a comma separated
                 # string
                 professions = person_info.get("primaryProfession")
 
@@ -231,7 +231,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                     self._populate_person(etype, person_info, session)
 
                 # if person is known for any movies then add these to the
-                # databse as well
+                # database as well
                 if person_info.get("knownForTitles"):
                     self.n_person_movie_links += 1
                     self._populate_person_movie_relations(person_info, session)
