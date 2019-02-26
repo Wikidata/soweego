@@ -306,9 +306,16 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             person_entity.gender = 'male' if 'actor' in person_info.get(
                 'primaryProfession') else 'female'
 
-        # datetime.date(year, month, day)
+
+        # IMDb only provides us with the birth and death year of
+        # a person, so this is the only one we'll take into
+        # account. Month and Day are set by default to 1. The
+        # base `ImdbPersonEntity` defines a precision of 9 for the
+        # birth and death dates, which (according to
+        # `vocab.DATE_PRECISION`) means that only the year is correct.
         born_year = person_info.get('birthYear')
         if born_year:
+            # datetime.date(year, month, day)
             person_entity.born = datetime.date(int(born_year), 1, 1)
 
         death_year = person_info.get('deathYear')
