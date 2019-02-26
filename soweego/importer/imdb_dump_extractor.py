@@ -71,7 +71,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
     def extract_and_populate(self, dump_file_paths: List[str], resolve: bool) -> None:
         """
         Extracts the data in the dumps (person and movie) and processes them.
-        It then proceeds to add the appropiate data to the database. See
+        It then proceeds to add the appropriate data to the database. See
         :ref:`soweego.importer.models.imdb_entity` module to see the SQLAlchemy
         definition of the entities we use to save IMDB data.
 
