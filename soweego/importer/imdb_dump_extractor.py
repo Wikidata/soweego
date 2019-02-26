@@ -184,6 +184,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
                 # if person has no professions then ignore it
                 if not professions:
+                    LOGGER.debug("Person %s has no professions", person_info.get("nconst"))
                     continue
 
                 professions = professions.split(",")
