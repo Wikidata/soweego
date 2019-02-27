@@ -16,7 +16,7 @@ import tarfile
 from collections import defaultdict
 from csv import DictReader
 from datetime import date
-from typing import Iterable
+from typing import Iterable, Tuple
 
 import requests
 from sqlalchemy.exc import IntegrityError
@@ -38,6 +38,8 @@ LOGGER = logging.getLogger(__name__)
 
 class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
+    _sqlalchemy_commit_every = 700
+
     def get_dump_download_urls(self) -> Iterable[str]:
         latest_version = requests.get(
             'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/LATEST').text.rstrip()
@@ -46,7 +48,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
     def extract_and_populate(self, dump_file_paths: Iterable[str], resolve: bool):
         dump_file_path = dump_file_paths[0]
         dump_path = os.path.join(os.path.dirname(
-            os.path.abspath(dump_file_path)), "%s_%s" % (os.path.basename(dump_file_path), 'extracted'))
+            os.path.abspath(dump_file_path)),
+            "%s_%s" % (os.path.basename(dump_file_path), 'extracted'))
 
         if not os.path.isdir(dump_path):
             with tarfile.open(dump_file_path, "r:bz2") as tar:
@@ -66,14 +69,13 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         LOGGER.info("Dropped and created tables %s" % tables)
         LOGGER.info("Importing artists and bands")
 
-        artist_count = 0
-        for artist in self._artist_generator(dump_path):
-            artist_count = artist_count + 1
-            session = db_manager.new_session()
-            session.add(artist)
-            session.commit()
+        artist_count = self._add_entities_from_generator(
+            db_manager,
+            self._artist_generator,
+            dump_path
+        )
 
-        LOGGER.debug("Added %s artist records" % artist_count)
+        LOGGER.debug("Added %s/%s artist records", *artist_count)
 
         db_manager.drop([MusicbrainzArtistLinkEntity,
                          MusicbrainzBandLinkEntity])
@@ -83,44 +85,79 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         LOGGER.info("Dropped and created tables %s" % tables)
         LOGGER.info("Importing links")
 
-        link_count = 0
-        for link in self._link_generator(dump_path, resolve):
-            link_count = link_count + 1
-            session = db_manager.new_session()
-            session.add(link)
-            session.commit()
+        link_count = self._add_entities_from_generator(
+            db_manager,
+            self._link_generator,
+            dump_path,
+            resolve
+        )
 
-        LOGGER.debug("Added %s link records" % link_count)
+        LOGGER.debug("Added %s/%s link records", *link_count)
         LOGGER.info("Importing ISNIs")
 
-        isni_link_count = 0
-        for link in self._isni_link_generator(dump_path, resolve):
-            isni_link_count = isni_link_count + 1
-            session = db_manager.new_session()
-            session.add(link)
-            session.commit()
+        isni_link_count = self._add_entities_from_generator(
+            db_manager,
+            self._isni_link_generator,
+            dump_path,
+            resolve
+        )
 
-        LOGGER.debug("Added %s ISNI link records" % isni_link_count)
+        LOGGER.debug("Added %s/%s ISNI link records", *isni_link_count)
 
         db_manager.drop([MusicBrainzArtistBandRelationship])
         db_manager.create([MusicBrainzArtistBandRelationship])
         LOGGER.info("Dropped and created tables %s" % tables)
         LOGGER.info("Importing relationships artist-band")
 
-        relationships_count = 0
-        relationships_total = 0
-        for relationship in self._artist_band_relationship_generator(dump_path):
+        relationships_count = self._add_entities_from_generator(
+            db_manager,
+            self._artist_band_relationship_generator,
+            dump_path
+        )
+
+        LOGGER.debug("Added %s/%s relationships records",
+                     *relationships_count)
+
+    def _add_entities_from_generator(self, db_manager,
+                                     _generator, *args) -> Tuple[int, int]:
+        """
+        Adds all entities yielded by a generator to the DB
+
+        :return: (the total number of entities yielded,
+        the number of entities added to the DB)
+        """
+
+        # we keep track of both the total number of entities added
+        # to the database and the total number of entities the
+        # generator yields. If everything goes ok then these 2
+        # numbers should be the same
+        n_total_entities = 0
+        n_added_entities = 0
+
+        session = db_manager.new_session()
+
+        for entity in _generator(*args):
             try:
-                relationships_total = relationships_total + 1
-                session = db_manager.new_session()
-                session.add(relationship)
-                session.commit()
-                relationships_count = relationships_count + 1
+                n_total_entities += 1
+                session.add(entity)
+
+                # commit entities to DB in batches, it is mode
+                # efficient
+                if n_added_entities % self._sqlalchemy_commit_every == 0:
+                    session.commit()
+
+                n_added_entities += 1
+
             except IntegrityError as i:
                 LOGGER.warning(str(i))
 
-        LOGGER.debug("Added %s/%s relationships records" %
-                     (relationships_count, relationships_total))
+        # finally, commit remaining entities in session
+        session.commit()
+
+        # and close session
+        session.close()
+
+        return n_total_entities, n_added_entities
 
     def _link_generator(self, dump_path: str, resolve: bool):
         l_artist_url_path = os.path.join(dump_path, 'mbdump', 'l_artist_url')
@@ -139,7 +176,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                         'Url with ID %s has multiple artists, only one will be stored' % relationship[3])
                 else:
                     urlid_artistid_relationship[relationship[3]
-                    ] = relationship[2]
+                                                ] = relationship[2]
 
         url_artistid = {}
         url_path = os.path.join(dump_path, 'mbdump', 'url')
@@ -248,7 +285,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         # Key is the entity id which has a list of aliases
         with open(artist_alias_path, 'r') as aliasesfile:
             for alias in DictReader(aliasesfile, delimiter='\t', fieldnames=[
-                'id', 'parent_id', 'label']):
+                    'id', 'parent_id', 'label']):
                 aliases[alias['parent_id']].append(alias['label'])
 
         # Key is the area internal id, value is the name
@@ -341,7 +378,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         for relation in relationships:
             translation0, translation1 = ids_translator[relation[0]
-                                         ], ids_translator[relation[1]]
+                                                        ], ids_translator[relation[1]]
 
             if translation0 and translation1:
                 if relation in to_invert:
