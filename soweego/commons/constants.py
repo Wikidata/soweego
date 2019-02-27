@@ -13,9 +13,7 @@ from typing import TypeVar
 
 from recordlinkage import NaiveBayesClassifier, SVMClassifier
 
-from soweego.importer.models import (base_entity, base_link_entity,
-                                     base_nlp_entity, discogs_entity,
-                                     musicbrainz_entity)
+from soweego.importer import models
 from soweego.wikidata import vocabulary
 
 # Miscellanea
@@ -50,23 +48,23 @@ HANDLED_ENTITIES = {
 }
 
 # DB entity Python types for typed function signatures
-DB_ENTITY = TypeVar('DB_ENTITY', base_entity.BaseEntity,
-                    base_link_entity.BaseLinkEntity, base_nlp_entity.BaseNlpEntity)
+DB_ENTITY = TypeVar('DB_ENTITY', models.base_entity.BaseEntity,
+                    models.base_link_entity.BaseLinkEntity, models.base_nlp_entity.BaseNlpEntity)
 
 # DB entities and their Wikidata class QID
 TARGET_CATALOGS = {
     'discogs': {
         'musician': {
             'qid': vocabulary.MUSICIAN,
-            'entity': discogs_entity.DiscogsMusicianEntity,
-            'link_entity': discogs_entity.DiscogsMusicianLinkEntity,
-            'nlp_entity': discogs_entity.DiscogsMusicianNlpEntity
+            'entity': models.discogs_entity.DiscogsMusicianEntity,
+            'link_entity': models.discogs_entity.DiscogsMusicianLinkEntity,
+            'nlp_entity': models.discogs_entity.DiscogsMusicianNlpEntity
         },
         'band': {
             'qid': vocabulary.BAND,
-            'entity': discogs_entity.DiscogsGroupEntity,
-            'link_entity': discogs_entity.DiscogsGroupLinkEntity,
-            'nlp_entity': discogs_entity.DiscogsGroupNlpEntity
+            'entity': models.discogs_entity.DiscogsGroupEntity,
+            'link_entity': models.discogs_entity.DiscogsGroupLinkEntity,
+            'nlp_entity': models.discogs_entity.DiscogsGroupNlpEntity
         }
     },
     'imdb': {
@@ -104,14 +102,14 @@ TARGET_CATALOGS = {
     'musicbrainz': {
         'musician': {
             'qid': vocabulary.MUSICIAN,
-            'entity': musicbrainz_entity.MusicbrainzArtistEntity,
-            'link_entity': musicbrainz_entity.MusicbrainzArtistLinkEntity,
+            'entity': models.musicbrainz_entity.MusicbrainzArtistEntity,
+            'link_entity': models.musicbrainz_entity.MusicbrainzArtistLinkEntity,
             'nlp_entity': None
         },
         'band': {
             'qid': vocabulary.BAND,
-            'entity': musicbrainz_entity.MusicbrainzBandEntity,
-            'link_entity': musicbrainz_entity.MusicbrainzBandLinkEntity,
+            'entity': models.musicbrainz_entity.MusicbrainzBandEntity,
+            'link_entity': models.musicbrainz_entity.MusicbrainzBandLinkEntity,
             'nlp_entity': None
         }
     }
