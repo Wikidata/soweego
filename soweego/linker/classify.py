@@ -14,6 +14,7 @@ import os
 
 import click
 import recordlinkage as rl
+from pandas import concat
 from sklearn.externals import joblib
 
 from soweego.commons import constants, target_database
@@ -33,11 +34,11 @@ LOGGER = logging.getLogger(__name__)
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default='/app/shared', help="Input/output directory, default: '/app/shared'.")
 def cli(target, target_type, model, upload, sandbox, threshold, dir_io):
     """Run a probabilistic linker."""
-    result = execute(target, target_type, model, threshold, dir_io)
-    if upload:
-        _upload(result, target, sandbox)
-    result.to_csv(os.path.join(dir_io, constants.LINKER_RESULT %
-                               target), header=True)
+    for chunk in execute(target, target_type, model, threshold, dir_io):
+        if upload:
+            _upload(chunk, target, sandbox)
+        chunk.to_csv(os.path.join(dir_io, constants.LINKER_RESULT %
+                                  target), mode='a', header=True)
 
 
 def _upload(predictions, catalog, sandbox):
@@ -48,20 +49,19 @@ def _upload(predictions, catalog, sandbox):
 
 def execute(catalog, entity, model, threshold, dir_io):
     wd_reader, target_reader = _build(catalog, entity, dir_io)
-    wd, target = workflow.preprocess(
+    wd_generator, target = workflow.preprocess(
         'classification', catalog, wd_reader, target_reader, dir_io)
     # TODO Also consider blocking on URLs
-    candidate_pairs = blocking.full_text_query_block(
-        wd, catalog, target_database.get_entity(catalog, entity), dir_io)
-    feature_vectors = workflow.extract_features(candidate_pairs, wd, target)
-    predictions = _classify(model, feature_vectors)
-    return predictions[predictions >= threshold]
-
-
-def _classify(model, feature_vectors):
     classifier = joblib.load(model)
     rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
-    return classifier.prob(feature_vectors)
+
+    for i, chunk in enumerate(wd_generator, 1):
+        samples = blocking.full_text_query_block(
+            'classification', catalog, chunk, i, target_database.get_entity(catalog, entity), dir_io)
+        feature_vectors = workflow.extract_features(samples, chunk, target)
+        predictions = classifier.prob(feature_vectors)
+        LOGGER.info('Chunk %d classified', i)
+        yield predictions[predictions >= threshold]
 
 
 def _build(catalog, entity, dir_io):

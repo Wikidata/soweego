@@ -36,23 +36,37 @@ def train_test_block(wikidata_df: pd.DataFrame, target_df: pd.DataFrame) -> pd.M
     return positive_index
 
 
-def full_text_query_block(wikidata_df: pd.DataFrame, catalog: str, target_entity: constants.DB_ENTITY, dir_io: str) -> pd.MultiIndex:
-    samples_path = os.path.join(dir_io, constants.TRAINING_SAMPLES % catalog)
+def full_text_query_block(goal: str, catalog: str, wikidata_df: pd.DataFrame, chunk_number: int, target_entity: constants.DB_ENTITY, dir_io: str) -> pd.MultiIndex:
+    if goal == 'training':
+        samples_path = os.path.join(
+            dir_io, constants.TRAINING_SAMPLES % (catalog, chunk_number))
+    elif goal == 'classification':
+        samples_path = os.path.join(
+            dir_io, constants.CLASSIFICATION_SAMPLES % (catalog, chunk_number))
+    else:
+        LOGGER.critical(
+            "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'", goal)
+        raise ValueError(
+            "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'" % goal)
 
     if os.path.exists(samples_path):
-        LOGGER.info("Will reuse existing %s training samples: '%s'",
-                    catalog, samples_path)
+        LOGGER.info("Will reuse existing %s %s samples: '%s'",
+                    catalog, goal, samples_path)
         tids = pd.read_pickle(samples_path)
     else:
         blocking_column = constants.NAME_TOKENS
         LOGGER.info("Blocking on column '%s' via full-text query ...",
                     blocking_column)
 
-        tids = wikidata_df[blocking_column].apply(
+        tids = wikidata_df[blocking_column].dropna().apply(
             _run_full_text_query, args=(target_entity,))
         tids.dropna(inplace=True)
+        LOGGER.debug('%s %s samples random example:\n%s',
+                     catalog, goal, tids.sample(5))
 
-        LOGGER.debug('Candidate target IDs sample:\n%s', tids.sample(5))
+        pd.to_pickle(tids, samples_path)
+        LOGGER.info("%s %s samples dumped to '%s'",
+                    catalog, goal, samples_path)
 
     qids_and_tids = []
     for qid, tids in tids.to_dict().items():
@@ -62,18 +76,17 @@ def full_text_query_block(wikidata_df: pd.DataFrame, catalog: str, target_entity
     samples_index = pd.MultiIndex.from_tuples(
         qids_and_tids, names=[constants.QID, constants.TID])
 
-    LOGGER.debug('Candidate target IDs index sample:\n%s',
-                 samples_index.to_series().sample(5))
+    LOGGER.debug('%s %s samples index random example:\n%s',
+                 catalog, goal, samples_index.to_series().sample(5))
     LOGGER.info('Blocking index built')
 
     return samples_index
 
 
-def _run_full_text_query(terms: set, target_entity: constants.DB_ENTITY, boolean_mode=False, limit=5):
-    if not terms:
-        return nan
-
+def _run_full_text_query(terms: list, target_entity: constants.DB_ENTITY, boolean_mode=False, limit=5):
     tids = set()
+    if isinstance(terms, str):
+        terms = [terms]
     LOGGER.debug("Full-text query terms: %s", terms)
 
     for result in tokens_fulltext_search(target_entity, boolean_mode, terms):

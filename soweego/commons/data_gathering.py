@@ -73,12 +73,12 @@ def tokens_fulltext_search(target_entity: constants.DB_ENTITY, boolean_mode: boo
 
     session = DBManager.connect_to_db()
     try:
-        if where_clause:
-            query = session.query(target_entity).filter(
-                ft_search).filter(where_clause).limit(limit)
-        else:
+        if where_clause is None:
             query = session.query(target_entity).filter(
                 ft_search).limit(limit)
+        else:
+            query = session.query(target_entity).filter(
+                ft_search).filter(where_clause).limit(limit)
 
         count = query.count()
         if count == 0:
@@ -139,16 +139,16 @@ def gather_target_dataset(entity_type, catalog, identifiers, fileout, for_classi
         'Gathering %s %s for the linker ...', catalog, to_log)
 
     session = DBManager.connect_to_db()
-    query = session.query(base, link, nlp).join(link, base.catalog_id == link.catalog_id).join(
+    query = session.query(base, link, nlp).outerjoin(link, base.catalog_id == link.catalog_id).outerjoin(
         nlp, base.catalog_id == nlp.catalog_id).filter(condition)
 
     try:
-        raw_result = _run_query(query, catalog, entity_type)
-        if raw_result is None:
+        result = _run_query(query, catalog, entity_type)
+        if result is None:
             sys.exit(1)
         relevant_fields = _build_dataset_relevant_fields(base, link, nlp)
         _dump_target_dataset_query_result(
-            raw_result, relevant_fields, fileout)
+            result, relevant_fields, fileout)
         session.commit()
     except:
         session.rollback()
@@ -168,8 +168,8 @@ def _build_dataset_relevant_fields(base, link, nlp):
     return fields
 
 
-def _dump_target_dataset_query_result(result_set, relevant_fields, fileout):
-    for base, link, nlp in result_set:
+def _dump_target_dataset_query_result(result, relevant_fields, fileout):
+    for base, link, nlp in result:
         parsed = {constants.TID: base.catalog_id}
         for field in relevant_fields:
             try:
@@ -189,17 +189,15 @@ def _dump_target_dataset_query_result(result_set, relevant_fields, fileout):
         fileout.flush()
 
 
-def _run_query(query, catalog, entity_type):
+def _run_query(query, catalog, entity_type, page=1000):
     count = query.count()
     if count == 0:
         LOGGER.warning(
             "No data available for %s %s. Stopping here", catalog, entity_type)
         return None
-    LOGGER.info('Got %d entries with data from %s %s',
+    LOGGER.info('Got %d internal IDs with data from %s %s',
                 count, catalog, entity_type)
-    # TODO just return 'query', can be used as a generator
-    result_set = query.all()
-    return result_set
+    return query.yield_per(page).enable_eagerloads(False)
 
 
 def _build_metadata_query_fields(entity, entity_type, catalog):
