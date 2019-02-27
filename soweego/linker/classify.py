@@ -52,7 +52,6 @@ def execute(catalog, entity, model, threshold, dir_io):
     wd_generator, target = workflow.preprocess(
         'classification', catalog, wd_reader, target_reader, dir_io)
     # TODO Also consider blocking on URLs
-    # FIXME con il blocking sui nomi completi funzia!!! provare con il blocking FT
     classifier = joblib.load(model)
     rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
 

@@ -179,7 +179,7 @@ def preprocess(goal: str, catalog: str, wikidata_reader: JsonReader, target_read
 
     return wd_preprocessed_df, target_preprocessed_df
 
-# FIXME parallelizza con n_jobs
+# FIXME parallelize with n_jobs
 def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, target: pd.DataFrame) -> pd.DataFrame:
     LOGGER.info('Extracting features ...')
 
