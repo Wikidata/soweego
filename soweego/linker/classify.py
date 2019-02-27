@@ -34,11 +34,11 @@ LOGGER = logging.getLogger(__name__)
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default='/app/shared', help="Input/output directory, default: '/app/shared'.")
 def cli(target, target_type, model, upload, sandbox, threshold, dir_io):
     """Run a probabilistic linker."""
-    result = execute(target, target_type, model, threshold, dir_io)
-    if upload:
-        _upload(result, target, sandbox)
-    result.to_csv(os.path.join(dir_io, constants.LINKER_RESULT %
-                               target), header=True)
+    for chunk in execute(target, target_type, model, threshold, dir_io):
+        if upload:
+            _upload(chunk, target, sandbox)
+        chunk.to_csv(os.path.join(dir_io, constants.LINKER_RESULT %
+                                  target), mode='a', header=True)
 
 
 def _upload(predictions, catalog, sandbox):
@@ -55,15 +55,14 @@ def execute(catalog, entity, model, threshold, dir_io):
     # FIXME con il blocking sui nomi completi funzia!!! provare con il blocking FT
     classifier = joblib.load(model)
     rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
-    predicted_chunks = []
+
     for i, chunk in enumerate(wd_generator, 1):
         samples = blocking.full_text_query_block(
             'classification', catalog, chunk, i, target_database.get_entity(catalog, entity), dir_io)
         feature_vectors = workflow.extract_features(samples, chunk, target)
         predictions = classifier.prob(feature_vectors)
-        predicted_chunks.append(predictions[predictions >= threshold])
         LOGGER.info('Chunk %d classified', i)
-    return concat(predicted_chunks, sort=False)
+        yield predictions[predictions >= threshold]
 
 
 def _build(catalog, entity, dir_io):
