@@ -51,7 +51,6 @@ HANDLED_ENTITIES = {
 DB_ENTITY = TypeVar('DB_ENTITY', models.base_entity.BaseEntity,
                     models.base_link_entity.BaseLinkEntity, models.base_nlp_entity.BaseNlpEntity)
 
-# TODO add IMDb entities
 # DB entities and their Wikidata class QID
 TARGET_CATALOGS = {
     'discogs': {
@@ -71,19 +70,31 @@ TARGET_CATALOGS = {
     'imdb': {
         'actor': {
             'qid': vocabulary.ACTOR,
-            'entity': None,
+            'entity': models.imdb_entity.ImdbActorEntity,
             'link_entity': None,
             'nlp_entity': None
         },
         'director': {
             'qid': vocabulary.FILM_DIRECTOR,
-            'entity': None,
+            'entity': models.imdb_entity.ImdbDirectorEntity,
+            'link_entity': None,
+            'nlp_entity': None
+        },
+        'musician': {
+            'qid': vocabulary.MUSICIAN,
+            'entity': models.imdb_entity.ImdbMusicianEntity,
             'link_entity': None,
             'nlp_entity': None
         },
         'producer': {
             'qid': vocabulary.FILM_PRODUCER,
-            'entity': None,
+            'entity': models.imdb_entity.ImdbProducerEntity,
+            'link_entity': None,
+            'nlp_entity': None
+        },
+        'writer': {
+            'qid': vocabulary.SCREENWRITER,
+            'entity': models.imdb_entity.ImdbWriterEntity,
             'link_entity': None,
             'nlp_entity': None
         }

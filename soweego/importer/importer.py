@@ -19,6 +19,7 @@ from soweego.commons import constants as const
 from soweego.commons import http_client as client
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.discogs_dump_extractor import DiscogsDumpExtractor
+from soweego.importer.imdb_dump_extractor import ImdbDumpExtractor
 from soweego.importer.musicbrainz_dump_extractor import \
     MusicBrainzDumpExtractor
 from soweego.commons.db_manager import DBManager
@@ -40,6 +41,8 @@ def import_cli(catalog: str, resolve: bool, output: str) -> None:
         extractor = DiscogsDumpExtractor()
     elif catalog == 'musicbrainz':
         extractor = MusicBrainzDumpExtractor()
+    elif catalog == "imdb":
+        extractor = ImdbDumpExtractor()
 
     importer.refresh_dump(output, extractor, resolve)
 

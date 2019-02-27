@@ -41,11 +41,43 @@ OFFICIAL_WEBSITE = 'P856'
 
 # Entity classes handled by soweego
 ACTOR = 'Q33999'
+ANIMATOR = 'Q266569'
+ART_DIRECTOR = 'Q706364'
+ARTIST = 'Q483501'
+ASSISTANT_DIRECTOR = 'Q1757008'
 BAND = 'Q215380'
+CAMERA_OPERATOR = 'Q1208175'
+CASTING_DIRECTOR = 'Q1049296'
+CASTING_DIRECTOR = 'Q1049296'
+CINEMATOGRAPHER = 'Q222344'
+COMPOSER = 'Q36834'
+COSTUME_DESIGNER = 'Q1323191'
+COSTUME_MAKER = 'Q59341113'
+DRIVER = 'Q352388'
+ELECTRICIAN = 'Q165029'
+EXECUTIVE = 'Q978044'
 FILM_DIRECTOR = 'Q2526255'
+FILM_EDITOR = 'Q7042855'
 FILM_PRODUCER = 'Q3282637'
 HUMAN = 'Q5'
+LOCATION_MANAGER = 'Q1093536'
+MAKE_UP_ARTIST = 'Q935666'
+MANAGER = 'Q2462658'
 MUSICIAN = 'Q639669'
+PRODUCTION_ASSISTANT = 'Q2867219'
+PRODUCTION_DESIGNER = 'Q2962070'
+PRODUCTION_MANAGER = 'Q21292974'
+PUBLICIST = 'Q4178004'
+SCREENWRITER = 'Q28389'
+SCRIPT_SUPERVISOR = 'Q1263187'
+SET_DECORATOR = 'Q6409989'
+SOUND_DEPARTMENT = 'Q128124'
+SPECIAL_EFFECTS = 'Q21560152'
+STUNTS = 'Q465501'
+TALENT_AGENT = 'Q1344174'
+VISUAL_EFFECTS_ARTIST = 'Q1224742'
+
+
 
 # Target catalogs helper dictionary
 CATALOG_MAPPING = {
@@ -148,4 +180,46 @@ DATE_PRECISION = {
     HOUR: 'hour',
     MINUTE: 'minute',
     SECOND: 'second'
+}
+
+
+# This dictionary provides mappings between the professions
+# used by IMDb and their respective Wikidata occupations
+IMDB_PROFESSIONS_MAPPINGS = {
+    'actor': ACTOR,
+    'actress': ACTOR,
+    'animation_department': ANIMATOR,
+    'art_department': ARTIST,
+    'art_director': ART_DIRECTOR,
+    'assistant_director': ASSISTANT_DIRECTOR,
+    'camera_department': CAMERA_OPERATOR,
+    'casting_department': CASTING_DIRECTOR,
+    'casting_director': CASTING_DIRECTOR,
+    'cinematographer': CINEMATOGRAPHER,
+    'composer': COMPOSER,
+    'costume_department': COSTUME_MAKER,
+    'costume_designer': COSTUME_DESIGNER,
+    'director': FILM_DIRECTOR,
+    'editor': FILM_EDITOR,
+    'electrical_department': ELECTRICIAN,
+    'executive': EXECUTIVE,
+    'location_management': LOCATION_MANAGER,
+    'make_up_department': MAKE_UP_ARTIST,
+    'manager': MANAGER,
+    'music_department': MUSICIAN,
+    'producer': FILM_PRODUCER,
+    'production_department': PRODUCTION_ASSISTANT,
+    'production_designer': PRODUCTION_DESIGNER,
+    'production_manager': PRODUCTION_MANAGER,
+    'publicist': PUBLICIST,
+    'script_department': SCRIPT_SUPERVISOR,
+    'set_decorator': SET_DECORATOR,
+    'sound_department': SOUND_DEPARTMENT,
+    'soundtrack': MUSICIAN,
+    'special_effects': SPECIAL_EFFECTS,
+    'stunts': STUNTS,
+    'talent_agent': TALENT_AGENT,
+    'transportation_department': DRIVER,
+    'visual_effects': VISUAL_EFFECTS_ARTIST,
+    'writer': SCREENWRITER,
 }
