@@ -14,6 +14,7 @@ import os
 
 import click
 import recordlinkage as rl
+from pandas import concat
 from sklearn.externals import joblib
 
 from soweego.commons import constants, target_database
@@ -42,18 +43,32 @@ def cli(classifier, target, target_type, binarize, dir_io):
 def execute(classifier, catalog, entity, binarize, dir_io):
     wd_reader, target_reader = workflow.train_test_build(
         catalog, entity, dir_io)
-    wd, target = workflow.preprocess(
+    wd_generator, target = workflow.preprocess(
         'training', catalog, wd_reader, target_reader, dir_io)
-    positive_samples = blocking.train_test_block(wd, target)
-    samples = blocking.full_text_query_block(
-        'training', catalog, wd, target_database.get_entity(catalog, entity), dir_io)
-    actual_positive = samples & positive_samples
-    positive_size, actual_size = len(positive_samples), len(actual_positive)
-    if positive_size != actual_size:
-        LOGGER.warning(
-            '%d positive samples are not included in the full set of samples and will not be used', positive_size - actual_size)
-    feature_vectors = workflow.extract_features(samples, wd, target)
-    return _train(classifier, feature_vectors, actual_positive, binarize)
+
+    feature_vectors = []
+    positive_samples_index = None
+    for i, chunk in enumerate(wd_generator, 1):
+        positives_from_wd = blocking.train_test_block(chunk, target)
+        all_samples = blocking.full_text_query_block(
+            'training', catalog, chunk, i, target_database.get_entity(catalog, entity), dir_io)
+        # MultiIndices are set-like: '&' = intersection
+        actual_positive = all_samples & positives_from_wd
+        positive_size, actual_size = len(
+            positives_from_wd), len(actual_positive)
+        if positive_size != actual_size:
+            LOGGER.warning('%d positive samples from Wikidata are not in the full set of samples from %s and will not be used',
+                           positive_size - actual_size, catalog)
+        # Hack to initialize the final MultiIndex
+        if i == 1:
+            positive_samples_index = actual_positive
+        else:
+            # '|' = union
+            positive_samples_index |= actual_positive
+        feature_vectors.append(
+            workflow.extract_features(all_samples, chunk, target))
+
+    return _train(classifier, concat(feature_vectors), positive_samples_index, binarize)
 
 
 def _train(classifier, feature_vectors, positive_samples_index, binarize):
@@ -66,4 +81,4 @@ def _train(classifier, feature_vectors, positive_samples_index, binarize):
 
 if __name__ == "__main__":
     m = execute(rl.NaiveBayesClassifier, 'discogs',
-                'musician', 0.3, '/Users/focs/soweego/output')
+                'musician', 0.3, '/tmp/soweego_shared/')
