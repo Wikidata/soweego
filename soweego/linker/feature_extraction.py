@@ -70,14 +70,13 @@ class StringList(BaseCompareFeature):
         paired = pd.Series(list(zip(source_column, target_column)))
 
         def _levenshtein_apply(pair):
-            source_values, target_values = pair
-            if not all(pair) or source_values is np.nan or target_values is np.nan:
-                LOGGER.warning(
+            if _pair_has_any_null(pair):
+                LOGGER.debug(
                     "Can't compute Levenshtein distance, the pair contains null values: %s", pair)
                 return np.nan
 
             scores = []
-
+            source_values, target_values = pair
             # Paranoid checks to ensure we work on lists
             if isinstance(source_values, str):
                 source_values = [source_values]
@@ -158,17 +157,15 @@ class UrlList(BaseCompareFeature):
         concatenated = pd.Series(list(zip(source_column, target_column)))
 
         def exact_apply(pair):
-            source_urls, target_urls = pair
-
-            if not all(pair) or source_urls is np.nan or target_urls is np.nan:
+            if _pair_has_any_null(pair):
                 LOGGER.debug(
                     "Can't compare URLs, the pair contains null values: %s", pair)
                 return np.nan
 
             scores = []
-            for source in source_urls:
-                for target in target_urls:
-                    if pd.isnull(source) or pd.isnull(target):
+            for source in pair[0]:
+                for target in pair[1]:
+                    if pd.isna(source) or pd.isna(target):
                         scores.append(self.missing_value)
                         continue
                     if source == target:
@@ -178,3 +175,19 @@ class UrlList(BaseCompareFeature):
             return np.average(scores)
 
         return fillna(concatenated.apply(exact_apply), self.missing_value)
+
+
+def _pair_has_any_null(pair):
+    if not all(pair):
+        return True
+
+    source_is_null, target_is_null = pd.isna(pair[0]), pd.isna(pair[1])
+    if isinstance(source_is_null, np.ndarray):
+        source_is_null = source_is_null.all()
+    if isinstance(target_is_null, np.ndarray):
+        target_is_null = target_is_null.all()
+
+    if source_is_null or target_is_null:
+        return True
+
+    return False
