@@ -13,6 +13,7 @@ import gzip
 import json
 import logging
 import os
+from multiprocessing import cpu_count
 from typing import Tuple
 
 import pandas as pd
@@ -179,11 +180,10 @@ def preprocess(goal: str, catalog: str, wikidata_reader: JsonReader, target_read
 
     return wd_preprocessed_df, target_preprocessed_df
 
-# FIXME parallelize with n_jobs
 def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, target: pd.DataFrame) -> pd.DataFrame:
     LOGGER.info('Extracting features ...')
 
-    compare = rl.Compare()
+    compare = rl.Compare(n_jobs=cpu_count())
     # TODO similar name match as a feature
     # TODO feature engineering on more fields
     # wikidata columns = Index(['tid', 'label', 'alias', 'description', 'url', 'given_name',
