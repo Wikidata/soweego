@@ -241,7 +241,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
         with gzip.open(file_path, 'rt') as ddump:
 
-            # count number of rows for TQDM (so we can display how)
+            # count number of rows for TQDM, so we can display how
             # much is missing to complete the process. Then go back
             # to the start of the file with `.seek(0)`
             n_rows = sum(1 for line in ddump)
@@ -253,7 +253,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
             # counter to see how often we need to commit the session to
             # the DB
-            e_coutner = 0
+            e_counter = 0
 
             # for every entry in the file..
             for entity_info in tqdm(reader, total=n_rows):
@@ -268,10 +268,10 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 # is not so hard on the memory requirements as would be
                 # adding everything to session and commiting once the for loop
                 # is done
-                if e_coutner % self._sqlalchemy_commit_every == 0:
+                if e_counter % self._sqlalchemy_commit_every == 0:
                     session.commit()
 
-                e_coutner += 1
+                e_counter += 1
 
             # commit remaining entities
             session.commit()

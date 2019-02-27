@@ -184,7 +184,7 @@ DATE_PRECISION = {
 
 
 # This dictionary provides mappings between the professions
-# used by IMDb and their respectivi Wikidata occupations
+# used by IMDb and their respective Wikidata occupations
 IMDB_PROFESSIONS_MAPPINGS = {
     'actor': ACTOR,
     'actress': ACTOR,
