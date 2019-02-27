@@ -30,14 +30,15 @@ LOGGER = logging.getLogger(__name__)
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default='/app/shared', help="Input/output directory, default: '/app/shared'.")
 def cli(classifier, target, target_type, binarize, dir_io):
     """Evaluate the performance of a probabilistic linker."""
-    predictions, (precision, recall, fscore, confusion_matrix) = evaluate(
+    result = evaluate(
         constants.CLASSIFIERS[classifier], target, target_type, binarize, dir_io)
 
-    predictions.to_series().to_csv(os.path.join(dir_io, constants.LINKER_EVALUATION_PREDICTIONS %
-                                                (target, classifier)), columns=[], header=True)
-    with open(os.path.join(dir_io, constants.LINKER_PERFORMANCE % (target, classifier)), 'w') as fileout:
-        fileout.write(
-            f'Precision: {precision}\nRecall: {recall}\nF-score: {fscore}\nConfusion matrix:\n{confusion_matrix}\n')
+    for predictions, (precision, recall, fscore, confusion_matrix) in result:
+        predictions.to_series().to_csv(os.path.join(dir_io, constants.LINKER_EVALUATION_PREDICTIONS %
+                                                    (target, classifier)), mode='a', columns=[], header=True)
+        with open(os.path.join(dir_io, constants.LINKER_PERFORMANCE % (target, classifier)), 'a') as fileout:
+            fileout.write(
+                f'Precision: {precision}\nRecall: {recall}\nF-score: {fscore}\nConfusion matrix:\n{confusion_matrix}\n')
 
 
 def _compute_performance(test_index, predictions, test_vectors_size):
@@ -58,26 +59,39 @@ def _compute_performance(test_index, predictions, test_vectors_size):
 
 
 def evaluate(classifier, catalog, entity, binarize, dir_io):
+    result = []
+
     # Build
     wd_reader, target_reader = workflow.train_test_build(
         catalog, entity, dir_io)
-    wd, target = workflow.preprocess(
+    wd_generator, target = workflow.preprocess(
         'training', catalog, wd_reader, target_reader, dir_io)
 
-    # Split (2/3 train, 1/3 test)
-    wd_train, wd_test = train_test_split(wd, test_size=0.33)
-    target_train, target_test = train_test_split(target, test_size=0.33)
+    for i, chunk in enumerate(wd_generator, 1):
+        # Split (2/3 train, 1/3 test)
+        wd_train, wd_test = train_test_split(chunk, test_size=0.33)
+        target_train, target_test = train_test_split(target, test_size=0.33)
 
-    # Train
-    train_index = blocking.train_test_block(wd_train, target_train)
-    train_vectors = workflow.extract_features(
-        train_index, wd_train, target_train)
-    model = workflow.init_model(classifier, binarize)
-    model.fit(train_vectors, train_index)
+        # Train
+        train_positives = blocking.train_test_block(wd_train, target_train)
+        train_all = blocking.full_text_query_block(
+            'training', catalog, chunk, i, target_database.get_entity(catalog, entity), dir_io)
+        train_actual = train_all & train_positives
+        train_vectors = workflow.extract_features(
+            train_all, wd_train, target_train)
+        model = workflow.init_model(classifier, binarize)
+        model.fit(train_vectors, train_actual)
 
-    # Test
-    test_index = blocking.train_test_block(wd_test, target_test)
-    test_vectors = workflow.extract_features(test_index, wd_test, target_test)
-    predictions = model.predict(test_vectors)
+        # Test
+        test_positives = blocking.train_test_block(wd_test, target_test)
+        test_all = blocking.full_text_query_block(
+            'training', catalog, chunk, i, target_database.get_entity(catalog, entity), dir_io)
+        test_actual = test_all & test_positives
+        test_vectors = workflow.extract_features(
+            test_all, wd_test, target_test)
+        predictions = model.predict(test_vectors)
 
-    return predictions, _compute_performance(test_index, predictions, len(test_vectors))
+        result.append((predictions, _compute_performance(
+            test_actual, predictions, len(test_vectors))))
+
+    return result
