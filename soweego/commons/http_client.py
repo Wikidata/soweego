@@ -15,6 +15,7 @@ import urllib
 
 import requests
 import urllib3
+from tqdm import tqdm
 
 LOGGER = logging.getLogger(__name__)
 
@@ -35,11 +36,20 @@ def http_call(base_url, method='GET', parameters=None, headers=list()):
 def download_file(url, filePath):
     """Downloads a web content and saves it in a custom filePath"""
     try:
+        file_size = int(requests.head(url).headers["Content-Length"])
+        pbar = tqdm(
+            total=file_size,
+            unit='B', unit_scale=True, desc=url.split('/')[-1])
+
         stream = requests.get(url, stream=True, verify=False)
         with open(filePath, 'wb') as f:
             for chunk in stream.iter_content(chunk_size=1024):
                 if chunk:
                     f.write(chunk)
                     f.flush()
+                    pbar.update(1024)
+                    
+            pbar.close()
+
     except Exception as e:
         LOGGER.warning('Unable to download %s \n %s', url, str(e))
