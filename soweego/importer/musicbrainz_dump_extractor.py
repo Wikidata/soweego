@@ -173,11 +173,15 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         # Loads all the relationships between URL ID and ARTIST ID
         urlid_artistid_relationship = {}
 
+        LOGGER.info('Loading artist relationships')
+
         with open(l_artist_url_path, "r") as tsvfile:
             url_relationships = DictReader(tsvfile,
                                            delimiter='\t',
                                            fieldnames=[i for i in range(0, 6)])
-            for relationship in url_relationships:
+
+            for relationship in tqdm(url_relationships,
+                                     total=self._count_num_lines_in_file(tsvfile)):
                 # url id matched with its user id
                 if relationship[3] in urlid_artistid_relationship:
                     LOGGER.warning(
@@ -189,12 +193,19 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         url_artistid = {}
         url_path = os.path.join(dump_path, 'mbdump', 'url')
+
+        LOGGER.info('Checking URLs realted to artists')
+
         # Translates URL IDs to the relative URL
         with open(url_path, "r") as tsvfile:
+
             urls = DictReader(tsvfile,
                               delimiter='\t',
                               fieldnames=[i for i in range(0, 5)])
-            for url_record in urls:
+
+            for url_record in tqdm(urls,
+                                   total=self._count_num_lines_in_file(tsvfile)):
+
                 urlid = url_record[0]
                 if urlid in urlid_artistid_relationship:
                     for candidate_url in url_utils.clean(url_record[2]):
@@ -211,6 +222,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         # Inverts dictionary
         for url, artistid in url_artistid.items():
             artistid_url[artistid].append(url)
+
+        LOGGER.info('Adding link entities to DB')
 
         url_artistid = None
         # Translates ARTIST ID to the relative ARTIST
@@ -300,16 +313,22 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         aliases = defaultdict(list)
         areas = {}
 
+        LOGGER.info('Getting artist aliases')
+
         # Key is the entity id which has a list of aliases
         with open(artist_alias_path, 'r') as aliasesfile:
             for alias in DictReader(aliasesfile, delimiter='\t', fieldnames=[
                     'id', 'parent_id', 'label']):
                 aliases[alias['parent_id']].append(alias['label'])
 
+        LOGGER.info('Getting area IDs and related names')
+
         # Key is the area internal id, value is the name
         with open(area_path, 'r') as areafile:
             for area in DictReader(areafile, delimiter='\t', fieldnames=['id', 'gid', 'name']):
                 areas[area['id']] = area['name'].lower()
+
+        LOGGER.info('Importing artist entities into DB')
 
         with open(artist_path, 'r') as artistfile:
 
@@ -361,6 +380,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         link_file_path = os.path.join(dump_path, 'mbdump', 'link')
         to_invert = set()
 
+        LOGGER.info('Loading artist-band relationships')
+
         links = set()
         with open(link_file_path) as link_file:
             reader = DictReader(link_file,
@@ -398,6 +419,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid']):
                 if artist['id'] in ids_translator:
                     ids_translator[artist['id']] = artist['gid']
+
+        LOGGER.info("Adding relationships into DB")
 
         yield len(relationships)  # first yield is always the number of rows
 
