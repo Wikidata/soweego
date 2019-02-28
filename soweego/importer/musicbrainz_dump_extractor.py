@@ -217,9 +217,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
         with open(artist_path, 'r') as artistfile:
 
-            n_rows = sum(1 for line in artistfile)
-            artistfile.seek(0)
-
+            n_rows = self._count_num_lines_in_file(artistfile)
             yield n_rows  # first yield is always the number of rows
 
             for artist in DictReader(artistfile, delimiter='\t',
@@ -271,8 +269,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
         with open(artist_path, 'r') as artistfile:
 
-            n_rows = sum(1 for line in artistfile)
-            artistfile.seek(0)
+            n_rows = self._count_num_lines_in_file(artistfile)
 
             yield n_rows  # first yield is always the number of rows
 
@@ -316,8 +313,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         with open(artist_path, 'r') as artistfile:
 
-            n_rows = sum(1 for line in artistfile)
-            artistfile.seek(0)
+            n_rows = self._count_num_lines_in_file(artistfile)
 
             yield n_rows  # first yield is always the number of rows
 
@@ -500,3 +496,12 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
     def _artist_gender(self, gender_code):
         genders = {'1': 'male', '2': 'female', '3': 'other', '\\N': 'other'}
         return genders[gender_code]
+
+    def _count_num_lines_in_file(self, file_) -> int:
+
+        # count number of rows and go back to
+        # the beginning of file
+        n_rows = sum(1 for line in file_)
+        file_.seek(0)
+
+        return n_rows
