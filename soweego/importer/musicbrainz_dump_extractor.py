@@ -20,6 +20,7 @@ from typing import Iterable, Tuple
 
 import requests
 from sqlalchemy.exc import IntegrityError
+from tqdm import tqdm
 
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
@@ -136,7 +137,14 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         session = db_manager.new_session()
 
-        for entity in _generator(*args):
+        # we construct the generator
+        blt_gen = _generator(*args)
+
+        # and obtain the first item, which is
+        # the number of rows that the generator will yield
+        n_rows = next(blt_gen)
+
+        for entity in tqdm(blt_gen, total=n_rows):
             try:
                 n_total_entities += 1
                 session.add(entity)
@@ -207,6 +215,12 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         # Translates ARTIST ID to the relative ARTIST
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
         with open(artist_path, 'r') as artistfile:
+
+            n_rows = sum(1 for line in artistfile)
+            artistfile.seek(0)
+            
+            yield n_rows # first yield is always the number of rows
+
             for artist in DictReader(artistfile, delimiter='\t',
                                      fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
                                                  'd_year', 'd_month', 'd_day', 'type_id']):
@@ -255,6 +269,13 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
         with open(artist_path, 'r') as artistfile:
+
+            n_rows = sum(1 for line in artistfile)
+            artistfile.seek(0)
+            
+            yield n_rows # first yield is always the number of rows
+
+
             for artist in DictReader(artistfile, delimiter='\t',
                                      fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
                                                  'd_year', 'd_month', 'd_day', 'type_id']):
@@ -294,6 +315,12 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 areas[area['id']] = area['name'].lower()
 
         with open(artist_path, 'r') as artistfile:
+
+            n_rows = sum(1 for line in artistfile)
+            artistfile.seek(0)
+            
+            yield n_rows # first yield is always the number of rows
+
             for artist in DictReader(artistfile, delimiter='\t',
                                      fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
                                                  'd_year', 'd_month', 'd_day', 'type_id', 'area', 'gender', 'ND1',
@@ -305,7 +332,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                         self._fill_entity(current_entity, artist, areas)
                         current_entity.gender = self._artist_gender(
                             artist['gender'])
-                    except ValueError:
+                    except KeyError:
                         LOGGER.error('Wrong gender code: %s', artist)
                         continue
 
@@ -376,6 +403,9 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 if artist['id'] in ids_translator:
                     ids_translator[artist['id']] = artist['gid']
 
+
+        yield len(relationships) # first yield is always the number of rows
+        
         for relation in relationships:
             translation0, translation1 = ids_translator[relation[0]
                                                         ], ids_translator[relation[1]]
