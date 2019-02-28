@@ -73,7 +73,7 @@ def build_wikidata(goal, catalog, entity, dir_io):
 
     wd_df_reader = pd.read_json(wd_io_path, lines=True, chunksize=1000)
 
-    LOGGER.info('Wikidata training set built')
+    LOGGER.info('Wikidata %s set built', goal)
     return wd_df_reader, qids_and_tids
 
 
@@ -106,10 +106,7 @@ def build_target(goal, catalog, entity, qids_and_tids, dir_io):
             data_gathering.gather_target_ids(
                 entity, catalog, target_database.get_pid(catalog), qids_and_tids)
 
-        tids = set()
-        for data in qids_and_tids.values():
-            for identifier in data[constants.TID]:
-                tids.add(identifier)
+        tids = _get_tids(qids_and_tids)
 
         # Dataset
         # TODO how to avoid an empty file in case of no query results (see data_gathering#)? Perhaps lazy creation of file?
@@ -121,8 +118,16 @@ def build_target(goal, catalog, entity, qids_and_tids, dir_io):
     target_df_reader = pd.read_json(
         target_io_path, lines=True, chunksize=1000, dtype={constants.TID: str})
 
-    LOGGER.info('Target training set built')
+    LOGGER.info('Target %s set built', goal)
     return target_df_reader
+
+
+def _get_tids(qids_and_tids):
+    tids = set()
+    for data in qids_and_tids.values():
+        for identifier in data[constants.TID]:
+            tids.add(identifier)
+    return tids
 
 
 def train_test_build(catalog, entity, dir_io):
@@ -161,9 +166,6 @@ def preprocess(goal: str, catalog: str, wikidata_reader: JsonReader, target_read
         wd_preprocessed_df = pd.read_pickle(wd_io_path)
     else:
         wd_preprocessed_df = _preprocess_wikidata(goal, wikidata_reader)
-        pd.to_pickle(wd_preprocessed_df, wd_io_path)
-        LOGGER.info("Preprocessed Wikidata %s %s DataFrame dumped to '%s'",
-                    catalog, goal, wd_io_path)
 
     if os.path.exists(target_io_path):
         LOGGER.info("Will reuse existing preprocessed %s %s DataFrame: '%s'",
@@ -177,7 +179,7 @@ def preprocess(goal: str, catalog: str, wikidata_reader: JsonReader, target_read
 
     return wd_preprocessed_df, target_preprocessed_df
 
-
+# FIXME parallelize with n_jobs
 def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, target: pd.DataFrame) -> pd.DataFrame:
     LOGGER.info('Extracting features ...')
 
@@ -222,7 +224,6 @@ def _preprocess_wikidata(goal, wikidata_reader):
     _handle_goal_value(goal)
 
     LOGGER.info('Preprocessing Wikidata ...')
-    wd_chunks = []
 
     for i, chunk in enumerate(wikidata_reader, 1):
         # 1. QID as index
@@ -252,10 +253,9 @@ def _preprocess_wikidata(goal, wikidata_reader):
 
         LOGGER.info('Chunk %d done', i)
 
-        wd_chunks.append(chunk)
+        yield chunk
 
     LOGGER.info('Wikidata preprocessing done')
-    return pd.concat(wd_chunks, sort=False)
 
 
 def _preprocess_target(goal, target_reader):
@@ -265,8 +265,9 @@ def _preprocess_target(goal, target_reader):
 
     # 1. Load into a DataFrame
     # Needed to avoid inconsistent aggregations
-    # if we run step 2 on chunks
+    # if we run step 4 on chunks
     # TODO Segfault when running in Docker container
+    # FIXME in realtà no, al massimo un'aggregazione finale prima di concatenare
     LOGGER.info('Loading target into a pandas DataFrame ...')
     target = pd.concat([chunk for chunk in target_reader],
                        ignore_index=True, sort=False)
@@ -291,6 +292,7 @@ def _preprocess_target(goal, target_reader):
 
     # 4. Aggregate denormalized data on target ID
     # TODO Token lists may contain duplicate tokens
+    # FIXME questo ci mette un botto senza chunk (10 minuti)
     LOGGER.info("Aggregating denormalized data on '%s' column ...",
                 constants.TID)
     target = target.groupby(constants.TID).agg(lambda x: list(set(x)))
@@ -431,7 +433,7 @@ def _join_descriptions(df):
 
 
 def _tokenize_values(values, tokenize_func):
-    if pd.isna(values):
+    if values is nan:
         return nan
     all_tokens = set()
     for value in values:

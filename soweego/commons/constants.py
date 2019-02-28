@@ -13,7 +13,9 @@ from typing import TypeVar
 
 from recordlinkage import NaiveBayesClassifier, SVMClassifier
 
-from soweego.importer import models
+from soweego.importer.models import (base_entity, base_link_entity,
+                                     base_nlp_entity, discogs_entity,
+                                     musicbrainz_entity)
 from soweego.wikidata import vocabulary
 
 # Miscellanea
@@ -48,42 +50,53 @@ HANDLED_ENTITIES = {
 }
 
 # DB entity Python types for typed function signatures
-DB_ENTITY = TypeVar('DB_ENTITY', models.base_entity.BaseEntity,
-                    models.base_link_entity.BaseLinkEntity, models.base_nlp_entity.BaseNlpEntity)
+DB_ENTITY = TypeVar('DB_ENTITY', base_entity.BaseEntity,
+                    base_link_entity.BaseLinkEntity, base_nlp_entity.BaseNlpEntity)
 
-# TODO add IMDb entities
 # DB entities and their Wikidata class QID
 TARGET_CATALOGS = {
     'discogs': {
         'musician': {
             'qid': vocabulary.MUSICIAN,
-            'entity': models.discogs_entity.DiscogsMusicianEntity,
-            'link_entity': models.discogs_entity.DiscogsMusicianLinkEntity,
-            'nlp_entity': models.discogs_entity.DiscogsMusicianNlpEntity
+            'entity': discogs_entity.DiscogsMusicianEntity,
+            'link_entity': discogs_entity.DiscogsMusicianLinkEntity,
+            'nlp_entity': discogs_entity.DiscogsMusicianNlpEntity
         },
         'band': {
             'qid': vocabulary.BAND,
-            'entity': models.discogs_entity.DiscogsGroupEntity,
-            'link_entity': models.discogs_entity.DiscogsGroupLinkEntity,
-            'nlp_entity': models.discogs_entity.DiscogsGroupNlpEntity
+            'entity': discogs_entity.DiscogsGroupEntity,
+            'link_entity': discogs_entity.DiscogsGroupLinkEntity,
+            'nlp_entity': discogs_entity.DiscogsGroupNlpEntity
         }
     },
     'imdb': {
         'actor': {
             'qid': vocabulary.ACTOR,
-            'entity': None,
+            'entity': models.imdb_entity.ImdbActorEntity,
             'link_entity': None,
             'nlp_entity': None
         },
         'director': {
             'qid': vocabulary.FILM_DIRECTOR,
-            'entity': None,
+            'entity': models.imdb_entity.ImdbDirectorEntity,
+            'link_entity': None,
+            'nlp_entity': None
+        },
+        'musician': {
+            'qid': vocabulary.MUSICIAN,
+            'entity': models.imdb_entity.ImdbMusicianEntity,
             'link_entity': None,
             'nlp_entity': None
         },
         'producer': {
             'qid': vocabulary.FILM_PRODUCER,
-            'entity': None,
+            'entity': models.imdb_entity.ImdbProducerEntity,
+            'link_entity': None,
+            'nlp_entity': None
+        },
+        'writer': {
+            'qid': vocabulary.SCREENWRITER,
+            'entity': models.imdb_entity.ImdbWriterEntity,
             'link_entity': None,
             'nlp_entity': None
         }
@@ -91,14 +104,14 @@ TARGET_CATALOGS = {
     'musicbrainz': {
         'musician': {
             'qid': vocabulary.MUSICIAN,
-            'entity': models.musicbrainz_entity.MusicbrainzArtistEntity,
-            'link_entity': models.musicbrainz_entity.MusicbrainzArtistLinkEntity,
+            'entity': musicbrainz_entity.MusicbrainzArtistEntity,
+            'link_entity': musicbrainz_entity.MusicbrainzArtistLinkEntity,
             'nlp_entity': None
         },
         'band': {
             'qid': vocabulary.BAND,
-            'entity': models.musicbrainz_entity.MusicbrainzBandEntity,
-            'link_entity': models.musicbrainz_entity.MusicbrainzBandLinkEntity,
+            'entity': musicbrainz_entity.MusicbrainzBandEntity,
+            'link_entity': musicbrainz_entity.MusicbrainzBandLinkEntity,
             'nlp_entity': None
         }
     }
@@ -125,14 +138,15 @@ DESCRIPTION_TOKENS = 'description_tokens'
 
 # File names
 WD_TRAINING_SET = 'wikidata_%s_training_set.jsonl.gz'
-WD_CLASSIFICATION_SET = 'wikidata_%s_dataset.jsonl.gz'
+WD_CLASSIFICATION_SET = 'wikidata_%s_classification_set.jsonl.gz'
 WD_TRAINING_DATAFRAME = 'wikidata_%s_training_dataframe.pkl.gz'
 WD_CLASSIFICATION_DATAFRAME = 'wikidata_%s_classification_dataframe.pkl.gz'
 TARGET_TRAINING_SET = '%s_training_set.jsonl.gz'
-TARGET_CLASSIFICATION_SET = '%s_dataset.jsonl.gz'
+TARGET_CLASSIFICATION_SET = '%s_classification_set.jsonl.gz'
 TARGET_TRAINING_DATAFRAME = '%s_training_dataframe.pkl.gz'
 TARGET_CLASSIFICATION_DATAFRAME = '%s_classification_dataframe.pkl.gz'
-TRAINING_SAMPLES = '%s_training_samples.pkl.gz'
+TRAINING_SAMPLES = '%s_training_samples%02d.pkl.gz'
+CLASSIFICATION_SAMPLES = '%s_classification_samples%02d.pkl.gz'
 LINKER_MODEL = '%s_%s_model.pkl'
 LINKER_RESULT = '%s_linker_result.csv.gz'
 LINKER_EVALUATION_PREDICTIONS = '%s_%s_linker_evaluation_predictions.csv.gz'

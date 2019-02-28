@@ -118,7 +118,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                     self._populate_band(db_manager, entity, identifier,
                                         name, living_links, node)
 
-                LOGGER.debug(
+                LOGGER.info(
                     '%d entities imported so far: %d musicians with %d links, %d bands with %d links, %d discarded dead links.',
                     self.total_entities, self.musicians, self.musician_links, self.bands, self.band_links,
                     self.dead_links)
