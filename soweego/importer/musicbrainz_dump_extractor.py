@@ -218,8 +218,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
             n_rows = sum(1 for line in artistfile)
             artistfile.seek(0)
-            
-            yield n_rows # first yield is always the number of rows
+
+            yield n_rows  # first yield is always the number of rows
 
             for artist in DictReader(artistfile, delimiter='\t',
                                      fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
@@ -272,9 +272,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
             n_rows = sum(1 for line in artistfile)
             artistfile.seek(0)
-            
-            yield n_rows # first yield is always the number of rows
 
+            yield n_rows  # first yield is always the number of rows
 
             for artist in DictReader(artistfile, delimiter='\t',
                                      fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
@@ -318,8 +317,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
             n_rows = sum(1 for line in artistfile)
             artistfile.seek(0)
-            
-            yield n_rows # first yield is always the number of rows
+
+            yield n_rows  # first yield is always the number of rows
 
             for artist in DictReader(artistfile, delimiter='\t',
                                      fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
@@ -403,9 +402,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 if artist['id'] in ids_translator:
                     ids_translator[artist['id']] = artist['gid']
 
+        yield len(relationships)  # first yield is always the number of rows
 
-        yield len(relationships) # first yield is always the number of rows
-        
         for relation in relationships:
             translation0, translation1 = ids_translator[relation[0]
                                                         ], ids_translator[relation[1]]
@@ -470,9 +468,18 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
     def _get_date_and_precision(self, year, month, day):
         date_list = [year, month, day]
         precision = -1
+
         try:
+            if date_list[0] != '\\N' and int(date_list[0]) < 0:
+                LOGGER.warning('Failed to convert date (%s/%s/%s). Encountered negative year, '
+                               'which Python Date object does not support', *date_list)
+
+                # We can't parse the date, so we treat is as if it wasn't available
+                date_list[0] = '\\N'
+
             null_index = date_list.index('\\N')
             precision = 8 + null_index if null_index > 0 else -1
+
         except ValueError:
             precision = 11
 
