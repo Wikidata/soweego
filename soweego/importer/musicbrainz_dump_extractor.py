@@ -54,11 +54,11 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         if not os.path.isdir(dump_path):
             with tarfile.open(dump_file_path, "r:bz2") as tar:
-                LOGGER.info("Extracting dump %s in %s" %
-                            (dump_file_path, dump_path))
+                LOGGER.info("Extracting dump %s in %s",
+                            dump_file_path, dump_path)
                 tar.extractall(dump_path)
-                LOGGER.info("Extracted dump %s in %s" %
-                            (dump_file_path, dump_path))
+                LOGGER.info("Extracted dump %s in %s",
+                            dump_file_path, dump_path)
 
         tables = [MusicbrainzArtistEntity,
                   MusicbrainzBandEntity]
@@ -67,7 +67,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         db_manager.drop(tables)
         db_manager.create(tables)
 
-        LOGGER.info("Dropped and created tables %s" % tables)
+        LOGGER.info("Dropped and created tables %s", tables)
         LOGGER.info("Importing artists and bands")
 
         artist_count = self._add_entities_from_generator(
@@ -83,7 +83,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         db_manager.create([MusicbrainzArtistLinkEntity,
                            MusicbrainzBandLinkEntity])
 
-        LOGGER.info("Dropped and created tables %s" % tables)
+        LOGGER.info("Dropped and created tables %s", tables)
         LOGGER.info("Importing links")
 
         link_count = self._add_entities_from_generator(
@@ -107,7 +107,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         db_manager.drop([MusicBrainzArtistBandRelationship])
         db_manager.create([MusicBrainzArtistBandRelationship])
-        LOGGER.info("Dropped and created tables %s" % tables)
+        LOGGER.info("Dropped and created tables %s", tables)
         LOGGER.info("Importing relationships artist-band")
 
         relationships_count = self._add_entities_from_generator(
@@ -181,7 +181,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 # url id matched with its user id
                 if relationship[3] in urlid_artistid_relationship:
                     LOGGER.warning(
-                        'Url with ID %s has multiple artists, only one will be stored' % relationship[3])
+                        'Url with ID %s has multiple artists, only one will be stored',
+                        relationship[3])
                 else:
                     urlid_artistid_relationship[relationship[3]
                                                 ] = relationship[2]
@@ -414,8 +415,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 else:
                     yield MusicBrainzArtistBandRelationship(translation0, translation1)
             else:
-                LOGGER.warning("Artist id missing translation: %s to (%s, %s)" %
-                               (relation, translation0, translation1))
+                LOGGER.warning("Artist id missing translation: %s to (%s, %s)",
+                               relation, translation0, translation1)
 
     def _fill_entity(self, entity, info, areas):
         entity.catalog_id = info['gid']
