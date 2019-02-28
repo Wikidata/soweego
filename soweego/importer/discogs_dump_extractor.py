@@ -16,6 +16,7 @@ from datetime import date, datetime
 from typing import Iterable
 
 from requests import get
+from tqdm import tqdm
 
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
@@ -76,7 +77,13 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                     [table.__tablename__ for table in tables])
 
         with gzip.open(dump_file_path, 'rt') as dump:
-            for _, node in et.iterparse(dump):
+            
+            # count number of lines and move again up to the beginning
+            # of the file
+            n_rows = sum(1 for line in dump)
+            dump.seek(0)
+
+            for _, node in tqdm(et.iterparse(dump), total=n_rows):
                 if not node.tag == 'artist':
                     continue
 
@@ -121,10 +128,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                                         name, living_links, node, session)
 
                 session.commit()
-                LOGGER.info(
-                    '%d entities imported so far: %d musicians with %d links, %d bands with %d links, %d discarded dead links.',
-                    self.total_entities, self.musicians, self.musician_links, self.bands, self.band_links,
-                    self.dead_links)
+
 
         end = datetime.now()
         LOGGER.info(
