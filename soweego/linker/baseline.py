@@ -7,6 +7,8 @@ from datetime import datetime
 import dateutil
 from dateutil.relativedelta import relativedelta
 
+from soweego.commons import constants
+
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
 __version__ = '1.0'
@@ -120,7 +122,7 @@ def perfect_name_match(source_dataset, target_entity: BaseEntity, target_pid: st
     for row_entity in source_dataset:
         entity = json.loads(row_entity)
         qid = entity['qid']
-        for label in entity['name']:
+        for label in entity[constants.NAME]:
             for res in data_gathering.perfect_name_search(target_entity, label):
                 if not compare_dates or birth_death_date_match(res, entity):
                     yield (qid, target_pid, res.catalog_id)
@@ -137,7 +139,7 @@ def similar_name_tokens_match(source, target, target_pid: str, compare_dates: bo
     for row_entity in source:
         entity = json.loads(row_entity)
         qid = entity['qid']
-        for label in entity['name']:
+        for label in entity[constants.NAME]:
             if not label:
                 continue
 
