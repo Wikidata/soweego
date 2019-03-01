@@ -16,6 +16,7 @@ from datetime import date, datetime
 from typing import Iterable
 
 from requests import get
+from tqdm import tqdm
 
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
@@ -40,6 +41,8 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
     band_nlp = 0
     valid_links = 0
     dead_links = 0
+
+    _sqlalchemy_commit_every = 700
 
     def get_dump_download_urls(self) -> Iterable[str]:
         response = get(DUMP_LIST_URL_TEMPLATE.format(date.today().year))
@@ -76,7 +79,20 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                     [table.__tablename__ for table in tables])
 
         with gzip.open(dump_file_path, 'rt') as dump:
-            for _, node in et.iterparse(dump):
+
+            # count number of lines and move again up to the beginning
+            # of the file
+            n_rows = sum(1 for line in dump)
+            dump.seek(0)
+
+            session = db_manager.new_session()
+
+            # we count how many iterations we've done up until now
+            # so that we can do an insertion every `self._sqlalchemy_commit_every`
+            # loops
+            e_counter = 0
+
+            for _, node in tqdm(et.iterparse(dump), total=n_rows):
                 if not node.tag == 'artist':
                     continue
 
@@ -118,10 +134,16 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                     self._populate_band(db_manager, entity, identifier,
                                         name, living_links, node)
 
-                LOGGER.info(
-                    '%d entities imported so far: %d musicians with %d links, %d bands with %d links, %d discarded dead links.',
-                    self.total_entities, self.musicians, self.musician_links, self.bands, self.band_links,
-                    self.dead_links)
+                if e_counter % self._sqlalchemy_commit_every == 0:
+                    # commit in batches of `self._sqlalchemy_commit_every`
+                    session.commit()
+
+                e_counter += 1
+
+            # finally commit remaining entities in session
+            # (if any), and close session
+            session.commit()
+            session.close()
 
         end = datetime.now()
         LOGGER.info(
