@@ -150,7 +150,7 @@ def similar_name_tokens_match(source, target, target_pid: str) -> Iterable[Tuple
             # Looks for sets contained in our set of tokens
             where_clause = target.catalog_id.notin_(to_exclude)
             for res in data_gathering.tokens_fulltext_search(target, False, tokenized, where_clause=where_clause):
-                res_tokenized = set(res.tokens.split())
+                res_tokenized = set(res.name_tokens.split())
                 if len(res_tokenized) > 1 and res_tokenized.issubset(tokenized):
                     yield (qid, target_pid, res.catalog_id)
 
@@ -185,7 +185,7 @@ def similar_link_tokens_match(source, target, target_pid: str) -> Iterable[Tuple
                 # Looks for sets contained in our set of tokens
                 where_clause = target.catalog_id.notin_(to_exclude)
                 for res in data_gathering.tokens_fulltext_search(target, False, tokenized, where_clause):
-                    res_tokenized = set(res.tokens.split())
+                    res_tokenized = set(res.url_tokens.split())
                     if len(res_tokenized) > 1 and res_tokenized.issubset(tokenized):
                         yield (qid, target_pid, res.catalog_id)
             except ProgrammingError as ex:
