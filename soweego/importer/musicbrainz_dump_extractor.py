@@ -231,6 +231,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         with open(artist_path, 'r') as artistfile:
 
             n_rows = self._count_num_lines_in_file(artistfile)
+
             yield n_rows  # first yield is always the number of rows
 
             for artist in DictReader(artistfile, delimiter='\t',
@@ -351,13 +352,13 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                         LOGGER.error('Wrong gender code: %s', artist)
                         continue
 
-                    yield current_entity
-
                     # Creates an entity foreach available alias
                     for alias in self._alias_entities(
                             current_entity, MusicbrainzArtistEntity, aliases[artist['id']]):
                         alias.gender = current_entity.gender
                         yield alias
+
+                    yield current_entity
 
                 if self._check_band(artist['type_id']):
                     current_entity = MusicbrainzBandEntity()
@@ -368,12 +369,12 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                         LOGGER.error('Wrong date: %s', artist)
                         continue
 
-                    yield current_entity
-
                     # Creates an entity foreach available alias
                     for alias in self._alias_entities(
                             current_entity, MusicbrainzBandEntity, aliases[artist['id']]):
                         yield alias
+
+                    yield current_entity
 
     def _artist_band_relationship_generator(self, dump_path):
         link_types = set(['855', '103', '305', '965', '895'])

@@ -3,6 +3,7 @@
 # Adapted from https://github.com/Wikidata/StrepHit/blob/master/strephit/commons/logging.py
 
 """Logging facility"""
+import json
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -24,7 +25,7 @@ LEVELS = {
     'ERROR': logging.ERROR,
     'CRITICAL': logging.CRITICAL,
 }
-CONFIG_FILE_PATH = os.path.abspath(os.path.join('logging.cfg'))
+CONFIG_FILE_PATH = os.path.abspath(os.path.join('logging.json'))
 DEFAULT_CONFIG = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -63,8 +64,7 @@ DEFAULT_CONFIG = {
 def setup():
     """Set up logging via a config file if available or via the default configuration."""
     if os.path.exists(CONFIG_FILE_PATH):
-        logging.config.fileConfig(CONFIG_FILE_PATH, DEFAULT_CONFIG,
-                                  disable_existing_loggers=False)
+        logging.config.dictConfig(json.load(open(CONFIG_FILE_PATH)))
     else:
         logging.config.dictConfig(DEFAULT_CONFIG)
 
