@@ -139,8 +139,8 @@ DESCRIPTION = 'description'
 DESCRIPTION_TOKENS = 'description_tokens'
 
 # File names
-WD_TRAINING_SET = 'wikidata_%s_training_set.jsonl.gz'
-WD_CLASSIFICATION_SET = 'wikidata_%s_classification_set.jsonl.gz'
+WD_TRAINING_SET = 'wikidata_%s_%s_training_set.jsonl.gz'
+WD_CLASSIFICATION_SET = 'wikidata_%s_%s_classification_set.jsonl.gz'
 WD_TRAINING_DATAFRAME = 'wikidata_%s_training_dataframe.pkl.gz'
 WD_CLASSIFICATION_DATAFRAME = 'wikidata_%s_classification_dataframe.pkl.gz'
 TARGET_TRAINING_SET = '%s_training_set.jsonl.gz'
