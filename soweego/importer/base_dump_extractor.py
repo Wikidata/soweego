@@ -52,7 +52,7 @@ class BaseDumpExtractor:
             session.close()
 
         if not success:
-            LOGGER.info("Sleeping for %s seconds before retrying commit" % delay)
+            LOGGER.info('Sleeping for %s seconds before retrying commit', delay)
             time.sleep(delay)
             delay *= 2
             LOGGER.info("Commit retry for %s..." % entity)
