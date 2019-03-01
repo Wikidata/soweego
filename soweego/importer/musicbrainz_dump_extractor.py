@@ -336,13 +336,13 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                         LOGGER.error('Wrong gender code: %s', artist)
                         continue
 
-                    yield current_entity
-
                     # Creates an entity foreach available alias
                     for alias in self._alias_entities(
                             current_entity, MusicbrainzArtistEntity, aliases[artist['id']]):
                         alias.gender = current_entity.gender
                         yield alias
+
+                    yield current_entity
 
                 if self._check_band(artist['type_id']):
                     current_entity = MusicbrainzBandEntity()
@@ -353,12 +353,12 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                         LOGGER.error('Wrong date: %s', artist)
                         continue
 
-                    yield current_entity
-
                     # Creates an entity foreach available alias
                     for alias in self._alias_entities(
                             current_entity, MusicbrainzBandEntity, aliases[artist['id']]):
                         yield alias
+
+                    yield current_entity
 
     def _artist_band_relationship_generator(self, dump_path):
         link_types = set(['855', '103', '305', '965', '895'])

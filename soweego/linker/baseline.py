@@ -22,6 +22,7 @@ from soweego.commons import (data_gathering, target_database, text_utils,
                              url_utils)
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.ingestor import wikidata_bot
+from soweego.commons import constants
 from soweego.wikidata.api_requests import get_data_for_linker
 
 LOGGER = logging.getLogger(__name__)
@@ -57,7 +58,7 @@ def cli(target, target_type, strategy, upload, sandbox, output_dir):
             target_type, target, target_database.get_pid(target))
         url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
         with gzip.open(wd_io_path, 'wt') as wd_io:
-            get_data_for_linker(qids, url_pids, ext_id_pids_to_urls, wd_io)
+            get_data_for_linker(qids, url_pids, ext_id_pids_to_urls, wd_io, None)
             LOGGER.info("Wikidata stream stored in %s" % wd_io_path)
 
     target_entity = target_database.get_entity(target, target_type)
@@ -111,7 +112,7 @@ def perfect_name_match(source_dataset, target_entity: BaseEntity, target_pid: st
     for row_entity in source_dataset:
         entity = json.loads(row_entity)
         qid = entity['qid']
-        for label in entity['label'].keys():
+        for label in entity[constants.NAME]:
             for res in data_gathering.perfect_name_search(target_entity, label):
                 yield (qid, target_pid, res.catalog_id)
 
@@ -127,7 +128,7 @@ def similar_name_tokens_match(source, target, target_pid: str) -> Iterable[Tuple
     for row_entity in source:
         entity = json.loads(row_entity)
         qid = entity['qid']
-        for label in entity['label'].keys():
+        for label in entity[constants.NAME]:
             if not label:
                 continue
 
