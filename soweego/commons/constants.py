@@ -13,6 +13,7 @@ from typing import TypeVar
 
 from recordlinkage import NaiveBayesClassifier, SVMClassifier
 
+from soweego.importer import models
 from soweego.importer.models import (base_entity, base_link_entity,
                                      base_nlp_entity, discogs_entity,
                                      musicbrainz_entity)
@@ -43,10 +44,11 @@ SUPPORTED_QUERY_SELECTORS = (IDENTIFIER, LINKS, DATASET, METADATA)
 # Entity types and corresponding Wikidata query
 HANDLED_ENTITIES = {
     'band': CLASS,
-    'musician': OCCUPATION,
     'actor': OCCUPATION,
     'director': OCCUPATION,
-    'producer': OCCUPATION
+    'musician': OCCUPATION,
+    'producer': OCCUPATION,
+    'writer': OCCUPATION
 }
 
 # DB entity Python types for typed function signatures
