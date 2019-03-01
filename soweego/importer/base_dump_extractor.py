@@ -55,5 +55,5 @@ class BaseDumpExtractor:
             LOGGER.info('Sleeping for %s seconds before retrying commit', delay)
             time.sleep(delay)
             delay *= 2
-            LOGGER.info("Commit retry for %s..." % entity)
+            LOGGER.info('Commit retry for %s ...', entity)
             self._commit_entity(db_manager, entity, delay)
