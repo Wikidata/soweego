@@ -117,7 +117,7 @@ def perfect_name_search(target_entity: constants.DB_ENTITY, to_search: str) -> I
         for r in session.query(target_entity).filter(
                 target_entity.name == to_search).all():
             yield r
-        session.commit()
+
     except:
         session.rollback()
         raise
