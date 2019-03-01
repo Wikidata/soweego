@@ -74,13 +74,17 @@ def cli(target, target_type, strategy, upload, sandbox, output_dir):
                 wd_io, target_entity, target_pid)
             _write_or_upload_result(
                 strategy, target, result, output_dir, "baseline_perfect_name.csv", upload, sandbox)
+
         if strategy == 'links' or strategy == 'all':
+            wd_io.seek(0) # go to beginning of file
             LOGGER.info("Starting similar links match")
             result = similar_link_tokens_match(
                 wd_io, target_link_entity, target_pid)
             _write_or_upload_result(
                 strategy, target, result, output_dir, "baseline_similar_links.csv", upload, sandbox)
+        
         if strategy == 'names' or strategy == 'all':
+            wd_io.seek(0) 
             LOGGER.info("Starting similar names match")
             result = similar_name_tokens_match(
                 wd_io, target_entity, target_pid)
