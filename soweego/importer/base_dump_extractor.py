@@ -45,7 +45,7 @@ class BaseDumpExtractor:
             session.add(entity)
             session.commit()
         except Exception as ex:
-            LOGGER.error("Failed to commit % s due to %s" % (entity, ex))
+            LOGGER.error('Failed to commit %s due to %s', entity, ex)
             session.rollback()
             success = False
         finally:
