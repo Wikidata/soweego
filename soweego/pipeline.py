@@ -4,7 +4,7 @@ import click
 from soweego.commons import target_database
 from soweego.commons.db_manager import DBManager
 from soweego.importer.importer import import_cli, validate_links_cli
-from soweego.linker import baseline
+from soweego.linker import baseline, evaluate, train, classify
 from soweego.validator.checks import (check_existence_cli, check_links_cli,
                                       check_metadata_cli)
 
@@ -13,8 +13,10 @@ LOGGER = logging.getLogger(__name__)
 
 @click.command()
 @click.argument('target', type=click.Choice(target_database.available_targets()))
-@click.option('--validator/--no-validator', default=False, help='Executes the validation steps for the target. Default: no.')
-@click.option('--importer/--no-importer', default=True, help='Executes the importer steps for the target. Default: yes.')
+@click.option('--validator/--no-validator', default=False,
+              help='Executes the validation steps for the target. Default: no.')
+@click.option('--importer/--no-importer', default=True,
+              help='Executes the importer steps for the target. Default: yes.')
 @click.option('--linker/--no-linker', default=True, help='Executes the linker steps for the target. Default: yes.')
 @click.option('--upload/--no-upload', default=True, help='Upload the results on wikidata. Default: yes.')
 @click.option('-c', '--credentials-path', type=click.Path(file_okay=True), default=None,
@@ -55,6 +57,9 @@ def _linker(target: str, upload: bool):
     upload_option = "--upload" if upload else "--no-upload"
     for target_type in target_database.available_types_for_target(target):
         baseline.cli([target, target_type, '-s', 'all', upload_option])
+        evaluate.cli(['nb', target, target_type])
+        train.cli(['nb', target, target_type])
+        classify.cli([target, target_type, '/app/shared/musicbrainz_nb_model.pkl', upload_option])
 
 
 def _validator(target: str, upload: bool):
