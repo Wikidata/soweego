@@ -16,7 +16,7 @@ from recordlinkage import NaiveBayesClassifier, SVMClassifier
 from soweego.importer import models
 from soweego.importer.models import (base_entity, base_link_entity,
                                      base_nlp_entity, discogs_entity,
-                                     musicbrainz_entity)
+                                     musicbrainz_entity, imdb_entity)
 from soweego.wikidata import vocabulary
 
 # Miscellanea
@@ -74,31 +74,31 @@ TARGET_CATALOGS = {
     'imdb': {
         'actor': {
             'qid': vocabulary.ACTOR,
-            'entity': models.imdb_entity.ImdbActorEntity,
+            'entity': imdb_entity.ImdbActorEntity,
             'link_entity': None,
             'nlp_entity': None
         },
         'director': {
             'qid': vocabulary.FILM_DIRECTOR,
-            'entity': models.imdb_entity.ImdbDirectorEntity,
+            'entity': imdb_entity.ImdbDirectorEntity,
             'link_entity': None,
             'nlp_entity': None
         },
         'musician': {
             'qid': vocabulary.MUSICIAN,
-            'entity': models.imdb_entity.ImdbMusicianEntity,
+            'entity': imdb_entity.ImdbMusicianEntity,
             'link_entity': None,
             'nlp_entity': None
         },
         'producer': {
             'qid': vocabulary.FILM_PRODUCER,
-            'entity': models.imdb_entity.ImdbProducerEntity,
+            'entity': imdb_entity.ImdbProducerEntity,
             'link_entity': None,
             'nlp_entity': None
         },
         'writer': {
             'qid': vocabulary.SCREENWRITER,
-            'entity': models.imdb_entity.ImdbWriterEntity,
+            'entity': imdb_entity.ImdbWriterEntity,
             'link_entity': None,
             'nlp_entity': None
         }
