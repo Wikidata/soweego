@@ -20,6 +20,7 @@ import json
 import logging
 from os import path
 from typing import Iterable, Tuple
+from tqdm import tqdm
 
 import click
 from sqlalchemy.exc import ProgrammingError
@@ -78,6 +79,7 @@ def cli(target, target_type, strategy, check_dates, upload, sandbox, output_dir)
 
     with gzip.open(wd_io_path, "rt") as wd_io:
         if strategy == 'perfect' or strategy == 'all':
+            wd_io.seek(0)  # go to beginning of file
             LOGGER.info("Starting perfect name match")
             result = perfect_name_match(
                 wd_io, target_entity, target_pid, check_dates)
@@ -85,15 +87,15 @@ def cli(target, target_type, strategy, check_dates, upload, sandbox, output_dir)
                 strategy, target, result, output_dir, "baseline_perfect_name.csv", upload, sandbox)
 
         if strategy == 'links' or strategy == 'all':
-            wd_io.seek(0) # go to beginning of file
+            wd_io.seek(0)  # go to beginning of file
             LOGGER.info("Starting similar links match")
             result = similar_link_tokens_match(
                 wd_io, target_link_entity, target_pid)
             _write_or_upload_result(
                 strategy, target, result, output_dir, "baseline_similar_links.csv", upload, sandbox)
-        
+
         if strategy == 'names' or strategy == 'all':
-            wd_io.seek(0) 
+            wd_io.seek(0)
             LOGGER.info("Starting similar names match")
             result = similar_name_tokens_match(
                 wd_io, target_entity, target_pid, check_dates)
@@ -124,7 +126,8 @@ def perfect_name_match(source_dataset, target_entity: BaseEntity, target_pid: st
     This strategy applies to any object that can be
     treated as a string: names, links, etc.
     """
-    for row_entity in source_dataset:
+
+    for row_entity in tqdm(source_dataset, total=_count_num_lines_in_file(source_dataset)):
         entity = json.loads(row_entity)
         qid = entity['qid']
         for label in entity[constants.NAME]:
@@ -141,7 +144,7 @@ def similar_name_tokens_match(source, target, target_pid: str, compare_dates: bo
     """
     to_exclude = set()
 
-    for row_entity in source:
+    for row_entity in tqdm(source, total=_count_num_lines_in_file(source)):
         entity = json.loads(row_entity)
         qid = entity['qid']
         for label in entity[constants.NAME]:
@@ -177,7 +180,7 @@ def similar_link_tokens_match(source, target, target_pid: str) -> Iterable[Tuple
     """
     to_exclude = set()
 
-    for row_entity in source:
+    for row_entity in tqdm(source, total=_count_num_lines_in_file(source)):
         entity = json.loads(row_entity)
         qid = entity['qid']
         for url in entity['url']:
@@ -241,3 +244,12 @@ def birth_death_date_match(target_entity: BaseEntity, wikidata_entity: dict) -> 
             return True
 
     return False
+
+
+def _count_num_lines_in_file(file_) -> int:
+    # count number of rows and go back to
+    # the beginning of file
+    n_rows = len(file_.readlines())
+    file_.seek(0)
+
+    return n_rows
