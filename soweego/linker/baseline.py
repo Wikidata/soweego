@@ -22,6 +22,7 @@ from soweego.commons import (data_gathering, target_database, text_utils,
                              url_utils)
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.ingestor import wikidata_bot
+from soweego.commons import constants
 from soweego.wikidata.api_requests import get_data_for_linker
 
 LOGGER = logging.getLogger(__name__)
