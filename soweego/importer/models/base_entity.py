@@ -23,7 +23,7 @@ class BaseEntity(AbstractConcreteBase, BASE):
     # Catalog identifier, indexed
     catalog_id = Column(String(50), nullable=False, index=True)
     # Full name
-    name = Column(String(255), nullable=False)
+    name = Column(String(255), nullable=False, index=True)
     # Tokenized full name, can be null. See text_utils#tokenize
     name_tokens = Column(String(255))
     # Date of birth

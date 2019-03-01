@@ -518,8 +518,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         return type_code in ['2', '5', '6', '3', '\\N']
 
     def _artist_gender(self, gender_code):
-        genders = {'1': 'male', '2': 'female', '3': 'other', '\\N': 'other'}
-        return genders[gender_code]
+        genders = {'1': 'male', '2': 'female'}
+        return genders.get(gender_code, None)
 
     def _count_num_lines_in_file(self, file_) -> int:
 
