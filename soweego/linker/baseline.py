@@ -214,7 +214,7 @@ def compare_dates_on_common_precision(common_precision: int, date_elements1: Ite
 
 
 def date_equals(born: datetime, born_precision: int, date_prec: Iterable) -> bool:
-    """Given a target date, it's precision and a wikidata date like ["1743-00-00T00:00:00Z", 9],
+    """Given a target date, its precision and a Wikidata date like ["1743-00-00T00:00:00Z", 9],
     tells if they're equal
     """
     if born is None or born_precision is None or not date_prec:
