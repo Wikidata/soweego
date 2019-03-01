@@ -111,7 +111,7 @@ def perfect_name_match(source_dataset, target_entity: BaseEntity, target_pid: st
     for row_entity in source_dataset:
         entity = json.loads(row_entity)
         qid = entity['qid']
-        for label in entity['name']:
+        for label in entity[constants.NAME]:
             for res in data_gathering.perfect_name_search(target_entity, label):
                 yield (qid, target_pid, res.catalog_id)
 
