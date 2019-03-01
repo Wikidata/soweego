@@ -421,7 +421,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 if artist['id'] in ids_translator:
                     ids_translator[artist['id']] = artist['gid']
 
-        LOGGER.info("Adding relationships into DB")
+        LOGGER.info('Adding relationships into DB')
 
         yield len(relationships)  # first yield is always the number of rows
 
