@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """TODO module docstring"""
+from datetime import datetime
 
 import dateutil
 from dateutil.relativedelta import relativedelta
@@ -199,7 +200,8 @@ def similar_link_tokens_match(source, target, target_pid: str) -> Iterable[Tuple
                 LOGGER.error(f'Issues searching tokens {tokenized} of {url}')
 
 
-def compare_dates_on_common_precision(common_precision, date_elements1, date_elements2):
+def compare_dates_on_common_precision(common_precision: int, date_elements1: Iterable,
+                                      date_elements2: Iterable) -> bool:
     # safety check
     if common_precision < 9:
         return False
@@ -209,48 +211,26 @@ def compare_dates_on_common_precision(common_precision, date_elements1, date_ele
     return True
 
 
-def birth_death_date_match(target_entity: BaseEntity, wikidata_entity: dict) -> bool:
-    # If the are equal it means they are both none, so it's not a match.
-    if wikidata_entity.get('born') is None and target_entity.born is None:
-        LOGGER.debug(f'Excluded - {target_entity} AND {wikidata_entity} born dates None')
+def date_equals(born: datetime, born_precision: int, date_prec: Iterable) -> bool:
+    """Given a target date, it's precision and a wikidata date like ["1743-00-00T00:00:00Z", 9],
+    tells if they're equal
+    """
+    if born is None or born_precision is None or not date_prec:
         return False
-    else:
-        # If only one of them is none, they are surely not a match
-        if wikidata_entity.get('born') and target_entity.born:
-            # foreach wikidata date, checks if it's a match
-            for date_prec in wikidata_entity['born']:
-                # After all this corner cases we compute the shared part of the date and we check if it's contained in both
-                common_born_precision = min(target_entity.born_precision, date_prec[1])
-                born_date_elements = date_prec[0].split('T')[0].split('-')
-                born_target_elements = [target_entity.born.year, target_entity.born.month, target_entity.born.day]
-                if not compare_dates_on_common_precision(common_born_precision, born_date_elements,
-                                                         born_target_elements):
-                    LOGGER.debug(
-                        f'Excluded - {target_entity} and {wikidata_entity} common born precision does not match')
-                    return False
-        else:
-            LOGGER.debug(f'Excluded - {target_entity} OR {wikidata_entity} born date is None')
-            return False
+    prec = int(date_prec[1])
+    date_elements = date_prec[0].split('T')[0].split('-')
+    common_precision = min(born_precision, prec)
+    return compare_dates_on_common_precision(common_precision, date_elements, [born.year, born.month, born.day])
 
-    # If the are equal it means they are both none, so it's a match.
-    # Due to death date can be missing
-    if not (wikidata_entity.get('died') is None and target_entity.died is None):
-        # If only one of them is none, they are surely not a match
-        if wikidata_entity.get('died') and target_entity.died:
-            # If the wikidata entity has more than one date, it's not a match
-            for date_prec in wikidata_entity['died']:
-                # After all this corner case we compute the shared part of the date and we check if it's contained in both
-                common_death_precision = min(target_entity.died_precision, date_prec[1])
-                death_date_elements = date_prec[0].split('T')[0].split('-')
-                death_target_elements = [target_entity.died.year, target_entity.died.month, target_entity.died.day]
-                if not compare_dates_on_common_precision(common_death_precision, death_date_elements,
-                                                         death_target_elements):
-                    LOGGER.debug(
-                        f'Excluded - {target_entity} and {wikidata_entity} common death precision does not match')
-                    return False
-        else:
 
-            LOGGER.debug(f'Excluded - {target_entity} OR {wikidata_entity} born date is None')
-            return False
+def birth_death_date_match(target_entity: BaseEntity, wikidata_entity: dict) -> bool:
+    """Given a wikidata json and a BaseEntity, checks born/death dates and tells if they match"""
+    for date_prec in wikidata_entity.get('born', []):
+        if date_equals(target_entity.born, target_entity.born_precision, date_prec):
+            return True
 
-    return True
+    for date_prec in wikidata_entity.get('died', []):
+        if date_equals(target_entity.died, target_entity.died_precision, date_prec):
+            return True
+
+    return False

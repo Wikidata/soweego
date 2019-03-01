@@ -99,6 +99,27 @@ class BaselineTest(TestCase):
 
         self.assertTrue(baseline.birth_death_date_match(target_entity, wikidata_json))
 
+    def test_datecomparison_onlydeathmatch(self):
+        wikidata_json = json.loads("""
+        {
+            "qid": "Q7330088",
+            "name": ["Richard Woodward"],
+            "born": [
+                ["1743-00-00T00:00:00Z", 9]
+            ],
+            "died": [
+                ["1777-11-22T00:00:00Z", 11]
+            ]
+        }""")
+        target_entity = BaseEntity()
+        target_entity.name = "Richard Woodward"
+        target_entity.born = None
+        target_entity.born_precision = None
+        target_entity.died = datetime(year=1777, month=11, day=22)
+        target_entity.died_precision = 11
+
+        self.assertTrue(baseline.birth_death_date_match(target_entity, wikidata_json))
+
 
 if __name__ == '__main__':
     main()
