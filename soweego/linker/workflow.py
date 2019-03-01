@@ -80,10 +80,10 @@ def build_wikidata(goal, catalog, entity, dir_io):
 def build_target(goal, catalog, entity, qids_and_tids, dir_io):
     if goal == 'training':
         target_io_path = os.path.join(
-            dir_io, constants.TARGET_TRAINING_SET % catalog)
+            dir_io, constants.TARGET_TRAINING_SET % (catalog, entity))
     elif goal == 'classification':
         target_io_path = os.path.join(
-            dir_io, constants.TARGET_CLASSIFICATION_SET % catalog)
+            dir_io, constants.TARGET_CLASSIFICATION_SET % (catalog, entity))
     else:
         raise ValueError(
             "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'" % goal)
