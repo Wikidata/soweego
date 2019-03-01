@@ -127,7 +127,7 @@ def similar_name_tokens_match(source, target, target_pid: str) -> Iterable[Tuple
     for row_entity in source:
         entity = json.loads(row_entity)
         qid = entity['qid']
-        for label in entity['name']:
+        for label in entity[constants.NAME]:
             if not label:
                 continue
 
