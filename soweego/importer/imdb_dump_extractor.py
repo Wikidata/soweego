@@ -253,7 +253,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
             # counter to see how often we need to commit the session to
             # the DB
-            e_counter = 0
+            e_counter = 1
 
             # for every entry in the file..
             for entity_info in tqdm(reader, total=n_rows):

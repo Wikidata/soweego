@@ -151,7 +151,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
                 # commit entities to DB in batches, it is mode
                 # efficient
-                if n_added_entities % self._sqlalchemy_commit_every == 0:
+                if n_added_entities+1 % self._sqlalchemy_commit_every == 0:
                     session.commit()
 
                 n_added_entities += 1

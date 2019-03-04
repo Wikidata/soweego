@@ -42,7 +42,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
     valid_links = 0
     dead_links = 0
 
-    _sqlalchemy_commit_every = 700
+    _sqlalchemy_commit_every = 5000
 
     def get_dump_download_urls(self) -> Iterable[str]:
         response = get(DUMP_LIST_URL_TEMPLATE.format(date.today().year))
@@ -90,7 +90,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             # we count how many iterations we've done up until now
             # so that we can do an insertion every `self._sqlalchemy_commit_every`
             # loops
-            e_counter = 0
+            e_counter = 1
 
             for _, node in tqdm(et.iterparse(dump), total=n_rows):
                 if not node.tag == 'artist':
@@ -137,6 +137,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                 if e_counter % self._sqlalchemy_commit_every == 0:
                     # commit in batches of `self._sqlalchemy_commit_every`
                     session.commit()
+                    session.expunge_all()
 
                 e_counter += 1
 
