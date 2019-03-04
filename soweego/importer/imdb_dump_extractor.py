@@ -71,7 +71,9 @@ class ImdbDumpExtractor(BaseDumpExtractor):
     def extract_and_populate(self, dump_file_paths: List[str], resolve: bool) -> None:
         """
         Extracts the data in the dumps (person and movie) and processes them.
-        It then proceeds to add the appropriate data to the database. See
+        It then proceeds to add the appropriate data to the database. 
+        
+        See
         :ref:`soweego.importer.models.imdb_entity` module to see the SQLAlchemy
         definition of the entities we use to save IMDB data.
 
@@ -225,8 +227,8 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
     def _loop_through_entities(self, file_path: str) -> Generator[Tuple[Dict, List], None, None]:
         """
-        Generator that given an IMDb dump file (which 
-        should be ".tsv.gz" format) it loops through every 
+        Generator that given an IMDb dump file (which
+        should be ".tsv.gz" format) it loops through every
         entry and yields it.
 
         :return: a generator which yields a Tuple[entity_info, entity_array]
@@ -347,7 +349,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         in IMDB and the IDs of the movies for which this person is
         known (which also come from IMDB). We add a
         :ref:`soweego.importer.models.imdb_entity.ImdbPersonMovieRelationship`
-        entity to the session for each realtion.
+        entity to the session for each relation.
 
         :param person_info: dictionary that contains the IMDB person ID and
         the IMDB movie IDs (for movies the specific person is known). The movie
