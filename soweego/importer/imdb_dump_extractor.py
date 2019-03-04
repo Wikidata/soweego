@@ -270,7 +270,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 # is done
                 if e_counter % self._sqlalchemy_commit_every == 0:
 
-                    LOGGER.info("Adding entities to the database, this might take a couple of minutes. "
+                    LOGGER.info("Adding batch of entities to the database, this might take a couple of minutes. "
                     "Progress will resume soon.")
                     
                     sss = datetime.datetime.now()
@@ -286,6 +286,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 e_counter += 1
 
             # commit remaining entities
+            session.bulk_save_objects(entity_array)
             session.commit()
 
     def _populate_person(self, person_entity: imdb_entity.ImdbPersonEntity,
