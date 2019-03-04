@@ -13,7 +13,7 @@ import csv
 import datetime
 import gzip
 import logging
-from typing import Dict, List, Generator
+from typing import Dict, List, Generator, Tuple
 
 from tqdm import tqdm
 
@@ -42,7 +42,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
     n_misc = 0
     n_person_movie_links = 0
 
-    _sqlalchemy_commit_every = 700
+    _sqlalchemy_commit_every = 2_000_000
 
     def get_dump_download_urls(self) -> List[str]:
         """
@@ -109,11 +109,9 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
         LOGGER.info('Starting import of movies ...')
 
-        movie_session = db_manager.new_session()
 
         # Here we open the movie dump file, and add everything to the DB
-        for movie_info in self._loop_through_entities(movies_file_path,
-                                                      movie_session):
+        for movie_info, entity_array in self._loop_through_entities(movies_file_path):
 
             # create the movie SQLAlchemy entity and populate it
             movie_entity = imdb_entity.ImdbMovieEntity()
@@ -131,12 +129,9 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 movie_entity.genres = movie_info.get(
                     'genres').replace(',', ' ')
 
-            movie_session.add(movie_entity)
+            entity_array.append(movie_entity)
 
             self.n_movies += 1
-
-        # close movie session
-        movie_session.close()
 
         # mark end for movie import process
         end = datetime.datetime.now()
@@ -149,11 +144,8 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         # reset timer for persons import
         start = datetime.datetime.now()
 
-        # start a new session for the import of people
-        person_session = db_manager.new_session()
-
-        for person_info in self._loop_through_entities(person_file_path,
-                                                       person_session):
+        
+        for person_info, entity_array  in self._loop_through_entities(person_file_path):
 
             # IMDb saves the list of professions as a comma separated
             # string
@@ -164,6 +156,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 LOGGER.debug('Person %s has no professions',
                              person_info.get('nconst'))
                 continue
+
 
             professions = professions.split(',')
 
@@ -195,7 +188,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
             # if the only profession a person has is `miscellaneous` then we
             # add it to all tables
-            if professions == 'miscellaneous':
+            if professions == ['miscellaneous']:
                 self.n_misc += 1
                 types_of_entities = [
                     imdb_entity.ImdbActorEntity(),
@@ -204,22 +197,21 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                     imdb_entity.ImdbProducerEntity(),
                     imdb_entity.ImdbWriterEntity(),
                 ]
+            
 
             # add person to every matching table
             for etype in types_of_entities:
-                self._populate_person(etype, person_info, person_session)
+                self._populate_person(etype, person_info, entity_array)
 
             # if person is known for any movies then add these to the
             # database as well
             if person_info.get('knownForTitles'):
                 self.n_person_movie_links += 1
                 self._populate_person_movie_relations(
-                    person_info, person_session)
+                    person_info, entity_array)
 
             self.n_persons += 1
 
-        # close person session
-        person_session.close()
 
         # mark the end time for the person import process
         end = datetime.datetime.now()
@@ -231,15 +223,20 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                     self.n_directors, self.n_musicians, self.n_producers,
                     self.n_writers, self.n_misc)
 
-    def _loop_through_entities(self, file_path: str,
-                               session: object) -> Generator[Dict, None, None]:
+    def _loop_through_entities(self, file_path: str) -> Generator[Tuple[Dict, List], None, None]:
         """
         Generator that given an IMDb dump file (which 
         should be ".tsv.gz" format) it loops through every 
-        entry and yields it
+        entry and yields it.
+
+        :return: a generator which yields a Tuple[entity_info, entity_array]
+        the consumer of this generator will take `entity_info`, create an
+        SQLAlchemy entity, and append this to the `entity_array`
         """
+        db_manager = DBManager()
 
         with gzip.open(file_path, 'rt') as ddump:
+            session = db_manager.new_session()
 
             # count number of rows for TQDM, so we can display how
             # much is missing to complete the process. Then go back
@@ -247,6 +244,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             n_rows = sum(1 for line in ddump)
             ddump.seek(0)
 
+            entity_array = []
             LOGGER.debug('Dump "%s" has %d entries', file_path, n_rows)
 
             reader = csv.DictReader(ddump, delimiter='\t')
@@ -261,7 +259,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 self._normalize_null(entity_info)
 
                 # yield the cleaned dict
-                yield entity_info
+                yield entity_info, entity_array
 
                 # every `_sqlalchemy_commit_every` loops we commit the session to
                 # the DB. This is more efficient than commiting every loop, and
@@ -269,7 +267,18 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 # adding everything to session and commiting once the for loop
                 # is done
                 if e_counter % self._sqlalchemy_commit_every == 0:
+
+                    LOGGER.info("Adding entities to the database, this might take a couple of minutes.")
+                    
+                    sss = datetime.datetime.now()
+
+                    session.bulk_save_objects(entity_array)
                     session.commit()
+                    session.expunge_all() # clear session
+
+                    entity_array.clear() # clear entity array
+                    
+                    LOGGER.debug("It took %s to entities to the database", datetime.datetime.now()-sss)
 
                 e_counter += 1
 
@@ -278,7 +287,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
     def _populate_person(self, person_entity: imdb_entity.ImdbPersonEntity,
                          person_info: Dict,
-                         session: object) -> None:
+                         entity_array: object) -> None:
         """
         Given an instance of
         :ref:`soweego.importer.models.imdb_entity.ImdbPersonEntity`
@@ -289,8 +298,8 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         :param person_entity: the entity which we want to populate
         :param person_info: the data we want to populate the
         entity with
-        :param session: the SQLAlchemy session to which we will
-        add the entity once it is populated.
+        :param entity_array: an external array to which we'll add the
+        entity once it is populated.
         """
 
         person_entity.catalog_id = person_info.get('nconst')
@@ -329,10 +338,10 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 person_info.get('primaryProfession').split(',')
             ))
 
-        session.add(person_entity)
+        entity_array.append(person_entity)
 
     def _populate_person_movie_relations(self, person_info: Dict,
-                                         session: object) -> None:
+                                         entity_array: object) -> None:
         """
         Given a `person_info` we extract the ID that the person has
         in IMDB and the IDs of the movies for which this person is
@@ -343,8 +352,8 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         :param person_info: dictionary that contains the IMDB person ID and
         the IMDB movie IDs (for movies the specific person is known). The movie
         IDs are a comma separated string
-        :param session: the SQLAlchemy session to which we will
-        add the relation entities.
+        :param entity_array: an external array to which we'll add the
+        person-movie relations.
         """
 
         know_for_titles = person_info.get(
@@ -352,7 +361,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
         for title in know_for_titles:
 
-            session.add(imdb_entity.ImdbPersonMovieRelationship(
+            entity_array.append(imdb_entity.ImdbPersonMovieRelationship(
                 from_catalog_id=person_info.get('nconst'),
                 to_catalog_id=title
             ))
