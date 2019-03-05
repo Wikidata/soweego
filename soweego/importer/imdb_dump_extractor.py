@@ -289,6 +289,10 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             session.bulk_save_objects(entity_array)
             session.commit()
 
+            # clear list reference since it might still be available in
+            # the scope where this generator was used.
+            entity_array.clear() 
+
     def _populate_person(self, person_entity: imdb_entity.ImdbPersonEntity,
                          person_info: Dict,
                          entity_array: object) -> None:
