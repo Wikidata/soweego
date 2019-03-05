@@ -42,7 +42,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
     n_misc = 0
     n_person_movie_links = 0
 
-    _sqlalchemy_commit_every = 2_000_000
+    _sqlalchemy_commit_every = 1_500_000
 
     def get_dump_download_urls(self) -> List[str]:
         """
