@@ -42,7 +42,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
     valid_links = 0
     dead_links = 0
 
-    _sqlalchemy_commit_every = 5000
+    _sqlalchemy_commit_every = 1_000_000
 
     def get_dump_download_urls(self) -> Iterable[str]:
         response = get(DUMP_LIST_URL_TEMPLATE.format(date.today().year))
@@ -87,10 +87,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
 
             session = db_manager.new_session()
 
-            # we count how many iterations we've done up until now
-            # so that we can do an insertion every `self._sqlalchemy_commit_every`
-            # loops
-            e_counter = 1
+            entity_array = []  # array to which we'll add the entities
 
             for _, node in tqdm(et.iterparse(dump), total=n_rows):
                 if not node.tag == 'artist':
@@ -116,33 +113,45 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                 members = node.find('members')
                 if groups:
                     entity = discogs_entity.DiscogsMusicianEntity()
-                    self._populate_musician(db_manager,
+                    self._populate_musician(entity_array,
                                             entity, identifier, name, living_links, node)
                 # Band
                 elif members:
                     entity = discogs_entity.DiscogsGroupEntity()
-                    self._populate_band(db_manager, entity, identifier,
+                    self._populate_band(entity_array, entity, identifier,
                                         name, living_links, node)
                 # Can't infer the entity type, so populate both
                 else:
                     LOGGER.debug(
                         'Unknown artist type. Will add it to both musicians and bands: %s', identifier)
                     entity = discogs_entity.DiscogsMusicianEntity()
-                    self._populate_musician(db_manager,
+                    self._populate_musician(entity_array,
                                             entity, identifier, name, living_links, node)
                     entity = discogs_entity.DiscogsGroupEntity()
-                    self._populate_band(db_manager, entity, identifier,
+                    self._populate_band(entity_array, entity, identifier,
                                         name, living_links, node)
 
-                if e_counter % self._sqlalchemy_commit_every == 0:
-                    # commit in batches of `self._sqlalchemy_commit_every`
-                    session.commit()
-                    session.expunge_all()
+                # commit in batches of `self._sqlalchemy_commit_every`
+                if len(entity_array) > self._sqlalchemy_commit_every:
 
-                e_counter += 1
+                    LOGGER.info("Adding batch of entities to the database, this might take a couple of minutes. "
+                                "Progress will resume soon.")
+
+                    insert_start_time = datetime.now()
+
+                    session.bulk_save_objects(entity_array)
+                    session.commit()
+                    session.expunge_all()  # clear session
+
+                    entity_array.clear()  # clear entity array
+
+                    LOGGER.debug("It took %s to add %s entities to the database",
+                                 datetime.now()-insert_start_time,
+                                 self._sqlalchemy_commit_every)
 
             # finally commit remaining entities in session
             # (if any), and close session
+            session.bulk_save_objects(entity_array)
             session.commit()
             session.close()
 
@@ -152,26 +161,27 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             end - start, self.total_entities, self.musicians, self.musician_links, self.bands, self.band_links,
             self.dead_links)
 
-    def _populate_band(self, db_manager, entity: discogs_entity.DiscogsGroupEntity, identifier, name, links, node):
+    def _populate_band(self, entity_array, entity: discogs_entity.DiscogsGroupEntity, identifier, name, links, node):
         # Main entity
         self._fill_entity(entity, identifier, name, node)
         self.bands += 1
         self.total_entities += 1
         # Textual data
         self._populate_nlp_entity(
-            db_manager, node, discogs_entity.DiscogsGroupNlpEntity, identifier)
+            entity_array, node, discogs_entity.DiscogsGroupNlpEntity, identifier)
         # Denormalized name variations
-        self._populate_name_variations(db_manager, node, entity, identifier)
+        self._populate_name_variations(entity_array, node, entity, identifier)
         # Links
         self._populate_links(
-            db_manager, links, discogs_entity.DiscogsGroupLinkEntity, identifier)
+            entity_array, links, discogs_entity.DiscogsGroupLinkEntity, identifier)
 
-        self._commit_entity(db_manager, entity)
+        entity_array.append(entity)
+
         # TODO populate group -> musicians relationship table
         #  for member in list(members):
         #      get member.attrib['id']
 
-    def _populate_musician(self, db_manager, entity: discogs_entity.DiscogsMusicianEntity, identifier, name, links,
+    def _populate_musician(self, entity_array, entity: discogs_entity.DiscogsMusicianEntity, identifier, name, links,
                            node):
         # Main entity
         self._fill_entity(entity, identifier, name, node)
@@ -179,32 +189,33 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         self.total_entities += 1
         # Textual data
         self._populate_nlp_entity(
-            db_manager, node, discogs_entity.DiscogsMusicianNlpEntity, identifier)
+            entity_array, node, discogs_entity.DiscogsMusicianNlpEntity, identifier)
         # Denormalized name variations
-        self._populate_name_variations(db_manager, node, entity, identifier)
+        self._populate_name_variations(entity_array, node, entity, identifier)
         # Links
         self._populate_links(
-            db_manager, links, discogs_entity.DiscogsMusicianLinkEntity, identifier)
+            entity_array, links, discogs_entity.DiscogsMusicianLinkEntity, identifier)
 
-        self._commit_entity(db_manager, entity)
+        entity_array.append(entity)
+
         # TODO populate musician -> groups relationship table
         #  for group in list(groups):
         #      get group.attrib['id']
 
-    def _populate_links(self, db_manager, links, entity_class, identifier):
+    def _populate_links(self, entity_array, links, entity_class, identifier):
         for link in links:
             link_entity = entity_class()
             self._fill_link_entity(link_entity, identifier, link)
-            self._commit_entity(db_manager, link_entity)
+            entity_array.append(link_entity)
 
-    def _populate_name_variations(self, db_manager, artist_node, current_entity, identifier):
+    def _populate_name_variations(self, entity_array, artist_node, current_entity, identifier):
         name_variations_node = artist_node.find('namevariations')
         if name_variations_node:
             children = list(name_variations_node)
             if children:
                 for e in self._denormalize_name_variation_entities(
                         current_entity, children):
-                    self._commit_entity(db_manager, e)
+                    entity_array.append(e)
             else:
                 LOGGER.debug(
                     'Artist %s has an empty <namevariations/> tag', identifier)
@@ -212,7 +223,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             LOGGER.debug(
                 'Artist %s has no <namevariations> tag', identifier)
 
-    def _populate_nlp_entity(self, db_manager, artist_node, entity_class, identifier):
+    def _populate_nlp_entity(self, entity_array, artist_node, entity_class, identifier):
         profile = artist_node.findtext('profile')
         if profile:
             nlp_entity = entity_class()
@@ -221,7 +232,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             description_tokens = text_utils.tokenize(profile)
             if description_tokens:
                 nlp_entity.description_tokens = ' '.join(description_tokens)
-            self._commit_entity(db_manager, nlp_entity)
+            entity_array.append(nlp_entity)
             self.total_entities += 1
             if 'Musician' in entity_class.__name__:
                 self.musician_nlp += 1
