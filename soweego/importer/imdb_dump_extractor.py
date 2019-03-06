@@ -72,7 +72,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         """
         Extracts the data in the dumps (person and movie) and processes them.
         It then proceeds to add the appropriate data to the database. 
-        
+
         See
         :ref:`soweego.importer.models.imdb_entity` module to see the SQLAlchemy
         definition of the entities we use to save IMDB data.
@@ -111,7 +111,6 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
         LOGGER.info('Starting import of movies ...')
 
-
         # Here we open the movie dump file, and add everything to the DB
         for movie_info, entity_array in self._loop_through_entities(movies_file_path):
 
@@ -146,8 +145,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         # reset timer for persons import
         start = datetime.datetime.now()
 
-        
-        for person_info, entity_array  in self._loop_through_entities(person_file_path):
+        for person_info, entity_array in self._loop_through_entities(person_file_path):
 
             # IMDb saves the list of professions as a comma separated
             # string
@@ -158,7 +156,6 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 LOGGER.debug('Person %s has no professions',
                              person_info.get('nconst'))
                 continue
-
 
             professions = professions.split(',')
 
@@ -199,7 +196,6 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                     imdb_entity.ImdbProducerEntity(),
                     imdb_entity.ImdbWriterEntity(),
                 ]
-            
 
             # add person to every matching table
             for etype in types_of_entities:
@@ -213,7 +209,6 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                     person_info, entity_array)
 
             self.n_persons += 1
-
 
         # mark the end time for the person import process
         end = datetime.datetime.now()
@@ -271,17 +266,18 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 if e_counter % self._sqlalchemy_commit_every == 0:
 
                     LOGGER.info("Adding batch of entities to the database, this might take a couple of minutes. "
-                    "Progress will resume soon.")
-                    
+                                "Progress will resume soon.")
+
                     sss = datetime.datetime.now()
 
                     session.bulk_save_objects(entity_array)
                     session.commit()
-                    session.expunge_all() # clear session
+                    session.expunge_all()  # clear session
 
-                    entity_array.clear() # clear entity array
-                    
-                    LOGGER.debug("It took %s to add the entities to the database", datetime.datetime.now()-sss)
+                    entity_array.clear()  # clear entity array
+
+                    LOGGER.debug("It took %s to add %s entities to the database", datetime.datetime.now()-sss,
+                                 self._sqlalchemy_commit_every)
 
                 e_counter += 1
 
@@ -291,7 +287,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
             # clear list reference since it might still be available in
             # the scope where this generator was used.
-            entity_array.clear() 
+            entity_array.clear()
 
     def _populate_person(self, person_entity: imdb_entity.ImdbPersonEntity,
                          person_info: Dict,
@@ -322,7 +318,6 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                for prof in ['actor', 'actress']):
             person_entity.gender = 'male' if 'actor' in person_info.get(
                 'primaryProfession') else 'female'
-
 
         # IMDb only provides us with the birth and death year of
         # a person, so this is the only one we'll take into
