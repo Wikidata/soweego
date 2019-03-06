@@ -42,7 +42,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
     n_misc = 0
     n_person_movie_links = 0
 
-    _sqlalchemy_commit_every = 1_500_000
+    _sqlalchemy_commit_every = 1_000_000
 
     def get_dump_download_urls(self) -> List[str]:
         """
@@ -246,10 +246,6 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
             reader = csv.DictReader(ddump, delimiter='\t')
 
-            # counter to see how often we need to commit the session to
-            # the DB
-            e_counter = 1
-
             # for every entry in the file..
             for entity_info in tqdm(reader, total=n_rows):
                 # clean the entry
@@ -263,7 +259,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 # is not so hard on the memory requirements as would be
                 # adding everything to session and commiting once the for loop
                 # is done
-                if e_counter % self._sqlalchemy_commit_every == 0:
+                if len(entity_array) >= self._sqlalchemy_commit_every:
 
                     LOGGER.info("Adding batch of entities to the database, this might take a couple of minutes. "
                                 "Progress will resume soon.")
@@ -278,9 +274,8 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
                     LOGGER.debug("It took %s to add %s entities to the database",
                                  datetime.datetime.now()-insert_start_time,
-                                 self._sqlalchemy_commit_every)
+                                 len(entity_array))
 
-                e_counter += 1
 
             # commit remaining entities
             session.bulk_save_objects(entity_array)

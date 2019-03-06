@@ -39,7 +39,7 @@ LOGGER = logging.getLogger(__name__)
 
 class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
-    _sqlalchemy_commit_every = 1_500_000
+    _sqlalchemy_commit_every = 1_000_000
 
     def get_dump_download_urls(self) -> Iterable[str]:
         latest_version = requests.get(
@@ -156,7 +156,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
                 # commit entities to DB in batches, it is mode
                 # efficient
-                if n_added_entities+1 % self._sqlalchemy_commit_every == 0:
+                if len(entity_array) >= self._sqlalchemy_commit_every:
 
                     LOGGER.info("Adding batch of entities to the database, "
                                 "this might take a couple of minutes. Progress will "
@@ -172,7 +172,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
                     LOGGER.debug("It took %s to add %s entities to the database",
                                  datetime.now()-insert_start_time,
-                                 self._sqlalchemy_commit_every)
+                                 len(entity_array))
 
                 n_added_entities += 1
 
