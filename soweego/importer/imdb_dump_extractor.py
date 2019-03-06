@@ -268,7 +268,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                     LOGGER.info("Adding batch of entities to the database, this might take a couple of minutes. "
                                 "Progress will resume soon.")
 
-                    sss = datetime.datetime.now()
+                    insert_start_time = datetime.datetime.now()
 
                     session.bulk_save_objects(entity_array)
                     session.commit()
@@ -276,7 +276,8 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
                     entity_array.clear()  # clear entity array
 
-                    LOGGER.debug("It took %s to add %s entities to the database", datetime.datetime.now()-sss,
+                    LOGGER.debug("It took %s to add %s entities to the database",
+                                 datetime.datetime.now()-insert_start_time,
                                  self._sqlalchemy_commit_every)
 
                 e_counter += 1

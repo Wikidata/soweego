@@ -15,7 +15,7 @@ import re
 import tarfile
 from collections import defaultdict
 from csv import DictReader
-from datetime import date
+from datetime import date, datetime
 from typing import Iterable, Tuple
 
 import requests
@@ -144,7 +144,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         # the number of rows that the generator will yield
         n_rows = next(blt_gen)
 
-        entity_array = [] # array to which we'll add the entities
+        entity_array = []  # array to which we'll add the entities
 
         # the generator will give us a new entity each loop
         # so we just add this to the `entity_array` and commit
@@ -159,15 +159,21 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 if n_added_entities+1 % self._sqlalchemy_commit_every == 0:
 
                     LOGGER.info("Adding batch of entities to the database, "
-                    "this might take a couple of minutes. Progress will "
-                    "resume soon.")
-                    
+                                "this might take a couple of minutes. Progress will "
+                                "resume soon.")
+
+                    insert_start_time = datetime.now()
+
                     session.bulk_save_objects(entity_array)
                     session.commit()
-                    session.expunge_all() # clear session
+                    session.expunge_all()  # clear session
 
-                    entity_array.clear() # clear entity array
-                    
+                    entity_array.clear()  # clear entity array
+
+                    LOGGER.debug("It took %s to add %s entities to the database",
+                                 datetime.now()-insert_start_time,
+                                 self._sqlalchemy_commit_every)
+
                 n_added_entities += 1
 
             except IntegrityError as i:
