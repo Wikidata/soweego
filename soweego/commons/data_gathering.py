@@ -139,8 +139,22 @@ def gather_target_dataset(entity_type, catalog, identifiers, fileout, for_classi
         'Gathering %s %s for the linker ...', catalog, to_log)
 
     session = DBManager.connect_to_db()
-    query = session.query(base, link, nlp).outerjoin(link, base.catalog_id == link.catalog_id).outerjoin(
-        nlp, base.catalog_id == nlp.catalog_id).filter(condition)
+
+    ##########
+
+    tables = [t for t in [base, link, nlp] if t]
+
+    query = session.query(*tables)
+
+    tables.remove(base)
+    for t in tables:
+        query = query.outerjoin(t, base.catalog_id == t.catalog_id)
+
+    query = query.filter(condition)
+
+    ########
+    # query = session.query(base, link, nlp).outerjoin(link, base.catalog_id == link.catalog_id).outerjoin(
+    #     nlp, base.catalog_id == nlp.catalog_id).filter(condition)
 
     try:
         result = _run_query(query, catalog, entity_type)
@@ -160,6 +174,8 @@ def gather_target_dataset(entity_type, catalog, identifiers, fileout, for_classi
 def _build_dataset_relevant_fields(base, link, nlp):
     fields = set()
     for entity in base, link, nlp:
+        if not entity:
+            continue
         for column in entity.__mapper__.column_attrs:
             field = column.key
             if field in ('internal_id', 'catalog_id'):
