@@ -59,7 +59,7 @@ def _linker(target: str, upload: bool):
         baseline.cli([target, target_type, '-s', 'all', upload_option])
         evaluate.cli(['nb', target, target_type])
         train.cli(['nb', target, target_type])
-        classify.cli([target, target_type, '/app/shared/musicbrainz_nb_model.pkl', upload_option])
+        classify.cli([target, target_type, '/app/shared/musicbrainz_%s_nb_model.pkl'.format(target_type), upload_option])
 
 
 def _validator(target: str, upload: bool):
