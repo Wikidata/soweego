@@ -149,7 +149,7 @@ def gather_target_dataset(goal, entity_type, catalog, identifiers):
     tables = [tb for tb in (base, link, nlp) if tb]
 
     # create the query
-    query = Query(*tables)
+    query = Query(tables)
 
     # remove base table so that we don't "outerjoin" it with
     # itself
@@ -222,7 +222,7 @@ def _dump_target_dataset_query_result(result, relevant_fields, fileout, chunk_si
 
         fileout.write(json.dumps(parsed, ensure_ascii=False) + '\n')
         fileout.flush()
-        
+
         if len(chunk) <= chunk_size:
             chunk.append(parsed)
         else:
