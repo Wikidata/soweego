@@ -18,7 +18,7 @@ from soweego.commons import localizations as loc
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import configure_mappers, sessionmaker
+from sqlalchemy.orm import configure_mappers, session, sessionmaker
 from sqlalchemy.pool import NullPool
 
 BASE = declarative_base()
@@ -30,7 +30,7 @@ class DBManager():
 
     """Exposes some primitives for the DB access"""
 
-    __engine: object
+    __engine: Engine
     __credentials = None
 
     def __init__(self):
@@ -52,7 +52,7 @@ class DBManager():
         """Return the current SQL Alchemy engine instance"""
         return self.__engine
 
-    def new_session(self) -> object:
+    def new_session(self) -> session.Session:
         """Create a new DB session"""
         Session = sessionmaker(bind=self.__engine)
         return Session()

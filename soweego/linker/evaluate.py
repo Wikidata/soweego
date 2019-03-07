@@ -64,34 +64,46 @@ def evaluate(classifier, catalog, entity, binarize, dir_io):
     # Build
     wd_reader, target_reader = workflow.train_test_build(
         catalog, entity, dir_io)
-    wd_generator, target = workflow.preprocess(
-        'training', catalog, wd_reader, target_reader, dir_io)
+    wd_generator, target_generator = workflow.preprocess(
+        'training', wd_reader, target_reader)
 
-    for i, chunk in enumerate(wd_generator, 1):
-        # Split (2/3 train, 1/3 test)
-        wd_train, wd_test = train_test_split(chunk, test_size=0.33)
-        target_train, target_test = train_test_split(target, test_size=0.33)
+    for i, wd_chunk in enumerate(wd_generator, 1):
+        for target_chunk in target_generator:
+            # 1. Random split (2/3 train, 1/3 test)
+            wd_train, target_train, wd_test, target_test = _random_split(
+                wd_chunk, target_chunk)
 
-        # Train
-        train_positives = blocking.train_test_block(wd_train, target_train)
-        train_all = blocking.full_text_query_block(
-            'training', catalog, chunk, i, target_database.get_entity(catalog, entity), dir_io)
-        train_actual = train_all & train_positives
-        train_vectors = workflow.extract_features(
-            train_all, wd_train, target_train)
-        model = workflow.init_model(classifier, binarize)
-        model.fit(train_vectors, train_actual)
+            # 2. Train
+            train_vectors, train_positives_index = _workflow(
+                wd_train, target_train, i, catalog, entity, dir_io)
 
-        # Test
-        test_positives = blocking.train_test_block(wd_test, target_test)
-        test_all = blocking.full_text_query_block(
-            'training', catalog, chunk, i, target_database.get_entity(catalog, entity), dir_io)
-        test_actual = test_all & test_positives
-        test_vectors = workflow.extract_features(
-            test_all, wd_test, target_test)
-        predictions = model.predict(test_vectors)
+            # 3. Build model
+            model = workflow.init_model(classifier, binarize)
+            model.fit(train_vectors, train_positives_index)
 
-        result.append((predictions, _compute_performance(
-            test_actual, predictions, len(test_vectors))))
+            # 4. Test
+            test_vectors, test_positive_index = _workflow(
+                wd_test, target_test, i, catalog, entity, dir_io)
+            predictions = model.predict(test_vectors)
+
+            result.append((predictions, _compute_performance(
+                test_positive_index, predictions, len(test_vectors))))
 
     return result
+
+
+def _workflow(wikidata, target, wd_chunk_number, catalog, entity, dir_io):
+    train_positives = blocking.train_test_block(wikidata, target)
+    train_all = blocking.full_text_query_block(
+        'training', catalog, wikidata, wd_chunk_number, target_database.get_entity(catalog, entity), dir_io)
+    train_actual = train_all & train_positives
+    train_vectors = workflow.extract_features(
+        train_all, wikidata, target)
+    return train_vectors, train_actual
+
+
+def _random_split(wd_chunk, target_chunk):
+    wd_train, wd_test = train_test_split(wd_chunk, test_size=0.33)
+    target_train, target_test = train_test_split(
+        target_chunk, test_size=0.33)
+    return wd_train, target_train, wd_test, target_test

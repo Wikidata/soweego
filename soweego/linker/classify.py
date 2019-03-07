@@ -14,7 +14,6 @@ import os
 
 import click
 import recordlinkage as rl
-from pandas import concat
 from sklearn.externals import joblib
 
 from soweego.commons import constants, target_database
@@ -49,31 +48,32 @@ def _upload(predictions, catalog, sandbox):
 
 def execute(catalog, entity, model, threshold, dir_io):
     wd_reader, target_reader = _build(catalog, entity, dir_io)
-    wd_generator, target = workflow.preprocess(
-        'classification', catalog, wd_reader, target_reader, dir_io)
-    # TODO Also consider blocking on URLs
+    wd_generator, target_generator = workflow.preprocess(
+        'classification', wd_reader, target_reader)
     classifier = joblib.load(model)
     rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
 
-    for i, chunk in enumerate(wd_generator, 1):
-        samples = blocking.full_text_query_block(
-            'classification', catalog, chunk, i, target_database.get_entity(catalog, entity), dir_io)
-        feature_vectors = workflow.extract_features(samples, chunk, target)
-        predictions = classifier.prob(feature_vectors)
-        LOGGER.info('Chunk %d classified', i)
-        yield predictions[predictions >= threshold]
+    for i, wd_chunk in enumerate(wd_generator, 1):
+        for target_chunk in target_generator:
+            # TODO Also consider blocking on URLs
+            samples = blocking.full_text_query_block(
+                'classification', catalog, wd_chunk, i, target_database.get_entity(catalog, entity), dir_io)
+            feature_vectors = workflow.extract_features(
+                samples, wd_chunk, target_chunk)
+            predictions = classifier.prob(feature_vectors)
+
+            LOGGER.info('Chunk %d classified', i)
+            yield predictions[predictions >= threshold]
 
 
 def _build(catalog, entity, dir_io):
     LOGGER.info("Building %s %s classification set, I/O directory: '%s'",
                 catalog, entity, dir_io)
-
     # Wikidata
     wd_df_reader, qids_and_tids = workflow.build_wikidata(
         'classification', catalog, entity, dir_io)
-
     # Target
     target_df_reader = workflow.build_target(
-        'classification', catalog, entity, qids_and_tids, dir_io)
+        'classification', catalog, entity, qids_and_tids)
 
     return wd_df_reader, target_df_reader
