@@ -25,13 +25,14 @@ LOGGER = logging.getLogger(__name__)
 def train_test_block(wikidata_df: pd.DataFrame, target_df: pd.DataFrame) -> pd.MultiIndex:
     blocking_column = constants.TID
 
-    LOGGER.info("Blocking on column '%s'", blocking_column)
+    LOGGER.info(
+        "Blocking on column '%s' to get positive samples ...", blocking_column)
 
     idx = Index()
     idx.block(blocking_column)
     positive_index = idx.index(wikidata_df, target_df)
 
-    LOGGER.info('Blocking index built')
+    LOGGER.info('Built blocking index of positive samples')
 
     return positive_index
 
@@ -55,7 +56,7 @@ def full_text_query_block(goal: str, catalog: str, wikidata_df: pd.DataFrame, ch
         tids = pd.read_pickle(samples_path)
     else:
         blocking_column = constants.NAME_TOKENS
-        LOGGER.info("Blocking on column '%s' via full-text query ...",
+        LOGGER.info("Blocking on column '%s' via full-text query to get all samples ...",
                     blocking_column)
 
         tids = wikidata_df[blocking_column].dropna().apply(
@@ -78,7 +79,7 @@ def full_text_query_block(goal: str, catalog: str, wikidata_df: pd.DataFrame, ch
 
     LOGGER.debug('%s %s samples index random example:\n%s',
                  catalog, goal, samples_index.to_series().sample(5))
-    LOGGER.info('Blocking index built')
+    LOGGER.info('Built blocking index of all samples')
 
     return samples_index
 

@@ -13,15 +13,15 @@ import datetime
 import json
 import logging
 import re
-import sys
 from collections import defaultdict
 from typing import Iterable
 
 import regex
+from pandas import read_sql
 from sqlalchemy import or_
+from sqlalchemy.orm.query import Query
 
 from soweego.commons import constants, target_database, url_utils
-from soweego.commons.cache import cached
 from soweego.commons.db_manager import DBManager
 from soweego.importer import models
 from soweego.wikidata import api_requests, sparql_queries, vocabulary
@@ -126,26 +126,30 @@ def perfect_name_search(target_entity: constants.DB_ENTITY, to_search: str) -> I
         session.close()
 
 
-def gather_target_dataset(entity_type, catalog, identifiers, fileout, for_classification):
+def gather_target_dataset(goal, entity_type, catalog, identifiers):
     base, link, nlp = target_database.get_entity(catalog, entity_type), target_database.get_link_entity(
         catalog, entity_type), target_database.get_nlp_entity(catalog, entity_type)
-    if for_classification:
+
+    if goal == 'training':
+        condition = base.catalog_id.in_(identifiers)
+        to_log = 'training set'
+    elif goal == 'classification':
         condition = ~base.catalog_id.in_(identifiers)
         to_log = 'dataset'
     else:
-        condition = base.catalog_id.in_(identifiers)
-        to_log = 'training set'
+        raise ValueError(
+            "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'" % goal)
 
     LOGGER.info(
         'Gathering %s %s for the linker ...', catalog, to_log)
 
-    session = DBManager.connect_to_db()
+    db_engine = DBManager().get_engine().execution_options(stream_results=True)
 
     # keep only non-None references
     tables = [tb for tb in (base, link, nlp) if tb]
 
     # create the query
-    query = session.query(*tables)
+    query = Query(tables)
 
     # remove base table so that we don't "outerjoin" it with
     # itself
@@ -154,23 +158,14 @@ def gather_target_dataset(entity_type, catalog, identifiers, fileout, for_classi
     # make the join statements to join different tables
     for tb in tables:
         query = query.outerjoin(tb, base.catalog_id == tb.catalog_id)
-
+    
     # finally, add the filter condition to the query
-    query = query.filter(condition)
+    query = query.filter(condition).enable_eagerloads(False)
 
-    try:
-        result = _run_query(query, catalog, entity_type)
-        if result is None:
-            sys.exit(1)
-        relevant_fields = _build_dataset_relevant_fields(base, link, nlp)
-        _dump_target_dataset_query_result(
-            result, relevant_fields, fileout)
-        session.commit()
-    except:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+    statement = query.statement
+    LOGGER.debug('SQL query to be fired: %s', statement)
+
+    return read_sql(statement, db_engine, chunksize=1000)
 
 
 def _build_dataset_relevant_fields(base, link, nlp):
@@ -189,8 +184,10 @@ def _build_dataset_relevant_fields(base, link, nlp):
     return fields
 
 
-def _dump_target_dataset_query_result(result, relevant_fields, fileout):
-    # res could be a tuple of (base, link, nlp), or only `base`
+
+def _dump_target_dataset_query_result(result, relevant_fields, fileout, chunk_size=1000):
+    chunk = []
+    
     for res in result:
 
         # if it is only `base` then we convert is to a list
@@ -225,6 +222,12 @@ def _dump_target_dataset_query_result(result, relevant_fields, fileout):
 
         fileout.write(json.dumps(parsed, ensure_ascii=False) + '\n')
         fileout.flush()
+
+        if len(chunk) <= chunk_size:
+            chunk.append(parsed)
+        else:
+            yield chunk
+            chunk = []
 
 
 def _run_query(query, catalog, entity_type, page=1000):
@@ -292,7 +295,6 @@ def _parse_target_metadata_query_result(result_set):
             LOGGER.debug('%s: no death place available', identifier)
 
 
-@cached
 def gather_target_links(entity_type, catalog):
     catalog_constants = _get_catalog_constants(catalog)
     catalog_entity = _get_catalog_entity(entity_type, catalog_constants)
@@ -363,8 +365,8 @@ def gather_wikidata_links(wikidata, url_pids, ext_id_pids_to_urls):
     LOGGER.info(
         'Gathering Wikidata sitelinks, third-party links, and external identifier links from the Web API. This will take a while ...')
     total = 0
-    for iterator in api_requests.get_links(wikidata.keys(), url_pids, ext_id_pids_to_urls):
-        for qid, url in iterator:
+    for generator in api_requests.get_links(wikidata.keys(), url_pids, ext_id_pids_to_urls):
+        for qid, url in generator:
             if not wikidata[qid].get('links'):
                 wikidata[qid]['links'] = set()
             wikidata[qid]['links'].add(url)

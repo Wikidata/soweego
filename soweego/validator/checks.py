@@ -77,7 +77,8 @@ def check_existence(entity, catalog, wikidata_cache=None):
             results = session.query(entity).filter(
                 entity.catalog_id == target_id).all()
             if not results:
-                LOGGER.info('%s %s identifier %s is invalid', qid, catalog, target_id)
+                LOGGER.info('%s %s identifier %s is invalid',
+                            qid, catalog, target_id)
                 invalid[target_id].add(qid)
                 count += 1
 
@@ -271,9 +272,9 @@ def _load_wikidata_cache(file_handle):
     return cache
 
 
-def _assess(criterion, source, target_iterator, to_deprecate, to_add):
+def _assess(criterion, source, target_generator, to_deprecate, to_add):
     LOGGER.info('Starting check against target %s ...', criterion)
-    target = _consume_target_iterator(target_iterator)
+    target = _consume_target_generator(target_generator)
     # Large loop size = # given Wikidata class instances with identifiers, e.g., 80k musicians
     for qid, data in source.items():
         source_data = data.get(criterion)
@@ -309,9 +310,9 @@ def _assess(criterion, source, target_iterator, to_deprecate, to_add):
                 criterion, len(to_deprecate), len(to_add))
 
 
-def _consume_target_iterator(target_iterator):
+def _consume_target_generator(target_generator):
     target = defaultdict(set)
-    for identifier, *data in target_iterator:
+    for identifier, *data in target_generator:
         if len(data) == 1:  # Links
             target[identifier].add(data.pop())
         else:  # Metadata

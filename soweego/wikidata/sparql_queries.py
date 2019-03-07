@@ -17,7 +17,7 @@ import os
 from csv import DictReader
 from functools import lru_cache
 from re import search
-from typing import Iterator
+from typing import Generator
 
 import click
 from requests import get
@@ -93,7 +93,7 @@ def identifier_class_based_query_cli(ontology_class, identifier_property, result
 
 
 @lru_cache()
-def run_query(query_type: tuple, class_qid: str, catalog_pid: str, result_per_page: int) -> Iterator:
+def run_query(query_type: tuple, class_qid: str, catalog_pid: str, result_per_page: int) -> Generator:
     """Run a filled SPARQL query template against the Wikidata endpoint with eventual paging.
 
     :param query_type: pair with one of ``identifier``, ``links``, ``dataset``, ``metadata``, and either ``class`` or ``occupation``
@@ -105,7 +105,7 @@ def run_query(query_type: tuple, class_qid: str, catalog_pid: str, result_per_pa
     :param result_per_page: page size. Use ``0`` to switch paging off
     :type result_per_page: int
     :return: query result generator yielding ``QID, identifier_or_URL`` or ``QID`` only
-    :rtype: Iterator
+    :rtype: Generator
     """
     what, how = query_type
 

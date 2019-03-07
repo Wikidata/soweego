@@ -13,7 +13,8 @@ import gzip
 import json
 import logging
 import os
-from typing import Tuple
+from multiprocessing import cpu_count
+from typing import Generator, Tuple
 
 import pandas as pd
 import recordlinkage as rl
@@ -77,48 +78,24 @@ def build_wikidata(goal, catalog, entity, dir_io):
     return wd_df_reader, qids_and_tids
 
 
-def build_target(goal, catalog, entity, qids_and_tids, dir_io):
-    if goal == 'training':
-        target_io_path = os.path.join(
-            dir_io, constants.TARGET_TRAINING_SET % (catalog, entity))
-    elif goal == 'classification':
-        target_io_path = os.path.join(
-            dir_io, constants.TARGET_CLASSIFICATION_SET % (catalog, entity))
-    else:
-        raise ValueError(
-            "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'" % goal)
+def build_target(goal, catalog, entity, qids_and_tids):
+    _handle_goal(goal)
 
-    if os.path.exists(target_io_path):
-        LOGGER.info("Will reuse existing %s %s set: '%s'",
-                    catalog, goal, target_io_path)
-    else:
-        LOGGER.info("Building %s %s set, output file '%s' ...",
-                    catalog, goal, target_io_path)
+    LOGGER.info('Building %s %s set ...', catalog, goal)
 
-        if goal == 'training':
-            for_classification = False
-        elif goal == 'classification':
-            if qids_and_tids:
-                raise ValueError(
-                    "Invalid 'qids_and_tids' parameter: it should be None when 'goal' is 'classification'")
-            for_classification = True
-            qids_and_tids = {}
-            data_gathering.gather_target_ids(
-                entity, catalog, target_database.get_pid(catalog), qids_and_tids)
+    if goal == 'classification':
+        if qids_and_tids:
+            raise ValueError(
+                "Invalid 'qids_and_tids' parameter: it should be None when 'goal' is 'classification'")
+        qids_and_tids = {}
+        data_gathering.gather_target_ids(
+            entity, catalog, target_database.get_pid(catalog), qids_and_tids)
 
-        tids = _get_tids(qids_and_tids)
-
-        # Dataset
-        # TODO how to avoid an empty file in case of no query results (see data_gathering#)? Perhaps lazy creation of file?
-        with gzip.open(target_io_path, 'wt') as target_io:
-            data_gathering.gather_target_dataset(
-                entity, catalog, tids, target_io, for_classification)
-
-    # Enforce target ID as a string
-    target_df_reader = pd.read_json(
-        target_io_path, lines=True, chunksize=1000, dtype={constants.TID: str})
+    target_df_reader = data_gathering.gather_target_dataset(
+        goal, entity, catalog, _get_tids(qids_and_tids))
 
     LOGGER.info('Target %s set built', goal)
+
     return target_df_reader
 
 
@@ -139,51 +116,21 @@ def train_test_build(catalog, entity, dir_io):
         'training', catalog, entity, dir_io)
 
     # Target
-    target_df_reader = build_target(
-        'training', catalog, entity, qids_and_tids, dir_io)
+    target_df_reader = build_target('training', catalog, entity, qids_and_tids)
+
 
     return wd_df_reader, target_df_reader
 
 
-def preprocess(goal: str, catalog: str, wikidata_reader: JsonReader, target_reader: JsonReader, dir_io: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    if goal == 'training':
-        wd_io_path = os.path.join(
-            dir_io, constants.WD_TRAINING_DATAFRAME % catalog)
-        target_io_path = os.path.join(
-            dir_io, constants.TARGET_TRAINING_DATAFRAME % catalog)
-    elif goal == 'classification':
-        wd_io_path = os.path.join(
-            dir_io, constants.WD_CLASSIFICATION_DATAFRAME % catalog)
-        target_io_path = os.path.join(
-            dir_io, constants.TARGET_CLASSIFICATION_DATAFRAME % catalog)
-    else:
-        raise ValueError(
-            "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'" % goal)
+def preprocess(goal: str, wikidata_reader: JsonReader, target_reader: JsonReader) -> Tuple[Generator[pd.DataFrame, None, None], Generator[pd.DataFrame, None, None]]:
+    _handle_goal(goal)
+    return _preprocess_wikidata(goal, wikidata_reader), _preprocess_target(goal, target_reader)
 
-    if os.path.exists(wd_io_path):
-        LOGGER.info("Will reuse existing preprocessed Wikidata %s %s DataFrame: '%s'",
-                    catalog, goal, wd_io_path)
-        wd_preprocessed_df = pd.read_pickle(wd_io_path)
-    else:
-        wd_preprocessed_df = _preprocess_wikidata(goal, wikidata_reader)
 
-    if os.path.exists(target_io_path):
-        LOGGER.info("Will reuse existing preprocessed %s %s DataFrame: '%s'",
-                    catalog, goal, target_io_path)
-        target_preprocessed_df = pd.read_pickle(target_io_path)
-    else:
-        target_preprocessed_df = _preprocess_target(goal, target_reader)
-        pd.to_pickle(target_preprocessed_df, target_io_path)
-        LOGGER.info("Preprocessed %s %s DataFrame dumped to '%s'",
-                    catalog, goal, target_io_path)
-
-    return wd_preprocessed_df, target_preprocessed_df
-
-# FIXME parallelize with n_jobs
 def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, target: pd.DataFrame) -> pd.DataFrame:
     LOGGER.info('Extracting features ...')
 
-    compare = rl.Compare()
+    compare = rl.Compare(n_jobs=cpu_count())
     # TODO similar name match as a feature
     # TODO feature engineering on more fields
     # wikidata columns = Index(['tid', 'label', 'alias', 'description', 'url', 'given_name',
@@ -221,7 +168,7 @@ def init_model(classifier, binarize):
 
 
 def _preprocess_wikidata(goal, wikidata_reader):
-    _handle_goal_value(goal)
+    _handle_goal(goal)
 
     LOGGER.info('Preprocessing Wikidata ...')
 
@@ -234,7 +181,7 @@ def _preprocess_wikidata(goal, wikidata_reader):
         # 2. Drop columns with null values only
         _drop_null_columns(chunk)
 
-        # 3. Training only: join target ids if multiple
+        # 3. Training only: join target IDs if multiple
         if goal == 'training':
             chunk[constants.TID] = chunk[constants.TID].map(
                 lambda cell: ' '.join(cell) if isinstance(cell, list) else cell)
@@ -252,67 +199,72 @@ def _preprocess_wikidata(goal, wikidata_reader):
         chunk = _shared_preprocessing(chunk, _will_handle_dates(chunk))
 
         LOGGER.info('Chunk %d done', i)
-
         yield chunk
 
     LOGGER.info('Wikidata preprocessing done')
 
 
 def _preprocess_target(goal, target_reader):
-    _handle_goal_value(goal)
+    _handle_goal(goal)
 
     LOGGER.info('Preprocessing target ...')
 
-    # 1. Load into a DataFrame
-    # Needed to avoid inconsistent aggregations
-    # if we run step 4 on chunks
-    # TODO Segfault when running in Docker container
-    # FIXME in realtà no, al massimo un'aggregazione finale prima di concatenare
-    LOGGER.info('Loading target into a pandas DataFrame ...')
-    target = pd.concat([chunk for chunk in target_reader],
-                       ignore_index=True, sort=False)
-    log_dataframe_info(
-        LOGGER, target, 'Target loaded into a pandas DataFrame')
-
-    # 2. Drop columns with null values only
-    LOGGER.info('Dropping columns with null values only ...')
-    _drop_null_columns(target)
-
-    will_handle_dates = _will_handle_dates(target)
-
-    # 3. Pair dates with their precision & drop precision columns
-    if will_handle_dates:
-        LOGGER.info('Pairing date columns with precision ones ...')
-        dob_column = list(zip(dob_column, target[constants.BIRTH_PRECISION]))
-        dod_column = list(zip(dod_column, target[constants.DEATH_PRECISION]))
-        target.drop(columns=[constants.BIRTH_PRECISION,
-                             constants.DEATH_PRECISION], inplace=True)
+    for i, chunk in enumerate(target_reader, 1):
+        # 1. Drop target DB internal ID columns
+        LOGGER.info("Dropping '%s' columns ...", constants.INTERNAL_ID)
+        chunk.drop(columns=constants.INTERNAL_ID, inplace=True)
         log_dataframe_info(
-            LOGGER, target, 'Paired date columns with precision ones')
+            LOGGER, chunk, f"Dropped '{constants.INTERNAL_ID}'' columns")
 
-    # 4. Aggregate denormalized data on target ID
-    # TODO Token lists may contain duplicate tokens
-    # FIXME questo ci mette un botto senza chunk (10 minuti)
-    LOGGER.info("Aggregating denormalized data on '%s' column ...",
-                constants.TID)
-    target = target.groupby(constants.TID).agg(lambda x: list(set(x)))
-    log_dataframe_info(
-        LOGGER, target, f"Data indexed and aggregated on '{constants.TID}' column")
-
-    # 5. Training only: target ID column for blocking
-    if goal == 'training':
-        LOGGER.info(
-            "Making '%s' column from the index for blocking ...", constants.TID)
-        target[constants.TID] = target.index
+        # 2. Rename non-null catalog ID column & drop others
+        LOGGER.info("Renaming '%s' column with no null values to '%s' & dropping '%s' columns with null values ...",
+                    constants.CATALOG_ID, constants.TID, constants.CATALOG_ID)
+        chunk[constants.TID] = chunk[constants.CATALOG_ID].dropna(axis=1)
+        chunk.drop(columns=constants.CATALOG_ID, inplace=True)
         log_dataframe_info(
-            LOGGER, target, f"Made '{constants.TID}' column from the index for blocking")
+            LOGGER, chunk, f"Renamed '{constants.CATALOG_ID}' column with no null values to '{constants.TID}' & dropped '{constants.CATALOG_ID}' columns with null values")
 
-    # 6. Shared preprocessing
-    target = _shared_preprocessing(target, will_handle_dates)
+        # 3. Drop columns with null values only
+        LOGGER.info('Dropping columns with null values only ...')
+        _drop_null_columns(chunk)
+
+        will_handle_dates = _will_handle_dates(chunk)
+
+        # 4. Pair dates with their precision & drop precision columns
+        if will_handle_dates:
+            LOGGER.info('Pairing date columns with precision ones ...')
+            chunk[constants.DATE_OF_BIRTH] = list(
+                zip(chunk[constants.DATE_OF_BIRTH], chunk[constants.BIRTH_PRECISION]))
+            chunk[constants.DATE_OF_DEATH] = list(
+                zip(chunk[constants.DATE_OF_DEATH], chunk[constants.DEATH_PRECISION]))
+            chunk.drop(columns=[constants.BIRTH_PRECISION,
+                                constants.DEATH_PRECISION], inplace=True)
+            log_dataframe_info(
+                LOGGER, chunk, 'Paired date columns with precision ones')
+
+        # 5. Aggregate denormalized data on target ID
+        # TODO Token lists may contain duplicate tokens
+        LOGGER.info("Aggregating denormalized data on '%s' column ...",
+                    constants.TID)
+        chunk = chunk.groupby(constants.TID).agg(lambda x: list(set(x)))
+        log_dataframe_info(
+            LOGGER, chunk, f"Data indexed and aggregated on '{constants.TID}' column")
+
+        # 6. Training only: target ID column for blocking
+        if goal == 'training':
+            LOGGER.info(
+                "Making '%s' column from the index for blocking ...", constants.TID)
+            chunk[constants.TID] = chunk.index
+            log_dataframe_info(
+                LOGGER, chunk, f"Made '{constants.TID}' column from the index for blocking")
+
+        # 7. Shared preprocessing
+        chunk = _shared_preprocessing(chunk, will_handle_dates)
+
+        LOGGER.info('Chunk %d done', i)
+        yield chunk
 
     LOGGER.info('Target preprocessing done')
-
-    return target
 
 
 def _shared_preprocessing(df, will_handle_dates):
@@ -341,7 +293,7 @@ def _handle_dates(df):
     # Parse into Period instead, see
     # http://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-oob
     for column in (constants.DATE_OF_BIRTH, constants.DATE_OF_DEATH):
-        if column is None:
+        if df.get(column) is None:
             LOGGER.warning(
                 "No '%s' column in DataFrame, won't handle its dates. Perhaps it was dropped because it contained null values only", column)
             continue
@@ -406,7 +358,7 @@ def _build_date_object(value, slice_index, to_dates_list):
             "Skipping date that can't be parsed: %s. Reason: %s", value, ve)
 
 
-def _handle_goal_value(goal):
+def _handle_goal(goal):
     if goal not in ('training', 'classification'):
         raise ValueError(
             "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'" % goal)
