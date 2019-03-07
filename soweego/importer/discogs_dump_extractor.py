@@ -11,13 +11,16 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import gzip
 import logging
+import os
+import shutil
 import xml.etree.ElementTree as et
 from datetime import date, datetime
-from typing import Iterable
+from typing import Iterable, Tuple
 
 from requests import get
 from tqdm import tqdm
 
+from lxml import etree
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
@@ -55,7 +58,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                 dump_file_name = child.text
         if dump_file_name is None:
             LOGGER.error(
-                "Failed to get the Discogs dump download URL: are we at the very start of the year?")
+                'Failed to get the Discogs dump download URL: are we at the very start of the year?')
             return None
         return [DUMP_BASE_URL + dump_file_name]
 
@@ -78,82 +81,109 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         LOGGER.info('SQL tables dropped and re-created: %s',
                     [table.__tablename__ for table in tables])
 
-        with gzip.open(dump_file_path, 'rt') as dump:
+        extracted_path = '.'.join(dump_file_path.split('.')[:-1])
 
-            # count number of lines and move again up to the beginning
-            # of the file
-            n_rows = sum(1 for line in dump)
-            dump.seek(0)
+        # Extract dump file if it has not yet been extracted
+        if not os.path.exists(extracted_path):
 
-            session = db_manager.new_session()
+            LOGGER.info('Extracting dump file')
 
-            entity_array = []  # array to which we'll add the entities
+            with gzip.open(dump_file_path, 'rb') as f_in:
+                with open(extracted_path, 'wb') as f_out:
+                    shutil.copyfileobj(f_in, f_out)
 
-            for _, node in tqdm(et.iterparse(dump), total=n_rows):
-                if not node.tag == 'artist':
-                    continue
+        def g_process_et_items() -> Iterable[Tuple]:
+            """
+            Generator: Processes ElementTree items in a memory
+            efficient way
+            """
 
-                # Skip nodes without required fields
-                identifier = node.findtext('id')
-                if not identifier:
-                    LOGGER.warning(
-                        'Skipping import for artist node with no identifier: %s', node)
-                    continue
-                name = node.findtext('name')
-                if not name:
-                    LOGGER.warning(
-                        'Skipping import for identifier with no name: %s', identifier)
-                    continue
+            context: etree.ElementTree = etree.iterparse(
+                extracted_path,
+                events=('end',),
+                tag='artist')
 
-                living_links = self._extract_living_links(
-                    node, identifier, resolve)
+            for event, elem in context:
+                yield event, elem
 
-                # Musician
-                groups = node.find('groups')
-                members = node.find('members')
-                if groups:
-                    entity = discogs_entity.DiscogsMusicianEntity()
-                    self._populate_musician(entity_array,
-                                            entity, identifier, name, living_links, node)
-                # Band
-                elif members:
-                    entity = discogs_entity.DiscogsGroupEntity()
-                    self._populate_band(entity_array, entity, identifier,
-                                        name, living_links, node)
-                # Can't infer the entity type, so populate both
-                else:
-                    LOGGER.debug(
-                        'Unknown artist type. Will add it to both musicians and bands: %s', identifier)
-                    entity = discogs_entity.DiscogsMusicianEntity()
-                    self._populate_musician(entity_array,
-                                            entity, identifier, name, living_links, node)
-                    entity = discogs_entity.DiscogsGroupEntity()
-                    self._populate_band(entity_array, entity, identifier,
-                                        name, living_links, node)
+                # delete content of node once we're done processing
+                # it. If we don't then it would stay in memory
+                elem.clear()
 
-                # commit in batches of `self._sqlalchemy_commit_every`
-                if len(entity_array) > self._sqlalchemy_commit_every:
+        # count number of entries
+        n_rows = sum(1 for _ in g_process_et_items())
 
-                    LOGGER.info("Adding batch of entities to the database, this might take a couple of minutes. "
-                                "Progress will resume soon.")
+        session = db_manager.new_session()
 
-                    insert_start_time = datetime.now()
+        entity_array = []  # array to which we'll add the entities
 
-                    session.bulk_save_objects(entity_array)
-                    session.commit()
-                    session.expunge_all()  # clear session
+        for _, node in tqdm(g_process_et_items(), total=n_rows):
 
-                    entity_array.clear()  # clear entity array
+            if not node.tag == 'artist':
+                continue
 
-                    LOGGER.debug("It took %s to add %s entities to the database",
-                                 datetime.now()-insert_start_time,
-                                 self._sqlalchemy_commit_every)
+            # Skip nodes without required fields
+            identifier = node.findtext('id')
+            if not identifier:
+                LOGGER.warning(
+                    'Skipping import for artist node with no identifier: %s', node)
+                continue
 
-            # finally commit remaining entities in session
-            # (if any), and close session
-            session.bulk_save_objects(entity_array)
-            session.commit()
-            session.close()
+            name = node.findtext('name')
+            if not name:
+                LOGGER.warning(
+                    'Skipping import for identifier with no name: %s', identifier)
+                continue
+
+            living_links = self._extract_living_links(
+                node, identifier, resolve)
+
+            # Musician
+            groups = node.find('groups')
+            members = node.find('members')
+            if groups:
+                entity = discogs_entity.DiscogsMusicianEntity()
+                self._populate_musician(entity_array,
+                                        entity, identifier, name, living_links, node)
+            # Band
+            elif members:
+                entity = discogs_entity.DiscogsGroupEntity()
+                self._populate_band(entity_array, entity, identifier,
+                                    name, living_links, node)
+            # Can't infer the entity type, so populate both
+            else:
+                LOGGER.debug(
+                    'Unknown artist type. Will add it to both musicians and bands: %s', identifier)
+                entity = discogs_entity.DiscogsMusicianEntity()
+                self._populate_musician(entity_array,
+                                        entity, identifier, name, living_links, node)
+                entity = discogs_entity.DiscogsGroupEntity()
+                self._populate_band(entity_array, entity, identifier,
+                                    name, living_links, node)
+
+            # commit in batches of `self._sqlalchemy_commit_every`
+            if len(entity_array) >= self._sqlalchemy_commit_every:
+
+                LOGGER.info('Adding batch of entities to the database, this might take a couple of minutes. '
+                            'Progress will resume soon.')
+
+                insert_start_time = datetime.now()
+
+                session.bulk_save_objects(entity_array)
+                session.commit()
+                session.expunge_all()  # clear session
+
+                entity_array.clear()  # clear entity array
+
+                LOGGER.debug('It took %s to add %s entities to the database',
+                             datetime.now()-insert_start_time,
+                             self._sqlalchemy_commit_every)
+
+        # finally commit remaining entities in session
+        # (if any), and close session
+        session.bulk_save_objects(entity_array)
+        session.commit()
+        session.close()
 
         end = datetime.now()
         LOGGER.info(
