@@ -115,7 +115,9 @@ TARGET_CATALOGS = {
     }
 }
 
-# Wikidata & target field names
+# Wikidata field & target column names
+INTERNAL_ID = 'internal_id'
+CATALOG_ID = 'catalog_id'
 QID = 'qid'
 TID = 'tid'
 ALIAS = 'alias'
