@@ -56,7 +56,8 @@ def gather_target_metadata(entity_type, catalog):
     return result
 
 
-def tokens_fulltext_search(target_entity: constants.DB_ENTITY, boolean_mode: bool, tokens: Iterable[str], where_clause: filter = None, limit: int = 10) -> Iterable[constants.DB_ENTITY]:
+def tokens_fulltext_search(target_entity: constants.DB_ENTITY, boolean_mode: bool, tokens: Iterable[str],
+                           where_clause=None, limit: int = 10) -> Iterable[constants.DB_ENTITY]:
     if issubclass(target_entity, models.base_entity.BaseEntity):
         column = target_entity.name_tokens
     elif issubclass(target_entity, models.base_link_entity.BaseLinkEntity):
@@ -67,6 +68,7 @@ def tokens_fulltext_search(target_entity: constants.DB_ENTITY, boolean_mode: boo
         LOGGER.critical('Bad target entity class: %s', target_entity)
         raise ValueError('Bad target entity class: %s' % target_entity)
 
+    tokens = filter(None, tokens)
     terms = ' '.join(map('+{0}'.format, tokens)
                      ) if boolean_mode else ' '.join(tokens)
     ft_search = column.match(terms)
@@ -347,7 +349,8 @@ def gather_relevant_pids():
                         compiled_regex = re.compile(formatter_regex)
                     except re.error:
                         LOGGER.debug(
-                            "Using 'regex' third-party library. Formatter regex not supported by the 're' standard library: %s", formatter_regex)
+                            "Using 'regex' third-party library. Formatter regex not supported by the 're' standard library: %s",
+                            formatter_regex)
                         try:
                             compiled_regex = regex.compile(formatter_regex)
                         except regex.error:
