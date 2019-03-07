@@ -155,7 +155,7 @@ def gather_target_dataset(entity_type, catalog, identifiers, fileout, for_classi
 
     # make the join statements to join different tables
     for tb in tables:
-        query = session.outerjoin(tb, base.catalog_id == tb.catalog_id)
+        query = query.outerjoin(tb, base.catalog_id == tb.catalog_id)
 
     # finally, add the filter condition to the query
     query = query.filter(condition)
