@@ -74,6 +74,6 @@ def _build(catalog, entity, dir_io):
         'classification', catalog, entity, dir_io)
     # Target
     target_df_reader = workflow.build_target(
-        'classification', catalog, entity, qids_and_tids, dir_io)
+        'classification', catalog, entity, qids_and_tids)
 
     return wd_df_reader, target_df_reader

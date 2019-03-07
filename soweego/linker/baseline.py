@@ -2,6 +2,12 @@
 # -*- coding: utf-8 -*-
 
 """TODO module docstring"""
+from datetime import datetime
+
+import dateutil
+from dateutil.relativedelta import relativedelta
+
+from soweego.commons import constants
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -14,6 +20,7 @@ import json
 import logging
 from os import path
 from typing import Iterable, Tuple
+from tqdm import tqdm
 
 import click
 from sqlalchemy.exc import ProgrammingError
@@ -22,6 +29,7 @@ from soweego.commons import (data_gathering, target_database, text_utils,
                              url_utils)
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.ingestor import wikidata_bot
+from soweego.commons import constants
 from soweego.wikidata.api_requests import get_data_for_linker
 
 LOGGER = logging.getLogger(__name__)
@@ -32,11 +40,14 @@ WD_IO_FILENAME = 'wikidata_%s_dataset.jsonl.gz'
 @click.argument('target', type=click.Choice(target_database.available_targets()))
 @click.argument('target_type', type=click.Choice(target_database.available_types()))
 @click.option('-s', '--strategy', type=click.Choice(['perfect', 'links', 'names', 'all']), default='perfect')
+@click.option('--check-dates/--no-check-dates', default=True,
+              help='When available, checks if the dates match too. Default: yes.')
 @click.option('--upload/--no-upload', default=False, help='Upload check results to Wikidata. Default: no.')
-@click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
+@click.option('--sandbox/--no-sandbox', default=False,
+              help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
 @click.option('-o', '--output-dir', type=click.Path(file_okay=False), default='/app/shared',
               help="default: '/app/shared'")
-def cli(target, target_type, strategy, upload, sandbox, output_dir):
+def cli(target, target_type, strategy, check_dates, upload, sandbox, output_dir):
     """Rule-based matching strategies.
 
     NOTICE: not all the entity types are available for all the targets
@@ -57,7 +68,7 @@ def cli(target, target_type, strategy, upload, sandbox, output_dir):
             target_type, target, target_database.get_pid(target))
         url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
         with gzip.open(wd_io_path, 'wt') as wd_io:
-            get_data_for_linker(qids, url_pids, ext_id_pids_to_urls, wd_io)
+            get_data_for_linker(qids, url_pids, ext_id_pids_to_urls, wd_io, None)
             LOGGER.info("Wikidata stream stored in %s" % wd_io_path)
 
     target_entity = target_database.get_entity(target, target_type)
@@ -68,26 +79,32 @@ def cli(target, target_type, strategy, upload, sandbox, output_dir):
 
     with gzip.open(wd_io_path, "rt") as wd_io:
         if strategy == 'perfect' or strategy == 'all':
+            wd_io.seek(0)  # go to beginning of file
             LOGGER.info("Starting perfect name match")
             result = perfect_name_match(
-                wd_io, target_entity, target_pid)
+                wd_io, target_entity, target_pid, check_dates)
             _write_or_upload_result(
                 strategy, target, result, output_dir, "baseline_perfect_name.csv", upload, sandbox)
+
         if strategy == 'links' or strategy == 'all':
+            wd_io.seek(0)  # go to beginning of file
             LOGGER.info("Starting similar links match")
             result = similar_link_tokens_match(
                 wd_io, target_link_entity, target_pid)
             _write_or_upload_result(
                 strategy, target, result, output_dir, "baseline_similar_links.csv", upload, sandbox)
+
         if strategy == 'names' or strategy == 'all':
+            wd_io.seek(0)
             LOGGER.info("Starting similar names match")
             result = similar_name_tokens_match(
-                wd_io, target_entity, target_pid)
+                wd_io, target_entity, target_pid, check_dates)
             _write_or_upload_result(
                 strategy, target, result, output_dir, "baseline_similar_names.csv", upload, sandbox)
 
 
-def _write_or_upload_result(strategy, target, result: Iterable, output_dir: str, filename: str, upload: bool, sandbox: bool):
+def _write_or_upload_result(strategy, target, result: Iterable, output_dir: str, filename: str, upload: bool,
+                            sandbox: bool):
     if upload:
         wikidata_bot.add_statements(
             result, target_database.get_qid(target), sandbox)
@@ -101,22 +118,25 @@ def _write_or_upload_result(strategy, target, result: Iterable, output_dir: str,
                     strategy, target, filepath)
 
 
-def perfect_name_match(source_dataset, target_entity: BaseEntity, target_pid: str) -> Iterable[Tuple[str, str, str]]:
+def perfect_name_match(source_dataset, target_entity: BaseEntity, target_pid: str, compare_dates: bool) -> Iterable[
+    Tuple[str, str, str]]:
     """Given a dictionary ``{string: identifier}``, a Base Entity and a PID,
     match perfect strings and return a dataset ``[(source_id, PID, target_id), ...]``.
 
     This strategy applies to any object that can be
     treated as a string: names, links, etc.
     """
-    for row_entity in source_dataset:
+
+    for row_entity in tqdm(source_dataset, total=_count_num_lines_in_file(source_dataset)):
         entity = json.loads(row_entity)
         qid = entity['qid']
-        for label in entity['label'].keys():
+        for label in entity[constants.NAME]:
             for res in data_gathering.perfect_name_search(target_entity, label):
-                yield (qid, target_pid, res.catalog_id)
+                if not compare_dates or birth_death_date_match(res, entity):
+                    yield (qid, target_pid, res.catalog_id)
 
 
-def similar_name_tokens_match(source, target, target_pid: str) -> Iterable[Tuple[str, str, str]]:
+def similar_name_tokens_match(source, target, target_pid: str, compare_dates: bool) -> Iterable[Tuple[str, str, str]]:
     """Given a dictionary ``{string: identifier}``, a BaseEntity and a tokenization function and a PID,
     match similar tokens and return a dataset ``[(source_id, PID, target_id), ...]``.
 
@@ -124,10 +144,10 @@ def similar_name_tokens_match(source, target, target_pid: str) -> Iterable[Tuple
     """
     to_exclude = set()
 
-    for row_entity in source:
+    for row_entity in tqdm(source, total=_count_num_lines_in_file(source)):
         entity = json.loads(row_entity)
         qid = entity['qid']
-        for label in entity['label'].keys():
+        for label in entity[constants.NAME]:
             if not label:
                 continue
 
@@ -140,14 +160,16 @@ def similar_name_tokens_match(source, target, target_pid: str) -> Iterable[Tuple
             # NOTICE: sets of size 1 are always exluded
             # Looks for sets equal or bigger containing our tokens
             for res in data_gathering.tokens_fulltext_search(target, True, tokenized):
-                yield (qid, target_pid, res.catalog_id)
-                to_exclude.add(res.catalog_id)
+                if not compare_dates or birth_death_date_match(res, entity):
+                    yield (qid, target_pid, res.catalog_id)
+                    to_exclude.add(res.catalog_id)
             # Looks for sets contained in our set of tokens
             where_clause = target.catalog_id.notin_(to_exclude)
             for res in data_gathering.tokens_fulltext_search(target, False, tokenized, where_clause=where_clause):
-                res_tokenized = set(res.tokens.split())
+                res_tokenized = set(res.name_tokens.split())
                 if len(res_tokenized) > 1 and res_tokenized.issubset(tokenized):
-                    yield (qid, target_pid, res.catalog_id)
+                    if not compare_dates or birth_death_date_match(res, entity):
+                        yield (qid, target_pid, res.catalog_id)
 
 
 def similar_link_tokens_match(source, target, target_pid: str) -> Iterable[Tuple[str, str, str]]:
@@ -158,7 +180,7 @@ def similar_link_tokens_match(source, target, target_pid: str) -> Iterable[Tuple
     """
     to_exclude = set()
 
-    for row_entity in source:
+    for row_entity in tqdm(source, total=_count_num_lines_in_file(source)):
         entity = json.loads(row_entity)
         qid = entity['qid']
         for url in entity['url']:
@@ -172,7 +194,7 @@ def similar_link_tokens_match(source, target, target_pid: str) -> Iterable[Tuple
                 continue
 
             try:
-                # NOTICE: sets of size 1 are always exluded
+                # NOTICE: sets of size 1 are always excluded
                 # Looks for sets equal or bigger containing our tokens
                 for res in data_gathering.tokens_fulltext_search(target, True, tokenized):
                     yield (qid, target_pid, res.catalog_id)
@@ -180,9 +202,54 @@ def similar_link_tokens_match(source, target, target_pid: str) -> Iterable[Tuple
                 # Looks for sets contained in our set of tokens
                 where_clause = target.catalog_id.notin_(to_exclude)
                 for res in data_gathering.tokens_fulltext_search(target, False, tokenized, where_clause):
-                    res_tokenized = set(res.tokens.split())
+                    res_tokenized = set(res.url_tokens.split())
                     if len(res_tokenized) > 1 and res_tokenized.issubset(tokenized):
                         yield (qid, target_pid, res.catalog_id)
             except ProgrammingError as ex:
                 LOGGER.error(ex)
                 LOGGER.error(f'Issues searching tokens {tokenized} of {url}')
+
+
+def compare_dates_on_common_precision(common_precision: int, date_elements1: Iterable,
+                                      date_elements2: Iterable) -> bool:
+    # safety check
+    if common_precision < 9:
+        return False
+    for i in range(0, common_precision - 9 + 1):
+        if int(date_elements1[i]) != int(date_elements2[i]):
+            return False
+    return True
+
+
+def date_equals(born: datetime, born_precision: int, date_prec: Iterable) -> bool:
+    """Given a target date, its precision and a Wikidata date like ["1743-00-00T00:00:00Z", 9],
+    tells if they're equal
+    """
+    if born is None or born_precision is None or not date_prec:
+        return False
+    prec = int(date_prec[1])
+    date_elements = date_prec[0].split('T')[0].split('-')
+    common_precision = min(born_precision, prec)
+    return compare_dates_on_common_precision(common_precision, date_elements, [born.year, born.month, born.day])
+
+
+def birth_death_date_match(target_entity: BaseEntity, wikidata_entity: dict) -> bool:
+    """Given a wikidata json and a BaseEntity, checks born/death dates and tells if they match"""
+    for date_prec in wikidata_entity.get('born', []):
+        if date_equals(target_entity.born, target_entity.born_precision, date_prec):
+            return True
+
+    for date_prec in wikidata_entity.get('died', []):
+        if date_equals(target_entity.died, target_entity.died_precision, date_prec):
+            return True
+
+    return False
+
+
+def _count_num_lines_in_file(file_) -> int:
+    # count number of rows and go back to
+    # the beginning of file
+    n_rows = len(file_.readlines())
+    file_.seek(0)
+
+    return n_rows

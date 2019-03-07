@@ -13,14 +13,13 @@ import json
 import logging
 from pkgutil import get_data
 
+from soweego.commons import constants
+from soweego.commons import localizations as loc
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import configure_mappers, session, sessionmaker
 from sqlalchemy.pool import NullPool
-
-from soweego.commons import constants
-from soweego.commons import localizations as loc
 
 BASE = declarative_base()
 LOGGER = logging.getLogger(__name__)

@@ -32,11 +32,11 @@ LOGGER = logging.getLogger(__name__)
 
 def build_wikidata(goal, catalog, entity, dir_io):
     if goal == 'training':
-        wd_io_path = os.path.join(dir_io, constants.WD_TRAINING_SET % catalog)
+        wd_io_path = os.path.join(dir_io, constants.WD_TRAINING_SET % (catalog, entity))
         qids_and_tids = {}
     elif goal == 'classification':
         wd_io_path = os.path.join(
-            dir_io, constants.WD_CLASSIFICATION_SET % catalog)
+            dir_io, constants.WD_CLASSIFICATION_SET % (catalog, entity))
         qids_and_tids = None
     else:
         raise ValueError(
@@ -117,6 +117,7 @@ def train_test_build(catalog, entity, dir_io):
 
     # Target
     target_df_reader = build_target('training', catalog, entity, qids_and_tids)
+
 
     return wd_df_reader, target_df_reader
 

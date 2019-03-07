@@ -16,10 +16,11 @@ import tarfile
 from collections import defaultdict
 from csv import DictReader
 from datetime import date
-from typing import Iterable
+from typing import Iterable, Tuple
 
 import requests
 from sqlalchemy.exc import IntegrityError
+from tqdm import tqdm
 
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
@@ -38,6 +39,8 @@ LOGGER = logging.getLogger(__name__)
 
 class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
+    _sqlalchemy_commit_every = 700
+
     def get_dump_download_urls(self) -> Iterable[str]:
         latest_version = requests.get(
             'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/LATEST').text.rstrip()
@@ -46,15 +49,16 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
     def extract_and_populate(self, dump_file_paths: Iterable[str], resolve: bool):
         dump_file_path = dump_file_paths[0]
         dump_path = os.path.join(os.path.dirname(
-            os.path.abspath(dump_file_path)), "%s_%s" % (os.path.basename(dump_file_path), 'extracted'))
+            os.path.abspath(dump_file_path)),
+            "%s_%s" % (os.path.basename(dump_file_path), 'extracted'))
 
         if not os.path.isdir(dump_path):
             with tarfile.open(dump_file_path, "r:bz2") as tar:
-                LOGGER.info("Extracting dump %s in %s" %
-                            (dump_file_path, dump_path))
+                LOGGER.info("Extracting dump %s in %s",
+                            dump_file_path, dump_path)
                 tar.extractall(dump_path)
-                LOGGER.info("Extracted dump %s in %s" %
-                            (dump_file_path, dump_path))
+                LOGGER.info("Extracted dump %s in %s",
+                            dump_file_path, dump_path)
 
         tables = [MusicbrainzArtistEntity,
                   MusicbrainzBandEntity]
@@ -63,64 +67,105 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         db_manager.drop(tables)
         db_manager.create(tables)
 
-        LOGGER.info("Dropped and created tables %s" % tables)
+        LOGGER.info("Dropped and created tables %s", tables)
         LOGGER.info("Importing artists and bands")
 
-        artist_count = 0
-        for artist in self._artist_generator(dump_path):
-            artist_count = artist_count + 1
-            session = db_manager.new_session()
-            session.add(artist)
-            session.commit()
+        artist_count = self._add_entities_from_generator(
+            db_manager,
+            self._artist_generator,
+            dump_path
+        )
 
-        LOGGER.debug("Added %s artist records" % artist_count)
+        LOGGER.debug("Added %s/%s artist records", *artist_count)
 
         db_manager.drop([MusicbrainzArtistLinkEntity,
                          MusicbrainzBandLinkEntity])
         db_manager.create([MusicbrainzArtistLinkEntity,
                            MusicbrainzBandLinkEntity])
 
-        LOGGER.info("Dropped and created tables %s" % tables)
+        LOGGER.info("Dropped and created tables %s", tables)
         LOGGER.info("Importing links")
 
-        link_count = 0
-        for link in self._link_generator(dump_path, resolve):
-            link_count = link_count + 1
-            session = db_manager.new_session()
-            session.add(link)
-            session.commit()
+        link_count = self._add_entities_from_generator(
+            db_manager,
+            self._link_generator,
+            dump_path,
+            resolve
+        )
 
-        LOGGER.debug("Added %s link records" % link_count)
+        LOGGER.debug("Added %s/%s link records", *link_count)
         LOGGER.info("Importing ISNIs")
 
-        isni_link_count = 0
-        for link in self._isni_link_generator(dump_path, resolve):
-            isni_link_count = isni_link_count + 1
-            session = db_manager.new_session()
-            session.add(link)
-            session.commit()
+        isni_link_count = self._add_entities_from_generator(
+            db_manager,
+            self._isni_link_generator,
+            dump_path,
+            resolve
+        )
 
-        LOGGER.debug("Added %s ISNI link records" % isni_link_count)
+        LOGGER.debug("Added %s/%s ISNI link records", *isni_link_count)
 
         db_manager.drop([MusicBrainzArtistBandRelationship])
         db_manager.create([MusicBrainzArtistBandRelationship])
-        LOGGER.info("Dropped and created tables %s" % tables)
+        LOGGER.info("Dropped and created tables %s", tables)
         LOGGER.info("Importing relationships artist-band")
 
-        relationships_count = 0
-        relationships_total = 0
-        for relationship in self._artist_band_relationship_generator(dump_path):
+        relationships_count = self._add_entities_from_generator(
+            db_manager,
+            self._artist_band_relationship_generator,
+            dump_path
+        )
+
+        LOGGER.debug("Added %s/%s relationships records",
+                     *relationships_count)
+
+    def _add_entities_from_generator(self, db_manager,
+                                     _generator, *args) -> Tuple[int, int]:
+        """
+        Adds all entities yielded by a generator to the DB
+
+        :return: (the total number of entities yielded,
+        the number of entities added to the DB)
+        """
+
+        # we keep track of both the total number of entities added
+        # to the database and the total number of entities the
+        # generator yields. If everything goes ok then these 2
+        # numbers should be the same
+        n_total_entities = 0
+        n_added_entities = 0
+
+        session = db_manager.new_session()
+
+        # we construct the generator
+        blt_gen = _generator(*args)
+
+        # and obtain the first item, which is
+        # the number of rows that the generator will yield
+        n_rows = next(blt_gen)
+
+        for entity in tqdm(blt_gen, total=n_rows):
             try:
-                relationships_total = relationships_total + 1
-                session = db_manager.new_session()
-                session.add(relationship)
-                session.commit()
-                relationships_count = relationships_count + 1
+                n_total_entities += 1
+                session.add(entity)
+
+                # commit entities to DB in batches, it is mode
+                # efficient
+                if n_added_entities % self._sqlalchemy_commit_every == 0:
+                    session.commit()
+
+                n_added_entities += 1
+
             except IntegrityError as i:
                 LOGGER.warning(str(i))
 
-        LOGGER.debug("Added %s/%s relationships records" %
-                     (relationships_count, relationships_total))
+        # finally, commit remaining entities in session
+        session.commit()
+
+        # and close session
+        session.close()
+
+        return n_total_entities, n_added_entities
 
     def _link_generator(self, dump_path: str, resolve: bool):
         l_artist_url_path = os.path.join(dump_path, 'mbdump', 'l_artist_url')
@@ -128,27 +173,39 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         # Loads all the relationships between URL ID and ARTIST ID
         urlid_artistid_relationship = {}
 
+        LOGGER.info('Loading artist relationships')
+
         with open(l_artist_url_path, "r") as tsvfile:
             url_relationships = DictReader(tsvfile,
                                            delimiter='\t',
                                            fieldnames=[i for i in range(0, 6)])
-            for relationship in url_relationships:
+
+            for relationship in tqdm(url_relationships,
+                                     total=self._count_num_lines_in_file(tsvfile)):
                 # url id matched with its user id
                 if relationship[3] in urlid_artistid_relationship:
                     LOGGER.warning(
-                        'Url with ID %s has multiple artists, only one will be stored' % relationship[3])
+                        'Url with ID %s has multiple artists, only one will be stored',
+                        relationship[3])
                 else:
                     urlid_artistid_relationship[relationship[3]
-                    ] = relationship[2]
+                                                ] = relationship[2]
 
         url_artistid = {}
         url_path = os.path.join(dump_path, 'mbdump', 'url')
+
+        LOGGER.info('Checking URLs realted to artists')
+
         # Translates URL IDs to the relative URL
         with open(url_path, "r") as tsvfile:
+
             urls = DictReader(tsvfile,
                               delimiter='\t',
                               fieldnames=[i for i in range(0, 5)])
-            for url_record in urls:
+
+            for url_record in tqdm(urls,
+                                   total=self._count_num_lines_in_file(tsvfile)):
+
                 urlid = url_record[0]
                 if urlid in urlid_artistid_relationship:
                     for candidate_url in url_utils.clean(url_record[2]):
@@ -166,10 +223,17 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         for url, artistid in url_artistid.items():
             artistid_url[artistid].append(url)
 
+        LOGGER.info('Adding link entities to DB')
+
         url_artistid = None
         # Translates ARTIST ID to the relative ARTIST
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
         with open(artist_path, 'r') as artistfile:
+
+            n_rows = self._count_num_lines_in_file(artistfile)
+
+            yield n_rows  # first yield is always the number of rows
+
             for artist in DictReader(artistfile, delimiter='\t',
                                      fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
                                                  'd_year', 'd_month', 'd_day', 'type_id']):
@@ -218,6 +282,11 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
         with open(artist_path, 'r') as artistfile:
+
+            n_rows = self._count_num_lines_in_file(artistfile)
+
+            yield n_rows  # first yield is always the number of rows
+
             for artist in DictReader(artistfile, delimiter='\t',
                                      fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
                                                  'd_year', 'd_month', 'd_day', 'type_id']):
@@ -245,18 +314,29 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         aliases = defaultdict(list)
         areas = {}
 
+        LOGGER.info('Getting artist aliases')
+
         # Key is the entity id which has a list of aliases
         with open(artist_alias_path, 'r') as aliasesfile:
             for alias in DictReader(aliasesfile, delimiter='\t', fieldnames=[
-                'id', 'parent_id', 'label']):
+                    'id', 'parent_id', 'label']):
                 aliases[alias['parent_id']].append(alias['label'])
+
+        LOGGER.info('Getting area IDs and related names')
 
         # Key is the area internal id, value is the name
         with open(area_path, 'r') as areafile:
             for area in DictReader(areafile, delimiter='\t', fieldnames=['id', 'gid', 'name']):
                 areas[area['id']] = area['name'].lower()
 
+        LOGGER.info('Importing artist entities into DB')
+
         with open(artist_path, 'r') as artistfile:
+
+            n_rows = self._count_num_lines_in_file(artistfile)
+
+            yield n_rows  # first yield is always the number of rows
+
             for artist in DictReader(artistfile, delimiter='\t',
                                      fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
                                                  'd_year', 'd_month', 'd_day', 'type_id', 'area', 'gender', 'ND1',
@@ -268,17 +348,17 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                         self._fill_entity(current_entity, artist, areas)
                         current_entity.gender = self._artist_gender(
                             artist['gender'])
-                    except ValueError:
+                    except KeyError:
                         LOGGER.error('Wrong gender code: %s', artist)
                         continue
-
-                    yield current_entity
 
                     # Creates an entity foreach available alias
                     for alias in self._alias_entities(
                             current_entity, MusicbrainzArtistEntity, aliases[artist['id']]):
                         alias.gender = current_entity.gender
                         yield alias
+
+                    yield current_entity
 
                 if self._check_band(artist['type_id']):
                     current_entity = MusicbrainzBandEntity()
@@ -289,17 +369,19 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                         LOGGER.error('Wrong date: %s', artist)
                         continue
 
-                    yield current_entity
-
                     # Creates an entity foreach available alias
                     for alias in self._alias_entities(
                             current_entity, MusicbrainzBandEntity, aliases[artist['id']]):
                         yield alias
 
+                    yield current_entity
+
     def _artist_band_relationship_generator(self, dump_path):
         link_types = set(['855', '103', '305', '965', '895'])
         link_file_path = os.path.join(dump_path, 'mbdump', 'link')
         to_invert = set()
+
+        LOGGER.info('Loading artist-band relationships')
 
         links = set()
         with open(link_file_path) as link_file:
@@ -339,9 +421,13 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 if artist['id'] in ids_translator:
                     ids_translator[artist['id']] = artist['gid']
 
+        LOGGER.info('Adding relationships into DB')
+
+        yield len(relationships)  # first yield is always the number of rows
+
         for relation in relationships:
             translation0, translation1 = ids_translator[relation[0]
-                                         ], ids_translator[relation[1]]
+                                                        ], ids_translator[relation[1]]
 
             if translation0 and translation1:
                 if relation in to_invert:
@@ -349,8 +435,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 else:
                     yield MusicBrainzArtistBandRelationship(translation0, translation1)
             else:
-                LOGGER.warning("Artist id missing translation: %s to (%s, %s)" %
-                               (relation, translation0, translation1))
+                LOGGER.warning("Artist id missing translation: %s to (%s, %s)",
+                               relation, translation0, translation1)
 
     def _fill_entity(self, entity, info, areas):
         entity.catalog_id = info['gid']
@@ -403,9 +489,18 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
     def _get_date_and_precision(self, year, month, day):
         date_list = [year, month, day]
         precision = -1
+
         try:
+            if date_list[0] != '\\N' and int(date_list[0]) < 0:
+                LOGGER.warning('Failed to convert date (%s/%s/%s). Encountered negative year, '
+                               'which Python Date object does not support', *date_list)
+
+                # We can't parse the date, so we treat is as if it wasn't available
+                date_list[0] = '\\N'
+
             null_index = date_list.index('\\N')
             precision = 8 + null_index if null_index > 0 else -1
+
         except ValueError:
             precision = 11
 
@@ -423,5 +518,14 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         return type_code in ['2', '5', '6', '3', '\\N']
 
     def _artist_gender(self, gender_code):
-        genders = {'1': 'male', '2': 'female', '3': 'other', '\\N': 'other'}
-        return genders[gender_code]
+        genders = {'1': 'male', '2': 'female'}
+        return genders.get(gender_code, None)
+
+    def _count_num_lines_in_file(self, file_) -> int:
+
+        # count number of rows and go back to
+        # the beginning of file
+        n_rows = sum(1 for line in file_)
+        file_.seek(0)
+
+        return n_rows

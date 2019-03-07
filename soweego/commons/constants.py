@@ -41,10 +41,11 @@ SUPPORTED_QUERY_SELECTORS = (IDENTIFIER, LINKS, DATASET, METADATA)
 # Entity types and corresponding Wikidata query
 HANDLED_ENTITIES = {
     'band': CLASS,
-    'musician': OCCUPATION,
     'actor': OCCUPATION,
     'director': OCCUPATION,
-    'producer': OCCUPATION
+    'musician': OCCUPATION,
+    'producer': OCCUPATION,
+    'writer': OCCUPATION
 }
 
 # DB entity Python types for typed function signatures
@@ -137,12 +138,12 @@ DESCRIPTION = 'description'
 DESCRIPTION_TOKENS = 'description_tokens'
 
 # File names
-WD_TRAINING_SET = 'wikidata_%s_training_set.jsonl.gz'
-WD_CLASSIFICATION_SET = 'wikidata_%s_classification_set.jsonl.gz'
+WD_TRAINING_SET = 'wikidata_%s_%s_training_set.jsonl.gz'
+WD_CLASSIFICATION_SET = 'wikidata_%s_%s_classification_set.jsonl.gz'
 WD_TRAINING_DATAFRAME = 'wikidata_%s_training_dataframe.pkl.gz'
 WD_CLASSIFICATION_DATAFRAME = 'wikidata_%s_classification_dataframe.pkl.gz'
-TARGET_TRAINING_SET = '%s_training_set.jsonl.gz'
-TARGET_CLASSIFICATION_SET = '%s_classification_set.jsonl.gz'
+TARGET_TRAINING_SET = '%s_%s_training_set.jsonl.gz'
+TARGET_CLASSIFICATION_SET = '%s_%s_classification_set.jsonl.gz'
 TARGET_TRAINING_DATAFRAME = '%s_training_dataframe.pkl.gz'
 TARGET_CLASSIFICATION_DATAFRAME = '%s_classification_dataframe.pkl.gz'
 TRAINING_SAMPLES = '%s_training_samples%02d.pkl.gz'
