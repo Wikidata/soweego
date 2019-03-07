@@ -293,7 +293,7 @@ def _handle_dates(df):
     # Parse into Period instead, see
     # http://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-oob
     for column in (constants.DATE_OF_BIRTH, constants.DATE_OF_DEATH):
-        if column is None:
+        if df.get(column) is None:
             LOGGER.warning(
                 "No '%s' column in DataFrame, won't handle its dates. Perhaps it was dropped because it contained null values only", column)
             continue
