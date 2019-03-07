@@ -192,12 +192,12 @@ def _build_dataset_relevant_fields(base, link, nlp):
 
 
 def _dump_target_dataset_query_result(result, relevant_fields, fileout):
-    # res could be a list of (base, link, nlp), or only `base`
+    # res could be a tuple of (base, link, nlp), or only `base`
     for res in result:
 
         # if it is only `base` then we convert is to a list
         # so that we can reuse the same algorithm
-        if not isinstance(res, list):
+        if not isinstance(res, tuple):
             res = [res]
 
         # the first item of the list is always `base`
