@@ -14,7 +14,7 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import json
 import logging
 from collections import defaultdict
-from typing import Iterator, TextIO
+from typing import Generator, TextIO
 from urllib.parse import urlunsplit
 
 from requests import get
@@ -169,7 +169,7 @@ def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fil
                 no_labels_count, no_aliases_count, no_descriptions_count, no_sitelinks_count, no_links_count, no_ext_ids_count, no_claims_count)
 
 
-def get_metadata(qids: set) -> Iterator[tuple]:
+def get_metadata(qids: set) -> Generator[tuple, None, None]:
     no_claims_count = 0
 
     qid_buckets, request_params = _prepare_request(qids, 'claims')
@@ -191,7 +191,7 @@ def get_metadata(qids: set) -> Iterator[tuple]:
                 no_claims_count, vocabulary.METADATA_PIDS)
 
 
-def get_links(qids: set, url_pids: set, ext_id_pids_to_urls: dict) -> Iterator[tuple]:
+def get_links(qids: set, url_pids: set, ext_id_pids_to_urls: dict) -> Generator[tuple, None, None]:
     """Get sitelinks and third-party links for each Wikidata item in the given set.
 
     :param qids: set of Wikidata QIDs
@@ -201,7 +201,7 @@ def get_links(qids: set, url_pids: set, ext_id_pids_to_urls: dict) -> Iterator[t
     :param ext_id_pids_to_urls: a dictionary ``{external_ID_PID: {formatter_URL: formatter_regex}}``
     :type ext_id_pids_to_urls: dict
     :return: a generator yielding ``QID, URL`` tuples
-    :rtype: Iterator[tuple]
+    :rtype: Generator[tuple, None, None]
     """
     no_sitelinks_count = 0
     no_links_count = 0
@@ -518,6 +518,6 @@ def _make_buckets(qids):
 
 if __name__ == "__main__":
     import io
-    # def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> Iterator[tuple]:
+    # def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> Generator[tuple]:
     get_data_for_linker(
         set(['Q1409', 'Q1405', 'Q1407']), set(), dict(), io.StringIO(), dict())
