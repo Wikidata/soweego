@@ -9,6 +9,7 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+import datetime
 import json
 import logging
 import re
@@ -140,21 +141,22 @@ def gather_target_dataset(entity_type, catalog, identifiers, fileout, for_classi
 
     session = DBManager.connect_to_db()
 
-    ##########
+    # keep only non-None references
+    tables = [tb for tb in (base, link, nlp) if tb]
 
-    tables = [t for t in [base, link, nlp] if t]
-
+    # create the query
     query = session.query(*tables)
 
+    # remove base table so that we don't "outerjoin" it with
+    # itself
     tables.remove(base)
-    for t in tables:
-        query = query.outerjoin(t, base.catalog_id == t.catalog_id)
 
+    # make the join statements to join different tables
+    for tb in tables:
+        query = session.outerjoin(tb, base.catalog_id == tb.catalog_id)
+
+    # finally, add the filter condition to the query
     query = query.filter(condition)
-
-    ########
-    # query = session.query(base, link, nlp).outerjoin(link, base.catalog_id == link.catalog_id).outerjoin(
-    #     nlp, base.catalog_id == nlp.catalog_id).filter(condition)
 
     try:
         result = _run_query(query, catalog, entity_type)
@@ -174,8 +176,11 @@ def gather_target_dataset(entity_type, catalog, identifiers, fileout, for_classi
 def _build_dataset_relevant_fields(base, link, nlp):
     fields = set()
     for entity in base, link, nlp:
+
+        # if either of (base, link, nlp) is None
         if not entity:
             continue
+
         for column in entity.__mapper__.column_attrs:
             field = column.key
             if field in ('internal_id', 'catalog_id'):
@@ -185,21 +190,38 @@ def _build_dataset_relevant_fields(base, link, nlp):
 
 
 def _dump_target_dataset_query_result(result, relevant_fields, fileout):
-    for base, link, nlp in result:
+    # res could be a list of (base, link, nlp), or only `base`
+    for res in result:
+
+        # if it is only `base` then we convert is to a list
+        # so that we can reuse the same algorithm
+        if not isinstance(res, list):
+            res = [res]
+
+        # the first item of the list is always `base`
+        base = res[0]
         parsed = {constants.TID: base.catalog_id}
+
         for field in relevant_fields:
-            try:
-                parsed[field] = getattr(base, field)
-            except AttributeError:
-                pass
-            try:
-                parsed[field] = getattr(link, field)
-            except AttributeError:
-                pass
-            try:
-                parsed[field] = getattr(nlp, field)
-            except AttributeError:
-                pass
+            
+            # for every `table` in the results
+            for tb in res:
+                
+                # we try to get the appropriate field for that table
+                try:
+                    f_value = getattr(tb, field)
+
+                    # if the value is a date/datetime then we need
+                    # to convert it to string, so that it is JSON
+                    # serializable
+                    if isinstance(f_value, datetime.date) or isinstance(f_value, datetime.datetime):
+                        parsed[field] = f_value.isoformat()
+                        
+                    else:
+                        parsed[field] = f_value
+
+                except AttributeError:
+                    pass
 
         fileout.write(json.dumps(parsed, ensure_ascii=False) + '\n')
         fileout.flush()
