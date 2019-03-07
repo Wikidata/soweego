@@ -28,7 +28,7 @@ pylint==2.3.0
 PyMySQL==0.9.3
 python-dateutil==2.8.0
 pytz==2018.9
-pywikibot==3.0.dev0
+pywikibot==3.0.20190204
 recordlinkage==0.12
 regex==2019.2.21
 requests==2.21.0
