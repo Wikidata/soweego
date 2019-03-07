@@ -233,10 +233,10 @@ def _preprocess_target(goal, target_reader):
         # 4. Pair dates with their precision & drop precision columns
         if will_handle_dates:
             LOGGER.info('Pairing date columns with precision ones ...')
-            dob_column = list(
-                zip(dob_column, chunk[constants.BIRTH_PRECISION]))
-            dod_column = list(
-                zip(dod_column, chunk[constants.DEATH_PRECISION]))
+            chunk[constants.DATE_OF_BIRTH] = list(
+                zip(chunk[constants.DATE_OF_BIRTH], chunk[constants.BIRTH_PRECISION]))
+            chunk[constants.DATE_OF_DEATH] = list(
+                zip(chunk[constants.DATE_OF_DEATH], chunk[constants.DEATH_PRECISION]))
             chunk.drop(columns=[constants.BIRTH_PRECISION,
                                 constants.DEATH_PRECISION], inplace=True)
             log_dataframe_info(
