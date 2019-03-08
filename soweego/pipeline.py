@@ -1,4 +1,5 @@
 import logging
+from typing import Callable
 
 import click
 from soweego.commons import target_database
@@ -7,8 +8,10 @@ from soweego.importer.importer import import_cli, validate_links_cli
 from soweego.linker import baseline, evaluate, train, classify
 from soweego.validator.checks import (check_existence_cli, check_links_cli,
                                       check_metadata_cli)
+from click.testing import CliRunner
 
 LOGGER = logging.getLogger(__name__)
+runner = CliRunner()
 
 
 @click.command()
@@ -47,19 +50,21 @@ def cli(target: str, validator: bool, importer: bool, linker: bool, upload: bool
 
 def _importer(target: str):
     LOGGER.info("Running importer for target: %s without resolving the URLs" % target)
-    import_cli([target, '--no-resolve'])
+    _invoke_no_exit(import_cli, [target, '--no-resolve'])
     LOGGER.info("Validating URL resolving them for target %s" % target)
-    validate_links_cli([target])
+    _invoke_no_exit(validate_links_cli, [target])
 
 
 def _linker(target: str, upload: bool):
     LOGGER.info("Running linker for target: %s" % target)
     upload_option = "--upload" if upload else "--no-upload"
     for target_type in target_database.available_types_for_target(target):
-        baseline.cli([target, target_type, '-s', 'all', upload_option])
-        evaluate.cli(['nb', target, target_type])
-        train.cli(['nb', target, target_type])
-        classify.cli([target, target_type, '/app/shared/musicbrainz_%s_nb_model.pkl'.format(target_type), upload_option])
+        _invoke_no_exit(baseline.cli, [target, target_type, '-s', 'all', upload_option])
+        _invoke_no_exit(evaluate.cli, ['nb', target, target_type])
+        _invoke_no_exit(train.cli, ['nb', target, target_type])
+        _invoke_no_exit(classify.cli,
+                      [target, target_type, '/app/shared/musicbrainz_%s_nb_model.pkl'.format(target_type),
+                       upload_option])
 
 
 def _validator(target: str, upload: bool):
@@ -68,6 +73,13 @@ def _validator(target: str, upload: bool):
     for entity_type in target_database.available_types_for_target(target):
         LOGGER.info("Running validator for target %s %s" %
                     (target, entity_type))
-        check_existence_cli([entity_type, target, upload_option])
-        check_links_cli([entity_type, target, upload_option])
-        check_metadata_cli([entity_type, target, upload_option])
+        _invoke_no_exit(check_existence_cli, [entity_type, target, upload_option])
+        _invoke_no_exit(check_links_cli, [entity_type, target, upload_option])
+        _invoke_no_exit(check_metadata_cli, [entity_type, target, upload_option])
+
+
+def _invoke_no_exit(function: Callable, args: list):
+    try:
+        function(args)
+    except SystemExit:
+        pass
