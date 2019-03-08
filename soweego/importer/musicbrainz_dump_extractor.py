@@ -38,7 +38,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 class MusicBrainzDumpExtractor(BaseDumpExtractor):
-
     _sqlalchemy_commit_every = 700
 
     def get_dump_download_urls(self) -> Iterable[str]:
@@ -78,10 +77,10 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         LOGGER.debug("Added %s/%s artist records", *artist_count)
 
-        db_manager.drop([MusicbrainzArtistLinkEntity,
-                         MusicbrainzBandLinkEntity])
-        db_manager.create([MusicbrainzArtistLinkEntity,
-                           MusicbrainzBandLinkEntity])
+        tables = [MusicbrainzArtistLinkEntity,
+                  MusicbrainzBandLinkEntity]
+        db_manager.drop(tables)
+        db_manager.create(tables)
 
         LOGGER.info("Dropped and created tables %s", tables)
         LOGGER.info("Importing links")
@@ -105,8 +104,9 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         LOGGER.debug("Added %s/%s ISNI link records", *isni_link_count)
 
-        db_manager.drop([MusicBrainzArtistBandRelationship])
-        db_manager.create([MusicBrainzArtistBandRelationship])
+        tables = [MusicBrainzArtistBandRelationship]
+        db_manager.drop(tables)
+        db_manager.create(tables)
         LOGGER.info("Dropped and created tables %s", tables)
         LOGGER.info("Importing relationships artist-band")
 
@@ -189,7 +189,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                         relationship[3])
                 else:
                     urlid_artistid_relationship[relationship[3]
-                                                ] = relationship[2]
+                    ] = relationship[2]
 
         url_artistid = {}
         url_path = os.path.join(dump_path, 'mbdump', 'url')
@@ -319,7 +319,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         # Key is the entity id which has a list of aliases
         with open(artist_alias_path, 'r') as aliasesfile:
             for alias in DictReader(aliasesfile, delimiter='\t', fieldnames=[
-                    'id', 'parent_id', 'label']):
+                'id', 'parent_id', 'label']):
                 aliases[alias['parent_id']].append(alias['label'])
 
         LOGGER.info('Getting area IDs and related names')
@@ -427,7 +427,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         for relation in relationships:
             translation0, translation1 = ids_translator[relation[0]
-                                                        ], ids_translator[relation[1]]
+                                         ], ids_translator[relation[1]]
 
             if translation0 and translation1:
                 if relation in to_invert:
