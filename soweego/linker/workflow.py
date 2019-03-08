@@ -219,7 +219,16 @@ def _preprocess_target(goal, target_reader):
         # 2. Rename non-null catalog ID column & drop others
         LOGGER.info("Renaming '%s' column with no null values to '%s' & dropping '%s' columns with null values ...",
                     constants.CATALOG_ID, constants.TID, constants.CATALOG_ID)
-        chunk[constants.TID] = chunk[constants.CATALOG_ID].dropna(axis=1)
+
+        # if the catalog_id constant represents only one column (so a Series)
+        # then this will by default be only catalog_id,
+        #  which doesn't have None values
+        if not isinstance(chunk[constants.CATALOG_ID], pd.Series):
+            chunk[constants.TID] = chunk[constants.CATALOG_ID].dropna(axis=1)
+
+        else:
+            chunk[constants.TID] = chunk[constants.CATALOG_ID]
+
         chunk.drop(columns=constants.CATALOG_ID, inplace=True)
         log_dataframe_info(
             LOGGER, chunk, f"Renamed '{constants.CATALOG_ID}' column with no null values to '{constants.TID}' & dropped '{constants.CATALOG_ID}' columns with null values")
