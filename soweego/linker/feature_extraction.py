@@ -10,6 +10,7 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import logging
+from typing import Union
 
 import jellyfish
 import numpy as np
@@ -175,6 +176,78 @@ class UrlList(BaseCompareFeature):
             return np.average(scores)
 
         return fillna(concatenated.apply(exact_apply), self.missing_value)
+
+
+class DateCompare(BaseCompareFeature):
+
+    name = "DateCompare"
+    description = "Compares the date attribute of record pairs."
+
+    def __init__(self,
+                 left_on,
+                 right_on,
+                 missing_value=0.0,
+                 compare="all",
+                 label=None):
+        super(DateCompare, self).__init__(left_on, right_on, label=label)
+
+        self.missing_value = missing_value
+        self.compare = compare
+
+    def _compute_vectorized(self, source_column, target_column):
+        paired = pd.Series(list(zip(source_column, target_column)))
+
+        def check_equality(s_item: Union[pd.Period, list], t_item: pd.Period):
+
+            if not isinstance(s_item, (list, tuple)):
+                s_item = [s_item]
+            
+            """
+            Here we need to get the precision of all by using item.freq.name
+            
+            and then compare them. See baseline implementation for what was done
+            to compare based on precision
+
+            possible freq.names (presicions) are: from most precise to least
+
+            In [83]: pd.Period(pot).freq.name # year month day and ultra time?
+            Out[83]: 'U'
+
+            In [84]: pd.Period(pot[:16]).freq.name # year month day and time
+            Out[84]: 'T'
+
+            In [85]: pd.Period(pot[:13]).freq.name # year month day and hour
+            Out[85]: 'H'
+
+            In [86]: pd.Period(pot[:10]).freq.name # year month and day
+            Out[86]: 'D'
+
+            In [89]: pd.Period(pot[:7]).freq.name # only year and month
+            Out[89]: 'M'
+
+            In [88]: pd.Period(pot[:4]).freq.name # only year
+            Out[88]: 'A-DEC'
+            """
+
+
+            s_precision = s_item.freq.name
+
+
+            similarity = 0
+            if s_item.year == t_item.year:
+                similarity += 1
+            
+                if s_item.month == t_item.month:
+                    similarity += 1
+
+                    if s_item.day == t_item.day:
+                        similarity += 1
+            
+
+        c = pd.Series()
+
+        # c[s_left.isnull() | s_right.isnull()] = self.missing_value
+        return c
 
 
 def _pair_has_any_null(pair):
