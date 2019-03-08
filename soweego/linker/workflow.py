@@ -9,6 +9,7 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+import datetime
 import gzip
 import json
 import logging
@@ -360,6 +361,9 @@ def _parse_dates_list(dates_list):
 
 
 def _build_date_object(value, slice_index, to_dates_list):
+    if isinstance(value, (datetime.date, datetime.datetime)):
+        value = value.isoformat()
+        
     try:
         to_dates_list.append(pd.Period(value[:slice_index]))
     except ValueError as ve:
