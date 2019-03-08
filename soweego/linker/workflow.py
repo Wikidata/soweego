@@ -181,11 +181,6 @@ def _preprocess_wikidata(goal, wikidata_reader):
         # 2. Drop columns with null values only
         _drop_null_columns(chunk)
 
-        # 3. Training only: join target IDs if multiple
-        if goal == 'training':
-            chunk[constants.TID] = chunk[constants.TID].map(
-                lambda cell: ' '.join(cell) if isinstance(cell, list) else cell)
-
         # 4. Tokenize & join strings lists columns
         for column in (constants.NAME, constants.PSEUDONYM):
             chunk[f'{column}_tokens'] = chunk[column].apply(
