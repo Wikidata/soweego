@@ -82,8 +82,3 @@ def _train(classifier, feature_vectors, positive_samples_index, binarize):
     model.fit(feature_vectors, positive_samples_index)
     LOGGER.info('Training done')
     return model
-
-
-if __name__ == "__main__":
-    m = execute(rl.NaiveBayesClassifier, 'discogs',
-                'musician', 0.3, '/Users/focs/soweego/output')
