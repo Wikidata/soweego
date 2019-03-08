@@ -35,7 +35,7 @@ def cli(classifier, target, target_type, binarize, dir_io):
     model = execute(
         constants.CLASSIFIERS[classifier], target, target_type, binarize, dir_io)
     outfile = os.path.join(
-        dir_io, constants.LINKER_MODEL % (target, classifier))
+        dir_io, constants.LINKER_MODEL % (target, target_type, classifier))
     joblib.dump(model, outfile)
     LOGGER.info("%s model dumped to '%s'", classifier, outfile)
 
