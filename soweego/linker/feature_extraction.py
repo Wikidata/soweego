@@ -22,12 +22,12 @@ from soweego.commons import text_utils
 
 LOGGER = logging.getLogger(__name__)
 
+
 # Adapted from https://github.com/J535D165/recordlinkage/blob/master/recordlinkage/compare.py
 # See RECORDLINKAGE_LICENSE
 
 
 class StringList(BaseCompareFeature):
-
     name = 'string_list'
     description = 'Compare pairs of lists with string values'
 
@@ -54,7 +54,8 @@ class StringList(BaseCompareFeature):
             algorithm = self.cosine_similarity
         else:
             raise ValueError(
-                'Bad string similarity algorithm: %s. Please use one of %s' % (self.algorithm, ('levenshtein', 'cosine')))
+                'Bad string similarity algorithm: %s. Please use one of %s' % (
+                    self.algorithm, ('levenshtein', 'cosine')))
 
         compared = algorithm(source_column, target_column)
         compared_filled = fillna(compared, self.missing_value)
@@ -87,7 +88,7 @@ class StringList(BaseCompareFeature):
                 for target in target_values:
                     try:
                         score = 1 - jellyfish.levenshtein_distance(source, target) \
-                            / np.max([len(source), len(target)])
+                                / np.max([len(source), len(target)])
                         scores.append(score)
                     except TypeError:
                         if pd.isnull(source) or pd.isnull(target):
@@ -143,7 +144,6 @@ class StringList(BaseCompareFeature):
 
 
 class UrlList(BaseCompareFeature):
-
     name = 'url_list'
     description = 'Compare pairs of lists with URL values'
 
@@ -191,3 +191,33 @@ def _pair_has_any_null(pair):
         return True
 
     return False
+
+
+class SimilarTokens(BaseCompareFeature):
+    name = 'similar_tokens'
+    description = 'Compare pairs of lists with URL values'
+
+    def __init__(self, left_on, right_on, agree_value=1.0, disagree_value=0.0, missing_value=0.0, label=None):
+        super(SimilarTokens, self).__init__(left_on, right_on, label=label)
+        self.agree_value = agree_value
+        self.disagree_value = disagree_value
+        self.missing_value = missing_value
+
+    def _compute_vectorized(self, source_column, target_column):
+        concatenated = pd.Series(list(zip(source_column, target_column)))
+
+        def exact_apply(pair):
+            if _pair_has_any_null(pair):
+                LOGGER.debug(
+                    "Can't compare Tokens, the pair contains null values: %s", pair)
+                return np.nan
+
+            first_set = set(filter(None, pair[0].split(' ')))
+            second_set = set(filter(None, pair[0].split(' ')))
+            count_intersect = len(first_set.intersection(second_set))
+
+            total = len(first_set) + len(second_set)
+
+            return count_intersect / total if total > 0 else np.nan
+
+        return fillna(concatenated.apply(exact_apply), self.missing_value)
