@@ -15,7 +15,7 @@ import re
 import tarfile
 from collections import defaultdict
 from csv import DictReader
-from datetime import date
+from datetime import date, datetime
 from typing import Iterable, Tuple
 
 import requests
@@ -39,7 +39,7 @@ LOGGER = logging.getLogger(__name__)
 
 class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
-    _sqlalchemy_commit_every = 700
+    _sqlalchemy_commit_every = 1_000_000
 
     def get_dump_download_urls(self) -> Iterable[str]:
         latest_version = requests.get(
@@ -120,7 +120,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                      *relationships_count)
 
     def _add_entities_from_generator(self, db_manager,
-                                     _generator, *args) -> Tuple[int, int]:
+                                     generator_, *args) -> Tuple[int, int]:
         """
         Adds all entities yielded by a generator to the DB
 
@@ -138,21 +138,41 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         session = db_manager.new_session()
 
         # we construct the generator
-        blt_gen = _generator(*args)
+        blt_gen = generator_(*args)
 
         # and obtain the first item, which is
         # the number of rows that the generator will yield
         n_rows = next(blt_gen)
 
+        entity_array = []  # array to which we'll add the entities
+
+        # the generator will give us a new entity each loop
+        # so we just add this to the `entity_array` and commit
+        # it once it is large enough (self._sqlalchemy_commit_every)
         for entity in tqdm(blt_gen, total=n_rows):
             try:
                 n_total_entities += 1
-                session.add(entity)
+                entity_array.append(entity)
 
                 # commit entities to DB in batches, it is mode
                 # efficient
-                if n_added_entities % self._sqlalchemy_commit_every == 0:
+                if len(entity_array) >= self._sqlalchemy_commit_every:
+
+                    LOGGER.info("Adding batch of entities to the database, "
+                                "this might take a couple of minutes. Progress will "
+                                "resume soon.")
+
+                    insert_start_time = datetime.now()
+
+                    session.bulk_save_objects(entity_array)
                     session.commit()
+                    session.expunge_all()  # clear session
+
+                    entity_array.clear()  # clear entity array
+
+                    LOGGER.debug("It took %s to add %s entities to the database",
+                                 datetime.now()-insert_start_time,
+                                 len(entity_array))
 
                 n_added_entities += 1
 
@@ -160,6 +180,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 LOGGER.warning(str(i))
 
         # finally, commit remaining entities in session
+        session.bulk_save_objects(entity_array)
         session.commit()
 
         # and close session
