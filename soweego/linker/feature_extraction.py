@@ -10,7 +10,7 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import logging
-from typing import Union
+from typing import Union, List, Tuple
 
 import jellyfish
 import numpy as np
@@ -195,59 +195,71 @@ class DateCompare(BaseCompareFeature):
         self.compare = compare
 
     def _compute_vectorized(self, source_column, target_column):
-        paired = pd.Series(list(zip(source_column, target_column)))
 
-        def check_equality(s_item: Union[pd.Period, list], t_item: pd.Period):
+        # we zip together the source column and the target column so that
+        # they're easier to process
+        concatenated = pd.Series(list(zip(source_column, target_column)))
 
+        def check_date_equality(pair: Tuple[Union[pd.Period, List[pd.Period]], pd.Period]):
+            """
+            Compares a target pd.Period with the source pd.Periods which represent either
+            a birth or death date. The source date can be a list of possible dates.
+
+            Returns the most optimistic match
+            """
+
+            s_item, t_item = pair
+
+            # precisions listed from less to most precise, as defined here:
+            # http://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#dateoffset-objects
+            precisions = [
+                'A-DEC',  # we know only the year
+                'M',  # we know up to the month
+                'D',  # up to the day
+                'H',  # up to the hour
+                'T',  # up to the minute
+                'S',  # up to the second
+                'U',  # up to the microsecond
+                'N',  # up to the nanosecond
+            ]
+
+            # will help us to keep track of the best score
+            best = 0
+
+            # convert `s_item` to a list if it isn't already
             if not isinstance(s_item, (list, tuple)):
                 s_item = [s_item]
+
+            for s_date in s_item:
+
+                # get precision number for both dates
+                s_precision = precisions.index(s_date.freq.name)
+                t_precision = precisions.index(t_item.freq.name)
+
+                # we choose to compare on the lowest precision
+                # since it's the maximum precision on which both
+                # dates can be safely compared
+                lowest_prec = min(s_precision, t_precision)
+
+                # the result for the current `s_date`
+                c_r = 0
+
+                for min_required_prec, d_attr in enumerate(['year', 'month', 'day', 'hour', 'minute', 'second']):
+                    if lowest_prec >= min_required_prec and getattr(s_date, d_attr) == getattr(t_item, d_attr):
+                        c_r += 1
+                    else:
+                        break
+
+                # we want a value between 0 and 1 for our score. 0 means no match at all and
+                # 1 stands for perfect match. So we just divide `c_r` by 6 (which is it's
+                # maximum possible value) and replace `best` if needed
+
+                best = max(best, (c_r/6))
             
-            """
-            Here we need to get the precision of all by using item.freq.name
-            
-            and then compare them. See baseline implementation for what was done
-            to compare based on precision
+            return best
 
-            possible freq.names (presicions) are: from most precise to least
-
-            In [83]: pd.Period(pot).freq.name # year month day and ultra time?
-            Out[83]: 'U'
-
-            In [84]: pd.Period(pot[:16]).freq.name # year month day and time
-            Out[84]: 'T'
-
-            In [85]: pd.Period(pot[:13]).freq.name # year month day and hour
-            Out[85]: 'H'
-
-            In [86]: pd.Period(pot[:10]).freq.name # year month and day
-            Out[86]: 'D'
-
-            In [89]: pd.Period(pot[:7]).freq.name # only year and month
-            Out[89]: 'M'
-
-            In [88]: pd.Period(pot[:4]).freq.name # only year
-            Out[88]: 'A-DEC'
-            """
-
-
-            s_precision = s_item.freq.name
-
-
-            similarity = 0
-            if s_item.year == t_item.year:
-                similarity += 1
-            
-                if s_item.month == t_item.month:
-                    similarity += 1
-
-                    if s_item.day == t_item.day:
-                        similarity += 1
-            
-
-        c = pd.Series()
-
-        # c[s_left.isnull() | s_right.isnull()] = self.missing_value
-        return c
+        
+        return fillna(concatenated.apply(check_date_equality), self.missing_value)
 
 
 def _pair_has_any_null(pair):
