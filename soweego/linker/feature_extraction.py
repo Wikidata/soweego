@@ -193,7 +193,7 @@ class DateCompare(BaseCompareFeature):
         self.missing_value = missing_value
 
     def _compute_vectorized(self, source_column, target_column):
-
+        
         # we zip together the source column and the target column so that
         # they're easier to process
         concatenated = pd.Series(list(zip(source_column, target_column)))
@@ -207,6 +207,14 @@ class DateCompare(BaseCompareFeature):
             """
 
             s_item, t_item = pair
+
+            # if t_item is NaT then we can't compare, and we skip this pair
+            if pd.isna(t_item):
+                return 0
+
+            # convert `s_item` to a list if it isn't already
+            if not isinstance(s_item, (list, tuple)):
+                s_item = [s_item]
 
             # precisions listed from less to most precise, as defined here:
             # http://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#dateoffset-objects
@@ -224,11 +232,11 @@ class DateCompare(BaseCompareFeature):
             # will help us to keep track of the best score
             best = 0
 
-            # convert `s_item` to a list if it isn't already
-            if not isinstance(s_item, (list, tuple)):
-                s_item = [s_item]
-
             for s_date in s_item:
+                
+                # if the current s_date is NaT then we can't compare, so we skip it
+                if pd.isna(s_date):
+                    continue
 
                 # get precision number for both dates
                 s_precision = precisions.index(s_date.freq.name)
