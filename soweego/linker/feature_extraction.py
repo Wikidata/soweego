@@ -187,12 +187,10 @@ class DateCompare(BaseCompareFeature):
                  left_on,
                  right_on,
                  missing_value=0.0,
-                 compare="all",
                  label=None):
         super(DateCompare, self).__init__(left_on, right_on, label=label)
 
         self.missing_value = missing_value
-        self.compare = compare
 
     def _compute_vectorized(self, source_column, target_column):
 
