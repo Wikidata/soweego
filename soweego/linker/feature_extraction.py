@@ -214,7 +214,8 @@ class DateCompare(BaseCompareFeature):
 
             # if t_item is NaT then we can't compare, and we skip this pair
             if pd.isna(t_item):
-                return 0
+                LOGGER.debug("Can't compare dates, the target value is null. Pair: %s", pair)
+                return np.nan
 
             # convert `s_item` to a list if it isn't already
             if not isinstance(s_item, (list, tuple)):
@@ -240,6 +241,7 @@ class DateCompare(BaseCompareFeature):
 
                 # if the current s_date is NaT then we can't compare, so we skip it
                 if pd.isna(s_date):
+                    LOGGER.debug("Can't compare dates, the current Wikidata value is null. Current pair: %s", (s_date, t_item))
                     continue
 
                 # get precision number for both dates
