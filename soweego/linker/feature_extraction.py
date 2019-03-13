@@ -10,7 +10,7 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import logging
-from typing import Union, List, Tuple
+from typing import List, Tuple, Union
 
 import jellyfish
 import numpy as np
@@ -19,7 +19,7 @@ from recordlinkage.base import BaseCompareFeature
 from recordlinkage.utils import fillna
 from sklearn.feature_extraction.text import CountVectorizer
 
-from soweego.commons import text_utils
+from soweego.commons import constants, text_utils
 
 LOGGER = logging.getLogger(__name__)
 
@@ -214,25 +214,13 @@ class DateCompare(BaseCompareFeature):
 
             # if t_item is NaT then we can't compare, and we skip this pair
             if pd.isna(t_item):
-                LOGGER.debug("Can't compare dates, the target value is null. Pair: %s", pair)
+                LOGGER.debug(
+                    "Can't compare dates, the target value is null. Pair: %s", pair)
                 return np.nan
 
             # convert `s_item` to a list if it isn't already
             if not isinstance(s_item, list):
                 s_item = [s_item]
-
-            # precisions listed from least to most precise, as defined here:
-            # http://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#dateoffset-objects
-            precisions = [
-                'A-DEC',  # we know only the year
-                'M',  # we know up to the month
-                'D',  # up to the day
-                'H',  # up to the hour
-                'T',  # up to the minute
-                'S',  # up to the second
-                'U',  # up to the microsecond
-                'N',  # up to the nanosecond
-            ]
 
             # will help us to keep track of the best score
             best = 0
@@ -241,12 +229,15 @@ class DateCompare(BaseCompareFeature):
 
                 # if the current s_date is NaT then we can't compare, so we skip it
                 if pd.isna(s_date):
-                    LOGGER.debug("Can't compare dates, the current Wikidata value is null. Current pair: %s", (s_date, t_item))
+                    LOGGER.debug(
+                        "Can't compare dates, the current Wikidata value is null. Current pair: %s", (s_date, t_item))
                     continue
 
                 # get precision number for both dates
-                s_precision = precisions.index(s_date.freq.name)
-                t_precision = precisions.index(t_item.freq.name)
+                s_precision = constants.PD_PERIOD_PRECISIONS.index(
+                    s_date.freq.name)
+                t_precision = constants.PD_PERIOD_PRECISIONS.index(
+                    t_item.freq.name)
 
                 # we choose to compare on the lowest precision
                 # since it's the maximum precision on which both
