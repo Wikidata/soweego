@@ -247,7 +247,17 @@ class DateCompare(BaseCompareFeature):
                 # the result for the current `s_date`
                 c_r = 0
 
+                # now we loop through the possible `Period` attributes that we can compare
+                # and the precision that stands for said attribute
                 for min_required_prec, d_attr in enumerate(['year', 'month', 'day', 'hour', 'minute', 'second']):
+
+                    # If both `s_date` and `t_item` have a precision which allows the
+                    # current attribute to be compared then we do so. If the attribute
+                    # matches then we add 1 to `c_r`, if not then we break the loop.
+                    # We consider from lowest to highest precision. If a lowest
+                    # precision attribute (ie, year) doesn't match then we say that
+                    # the dates don't match at all (we don't check if higher precision
+                    # attributes match)
                     if lowest_prec >= min_required_prec and getattr(s_date, d_attr) == getattr(t_item, d_attr):
                         c_r += 1
                     else:
