@@ -152,9 +152,9 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
     # Feture 4: cosine similarity on descriptions
     compare.add(StringList(constants.DESCRIPTION, constants.DESCRIPTION,
                            algorithm='cosine', analyzer='soweego', label='description_cosine'))
-                           
-    compare.add(DateCompare(constants.DATE_OF_BIRTH, constants.DATE_OF_BIRTH,
-                            compare="all", label='date_of_birth_comp_all'))
+
+    compare.add(DateCompare(constants.DATE_OF_BIRTH,
+                            constants.DATE_OF_BIRTH, label='date_of_birth'))
 
     feature_vectors = compare.compute(candidate_pairs, wikidata, target)
 
