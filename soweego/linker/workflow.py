@@ -9,6 +9,7 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+import datetime
 import gzip
 import json
 import logging
@@ -24,7 +25,7 @@ from pandas.io.json.json import JsonReader
 from soweego.commons import (constants, data_gathering, target_database,
                              text_utils, url_utils)
 from soweego.commons.logging import log_dataframe_info
-from soweego.linker.feature_extraction import StringList, UrlList
+from soweego.linker.feature_extraction import StringList, UrlList, DateCompare
 from soweego.wikidata import api_requests, vocabulary
 
 LOGGER = logging.getLogger(__name__)
@@ -32,7 +33,8 @@ LOGGER = logging.getLogger(__name__)
 
 def build_wikidata(goal, catalog, entity, dir_io):
     if goal == 'training':
-        wd_io_path = os.path.join(dir_io, constants.WD_TRAINING_SET % (catalog, entity))
+        wd_io_path = os.path.join(
+            dir_io, constants.WD_TRAINING_SET % (catalog, entity))
         qids_and_tids = {}
     elif goal == 'classification':
         wd_io_path = os.path.join(
@@ -118,7 +120,6 @@ def train_test_build(catalog, entity, dir_io):
     # Target
     target_df_reader = build_target('training', catalog, entity, qids_and_tids)
 
-
     return wd_df_reader, target_df_reader
 
 
@@ -151,6 +152,13 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
     # Feture 4: cosine similarity on descriptions
     compare.add(StringList(constants.DESCRIPTION, constants.DESCRIPTION,
                            algorithm='cosine', analyzer='soweego', label='description_cosine'))
+
+    compare.add(DateCompare(constants.DATE_OF_BIRTH,
+                            constants.DATE_OF_BIRTH, label='date_of_birth'))
+
+    compare.add(DateCompare(constants.DATE_OF_DEATH,
+                            constants.DATE_OF_DEATH, label='date_of_death'))
+
     feature_vectors = compare.compute(candidate_pairs, wikidata, target)
 
     LOGGER.info('Feature extraction done')
@@ -214,7 +222,16 @@ def _preprocess_target(goal, target_reader):
         # 2. Rename non-null catalog ID column & drop others
         LOGGER.info("Renaming '%s' column with no null values to '%s' & dropping '%s' columns with null values ...",
                     constants.CATALOG_ID, constants.TID, constants.CATALOG_ID)
-        chunk[constants.TID] = chunk[constants.CATALOG_ID].dropna(axis=1)
+
+        # if the catalog_id constant represents only one column (so a Series)
+        # then this will by default be only catalog_id,
+        #  which doesn't have None values
+        if not isinstance(chunk[constants.CATALOG_ID], pd.Series):
+            chunk[constants.TID] = chunk[constants.CATALOG_ID].dropna(axis=1)
+
+        else:
+            chunk[constants.TID] = chunk[constants.CATALOG_ID]
+
         chunk.drop(columns=constants.CATALOG_ID, inplace=True)
         log_dataframe_info(
             LOGGER, chunk, f"Renamed '{constants.CATALOG_ID}' column with no null values to '{constants.TID}' & dropped '{constants.CATALOG_ID}' columns with null values")
@@ -346,6 +363,9 @@ def _parse_dates_list(dates_list):
 
 
 def _build_date_object(value, slice_index, to_dates_list):
+    if isinstance(value, (datetime.date, datetime.datetime)):
+        value = value.isoformat()
+
     try:
         to_dates_list.append(pd.Period(value[:slice_index]))
     except ValueError as ve:

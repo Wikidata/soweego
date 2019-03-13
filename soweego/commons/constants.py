@@ -162,3 +162,18 @@ CLASSIFIERS = {
 }
 CLASSIFICATION_RETURN_SERIES = ('classification.return_type', 'series')
 CONFIDENCE_THRESHOLD = 0.5
+
+
+# precisions for the `pandas.Period` class. 
+# Listed from least to most precise, as defined here:
+# http://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#dateoffset-objects
+PD_PERIOD_PRECISIONS = [
+    'A-DEC',  # we know only the year
+    'M',  # we know up to the month
+    'D',  # up to the day
+    'H',  # up to the hour
+    'T',  # up to the minute
+    'S',  # up to the second
+    'U',  # up to the microsecond
+    'N',  # up to the nanosecond
+]
