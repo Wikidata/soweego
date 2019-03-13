@@ -193,7 +193,7 @@ class DateCompare(BaseCompareFeature):
         self.missing_value = missing_value
 
     def _compute_vectorized(self, source_column, target_column):
-        
+
         # we zip together the source column and the target column so that
         # they're easier to process
         concatenated = pd.Series(list(zip(source_column, target_column)))
@@ -216,7 +216,7 @@ class DateCompare(BaseCompareFeature):
             if not isinstance(s_item, (list, tuple)):
                 s_item = [s_item]
 
-            # precisions listed from less to most precise, as defined here:
+            # precisions listed from least to most precise, as defined here:
             # http://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#dateoffset-objects
             precisions = [
                 'A-DEC',  # we know only the year
@@ -257,12 +257,13 @@ class DateCompare(BaseCompareFeature):
                         break
 
                 # we want a value between 0 and 1 for our score. 0 means no match at all and
-                # 1 stands for perfect match. So we just divide `c_r` by 6 (which is it's
-                # maximum possible value) and replace `best` if needed
-
-                best = max(best, (c_r/6))
+                # 1 stands for perfect match. So we just divide `c_r` by `lowest_prec`
+                # so that we get the percentage of items that matches from the total number
+                # of items we compared (since we have variable date precision)
+                best = max(best, (c_r/lowest_prec))
             
-            return best
+            # Finally, round since we want a final binary value (0 if <= 0.5 ; else 1)
+            return np.round(best)
 
         
         return fillna(concatenated.apply(check_date_equality), self.missing_value)
