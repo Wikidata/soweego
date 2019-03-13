@@ -9,6 +9,7 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+import datetime
 import gzip
 import json
 import logging
@@ -24,7 +25,7 @@ from pandas.io.json.json import JsonReader
 from soweego.commons import (constants, data_gathering, target_database,
                              text_utils, url_utils)
 from soweego.commons.logging import log_dataframe_info
-from soweego.linker.feature_extraction import StringList, UrlList
+from soweego.linker.feature_extraction import StringList, UrlList, DateCompare
 from soweego.wikidata import api_requests, vocabulary
 
 LOGGER = logging.getLogger(__name__)
@@ -154,6 +155,13 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
     # Feture 4: cosine similarity on descriptions
     compare.add(StringList(constants.DESCRIPTION, constants.DESCRIPTION,
                            algorithm='cosine', analyzer='soweego', label='description_cosine'))
+
+    compare.add(DateCompare(constants.DATE_OF_BIRTH,
+                            constants.DATE_OF_BIRTH, label='date_of_birth'))
+
+    compare.add(DateCompare(constants.DATE_OF_DEATH,
+                            constants.DATE_OF_DEATH, label='date_of_death'))
+
     feature_vectors = compare.compute(candidate_pairs, wikidata, target)
     pd.to_pickle(feature_vectors, path_io)
 
@@ -226,10 +234,17 @@ def preprocess_target(goal, target_reader):
     # 2. Rename non-null catalog ID column & drop others
     LOGGER.info("Renaming '%s' column with no null values to '%s' & dropping '%s' columns with null values ...",
                 constants.CATALOG_ID, constants.TID, constants.CATALOG_ID)
-    no_nulls = target[constants.CATALOG_ID].dropna(axis=1)
-    # It may happen that > 1 column has no null values
-    target[constants.TID] = no_nulls.iloc[:, 0] if isinstance(
-        no_nulls, pd.DataFrame) else no_nulls
+    # If 'catalog_id' is one column (i.e., a Series),
+    # then it won't have None values
+    if isinstance(target[constants.CATALOG_ID], pd.Series):
+        target[constants.TID] = target[constants.CATALOG_ID]
+    else:
+        no_nulls = target[constants.CATALOG_ID].dropna(axis=1)
+        # It may happen that more than 1 column has no null values:
+        # in this case, they must be identical,
+        # so take the first one
+        target[constants.TID] = no_nulls.iloc[:, 0] if isinstance(
+            no_nulls, pd.DataFrame) else no_nulls
     target.drop(columns=constants.CATALOG_ID, inplace=True)
     log_dataframe_info(
         LOGGER, target, f"Renamed '{constants.CATALOG_ID}' column with no null values to '{constants.TID}' & dropped '{constants.CATALOG_ID}' columns with null values")
@@ -351,6 +366,9 @@ def _parse_dates_list(dates_list):
 
 
 def _build_date_object(value, slice_index, to_dates_list):
+    if isinstance(value, (datetime.date, datetime.datetime)):
+        value = value.isoformat()
+
     try:
         to_dates_list.append(pd.Period(value[:slice_index]))
     except ValueError as ve:
