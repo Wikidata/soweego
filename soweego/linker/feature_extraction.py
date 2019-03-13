@@ -264,8 +264,7 @@ class DateCompare(BaseCompareFeature):
                 # common precision is 0 (the year)
                 best = max(best, (c_r / (lowest_prec+1)))
 
-            # Finally, round since we want a final binary value (0 if <= 0.5 ; else 1)
-            return np.round(best)
+            return best
 
         return fillna(concatenated.apply(check_date_equality), self.missing_value)
 
