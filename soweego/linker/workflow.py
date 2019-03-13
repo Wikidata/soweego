@@ -77,11 +77,11 @@ def build_wikidata(goal, catalog, entity, dir_io):
     wd_df_reader = pd.read_json(wd_io_path, lines=True, chunksize=1000)
 
     LOGGER.info('Wikidata %s set built', goal)
-    return wd_df_reader, qids_and_tids
+    return wd_df_reader
 
 
 def build_target(goal, catalog, entity, qids_and_tids):
-    _handle_goal(goal)
+    handle_goal(goal)
 
     LOGGER.info('Building %s %s set ...', catalog, goal)
 
@@ -114,8 +114,7 @@ def train_test_build(catalog, entity, dir_io):
                 catalog, entity, dir_io)
 
     # Wikidata
-    wd_df_reader, qids_and_tids = build_wikidata(
-        'training', catalog, entity, dir_io)
+    wd_df_reader = build_wikidata('training', catalog, entity, dir_io)
 
     # Target
     target_df_reader = build_target('training', catalog, entity, qids_and_tids)
@@ -124,12 +123,16 @@ def train_test_build(catalog, entity, dir_io):
 
 
 def preprocess(goal: str, wikidata_reader: JsonReader, target_reader: JsonReader) -> Tuple[Generator[pd.DataFrame, None, None], Generator[pd.DataFrame, None, None]]:
-    _handle_goal(goal)
-    return _preprocess_wikidata(goal, wikidata_reader), _preprocess_target(goal, target_reader)
+    handle_goal(goal)
+    return preprocess_wikidata(goal, wikidata_reader), preprocess_target(goal, target_reader)
 
 
-def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, target: pd.DataFrame) -> pd.DataFrame:
+def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, target: pd.DataFrame, path_io: str) -> pd.DataFrame:
     LOGGER.info('Extracting features ...')
+
+    if os.path.exists(path_io):
+        LOGGER.info("Will reuse existing features: '%s'", path_io)
+        return pd.read_pickle(path_io)
 
     compare = rl.Compare(n_jobs=cpu_count())
     # TODO similar name match as a feature
@@ -160,7 +163,9 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
                             constants.DATE_OF_DEATH, label='date_of_death'))
 
     feature_vectors = compare.compute(candidate_pairs, wikidata, target)
+    pd.to_pickle(feature_vectors, path_io)
 
+    LOGGER.info("Features dumped to '%s'", path_io)
     LOGGER.info('Feature extraction done')
     return feature_vectors
 
@@ -175,8 +180,8 @@ def init_model(classifier, binarize):
     return model
 
 
-def _preprocess_wikidata(goal, wikidata_reader):
-    _handle_goal(goal)
+def preprocess_wikidata(goal, wikidata_reader):
+    handle_goal(goal)
 
     LOGGER.info('Preprocessing Wikidata ...')
 
@@ -189,14 +194,20 @@ def _preprocess_wikidata(goal, wikidata_reader):
         # 2. Drop columns with null values only
         _drop_null_columns(chunk)
 
+        # 3. Training only: join target IDs if multiple
+        # TODO don't wipe out QIDs with > 1 positive samples!
+        if goal == 'training':
+            chunk[constants.TID] = chunk[constants.TID].map(
+                lambda cell: cell[0] if isinstance(cell, list) else cell)
+
         # 4. Tokenize & join strings lists columns
         for column in (constants.NAME, constants.PSEUDONYM):
             chunk[f'{column}_tokens'] = chunk[column].apply(
-                _tokenize_values, args=(text_utils.tokenize,))
+                tokenize_values, args=(text_utils.tokenize,))
 
         # 5. Tokenize & join URLs lists
         chunk[constants.URL_TOKENS] = chunk[constants.URL].apply(
-            _tokenize_values, args=(url_utils.tokenize,))
+            tokenize_values, args=(url_utils.tokenize,))
 
         # 6. Shared preprocessing
         chunk = _shared_preprocessing(chunk, _will_handle_dates(chunk))
@@ -207,76 +218,68 @@ def _preprocess_wikidata(goal, wikidata_reader):
     LOGGER.info('Wikidata preprocessing done')
 
 
-def _preprocess_target(goal, target_reader):
-    _handle_goal(goal)
+def preprocess_target(goal, target_reader):
+    handle_goal(goal)
 
     LOGGER.info('Preprocessing target ...')
 
-    for i, chunk in enumerate(target_reader, 1):
-        # 1. Drop target DB internal ID columns
-        LOGGER.info("Dropping '%s' columns ...", constants.INTERNAL_ID)
-        chunk.drop(columns=constants.INTERNAL_ID, inplace=True)
+    target = pd.concat([chunk for chunk in target_reader], sort=False)
+
+    # 1. Drop target DB internal ID columns
+    LOGGER.info("Dropping '%s' columns ...", constants.INTERNAL_ID)
+    target.drop(columns=constants.INTERNAL_ID, inplace=True)
+    log_dataframe_info(
+        LOGGER, target, f"Dropped '{constants.INTERNAL_ID}'' columns")
+
+    # 2. Rename non-null catalog ID column & drop others
+    LOGGER.info("Renaming '%s' column with no null values to '%s' & dropping '%s' columns with null values ...",
+                constants.CATALOG_ID, constants.TID, constants.CATALOG_ID)
+    # If 'catalog_id' is one column (i.e., a Series),
+    # then it won't have None values
+    if isinstance(target[constants.CATALOG_ID], pd.Series):
+        target[constants.TID] = target[constants.CATALOG_ID]
+    else:
+        no_nulls = target[constants.CATALOG_ID].dropna(axis=1)
+        # It may happen that more than 1 column has no null values:
+        # in this case, they must be identical,
+        # so take the first one
+        target[constants.TID] = no_nulls.iloc[:, 0] if isinstance(
+            no_nulls, pd.DataFrame) else no_nulls
+    target.drop(columns=constants.CATALOG_ID, inplace=True)
+    log_dataframe_info(
+        LOGGER, target, f"Renamed '{constants.CATALOG_ID}' column with no null values to '{constants.TID}' & dropped '{constants.CATALOG_ID}' columns with null values")
+
+    # 3. Drop columns with null values only
+    LOGGER.info('Dropping columns with null values only ...')
+    _drop_null_columns(target)
+
+    will_handle_dates = _will_handle_dates(target)
+
+    # 4. Pair dates with their precision & drop precision columns
+    if will_handle_dates:
+        LOGGER.info('Pairing date columns with precision ones ...')
+        target[constants.DATE_OF_BIRTH] = list(
+            zip(target[constants.DATE_OF_BIRTH], target[constants.BIRTH_PRECISION]))
+        target[constants.DATE_OF_DEATH] = list(
+            zip(target[constants.DATE_OF_DEATH], target[constants.DEATH_PRECISION]))
+        target.drop(columns=[constants.BIRTH_PRECISION,
+                             constants.DEATH_PRECISION], inplace=True)
         log_dataframe_info(
-            LOGGER, chunk, f"Dropped '{constants.INTERNAL_ID}'' columns")
+            LOGGER, target, 'Paired date columns with precision ones')
 
-        # 2. Rename non-null catalog ID column & drop others
-        LOGGER.info("Renaming '%s' column with no null values to '%s' & dropping '%s' columns with null values ...",
-                    constants.CATALOG_ID, constants.TID, constants.CATALOG_ID)
+    # 5. Aggregate denormalized data on target ID
+    # TODO Token lists may contain duplicate tokens
+    LOGGER.info("Aggregating denormalized data on '%s' column ...",
+                constants.TID)
+    target = target.groupby(constants.TID).agg(lambda x: list(set(x)))
+    log_dataframe_info(
+        LOGGER, target, f"Data indexed and aggregated on '{constants.TID}' column")
 
-        # if the catalog_id constant represents only one column (so a Series)
-        # then this will by default be only catalog_id,
-        #  which doesn't have None values
-        if not isinstance(chunk[constants.CATALOG_ID], pd.Series):
-            chunk[constants.TID] = chunk[constants.CATALOG_ID].dropna(axis=1)
-
-        else:
-            chunk[constants.TID] = chunk[constants.CATALOG_ID]
-
-        chunk.drop(columns=constants.CATALOG_ID, inplace=True)
-        log_dataframe_info(
-            LOGGER, chunk, f"Renamed '{constants.CATALOG_ID}' column with no null values to '{constants.TID}' & dropped '{constants.CATALOG_ID}' columns with null values")
-
-        # 3. Drop columns with null values only
-        LOGGER.info('Dropping columns with null values only ...')
-        _drop_null_columns(chunk)
-
-        will_handle_dates = _will_handle_dates(chunk)
-
-        # 4. Pair dates with their precision & drop precision columns
-        if will_handle_dates:
-            LOGGER.info('Pairing date columns with precision ones ...')
-            chunk[constants.DATE_OF_BIRTH] = list(
-                zip(chunk[constants.DATE_OF_BIRTH], chunk[constants.BIRTH_PRECISION]))
-            chunk[constants.DATE_OF_DEATH] = list(
-                zip(chunk[constants.DATE_OF_DEATH], chunk[constants.DEATH_PRECISION]))
-            chunk.drop(columns=[constants.BIRTH_PRECISION,
-                                constants.DEATH_PRECISION], inplace=True)
-            log_dataframe_info(
-                LOGGER, chunk, 'Paired date columns with precision ones')
-
-        # 5. Aggregate denormalized data on target ID
-        # TODO Token lists may contain duplicate tokens
-        LOGGER.info("Aggregating denormalized data on '%s' column ...",
-                    constants.TID)
-        chunk = chunk.groupby(constants.TID).agg(lambda x: list(set(x)))
-        log_dataframe_info(
-            LOGGER, chunk, f"Data indexed and aggregated on '{constants.TID}' column")
-
-        # 6. Training only: target ID column for blocking
-        if goal == 'training':
-            LOGGER.info(
-                "Making '%s' column from the index for blocking ...", constants.TID)
-            chunk[constants.TID] = chunk.index
-            log_dataframe_info(
-                LOGGER, chunk, f"Made '{constants.TID}' column from the index for blocking")
-
-        # 7. Shared preprocessing
-        chunk = _shared_preprocessing(chunk, will_handle_dates)
-
-        LOGGER.info('Chunk %d done', i)
-        yield chunk
+    # 6. Shared preprocessing
+    target = _shared_preprocessing(target, will_handle_dates)
 
     LOGGER.info('Target preprocessing done')
+    return target
 
 
 def _shared_preprocessing(df, will_handle_dates):
@@ -373,7 +376,7 @@ def _build_date_object(value, slice_index, to_dates_list):
             "Skipping date that can't be parsed: %s. Reason: %s", value, ve)
 
 
-def _handle_goal(goal):
+def handle_goal(goal):
     if goal not in ('training', 'classification'):
         raise ValueError(
             "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'" % goal)
@@ -399,7 +402,7 @@ def _join_descriptions(df):
     log_dataframe_info(LOGGER, df, 'Joined descriptions')
 
 
-def _tokenize_values(values, tokenize_func):
+def tokenize_values(values, tokenize_func):
     if values is nan:
         return nan
     all_tokens = set()
