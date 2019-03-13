@@ -156,6 +156,9 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
     compare.add(DateCompare(constants.DATE_OF_BIRTH,
                             constants.DATE_OF_BIRTH, label='date_of_birth'))
 
+    compare.add(DateCompare(constants.DATE_OF_DEATH,
+                            constants.DATE_OF_DEATH, label='date_of_death'))
+
     feature_vectors = compare.compute(candidate_pairs, wikidata, target)
 
     LOGGER.info('Feature extraction done')
