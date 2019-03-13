@@ -218,7 +218,7 @@ class DateCompare(BaseCompareFeature):
                 return np.nan
 
             # convert `s_item` to a list if it isn't already
-            if not isinstance(s_item, (list, tuple)):
+            if not isinstance(s_item, list):
                 s_item = [s_item]
 
             # precisions listed from least to most precise, as defined here:
