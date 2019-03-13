@@ -179,6 +179,10 @@ class UrlList(BaseCompareFeature):
 
 
 class DateCompare(BaseCompareFeature):
+    """
+    Compares `pandas.Period` date objects, taking into
+    account their maximum precisions.
+    """
 
     name = "DateCompare"
     description = "Compares the date attribute of record pairs."
