@@ -233,7 +233,7 @@ class DateCompare(BaseCompareFeature):
             best = 0
 
             for s_date in s_item:
-                
+
                 # if the current s_date is NaT then we can't compare, so we skip it
                 if pd.isna(s_date):
                     continue
@@ -260,12 +260,13 @@ class DateCompare(BaseCompareFeature):
                 # 1 stands for perfect match. So we just divide `c_r` by `lowest_prec`
                 # so that we get the percentage of items that matches from the total number
                 # of items we compared (since we have variable date precision)
-                best = max(best, (c_r/lowest_prec))
-            
+                # we sum 1 to `lowers_prec` to account for the fact that the possible minimum
+                # common precision is 0 (the year)
+                best = max(best, (c_r / (lowest_prec+1)))
+
             # Finally, round since we want a final binary value (0 if <= 0.5 ; else 1)
             return np.round(best)
 
-        
         return fillna(concatenated.apply(check_date_equality), self.missing_value)
 
 
