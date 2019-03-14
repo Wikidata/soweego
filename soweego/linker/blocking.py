@@ -41,7 +41,7 @@ def train_test_block(wikidata_df: pd.DataFrame, target_df: pd.DataFrame) -> pd.M
 def full_text_query_block(goal: str, catalog: str, wikidata_series: pd.Series, chunk_number: int, target_entity: constants.DB_ENTITY, dir_io: str) -> pd.MultiIndex:
     handle_goal(goal)
     samples_path = os.path.join(
-        dir_io, constants.SAMPLES % (catalog, goal, chunk_number))
+        dir_io, constants.SAMPLES % (catalog, target_entity.__name__, goal, chunk_number))
 
     if os.path.exists(samples_path):
         LOGGER.info("Will reuse existing %s %s samples index, chunk %d: '%s'",
