@@ -64,6 +64,7 @@ def execute(classifier, catalog, entity, binarize, dir_io):
 
         features_path = os.path.join(
             dir_io, constants.FEATURES % (catalog, entity, 'training', i))
+            
         feature_vectors.append(workflow.extract_features(
             all_samples, wd_chunk, target_chunk, features_path))
 
