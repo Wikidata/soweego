@@ -24,6 +24,7 @@ from sqlalchemy.orm.query import Query
 from soweego.commons import constants, target_database, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer import models
+from soweego.linker import workflow
 from soweego.wikidata import api_requests, sparql_queries, vocabulary
 
 LOGGER = logging.getLogger(__name__)
@@ -127,21 +128,14 @@ def perfect_name_search(target_entity: constants.DB_ENTITY, to_search: str) -> I
 
 
 def gather_target_dataset(goal, entity_type, catalog, identifiers):
+    workflow.handle_goal(goal)
+
     base, link, nlp = target_database.get_entity(catalog, entity_type), target_database.get_link_entity(
         catalog, entity_type), target_database.get_nlp_entity(catalog, entity_type)
 
-    if goal == 'training':
-        condition = base.catalog_id.in_(identifiers)
-        to_log = 'training set'
-    elif goal == 'classification':
-        condition = ~base.catalog_id.in_(identifiers)
-        to_log = 'dataset'
-    else:
-        raise ValueError(
-            "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'" % goal)
-
+    
     LOGGER.info(
-        'Gathering %s %s for the linker ...', catalog, to_log)
+        'Gathering %s %s for the linker ...', catalog, goal)
 
     db_engine = DBManager().get_engine().execution_options(stream_results=True)
 
@@ -160,7 +154,7 @@ def gather_target_dataset(goal, entity_type, catalog, identifiers):
         query = query.outerjoin(tb, base.catalog_id == tb.catalog_id)
     
     # finally, add the filter condition to the query
-    query = query.filter(condition).enable_eagerloads(False)
+    query = query.filter(base.catalog_id.in_(identifiers)).enable_eagerloads(False)
 
     statement = query.statement
     LOGGER.debug('SQL query to be fired: %s', statement)
