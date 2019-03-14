@@ -33,11 +33,12 @@ LOGGER = logging.getLogger(__name__)
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default='/app/shared', help="Input/output directory, default: '/app/shared'.")
 def cli(target, target_type, model, upload, sandbox, threshold, dir_io):
     """Run a probabilistic linker."""
+
     for chunk in execute(target, target_type, model, threshold, dir_io):
         if upload:
             _upload(chunk, target, sandbox)
         chunk.to_csv(os.path.join(dir_io, constants.LINKER_RESULT %
-                                  (target, target_type)), mode='a', header=True)
+                                  (target, target_type, model)), mode='a', header=True)
 
 
 def _upload(predictions, catalog, sandbox):
@@ -52,7 +53,6 @@ def execute(catalog, entity, model, threshold, dir_io):
         'classification', wd_reader, target_reader)
     classifier = joblib.load(model)
     rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
-
     for i, wd_chunk in enumerate(wd_generator, 1):
         for target_chunk in target_generator:
             # TODO Also consider blocking on URLs
