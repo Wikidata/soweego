@@ -11,13 +11,14 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import logging
 import os
+from itertools import tee
 
 import click
 import recordlinkage as rl
-from pandas import concat
+from pandas import MultiIndex, concat
 from sklearn.externals import joblib
 
-from soweego.commons import constants, target_database
+from soweego.commons import constants, data_gathering, target_database
 from soweego.linker import blocking, workflow
 
 LOGGER = logging.getLogger(__name__)
@@ -41,36 +42,53 @@ def cli(classifier, target, target_type, binarize, dir_io):
 
 
 def execute(classifier, catalog, entity, binarize, dir_io):
-    wd_reader, target_reader = workflow.train_test_build(
-        catalog, entity, dir_io)
-    wd_generator, target_generator = workflow.preprocess(
-        'training', wd_reader, target_reader)
+    wd_reader = workflow.build_wikidata('training', catalog, entity, dir_io)
+    wd_generator = workflow.preprocess_wikidata('training', wd_reader)
 
-    feature_vectors = []
-    positive_samples_index = None
+    positive_samples, feature_vectors = [], []
+
     for i, wd_chunk in enumerate(wd_generator, 1):
-        for target_chunk in target_generator:
-            positives_from_wd = blocking.train_test_block(
-                wd_chunk, target_chunk)
-            all_samples = blocking.full_text_query_block(
-                'training', catalog, wd_chunk, i, target_database.get_entity(catalog, entity), dir_io)
-            # MultiIndices are set-like: '&' = intersection
-            actual_positive = all_samples & positives_from_wd
-            positive_size, actual_size = len(
-                positives_from_wd), len(actual_positive)
-            if positive_size != actual_size:
-                LOGGER.warning('%d positive samples from Wikidata are not in the full set of samples from %s and will not be used',
-                               positive_size - actual_size, catalog)
-            # Hack to initialize the final MultiIndex
-            if i == 1:
-                positive_samples_index = actual_positive
-            else:
-                # '|' = union
-                positive_samples_index |= actual_positive
+        # Positive samples from Wikidata
+        positive_samples.append(wd_chunk[constants.TID])
 
-            feature_vectors.append(
-                workflow.extract_features(all_samples, wd_chunk, target_chunk))
+        # Samples index from Wikidata
+        all_samples = blocking.full_text_query_block(
+            'training', catalog, wd_chunk[constants.NAME_TOKENS], i, target_database.get_entity(catalog, entity), dir_io)
+
+        # Build target chunk based on samples
+        target_reader = data_gathering.gather_target_dataset(
+            'training', entity, catalog, set(all_samples.get_level_values(constants.TID)))
+
+        # Preprocess target chunk
+        target_chunk = workflow.preprocess_target('training', target_reader)
+
+        features_path = os.path.join(
+            dir_io, constants.FEATURES % (catalog, 'training', i))
+        feature_vectors.append(workflow.extract_features(
+            all_samples, wd_chunk, target_chunk, features_path))
+
+    positive_samples = concat(positive_samples)
+    positive_samples_index = MultiIndex.from_tuples(zip(
+        positive_samples.index, positive_samples), names=[constants.QID, constants.TID])
+    LOGGER.info('Built positive samples index from Wikidata')
+
     return _train(classifier, concat(feature_vectors), positive_samples_index, binarize)
+
+
+def _build_positive_samples_index(wd_reader1):
+    LOGGER.info('Building positive samples index from Wikidata ...')
+    positive_samples = []
+    for chunk in wd_reader1:
+        # TODO don't wipe out QIDs with > 1 positive samples!
+        tids_series = chunk.set_index(constants.QID)[constants.TID].map(
+            lambda cell: cell[0] if isinstance(cell, list) else cell)
+        positive_samples.append(tids_series)
+
+    positive_samples = concat(positive_samples)
+    positive_samples_index = MultiIndex.from_tuples(zip(
+        positive_samples.index, positive_samples), names=[constants.QID, constants.TID])
+    LOGGER.info('Built positive samples index from Wikidata')
+    return positive_samples_index
 
 
 def _train(classifier, feature_vectors, positive_samples_index, binarize):
@@ -79,8 +97,3 @@ def _train(classifier, feature_vectors, positive_samples_index, binarize):
     model.fit(feature_vectors, positive_samples_index)
     LOGGER.info('Training done')
     return model
-
-
-if __name__ == "__main__":
-    m = execute(rl.NaiveBayesClassifier, 'discogs',
-                'musician', 0.3, '/tmp/soweego_shared/')
