@@ -293,7 +293,7 @@ def _pair_has_any_null(pair):
 
 
 class SimilarTokens(BaseCompareFeature):
-    name = 'similar_tokens'
+    name = 'SimilarTokens'
     description = 'Compare pairs of lists with URL values'
 
     def __init__(self, left_on, right_on, agree_value=1.0, disagree_value=0.0, missing_value=0.0, label=None):
