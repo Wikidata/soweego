@@ -19,6 +19,7 @@ from urllib.parse import urlunsplit
 
 from requests import get
 from requests.exceptions import ChunkedEncodingError
+from tqdm import tqdm
 
 from soweego.commons import constants
 from soweego.commons.logging import log_request_data
@@ -88,7 +89,7 @@ def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fil
 
     qid_buckets, request_params = _prepare_request(
         qids, 'labels|aliases|descriptions|sitelinks|claims')
-    for bucket in qid_buckets:
+    for bucket in tqdm(qid_buckets):
         response_body = _make_request(bucket, request_params)
         if not response_body:
             continue
