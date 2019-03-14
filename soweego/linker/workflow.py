@@ -134,6 +134,10 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
         LOGGER.info("Will reuse existing features: '%s'", path_io)
         return pd.read_pickle(path_io)
 
+    def in_both_datasets(col: str) -> bool:
+        """Checks if `col` is available in both datasets"""
+        return (col in wikidata.columns) and (col in target.columns)
+
     compare = rl.Compare(n_jobs=cpu_count())
     # TODO similar name match as a feature
     # TODO feature engineering on more fields
@@ -143,24 +147,29 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
     # discogs columns = Index(['description_tokens', 'name_tokens', 'description', 'url', 'url_tokens',
     #    'name', 'born', 'born_precision', 'real_name', 'is_wiki',
     #    'data_quality', 'died', 'died_precision', 'identifier'],
+
     # Feature 1: exact match on URLs
-    compare.add(UrlList(constants.URL, constants.URL, label='url_exact'))
+    if in_both_datasets(constants.URL):
+        compare.add(UrlList(constants.URL, constants.URL, label='url_exact'))
+
     # Feature 2: dates
-    # TODO parse dates
-    # compare.date('date_of_birth', 'born', label='birth_date')
-    # compare.date('date_of_death', 'died', label='death_date')
+    if in_both_datasets(constants.DATE_OF_BIRTH):
+        compare.add(DateCompare(constants.DATE_OF_BIRTH,
+                                constants.DATE_OF_BIRTH, label='date_of_birth'))
+
+    if in_both_datasets(constants.DATE_OF_DEATH):
+        compare.add(DateCompare(constants.DATE_OF_DEATH,
+                                constants.DATE_OF_DEATH, label='date_of_death'))
+
     # Feature 3: Levenshtein distance on names
-    compare.add(StringList(constants.NAME_TOKENS,
-                           constants.NAME_TOKENS, label='name_levenshtein'))
-    # Feture 4: cosine similarity on descriptions
-    compare.add(StringList(constants.DESCRIPTION, constants.DESCRIPTION,
-                           algorithm='cosine', analyzer='soweego', label='description_cosine'))
+    if in_both_datasets(constants.NAME_TOKENS):
+        compare.add(StringList(constants.NAME_TOKENS,
+                               constants.NAME_TOKENS, label='name_levenshtein'))
 
-    compare.add(DateCompare(constants.DATE_OF_BIRTH,
-                            constants.DATE_OF_BIRTH, label='date_of_birth'))
-
-    compare.add(DateCompare(constants.DATE_OF_DEATH,
-                            constants.DATE_OF_DEATH, label='date_of_death'))
+    # Feature 4: cosine similarity on descriptions
+    if in_both_datasets(constants.DESCRIPTION):
+        compare.add(StringList(constants.DESCRIPTION, constants.DESCRIPTION,
+                               algorithm='cosine', analyzer='soweego', label='description_cosine'))
 
     feature_vectors = compare.compute(candidate_pairs, wikidata, target)
     pd.to_pickle(feature_vectors, path_io)
