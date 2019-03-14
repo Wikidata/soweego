@@ -70,10 +70,10 @@ def _build(catalog, entity, dir_io):
     LOGGER.info("Building %s %s classification set, I/O directory: '%s'",
                 catalog, entity, dir_io)
     # Wikidata
-    wd_df_reader, qids_and_tids = workflow.build_wikidata(
+    wd_df_reader = workflow.build_wikidata(
         'classification', catalog, entity, dir_io)
     # Target
     target_df_reader = workflow.build_target(
-        'classification', catalog, entity, qids_and_tids)
+        'classification', catalog, entity, None)
 
     return wd_df_reader, target_df_reader

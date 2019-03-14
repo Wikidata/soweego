@@ -213,7 +213,7 @@ def _dump_target_dataset_query_result(result, relevant_fields, fileout, chunk_si
                     # if the value is a date/datetime then we need
                     # to convert it to string, so that it is JSON
                     # serializable
-                    if isinstance(f_value, datetime.date) or isinstance(f_value, datetime.datetime):
+                    if isinstance(f_value, (datetime.date, datetime.datetime)):
                         parsed[field] = f_value.isoformat()
                         
                     else:

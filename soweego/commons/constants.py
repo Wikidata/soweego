@@ -146,8 +146,8 @@ TARGET_TRAINING_SET = '%s_%s_training_set.jsonl.gz'
 TARGET_CLASSIFICATION_SET = '%s_%s_classification_set.jsonl.gz'
 TARGET_TRAINING_DATAFRAME = '%s_training_dataframe.pkl.gz'
 TARGET_CLASSIFICATION_DATAFRAME = '%s_classification_dataframe.pkl.gz'
-TRAINING_SAMPLES = '%s_training_samples%02d.pkl.gz'
-CLASSIFICATION_SAMPLES = '%s_classification_samples%02d.pkl.gz'
+SAMPLES = '%s_%s_samples%02d.pkl.gz'
+FEATURES = '%s_%s_features%02d.pkl.gz'
 LINKER_MODEL = '%s_%s_%s_model.pkl'
 LINKER_RESULT = '%s_linker_result.csv.gz'
 LINKER_EVALUATION_PREDICTIONS = '%s_%s_linker_evaluation_predictions.csv.gz'
@@ -162,3 +162,18 @@ CLASSIFIERS = {
 }
 CLASSIFICATION_RETURN_SERIES = ('classification.return_type', 'series')
 CONFIDENCE_THRESHOLD = 0.5
+
+
+# precisions for the `pandas.Period` class. 
+# Listed from least to most precise, as defined here:
+# http://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#dateoffset-objects
+PD_PERIOD_PRECISIONS = [
+    'A-DEC',  # we know only the year
+    'M',  # we know up to the month
+    'D',  # up to the day
+    'H',  # up to the hour
+    'T',  # up to the minute
+    'S',  # up to the second
+    'U',  # up to the microsecond
+    'N',  # up to the nanosecond
+]

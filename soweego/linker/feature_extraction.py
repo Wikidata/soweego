@@ -10,6 +10,7 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import logging
+from typing import List, Tuple, Union
 
 import jellyfish
 import numpy as np
@@ -18,7 +19,7 @@ from recordlinkage.base import BaseCompareFeature
 from recordlinkage.utils import fillna
 from sklearn.feature_extraction.text import CountVectorizer
 
-from soweego.commons import text_utils
+from soweego.commons import constants, text_utils
 
 LOGGER = logging.getLogger(__name__)
 
@@ -175,6 +176,104 @@ class UrlList(BaseCompareFeature):
             return np.average(scores)
 
         return fillna(concatenated.apply(exact_apply), self.missing_value)
+
+
+class DateCompare(BaseCompareFeature):
+    """
+    Compares `pandas.Period` date objects, taking into
+    account their maximum precisions.
+    """
+
+    name = "DateCompare"
+    description = "Compares the date attribute of record pairs."
+
+    def __init__(self,
+                 left_on,
+                 right_on,
+                 missing_value=0.0,
+                 label=None):
+        super(DateCompare, self).__init__(left_on, right_on, label=label)
+
+        self.missing_value = missing_value
+
+    def _compute_vectorized(self, source_column, target_column):
+
+        # we zip together the source column and the target column so that
+        # they're easier to process
+        concatenated = pd.Series(list(zip(source_column, target_column)))
+
+        def check_date_equality(pair: Tuple[Union[pd.Period, List[pd.Period]], pd.Period]):
+            """
+            Compares a target pd.Period with the source pd.Periods which represent either
+            a birth or death date. The source date can be a list of possible dates.
+
+            Returns the most optimistic match
+            """
+
+            s_item, t_item = pair
+
+            # if t_item is NaT then we can't compare, and we skip this pair
+            if pd.isna(t_item):
+                LOGGER.debug(
+                    "Can't compare dates, the target value is null. Pair: %s", pair)
+                return np.nan
+
+            # convert `s_item` to a list if it isn't already
+            if not isinstance(s_item, list):
+                s_item = [s_item]
+
+            # will help us to keep track of the best score
+            best = 0
+
+            for s_date in s_item:
+
+                # if the current s_date is NaT then we can't compare, so we skip it
+                if pd.isna(s_date):
+                    LOGGER.debug(
+                        "Can't compare dates, the current Wikidata value is null. Current pair: %s", (s_date, t_item))
+                    continue
+
+                # get precision number for both dates
+                s_precision = constants.PD_PERIOD_PRECISIONS.index(
+                    s_date.freq.name)
+                t_precision = constants.PD_PERIOD_PRECISIONS.index(
+                    t_item.freq.name)
+
+                # we choose to compare on the lowest precision
+                # since it's the maximum precision on which both
+                # dates can be safely compared
+                lowest_prec = min(s_precision, t_precision)
+
+                # the result for the current `s_date`
+                c_r = 0
+
+                # now we loop through the possible `Period` attributes that we can compare
+                # and the precision that stands for said attribute
+                for min_required_prec, d_attr in enumerate(['year', 'month', 'day', 'hour', 'minute', 'second']):
+
+                    # If both `s_date` and `t_item` have a precision which allows the
+                    # current attribute to be compared then we do so. If the attribute
+                    # matches then we add 1 to `c_r`, if not then we break the loop.
+                    # We consider from lowest to highest precision. If a lowest
+                    # precision attribute (ie, year) doesn't match then we say that
+                    # the dates don't match at all (we don't check if higher precision
+                    # attributes match)
+                    if lowest_prec >= min_required_prec and getattr(s_date, d_attr) == getattr(t_item, d_attr):
+                        c_r += 1
+                    else:
+                        break
+
+                # we want a value between 0 and 1 for our score. 0 means no match at all and
+                # 1 stands for perfect match. So we just divide `c_r` by `lowest_prec`
+                # so that we get the percentage of items that matches from the total number
+                # of items we compared (since we have variable date precision)
+                # we sum 1 to `lowers_prec` to account for the fact that the possible minimum
+                # common precision is 0 (the year)
+                best = max(best, (c_r / (lowest_prec+1)))
+
+            return best
+
+        return fillna(concatenated.apply(check_date_equality), self.missing_value)
 
 
 def _pair_has_any_null(pair):

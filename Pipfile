@@ -14,9 +14,11 @@ sqlalchemy = "*"
 regex = "*"
 recordlinkage = "*"
 tqdm = "*"
+lxml = "*"
 
 [dev-packages]
 pylint = "*"
 rope = "*"
 ipython = "*"
 "autopep8" = "*"
+ipdb = "*"
