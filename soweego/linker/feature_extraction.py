@@ -269,7 +269,7 @@ class DateCompare(BaseCompareFeature):
                 # of items we compared (since we have variable date precision)
                 # we sum 1 to `lowers_prec` to account for the fact that the possible minimum
                 # common precision is 0 (the year)
-                best = max(best, (c_r / (lowest_prec+1)))
+                best = max(best, (c_r / (lowest_prec + 1)))
 
             return best
 
@@ -311,12 +311,19 @@ class SimilarTokens(BaseCompareFeature):
                     "Can't compare Tokens, the pair contains null values: %s", pair)
                 return np.nan
 
-            first_set = set(filter(None, pair[0].split(' ')))
-            second_set = set(filter(None, pair[0].split(' ')))
+            source_labels = [pair[0]] if isinstance(pair[0], str) else pair[0]
+            target_labels = [pair[1]] if isinstance(pair[1], str) else pair[1]
+
+            first_set = set(source_labels)
+            second_set = set()
+
+            for label in target_labels:
+                if label:
+                    second_set.update(filter(None, text_utils.tokenize(label)))
+
             count_intersect = len(first_set.intersection(second_set))
+            count_total = len(first_set.union(second_set))
 
-            total = len(first_set) + len(second_set)
-
-            return count_intersect / total if total > 0 else np.nan
+            return count_intersect / count_total if count_total > 0 else np.nan
 
         return fillna(concatenated.apply(exact_apply), self.missing_value)
