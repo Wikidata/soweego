@@ -35,8 +35,8 @@ def cli(classifier, target, target_type, binarize, dir_io):
 
     for predictions, (precision, recall, fscore, confusion_matrix) in result:
         predictions.to_series().to_csv(os.path.join(dir_io, constants.LINKER_EVALUATION_PREDICTIONS %
-                                                    (target, classifier)), mode='a', columns=[], header=True)
-        with open(os.path.join(dir_io, constants.LINKER_PERFORMANCE % (target, classifier)), 'a') as fileout:
+                                                    (target, target_type, classifier)), mode='a', columns=[], header=True)
+        with open(os.path.join(dir_io, constants.LINKER_PERFORMANCE % (target, target_type, classifier)), 'a') as fileout:
             fileout.write(
                 f'Precision: {precision}\nRecall: {recall}\nF-score: {fscore}\nConfusion matrix:\n{confusion_matrix}\n')
 

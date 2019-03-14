@@ -140,18 +140,12 @@ DESCRIPTION_TOKENS = 'description_tokens'
 # File names
 WD_TRAINING_SET = 'wikidata_%s_%s_training_set.jsonl.gz'
 WD_CLASSIFICATION_SET = 'wikidata_%s_%s_classification_set.jsonl.gz'
-WD_TRAINING_DATAFRAME = 'wikidata_%s_training_dataframe.pkl.gz'
-WD_CLASSIFICATION_DATAFRAME = 'wikidata_%s_classification_dataframe.pkl.gz'
-TARGET_TRAINING_SET = '%s_%s_training_set.jsonl.gz'
-TARGET_CLASSIFICATION_SET = '%s_%s_classification_set.jsonl.gz'
-TARGET_TRAINING_DATAFRAME = '%s_training_dataframe.pkl.gz'
-TARGET_CLASSIFICATION_DATAFRAME = '%s_classification_dataframe.pkl.gz'
-SAMPLES = '%s_%s_samples%02d.pkl.gz'
-FEATURES = '%s_%s_features%02d.pkl.gz'
+SAMPLES = '%s_%s_%s_samples%02d.pkl.gz'
+FEATURES = '%s_%s_%s_features%02d.pkl.gz'
 LINKER_MODEL = '%s_%s_%s_model.pkl'
-LINKER_RESULT = '%s_linker_result.csv.gz'
-LINKER_EVALUATION_PREDICTIONS = '%s_%s_linker_evaluation_predictions.csv.gz'
-LINKER_PERFORMANCE = '%s_%s_linker_performance.txt'
+LINKER_RESULT = '%s_%s_linker_result.csv.gz'
+LINKER_EVALUATION_PREDICTIONS = '%s_%s_%s_linker_evaluation_predictions.csv.gz'
+LINKER_PERFORMANCE = '%s_%s_%s_linker_performance.txt'
 
 # Supervised classification
 CLASSIFIERS = {
