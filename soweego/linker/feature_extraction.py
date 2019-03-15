@@ -319,7 +319,7 @@ class SimilarTokens(BaseCompareFeature):
 
             for label in target_labels:
                 if label:
-                    second_set.update(filter(None, label.split(' ')))
+                    second_set.update(filter(None, label.split()))
 
             count_intersect = len(first_set.intersection(second_set))
             count_total = len(first_set.union(second_set))
