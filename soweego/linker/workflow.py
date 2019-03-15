@@ -353,17 +353,17 @@ def _parse_dates_list(dates_list):
                 LOGGER.debug('Date precision: %s. Falling back to YEAR, due to lack of support in Python pandas.Period',
                              vocabulary.DATE_PRECISION[precision])
                 _build_date_object(date, 4, dates)
-            elif precision is vocabulary.YEAR:
+            elif precision == vocabulary.YEAR:
                 _build_date_object(date, 4, dates)
-            elif precision is vocabulary.MONTH:
+            elif precision == vocabulary.MONTH:
                 _build_date_object(date, 7, dates)
-            elif precision is vocabulary.DAY:
+            elif precision == vocabulary.DAY:
                 _build_date_object(date, 10, dates)
-            elif precision is vocabulary.HOUR:
+            elif precision == vocabulary.HOUR:
                 _build_date_object(date, 13, dates)
-            elif precision is vocabulary.MINUTE:
+            elif precision == vocabulary.MINUTE:
                 _build_date_object(date, 16, dates)
-            elif precision is vocabulary.SECOND:
+            elif precision == vocabulary.SECOND:
                 _build_date_object(date, len(date), dates)
         else:
             LOGGER.warning(
