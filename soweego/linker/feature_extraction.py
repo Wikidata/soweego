@@ -293,7 +293,7 @@ def _pair_has_any_null(pair):
 
 
 class SimilarTokens(BaseCompareFeature):
-    name = 'similar_tokens'
+    name = 'SimilarTokens'
     description = 'Compare pairs of lists with string values based on shared tokens'
 
     def __init__(self, left_on, right_on, agree_value=1.0, disagree_value=0.0, missing_value=0.0, label=None):
@@ -305,7 +305,7 @@ class SimilarTokens(BaseCompareFeature):
     def _compute_vectorized(self, source_column, target_column):
         concatenated = pd.Series(list(zip(source_column, target_column)))
 
-        def exact_apply(pair):
+        def intersection_percentage_size(pair):
             if _pair_has_any_null(pair):
                 LOGGER.debug(
                     "Can't compare Tokens, the pair contains null values: %s", pair)
@@ -326,4 +326,4 @@ class SimilarTokens(BaseCompareFeature):
 
             return count_intersect / count_total if count_total > 0 else np.nan
 
-        return fillna(concatenated.apply(exact_apply), self.missing_value)
+        return fillna(concatenated.apply(intersection_percentage_size), self.missing_value)
