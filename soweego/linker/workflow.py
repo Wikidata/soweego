@@ -25,7 +25,7 @@ from pandas.io.json.json import JsonReader
 from soweego.commons import (constants, data_gathering, target_database,
                              text_utils, url_utils)
 from soweego.commons.logging import log_dataframe_info
-from soweego.linker.feature_extraction import StringList, UrlList, DateCompare
+from soweego.linker.feature_extraction import StringList, UrlList, DateCompare, SimilarTokens
 from soweego.wikidata import api_requests, vocabulary
 
 LOGGER = logging.getLogger(__name__)
@@ -122,12 +122,14 @@ def train_test_build(catalog, entity, dir_io):
     return wd_df_reader, target_df_reader
 
 
-def preprocess(goal: str, wikidata_reader: JsonReader, target_reader: JsonReader) -> Tuple[Generator[pd.DataFrame, None, None], Generator[pd.DataFrame, None, None]]:
+def preprocess(goal: str, wikidata_reader: JsonReader, target_reader: JsonReader) -> Tuple[
+    Generator[pd.DataFrame, None, None], Generator[pd.DataFrame, None, None]]:
     handle_goal(goal)
     return preprocess_wikidata(goal, wikidata_reader), preprocess_target(goal, target_reader)
 
 
-def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, target: pd.DataFrame, path_io: str) -> pd.DataFrame:
+def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, target: pd.DataFrame,
+                     path_io: str) -> pd.DataFrame:
     LOGGER.info('Extracting features ...')
 
     if os.path.exists(path_io):
@@ -161,10 +163,11 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
         compare.add(DateCompare(constants.DATE_OF_DEATH,
                                 constants.DATE_OF_DEATH, label='date_of_death'))
 
-    # Feature 3: Levenshtein distance on names
+    # Feature 3: Levenshtein distance on names and similar tokens
     if in_both_datasets(constants.NAME_TOKENS):
         compare.add(StringList(constants.NAME_TOKENS,
                                constants.NAME_TOKENS, label='name_levenshtein'))
+        compare.add(SimilarTokens(constants.NAME_TOKENS, constants.NAME_TOKENS, label='similar_name_tokens'))
 
     # Feature 4: cosine similarity on descriptions
     if in_both_datasets(constants.DESCRIPTION):
@@ -256,7 +259,8 @@ def preprocess_target(goal, target_reader):
             no_nulls, pd.DataFrame) else no_nulls
     target.drop(columns=constants.CATALOG_ID, inplace=True)
     log_dataframe_info(
-        LOGGER, target, f"Renamed '{constants.CATALOG_ID}' column with no null values to '{constants.TID}' & dropped '{constants.CATALOG_ID}' columns with null values")
+        LOGGER, target,
+        f"Renamed '{constants.CATALOG_ID}' column with no null values to '{constants.TID}' & dropped '{constants.CATALOG_ID}' columns with null values")
 
     # 3. Drop columns with null values only
     LOGGER.info('Dropping columns with null values only ...')
@@ -319,7 +323,8 @@ def _handle_dates(df):
     for column in (constants.DATE_OF_BIRTH, constants.DATE_OF_DEATH):
         if df.get(column) is None:
             LOGGER.warning(
-                "No '%s' column in DataFrame, won't handle its dates. Perhaps it was dropped because it contained null values only", column)
+                "No '%s' column in DataFrame, won't handle its dates. Perhaps it was dropped because it contained null values only",
+                column)
             continue
 
         df[column] = df[column].map(
@@ -333,8 +338,9 @@ def _will_handle_dates(df):
     dod_column = df.get(constants.DATE_OF_DEATH)
 
     if dob_column is None and dod_column is None:
-        LOGGER.warning("Neither '%s' nor '%s' column in DataFrame, won't handle dates. Perhaps they were dropped because they contained null values only",
-                       constants.DATE_OF_BIRTH, constants.DATE_OF_DEATH)
+        LOGGER.warning(
+            "Neither '%s' nor '%s' column in DataFrame, won't handle dates. Perhaps they were dropped because they contained null values only",
+            constants.DATE_OF_BIRTH, constants.DATE_OF_DEATH)
         return False
 
     return True
@@ -353,17 +359,17 @@ def _parse_dates_list(dates_list):
                 LOGGER.debug('Date precision: %s. Falling back to YEAR, due to lack of support in Python pandas.Period',
                              vocabulary.DATE_PRECISION[precision])
                 _build_date_object(date, 4, dates)
-            elif precision is vocabulary.YEAR:
+            elif precision == vocabulary.YEAR:
                 _build_date_object(date, 4, dates)
-            elif precision is vocabulary.MONTH:
+            elif precision == vocabulary.MONTH:
                 _build_date_object(date, 7, dates)
-            elif precision is vocabulary.DAY:
+            elif precision == vocabulary.DAY:
                 _build_date_object(date, 10, dates)
-            elif precision is vocabulary.HOUR:
+            elif precision == vocabulary.HOUR:
                 _build_date_object(date, 13, dates)
-            elif precision is vocabulary.MINUTE:
+            elif precision == vocabulary.MINUTE:
                 _build_date_object(date, 16, dates)
-            elif precision is vocabulary.SECOND:
+            elif precision == vocabulary.SECOND:
                 _build_date_object(date, len(date), dates)
         else:
             LOGGER.warning(
@@ -404,7 +410,8 @@ def _join_descriptions(df):
     column = df.get(constants.DESCRIPTION)
     if column is None:
         LOGGER.warning(
-            "No '%s' column in DataFrame, won't join values. Perhaps it was dropped because it contained null values only", constants.DESCRIPTION)
+            "No '%s' column in DataFrame, won't join values. Perhaps it was dropped because it contained null values only",
+            constants.DESCRIPTION)
         return
 
     df[constants.DESCRIPTION] = df[constants.DESCRIPTION].str.join(' ')

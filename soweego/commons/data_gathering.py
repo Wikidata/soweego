@@ -58,7 +58,8 @@ def gather_target_metadata(entity_type, catalog):
     return result
 
 
-def tokens_fulltext_search(target_entity: constants.DB_ENTITY, boolean_mode: bool, tokens: Iterable[str], where_clause: filter = None, limit: int = 10) -> Iterable[constants.DB_ENTITY]:
+def tokens_fulltext_search(target_entity: constants.DB_ENTITY, boolean_mode: bool, tokens: Iterable[str],
+                           where_clause: filter = None, limit: int = 10) -> Iterable[constants.DB_ENTITY]:
     if issubclass(target_entity, models.base_entity.BaseEntity):
         column = target_entity.name_tokens
     elif issubclass(target_entity, models.base_link_entity.BaseLinkEntity):
@@ -69,6 +70,7 @@ def tokens_fulltext_search(target_entity: constants.DB_ENTITY, boolean_mode: boo
         LOGGER.critical('Bad target entity class: %s', target_entity)
         raise ValueError('Bad target entity class: %s' % target_entity)
 
+    tokens = filter(None, tokens)
     terms = ' '.join(map('+{0}'.format, tokens)
                      ) if boolean_mode else ' '.join(tokens)
     ft_search = column.match(terms)
@@ -127,6 +129,20 @@ def perfect_name_search(target_entity: constants.DB_ENTITY, to_search: str) -> I
         session.close()
 
 
+def perfect_name_search_bucket(target_entity: constants.DB_ENTITY, to_search: set) -> Iterable[constants.DB_ENTITY]:
+    session = DBManager.connect_to_db()
+    try:
+        for r in session.query(target_entity).filter(
+                target_entity.name.in_(to_search)).all():
+            yield r
+
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
 def gather_target_dataset(goal, entity_type, catalog, identifiers):
     workflow.handle_goal(goal)
 
@@ -152,7 +168,7 @@ def gather_target_dataset(goal, entity_type, catalog, identifiers):
     # make the join statements to join different tables
     for tb in tables:
         query = query.outerjoin(tb, base.catalog_id == tb.catalog_id)
-    
+
     # finally, add the filter condition to the query
     query = query.filter(base.catalog_id.in_(identifiers)).enable_eagerloads(False)
 
@@ -178,10 +194,9 @@ def _build_dataset_relevant_fields(base, link, nlp):
     return fields
 
 
-
 def _dump_target_dataset_query_result(result, relevant_fields, fileout, chunk_size=1000):
     chunk = []
-    
+
     for res in result:
 
         # if it is only `base` then we convert is to a list
@@ -194,10 +209,10 @@ def _dump_target_dataset_query_result(result, relevant_fields, fileout, chunk_si
         parsed = {constants.TID: base.catalog_id}
 
         for field in relevant_fields:
-            
+
             # for every `table` in the results
             for tb in res:
-                
+
                 # we try to get the appropriate field for that table
                 try:
                     f_value = getattr(tb, field)
@@ -207,7 +222,7 @@ def _dump_target_dataset_query_result(result, relevant_fields, fileout, chunk_si
                     # serializable
                     if isinstance(f_value, (datetime.date, datetime.datetime)):
                         parsed[field] = f_value.isoformat()
-                        
+
                     else:
                         parsed[field] = f_value
 
@@ -381,7 +396,8 @@ def gather_relevant_pids():
                         compiled_regex = re.compile(formatter_regex)
                     except re.error:
                         LOGGER.debug(
-                            "Using 'regex' third-party library. Formatter regex not supported by the 're' standard library: %s", formatter_regex)
+                            "Using 'regex' third-party library. Formatter regex not supported by the 're' standard library: %s",
+                            formatter_regex)
                         try:
                             compiled_regex = regex.compile(formatter_regex)
                         except regex.error:

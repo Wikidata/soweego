@@ -27,17 +27,18 @@ LOGGER = logging.getLogger(__name__)
 @click.argument('target', type=click.Choice(target_database.available_targets()))
 @click.argument('target_type', type=click.Choice(target_database.available_types()))
 @click.argument('model', type=click.Path(exists=True, dir_okay=False, writable=False))
-@click.option('--upload/--no-upload', default=True, help='Upload links to Wikidata. Default: yes.')
+@click.option('--upload/--no-upload', default=False, help='Upload links to Wikidata. Default: no.')
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
 @click.option('-t', '--threshold', default=constants.CONFIDENCE_THRESHOLD, help="Probability score threshold, default: 0.5.")
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default='/app/shared', help="Input/output directory, default: '/app/shared'.")
 def cli(target, target_type, model, upload, sandbox, threshold, dir_io):
     """Run a probabilistic linker."""
+
     for chunk in execute(target, target_type, model, threshold, dir_io):
         if upload:
             _upload(chunk, target, sandbox)
         chunk.to_csv(os.path.join(dir_io, constants.LINKER_RESULT %
-                                  (target, target_type)), mode='a', header=True)
+                                  (target, target_type, model)), mode='a', header=True)
 
 
 def _upload(predictions, catalog, sandbox):
@@ -53,7 +54,6 @@ def execute(catalog, entity, model, threshold, dir_io):
 
     classifier = joblib.load(model)
     rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
-
     for i, wd_chunk in enumerate(wd_generator, 1):
         # TODO Also consider blocking on URLs
 
