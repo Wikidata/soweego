@@ -78,7 +78,7 @@ def _lookup_label(item_value):
     return _return_monolingual_strings(item_value, labels)
 
 
-def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> None:
+def get_data_for_linker(catalog: str, qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> None:
     no_labels_count = 0
     no_aliases_count = 0
     no_descriptions_count = 0
@@ -299,6 +299,7 @@ def _return_claims_for_linker(qid, claims, no_count):
         LOGGER.debug('Available claim PIDs for %s: %s', qid, available)
         for pid in available:
             for pid_claim in claims[pid]:
+                import pudb; pudb.set_trace()
                 value = _extract_value_from_claim(pid_claim, pid, qid)
                 if not value:
                     continue
@@ -519,6 +520,6 @@ def _make_buckets(qids):
 
 if __name__ == "__main__":
     import io
-    # def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> Generator[tuple]:
-    get_data_for_linker(
+    # def get_data_for_linker(catalog: str, qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> Generator[tuple]:
+    get_data_for_linker('imdb',
         set(['Q1409', 'Q1405', 'Q1407']), set(), dict(), io.StringIO(), dict())
