@@ -121,26 +121,28 @@ def perfect_name_match(source_dataset, target_entity: BaseEntity, target_pid: st
     This strategy applies to any object that can be
     treated as a string: names, links, etc.
     """
-
-    bucket_for_query = set()
+    bucket_size = 100
+    bucket_names = set()
     bucket = []
     total = _count_num_lines_in_file(source_dataset)
     missing = total
     for row_entity in tqdm(source_dataset, total=total):
         entity = json.loads(row_entity)
-        bucket_for_query.update(entity[constants.NAME])
+        bucket_names.update(entity[constants.NAME])
         bucket.append(entity)
-        # After building a bucket of 50 wikidata entries, tries to search them and does a n^2 comparison to try to match
-        if len(bucket_for_query) >= 100 or missing < 100:
-            missing -= len(bucket_for_query)
-            for res in data_gathering.perfect_name_search_bucket(target_entity, bucket_for_query):
+        # After building a bucket of bucket_size wikidata entries,
+        # tries to search them and does a n^2 comparison to try to match
+        if len(bucket_names) >= bucket_size or missing < bucket_size:
+            missing -= len(bucket_names)
+            for res in data_gathering.perfect_name_search_bucket(target_entity, bucket_names):
                 for en in bucket:
+                    # wikidata entities have a list of names
                     for name in en[constants.NAME]:
                         if name.lower() == res.name.lower():
                             if not compare_dates or birth_death_date_match(res, en):
                                 yield (en[constants.QID], target_pid, res.catalog_id)
             bucket.clear()
-            bucket_for_query.clear()
+            bucket_names.clear()
 
 
 def similar_name_tokens_match(source, target, target_pid: str, compare_dates: bool) -> Iterable[Tuple[str, str, str]]:
