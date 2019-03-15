@@ -127,13 +127,19 @@ def perfect_name_match(source_dataset, target_entity: BaseEntity, target_pid: st
     treated as a string: names, links, etc.
     """
 
+    bucket = set()
     for row_entity in tqdm(source_dataset, total=_count_num_lines_in_file(source_dataset)):
         entity = json.loads(row_entity)
         qid = entity['qid']
-        for label in entity[constants.NAME]:
-            for res in data_gathering.perfect_name_search(target_entity, label):
-                if not compare_dates or birth_death_date_match(res, entity):
-                    yield (qid, target_pid, res.catalog_id)
+        bucket.update(entity[constants.NAME])
+        # After building a bucket of 50 wikidata entries, tries to search them and does a n^2 comparison to try to match
+        if len(bucket) >= 50:
+            for res in data_gathering.perfect_name_search_bucket(target_entity, bucket):
+                for name in bucket:
+                    if name == res.name:
+                        #if not compare_dates or birth_death_date_match(res, bucket_entity):
+                        yield (qid, target_pid, res.catalog_id)
+            bucket.clear()
 
 
 def similar_name_tokens_match(source, target, target_pid: str, compare_dates: bool) -> Iterable[Tuple[str, str, str]]:
