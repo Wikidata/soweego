@@ -116,6 +116,14 @@ TARGET_CATALOGS = {
     }
 }
 
+# When building the wikidata dump for catalogs in this array
+# also the QIDs of a person's occupations will be included
+# as part of the dump
+REQUIRE_OCCUPATIONS = [
+    'imdb'
+]
+
+
 # Wikidata field & target column names
 INTERNAL_ID = 'internal_id'
 CATALOG_ID = 'catalog_id'
@@ -158,7 +166,7 @@ CLASSIFICATION_RETURN_SERIES = ('classification.return_type', 'series')
 CONFIDENCE_THRESHOLD = 0.5
 
 
-# precisions for the `pandas.Period` class. 
+# precisions for the `pandas.Period` class.
 # Listed from least to most precise, as defined here:
 # http://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#dateoffset-objects
 PD_PERIOD_PRECISIONS = [
