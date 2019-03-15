@@ -133,7 +133,7 @@ def perfect_name_match(source_dataset, target_entity: BaseEntity, target_pid: st
         qid = entity['qid']
         bucket.update(entity[constants.NAME])
         # After building a bucket of 50 wikidata entries, tries to search them and does a n^2 comparison to try to match
-        if len(bucket) >= 50:
+        if len(bucket) >= 100:
             for res in data_gathering.perfect_name_search_bucket(target_entity, bucket):
                 for name in bucket:
                     if name == res.name:
