@@ -135,7 +135,7 @@ LINKER_PIDS = {
     FAMILY_NAME: 'family_name',
     GIVEN_NAME: 'given_name',
     PSEUDONYM: 'pseudonym',
-    OCCUPATION: 'occupation'
+    OCCUPATION: 'occupations'
 }
 
 # Music domain properties for linking
