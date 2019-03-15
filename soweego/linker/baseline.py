@@ -136,7 +136,7 @@ def perfect_name_match(source_dataset, target_entity: BaseEntity, target_pid: st
             for res in data_gathering.perfect_name_search_bucket(target_entity, bucket_for_query):
                 for en in bucket:
                     for name in en[constants.NAME]:
-                        if name == res.name:
+                        if name.lower() == res.name.lower():
                             if not compare_dates or birth_death_date_match(res, en):
                                 yield (en[constants.QID], target_pid, res.catalog_id)
             bucket.clear()
