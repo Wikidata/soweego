@@ -128,6 +128,20 @@ def perfect_name_search(target_entity: constants.DB_ENTITY, to_search: str) -> I
         session.close()
 
 
+def perfect_name_search_bucket(target_entity: constants.DB_ENTITY, to_search: set) -> Iterable[constants.DB_ENTITY]:
+    session = DBManager.connect_to_db()
+    try:
+        for r in session.query(target_entity).filter(
+                target_entity.name.in_(to_search)).all():
+            yield r
+
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
 def gather_target_dataset(goal, entity_type, catalog, identifiers):
     base, link, nlp = target_database.get_entity(catalog, entity_type), target_database.get_link_entity(
         catalog, entity_type), target_database.get_nlp_entity(catalog, entity_type)
