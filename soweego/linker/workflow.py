@@ -164,7 +164,7 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
     if in_both_datasets(constants.DATE_OF_DEATH):
         compare.add(DateCompare(constants.DATE_OF_DEATH,
                                 constants.DATE_OF_DEATH, label='date_of_death'))
-
+    
     # Feature 3: Levenshtein distance on names and similar tokens
     if in_both_datasets(constants.NAME_TOKENS):
         compare.add(StringList(constants.NAME_TOKENS,
@@ -178,8 +178,9 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
                                algorithm='cosine', analyzer='soweego', label='description_cosine'))
 
     # Feature 5: comparison of occupations
-    if in_both_datasets(constants.OCCUPATION):
-        compare.add(OccupationCompare(constants.OCCUPATION, constants.OCCUPATION,
+    occupations_col_name = vocabulary.LINKER_PIDS[vocabulary.OCCUPATION]
+    if in_both_datasets(occupations_col_name):
+        compare.add(OccupationCompare(occupations_col_name, occupations_col_name,
                                label='occupation_comp'))
 
     feature_vectors = compare.compute(candidate_pairs, wikidata, target)
