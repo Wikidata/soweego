@@ -25,7 +25,9 @@ from pandas.io.json.json import JsonReader
 from soweego.commons import (constants, data_gathering, target_database,
                              text_utils, url_utils)
 from soweego.commons.logging import log_dataframe_info
-from soweego.linker.feature_extraction import StringList, UrlList, DateCompare, SimilarTokens
+from soweego.linker.feature_extraction import (DateCompare, OccupationCompare,
+                                               SimilarTokens, StringList,
+                                               UrlList)
 from soweego.wikidata import api_requests, vocabulary
 
 LOGGER = logging.getLogger(__name__)
@@ -72,7 +74,7 @@ def build_wikidata(goal, catalog, entity, dir_io):
         url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
         with gzip.open(wd_io_path, 'wt') as wd_io:
             api_requests.get_data_for_linker(catalog,
-                qids, url_pids, ext_id_pids_to_urls, wd_io, qids_and_tids)
+                                             qids, url_pids, ext_id_pids_to_urls, wd_io, qids_and_tids)
 
     wd_df_reader = pd.read_json(wd_io_path, lines=True, chunksize=1000)
 
@@ -123,7 +125,7 @@ def train_test_build(catalog, entity, dir_io):
 
 
 def preprocess(goal: str, wikidata_reader: JsonReader, target_reader: JsonReader) -> Tuple[
-    Generator[pd.DataFrame, None, None], Generator[pd.DataFrame, None, None]]:
+        Generator[pd.DataFrame, None, None], Generator[pd.DataFrame, None, None]]:
     handle_goal(goal)
     return preprocess_wikidata(goal, wikidata_reader), preprocess_target(goal, target_reader)
 
@@ -167,12 +169,18 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
     if in_both_datasets(constants.NAME_TOKENS):
         compare.add(StringList(constants.NAME_TOKENS,
                                constants.NAME_TOKENS, label='name_levenshtein'))
-        compare.add(SimilarTokens(constants.NAME_TOKENS, constants.NAME_TOKENS, label='similar_name_tokens'))
+        compare.add(SimilarTokens(constants.NAME_TOKENS,
+                                  constants.NAME_TOKENS, label='similar_name_tokens'))
 
     # Feature 4: cosine similarity on descriptions
     if in_both_datasets(constants.DESCRIPTION):
         compare.add(StringList(constants.DESCRIPTION, constants.DESCRIPTION,
                                algorithm='cosine', analyzer='soweego', label='description_cosine'))
+
+    # Feature 5: comparison of occupations
+    if in_both_datasets(constants.OCCUPATION):
+        compare.add(StringList(constants.OCCUPATION, constants.OCCUPATION,
+                               label='occupation_comp'))
 
     feature_vectors = compare.compute(candidate_pairs, wikidata, target)
     pd.to_pickle(feature_vectors, path_io)
