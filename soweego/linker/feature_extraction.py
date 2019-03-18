@@ -10,7 +10,7 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import logging
-from typing import List, Tuple, Union
+from typing import List, Set, Tuple, Union
 
 import jellyfish
 import numpy as np
@@ -89,7 +89,7 @@ class StringList(BaseCompareFeature):
                 for target in target_values:
                     try:
                         score = 1 - jellyfish.levenshtein_distance(source, target) \
-                                / np.max([len(source), len(target)])
+                            / np.max([len(source), len(target)])
                         scores.append(score)
                     except TypeError:
                         if pd.isnull(source) or pd.isnull(target):
@@ -327,3 +327,58 @@ class SimilarTokens(BaseCompareFeature):
             return count_intersect / count_total if count_total > 0 else np.nan
 
         return fillna(concatenated.apply(intersection_percentage_size), self.missing_value)
+
+
+class OccupationCompare(BaseCompareFeature):
+
+    name = "OccupationCompare"
+    description = "Compares occupations attribute of record pairs."
+
+    def __init__(self,
+                 left_on,
+                 right_on,
+                 missing_value=0.0,
+                 label=None):
+        super(OccupationCompare, self).__init__(left_on, right_on, label=label)
+
+        self.missing_value = missing_value
+
+    def _compute_vectorized(self, source_column, target_column):
+        # each item in `source_column` is already an array composed
+        # of QID strings representing the occupations of a person.
+        # On the other hand, each item in `target_column` is a
+        # string of space separated QIDs, so we need to first convert
+        # those into lists
+        # then we also convert each item both the source and target
+        # from arrays to sets, so that they're easier to compare
+        target_column = target_column.apply(lambda x: set(x.split(" ")))
+        source_column = source_column.apply(set)
+
+        # we then zip together the source column and the target column so that
+        # they're easier to process
+        concatenated = pd.Series(list(zip(source_column, target_column)))
+
+        def check_occupation_equality(pair: Tuple[Set[str], Set[str]]):
+            """Given 2 sets, returns the percentage of items that the
+            smallest set shares with the larger set"""
+            s_item: Set
+            t_item: Set
+            s_item, t_item = pair
+
+            # explicitly check if set is empty
+            if s_item == set():
+                LOGGER.debug(
+                    "Can't compare occupations, the wikidata value is null. Pair: %s", pair)
+                return np.nan
+
+            if t_item == set():
+                LOGGER.debug(
+                    "Can't compare occupations, the target value is null. Pair: %s", pair)
+                return np.nan
+
+            smaller_length = min(len(s_item), len(t_item))
+            n_shared_items = len(s_item.intersection(t_item))
+
+            return n_shared_items / smaller_length
+
+        return fillna(concatenated.apply(check_occupation_equality), self.missing_value)

@@ -179,7 +179,7 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
 
     # Feature 5: comparison of occupations
     if in_both_datasets(constants.OCCUPATION):
-        compare.add(StringList(constants.OCCUPATION, constants.OCCUPATION,
+        compare.add(OccupationCompare(constants.OCCUPATION, constants.OCCUPATION,
                                label='occupation_comp'))
 
     feature_vectors = compare.compute(candidate_pairs, wikidata, target)
@@ -295,7 +295,6 @@ def preprocess_target(goal, target_reader):
     target = target.groupby(constants.TID).agg(lambda x: list(set(x)))
     log_dataframe_info(
         LOGGER, target, f"Data indexed and aggregated on '{constants.TID}' column")
-
     # 6. Shared preprocessing
     target = _shared_preprocessing(target, will_handle_dates)
 
