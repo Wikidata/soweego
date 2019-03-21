@@ -16,6 +16,7 @@ import logging
 import os
 import pickle
 from collections import defaultdict
+from functools import lru_cache
 from typing import Generator, TextIO
 from urllib.parse import urlunsplit
 
@@ -425,8 +426,8 @@ def _prepare_request(qids, props):
     }
     return qid_buckets, request_params
 
-
-def _get_authenticated_session():
+@lru_cache()
+def get_authenticated_session():
     """
     Returns the token to be used for authentication.
     If token is not valid then a new one will be generated
@@ -470,10 +471,12 @@ def _get_authenticated_session():
         while True:
             bot_password = input('Password: ')
 
-            if bot_password == '':
-                raise NotImplementedError
-
             session = requests.Session()  # to automatically manage cookies
+
+            if bot_password == '':
+                # maximum bucket size when authenticated is 50
+                BUCKET_SIZE = 50 
+                break
 
             # obtain token
             token_request = session.get(WIKIDATA_API_URL, params={
@@ -499,6 +502,7 @@ def _get_authenticated_session():
                 print('Please try again ..')
 
             else:
+                print('Success!\n')
                 break
 
         with open(wiki_api_dump_path, 'wb') as f:
@@ -511,7 +515,7 @@ def _get_authenticated_session():
 def _make_request(bucket, params):
     params['ids'] = '|'.join(bucket)
     connection_is_ok = True
-    session = _get_authenticated_session()
+    session = get_authenticated_session()
     while True:
         try:
             response = session.get(WIKIDATA_API_URL, params=params)

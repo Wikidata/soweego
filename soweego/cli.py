@@ -14,6 +14,9 @@ import logging
 import click
 from soweego import (commons, importer, ingestor, linker, pipeline, validator,
                      wikidata)
+                     
+import colored_traceback
+colored_traceback.add_hook()
 
 CLI_COMMANDS = {
     'commons': commons.cli.cli,
@@ -37,6 +40,10 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 @click.pass_context
 def cli(ctx, log_level):
     """Link Wikidata items to trusted external catalogs."""
+
+    # setup bot authentication
+    wikidata.api_requests.get_authenticated_session()
+    
     commons.logging.setup()
     for module, level in log_level:
         commons.logging.set_log_level(module, level)
