@@ -13,8 +13,8 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import json
 import logging
-import pickle
 import os
+import pickle
 from collections import defaultdict
 from typing import Generator, TextIO
 from urllib.parse import urlunsplit
@@ -457,27 +457,49 @@ def _get_authenticated_session():
 
     except (FileNotFoundError, AssertionError):
         LOGGER.info('Obtaining new authenticated session')
-        import pudb
-        pudb.set_trace()
-        session = requests.Session()  # to automatically manage cookies
 
-        # obtain token
-        token_request = session.get(WIKIDATA_API_URL, params={
-            'action': 'query',
-            'meta': 'tokens',
-            'type': 'login',
-            'format': 'json'
-        }).json()
-        token = token_request['query']['tokens']['logintoken']
+        # The first thing we need to do is for the user to input
+        # the password. This will be asked for interactively.
+        # If no password is provided then we don't login, and
+        # proceed.
 
-        # do login
-        session.post(WIKIDATA_API_URL, data={
-            'action': 'login',
-            'lgname': 'soweego bot',
-            'lgpassword': '',
-            'lgtoken': token,
-            'format': 'json'
-        })
+        print('\n----- Authentication for the bot required -----')
+        print('Please input the password to authenticate the bot, or leave blank if '
+              "you don't want to authenticate")
+
+        while True:
+            bot_password = input('Password: ')
+
+            if bot_password == '':
+                raise NotImplementedError
+
+            session = requests.Session()  # to automatically manage cookies
+
+            # obtain token
+            token_request = session.get(WIKIDATA_API_URL, params={
+                'action': 'query',
+                'meta': 'tokens',
+                'type': 'login',
+                'format': 'json'
+            }).json()
+            token = token_request['query']['tokens']['logintoken']
+
+            # do login
+            login_r = session.post(WIKIDATA_API_URL, data={
+                'action': 'login',
+                'lgname': 'Soweego bot',
+                'lgpassword': bot_password,
+                'lgtoken': token,
+                'format': 'json'
+            }).json()
+
+            if login_r['login']['result'] == 'Failed':
+                print("\nCouldn't login. Possibly the password is wrong.")
+                print('Reason given by server: ', login_r['login']['reason'])
+                print('Please try again ..')
+
+            else:
+                break
 
         with open(wiki_api_dump_path, 'wb') as f:
             LOGGER.info('Persisting session to disk')
