@@ -132,8 +132,8 @@ def perfect_name_match(source_dataset, target_entity: BaseEntity, target_pid: st
         bucket.append(entity)
         # After building a bucket of bucket_size wikidata entries,
         # tries to search them and does a n^2 comparison to try to match
-        if len(bucket_names) >= bucket_size or missing < bucket_size:
-            missing -= len(bucket_names)
+        if len(bucket) >= bucket_size or missing < bucket_size:
+            missing -= len(bucket)
             for res in data_gathering.perfect_name_search_bucket(target_entity, bucket_names):
                 for en in bucket:
                     # wikidata entities have a list of names
