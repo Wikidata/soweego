@@ -155,7 +155,7 @@ def similar_name_tokens_match(source, target, target_pid: str, compare_dates: bo
 
     for row_entity in tqdm(source, total=_count_num_lines_in_file(source)):
         entity = json.loads(row_entity)
-        qid = entity['qid']
+        qid = entity[constants.QID]
         for label in entity[constants.NAME]:
             if not label:
                 continue
@@ -191,8 +191,8 @@ def similar_link_tokens_match(source, target, target_pid: str) -> Iterable[Tuple
 
     for row_entity in tqdm(source, total=_count_num_lines_in_file(source)):
         entity = json.loads(row_entity)
-        qid = entity['qid']
-        for url in entity['url']:
+        qid = entity[constants.QID]
+        for url in entity[constants.URL]:
             if not url:
                 continue
 
