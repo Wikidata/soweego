@@ -30,7 +30,8 @@ LOGGER = logging.getLogger(__name__)
 @click.option('--upload/--no-upload', default=False, help='Upload links to Wikidata. Default: no.')
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
 @click.option('-t', '--threshold', default=constants.CONFIDENCE_THRESHOLD, help="Probability score threshold, default: 0.5.")
-@click.option('-d', '--dir-io', type=click.Path(file_okay=False), default='/app/shared', help="Input/output directory, default: '/app/shared'.")
+@click.option('-d', '--dir-io', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER,
+              help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER)
 def cli(target, target_type, model, upload, sandbox, threshold, dir_io):
     """Run a probabilistic linker."""
 
