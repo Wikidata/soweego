@@ -14,12 +14,14 @@ import os
 
 import click
 import recordlinkage as rl
-from sklearn.model_selection import train_test_split
+from pandas import concat
+from sklearn.model_selection import KFold, train_test_split
 
 from soweego.commons import constants, target_database
-from soweego.linker import blocking, workflow
+from soweego.linker import train, workflow
 
 LOGGER = logging.getLogger(__name__)
+rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
 
 
 @click.command()
@@ -30,15 +32,11 @@ LOGGER = logging.getLogger(__name__)
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default='/app/shared', help="Input/output directory, default: '/app/shared'.")
 def cli(classifier, target, target_type, binarize, dir_io):
     """Evaluate the performance of a probabilistic linker."""
-    result = evaluate(
+    precision, recall, fscore, confusion_matrix = k_fold_single_evaluation(
         constants.CLASSIFIERS[classifier], target, target_type, binarize, dir_io)
-
-    for predictions, (precision, recall, fscore, confusion_matrix) in result:
-        predictions.to_series().to_csv(os.path.join(dir_io, constants.LINKER_EVALUATION_PREDICTIONS %
-                                                    (target, target_type, classifier)), mode='a', columns=[], header=True)
-        with open(os.path.join(dir_io, constants.LINKER_PERFORMANCE % (target, target_type, classifier)), 'a') as fileout:
-            fileout.write(
-                f'Precision: {precision}\nRecall: {recall}\nF-score: {fscore}\nConfusion matrix:\n{confusion_matrix}\n')
+    with open(os.path.join(dir_io, constants.LINKER_PERFORMANCE % (target, target_type, classifier)), 'w') as fileout:
+        fileout.write(
+            f'Precision: {precision}\nRecall: {recall}\nF-score: {fscore}\nConfusion matrix:\n{confusion_matrix}\n')
 
 
 def _compute_performance(test_index, predictions, test_vectors_size):
@@ -58,48 +56,21 @@ def _compute_performance(test_index, predictions, test_vectors_size):
     return precision, recall, fscore, confusion_matrix
 
 
-def evaluate(classifier, catalog, entity, binarize, dir_io):
-    result = []
+def k_fold_single_evaluation(classifier, catalog, entity, binarize, dir_io, k=5):
+    predictions, test_set = [], []
+    dataset, positive_samples_index = train.build_dataset(
+        'training', catalog, entity, dir_io)
+    k_fold = KFold(n_splits=k, shuffle=True)
 
-    # Build
-    wd_reader, target_reader = workflow.train_test_build(
-        catalog, entity, dir_io)
-    wd_generator, target_generator = workflow.preprocess(
-        'training', wd_reader, target_reader)
+    for train_index, test_index in k_fold.split(dataset):
+        training, test = dataset.iloc[train_index], dataset.iloc[test_index]
+        test_set.append(test)
+        model = workflow.init_model(classifier, binarize)
+        model.fit(training, positive_samples_index & training.index)
+        predictions.append(model.predict(test))
 
-    for i, wd_chunk in enumerate(wd_generator, 1):
-        for target_chunk in target_generator:
-            # 1. Random split (2/3 train, 1/3 test)
-            wd_train, target_train, wd_test, target_test = _random_split(
-                wd_chunk, target_chunk)
-
-            # 2. Train
-            train_vectors, train_positives_index = _workflow(
-                wd_train, target_train, i, catalog, entity, dir_io)
-
-            # 3. Build model
-            model = workflow.init_model(classifier, binarize)
-            model.fit(train_vectors, train_positives_index)
-
-            # 4. Test
-            test_vectors, test_positive_index = _workflow(
-                wd_test, target_test, i, catalog, entity, dir_io)
-            predictions = model.predict(test_vectors)
-
-            result.append((predictions, _compute_performance(
-                test_positive_index, predictions, len(test_vectors))))
-
-    return result
-
-
-def _workflow(wikidata, target, wd_chunk_number, catalog, entity, dir_io):
-    train_positives = blocking.train_test_block(wikidata, target)
-    train_all = blocking.full_text_query_block(
-        'training', catalog, wikidata, wd_chunk_number, target_database.get_entity(catalog, entity), dir_io)
-    train_actual = train_all & train_positives
-    train_vectors = workflow.extract_features(
-        train_all, wikidata, target)
-    return train_vectors, train_actual
+    test_set = concat(test_set)
+    return _compute_performance(positive_samples_index & test_set.index, concat(predictions), len(test_set))
 
 
 def _random_split(wd_chunk, target_chunk):
