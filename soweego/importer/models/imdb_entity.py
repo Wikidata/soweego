@@ -17,6 +17,7 @@ from sqlalchemy.orm import relationship
 
 from soweego.importer.models.base_entity import BaseEntity, BaseRelationship
 from soweego.importer.models.base_link_entity import BaseLinkEntity
+from soweego.wikidata import vocabulary
 
 BASE = declarative_base()
 
@@ -55,6 +56,11 @@ class ImdbMovieEntity(BASE):
 
 
 class ImdbPersonEntity(BaseEntity):
+    # each table/entity type should be associated with
+    # an occupation (defined in vocabulary.py) which
+    # is the main occupation for people in said table
+    table_occupation = None
+
     __tablename__ = BASE_PERSON_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
@@ -74,6 +80,8 @@ class ImdbPersonEntity(BaseEntity):
 
 
 class ImdbActorEntity(ImdbPersonEntity):
+    table_occupation = vocabulary.ACTOR
+
     __tablename__ = ACTOR_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
@@ -81,6 +89,8 @@ class ImdbActorEntity(ImdbPersonEntity):
 
 
 class ImdbDirectorEntity(ImdbPersonEntity):
+    table_occupation = vocabulary.DIRECTOR
+    
     __tablename__ = DIRECTOR_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
@@ -88,6 +98,8 @@ class ImdbDirectorEntity(ImdbPersonEntity):
 
 
 class ImdbMusicianEntity(ImdbPersonEntity):
+    table_occupation = vocabulary.MUSICIAN
+    
     __tablename__ = MUSICIAN_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
@@ -95,6 +107,8 @@ class ImdbMusicianEntity(ImdbPersonEntity):
 
 
 class ImdbProducerEntity(ImdbPersonEntity):
+    table_occupation = vocabulary.FILM_PRODUCER
+    
     __tablename__ = PRODUCER_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
@@ -102,6 +116,8 @@ class ImdbProducerEntity(ImdbPersonEntity):
 
 
 class ImdbWriterEntity(ImdbPersonEntity):
+    table_occupation = vocabulary.SCREENWRITER
+    
     __tablename__ = WRITER_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
