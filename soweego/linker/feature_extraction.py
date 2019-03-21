@@ -351,8 +351,21 @@ class OccupationCompare(BaseCompareFeature):
         # those into lists
         # then we also convert each item both the source and target
         # from arrays to sets, so that they're easier to compare
-        target_column = target_column.apply(lambda x: set(x.split(" ")))
-        source_column = source_column.apply(set)
+        def to_set(itm):
+            # if it is an empty array (from source), or an
+            # empty string (from target)
+            if len(itm) == 0: 
+                return set()
+
+            # if it is a string with length > 0 split it into
+            # its components
+            elif isinstance(itm, str):
+                itm = itm.split(" ") 
+
+            return set(itm)
+
+        target_column = target_column.apply(to_set)
+        source_column = source_column.apply(to_set)
 
         # we then zip together the source column and the target column so that
         # they're easier to process
