@@ -14,12 +14,12 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import json
 import logging
 import pickle
+import os
 from collections import defaultdict
 from typing import Generator, TextIO
 from urllib.parse import urlunsplit
 
 import requests
-from requests import get
 from requests.exceptions import ChunkedEncodingError
 from tqdm import tqdm
 
@@ -432,8 +432,11 @@ def _get_authenticated_session():
     If token is not valid then a new one will be generated
     """
 
+    wiki_api_dump_path = os.path.join(
+        constants.SHARED_FOLDER, constants.WIKIDATA_API_SESSION)
+
     try:
-        with open('/app/shared/wiki_session.pkl', 'rb') as f:
+        with open(wiki_api_dump_path, 'rb') as f:
             LOGGER.info('Previously authenticated session exists')
             session = pickle.load(f)
 
@@ -476,7 +479,7 @@ def _get_authenticated_session():
             'format': 'json'
         })
 
-        with open('/app/shared/wiki_session.pkl', 'wb') as f:
+        with open(wiki_api_dump_path, 'wb') as f:
             LOGGER.info('Persisting session to disk')
             pickle.dump(session, f)
 
