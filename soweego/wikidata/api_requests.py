@@ -13,10 +13,12 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import json
 import logging
+import pickle
 from collections import defaultdict
 from typing import Generator, TextIO
 from urllib.parse import urlunsplit
 
+import requests
 from requests import get
 from requests.exceptions import ChunkedEncodingError
 from tqdm import tqdm
@@ -28,7 +30,7 @@ from soweego.wikidata import vocabulary
 LOGGER = logging.getLogger(__name__)
 
 WIKIDATA_API_URL = 'https://www.wikidata.org/w/api.php'
-BUCKET_SIZE = 50
+BUCKET_SIZE = 500
 
 
 # Values: plain strings (includes URLs), monolingual strings,
@@ -424,12 +426,70 @@ def _prepare_request(qids, props):
     return qid_buckets, request_params
 
 
+def _get_authenticated_session():
+    """
+    Returns the token to be used for authentication.
+    If token is not valid then a new one will be generated
+    """
+
+    try:
+        with open('/app/shared/wiki_session.pkl', 'rb') as f:
+            LOGGER.info('Previously authenticated session exists')
+            session = pickle.load(f)
+
+            # check if session is still valid
+            res = session.get(WIKIDATA_API_URL, params={
+                'action': 'query',
+                'assert': 'user',
+                'format': 'json'
+            })
+
+            # if the assert query failed then it means
+            # we need to renew the session
+            if 'error' in res.json().keys():
+                LOGGER.info('Session has expired and will be renewed')
+                raise AssertionError
+
+            return session
+
+    except (FileNotFoundError, AssertionError):
+        LOGGER.info('Obtaining new authenticated session')
+        import pudb
+        pudb.set_trace()
+        session = requests.Session()  # to automatically manage cookies
+
+        # obtain token
+        token_request = session.get(WIKIDATA_API_URL, params={
+            'action': 'query',
+            'meta': 'tokens',
+            'type': 'login',
+            'format': 'json'
+        }).json()
+        token = token_request['query']['tokens']['logintoken']
+
+        # do login
+        session.post(WIKIDATA_API_URL, data={
+            'action': 'login',
+            'lgname': 'soweego bot',
+            'lgpassword': '',
+            'lgtoken': token,
+            'format': 'json'
+        })
+
+        with open('/app/shared/wiki_session.pkl', 'wb') as f:
+            LOGGER.info('Persisting session to disk')
+            pickle.dump(session, f)
+
+        return session
+
+
 def _make_request(bucket, params):
     params['ids'] = '|'.join(bucket)
     connection_is_ok = True
+    session = _get_authenticated_session()
     while True:
         try:
-            response = get(WIKIDATA_API_URL, params=params)
+            response = session.get(WIKIDATA_API_URL, params=params)
             log_request_data(response, LOGGER)
         except ChunkedEncodingError:
             LOGGER.warning(
