@@ -49,7 +49,8 @@ def _upload(predictions, catalog, sandbox):
 
 def execute(catalog, entity, model, threshold, dir_io):
 
-    wd_reader = workflow.build_wikidata('classification', catalog, entity, dir_io)
+    wd_reader = workflow.build_wikidata(
+        'classification', catalog, entity, dir_io)
     wd_generator = workflow.preprocess_wikidata('classification', wd_reader)
 
     classifier = joblib.load(model)
@@ -66,7 +67,8 @@ def execute(catalog, entity, model, threshold, dir_io):
             'classification', entity, catalog, set(samples.get_level_values(constants.TID)))
 
         # Preprocess target chunk
-        target_chunk = workflow.preprocess_target('classification', target_reader)
+        target_chunk = workflow.preprocess_target(
+            'classification', target_reader)
 
         features_path = os.path.join(
             dir_io, constants.FEATURES % (catalog, entity, 'classification', i))
