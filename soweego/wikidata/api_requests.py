@@ -478,6 +478,8 @@ def get_authenticated_session():
                 # maximum bucket size when authenticated is 50
                 LOGGER.info('No password provided so unauthenticated session will be used '
                             'for this execution.')
+
+                global BUCKET_SIZE
                 BUCKET_SIZE = 50
 
                 # we return the session at once since we don't
@@ -491,6 +493,7 @@ def get_authenticated_session():
                 'type': 'login',
                 'format': 'json'
             }).json()
+
             token = token_request['query']['tokens']['logintoken']
 
             # do login
