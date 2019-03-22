@@ -59,12 +59,14 @@ def _linker(target: str, upload: bool):
     LOGGER.info("Running linker for target: %s" % target)
     upload_option = "--upload" if upload else "--no-upload"
     for target_type in target_database.available_types_for_target(target):
-        _invoke_no_exit(baseline.cli, [target, target_type, '-s', 'all', upload_option])
+        if not target_type:
+            continue
+        # _invoke_no_exit(baseline.cli, [target, target_type, '-s', 'all', upload_option])
         _invoke_no_exit(evaluate.cli, ['nb', target, target_type])
         _invoke_no_exit(train.cli, ['nb', target, target_type])
         _invoke_no_exit(classify.cli,
-                      [target, target_type, '/app/shared/musicbrainz_%s_nb_model.pkl'.format(target_type),
-                       upload_option])
+                        [target, target_type, '/app/shared/musicbrainz_%s_nb_model.pkl'.format(target_type),
+                         upload_option])
 
 
 def _validator(target: str, upload: bool):
