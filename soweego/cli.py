@@ -15,9 +15,6 @@ import click
 from soweego import (commons, importer, ingestor, linker, pipeline, validator,
                      wikidata)
                      
-import colored_traceback
-colored_traceback.add_hook()
-
 CLI_COMMANDS = {
     'commons': commons.cli.cli,
     'importer': importer.cli.cli,
