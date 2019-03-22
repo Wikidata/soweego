@@ -54,6 +54,9 @@ def validate_links_cli(catalog: str):
 
         LOGGER.info("Validating %s %s links..." % (catalog, entity_type))
         entity = target_database.get_link_entity(catalog, entity_type)
+        if not entity:
+            LOGGER.info("%s %s does not have a links table. Skipping..." % (catalog, entity_type))
+            continue
 
         session = DBManager.connect_to_db()
         total = 0
@@ -72,7 +75,7 @@ def validate_links_cli(catalog: str):
         LOGGER.info("Removed %s/%s from %s %s" % (removed, total, catalog, entity_type))
 
 
-class Importer():
+class Importer:
 
     def refresh_dump(self, output_folder: str, downloader: BaseDumpExtractor, resolve: bool):
         """Downloads the dump, if necessary,
