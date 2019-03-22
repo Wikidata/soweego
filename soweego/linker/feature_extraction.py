@@ -20,6 +20,7 @@ from recordlinkage.utils import fillna
 from sklearn.feature_extraction.text import CountVectorizer
 
 from soweego.commons import constants, text_utils
+from soweego.wikidata import sparql_queries
 
 LOGGER = logging.getLogger(__name__)
 
@@ -334,6 +335,11 @@ class OccupationCompare(BaseCompareFeature):
     name = "OccupationCompare"
     description = "Compares occupations attribute of record pairs."
 
+    # when expanding the occupations in `_expand_occupations` it
+    # is useful to have a dict were we can cache each result, so that
+    # we don't have to do a sparql query every time.
+    _expand_occupations_cache = {}
+
     def __init__(self,
                  left_on,
                  right_on,
@@ -343,7 +349,46 @@ class OccupationCompare(BaseCompareFeature):
 
         self.missing_value = missing_value
 
-    def _compute_vectorized(self, source_column, target_column):
+    def _expand_occupations(self, occupation_qids: Set[str]) -> Set[str]:
+        """
+        This should be applied to a pandas.Series, where each element
+        is a set of QIDs.
+
+        This function will expand the set to include all superclasses and
+        subclasses of each QID in the original set.
+        """
+
+        expanded_set = set()
+
+        for qid in occupation_qids:
+            LOGGER.info('Expanding qid %s', qid)
+            expanded_set.add(qid)  # add qid to expanded set
+
+            # check if we have the subclasses and superclasses
+            # of this specific qid in memory
+            if qid in self._expand_occupations_cache:
+
+                # if we do then add them to expanded set
+                expanded_set = expanded_set | self._expand_occupations_cache[qid]
+
+            else:
+
+                # get subclasses ans superclasses
+                subclasses = sparql_queries.get_subclasses_of_qid(qid)
+                superclasses = sparql_queries.get_superclasses_of_qid(qid)
+
+                joined = subclasses | superclasses
+
+                # add joined to cache
+                self._expand_occupations_cache[qid] = joined
+
+                # finally add them to expanded set
+                expanded_set = expanded_set | joined
+
+        return expanded_set
+
+    def _compute_vectorized(self, source_column: pd.Series, target_column: pd.Series):
+
         # each item in `source_column` is already an array composed
         # of QID strings representing the occupations of a person.
         # On the other hand, each item in `target_column` is a
@@ -351,21 +396,26 @@ class OccupationCompare(BaseCompareFeature):
         # those into lists
         # then we also convert each item both the source and target
         # from arrays to sets, so that they're easier to compare
+        
         def to_set(itm):
             # if it is an empty array (from source), or an
             # empty string (from target)
-            if len(itm) == 0: 
+            if len(itm) == 0:
                 return set()
 
             # if it is a string with length > 0 split it into
             # its components
             elif isinstance(itm, str):
-                itm = itm.split(" ") 
+                itm = itm.split(" ")
 
             return set(itm)
 
         target_column = target_column.apply(to_set)
         source_column = source_column.apply(to_set)
+
+        # finally, we want to expand the target_column (add the
+        # superclasses and subclasses of each occupation)
+        target_column = target_column.apply(self._expand_occupations)
 
         # we then zip together the source column and the target column so that
         # they're easier to process
