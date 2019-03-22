@@ -16,7 +16,8 @@ import logging
 import os
 import pickle
 from collections import defaultdict
-from functools import lru_cache
+from functools import lru_cache, partial
+from multiprocessing.pool import Pool
 from typing import Generator, TextIO
 from urllib.parse import urlunsplit
 
@@ -81,6 +82,91 @@ def _lookup_label(item_value):
     return _return_monolingual_strings(item_value, labels)
 
 
+def _pall_process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_and_tids,
+                         no_labels_count, no_aliases_count, no_descriptions_count,
+                         no_sitelinks_count, no_links_count, no_ext_ids_count, no_claims_count) -> str:
+
+    response_body = _make_request(bucket, request_params)
+
+    if not response_body:
+        return ''
+
+    bucket_results = []
+
+    for qid in response_body['entities']:
+        to_write = {}
+        # Stick target ids if given
+        if qids_and_tids:
+            tids = qids_and_tids.get(qid)
+            if tids:
+                to_write[constants.TID] = list(tids[constants.TID])
+
+        entity = response_body['entities'][qid]
+        claims = entity.get('claims')
+        if not claims:
+            LOGGER.info('Skipping QID with no claims: %s', qid)
+            no_claims_count += 1
+            continue
+
+        # Labels
+        labels = entity.get('labels')
+        if not labels:
+            LOGGER.info('Skipping QID with no labels: %s', qid)
+            no_labels_count += 1
+            continue
+        to_write[constants.QID] = qid
+        to_write[constants.NAME] = _return_monolingual_strings(
+            qid, labels)
+
+        # Aliases
+        aliases = entity.get('aliases')
+        if aliases:
+            # Merge them into labels
+            to_write[constants.NAME].update(
+                _return_aliases(qid, aliases))
+        else:
+            LOGGER.debug('%s has no aliases', qid)
+            no_aliases_count += 1
+        # Convert set to list for JSON serialization
+        to_write[constants.NAME] = list(to_write[constants.NAME])
+
+        # Descriptions
+        descriptions = entity.get('descriptions')
+        if descriptions:
+            to_write[constants.DESCRIPTION] = list(
+                _return_monolingual_strings(qid, descriptions))
+        else:
+            LOGGER.debug('%s has no descriptions', qid)
+            no_descriptions_count += 1
+
+        # Sitelinks
+        sitelinks = entity.get('sitelinks')
+        if sitelinks:
+            to_write[constants.URL] = _return_sitelinks(sitelinks)
+        else:
+            LOGGER.debug('%s has no sitelinks', qid)
+            to_write[constants.URL] = set()
+            no_sitelinks_count += 1
+
+        # Third-party URLs
+        to_write[constants.URL].update(
+            _return_third_party_urls(qid, claims, url_pids, no_links_count))
+
+        # External ID URLs
+        to_write[constants.URL].update(_return_ext_id_urls(
+            qid, claims, ext_id_pids_to_urls, no_ext_ids_count))
+        # Convert set to list for JSON serialization
+        to_write[constants.URL] = list(to_write[constants.URL])
+
+        # Expected claims
+        to_write.update(_return_claims_for_linker(
+            qid, claims, no_claims_count))
+
+        bucket_results.append(json.dumps(to_write, ensure_ascii=False) + '\n')
+
+    return ''.join(bucket_results)
+
+
 def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> None:
     no_labels_count = 0
     no_aliases_count = 0
@@ -92,81 +178,25 @@ def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fil
 
     qid_buckets, request_params = _prepare_request(
         qids, 'labels|aliases|descriptions|sitelinks|claims')
-    for bucket in tqdm(qid_buckets):
-        response_body = _make_request(bucket, request_params)
-        if not response_body:
-            continue
 
-        for qid in response_body['entities']:
-            to_write = {}
-            # Stick target ids if given
-            if qids_and_tids:
-                tids = qids_and_tids.get(qid)
-                if tids:
-                    to_write[constants.TID] = list(tids[constants.TID])
+    pool_function = partial(_pall_process_bucket,
+                            request_params=request_params,
+                            url_pids=url_pids,
+                            ext_id_pids_to_urls=ext_id_pids_to_urls,
+                            qids_and_tids=qids_and_tids,
+                            no_labels_count=no_labels_count,
+                            no_aliases_count=no_aliases_count,
+                            no_descriptions_count=no_descriptions_count,
+                            no_sitelinks_count=no_sitelinks_count,
+                            no_links_count=no_links_count,
+                            no_ext_ids_count=no_ext_ids_count,
+                            no_claims_count=no_claims_count,)
 
-            entity = response_body['entities'][qid]
-            claims = entity.get('claims')
-            if not claims:
-                LOGGER.info('Skipping QID with no claims: %s', qid)
-                no_claims_count += 1
-                continue
+    with Pool() as pool:
+        for processed_bucket in pool.imap_unordered(pool_function,
+                                                    tqdm(qid_buckets, total=len(qid_buckets))):
 
-            # Labels
-            labels = entity.get('labels')
-            if not labels:
-                LOGGER.info('Skipping QID with no labels: %s', qid)
-                no_labels_count += 1
-                continue
-            to_write[constants.QID] = qid
-            to_write[constants.NAME] = _return_monolingual_strings(
-                qid, labels)
-
-            # Aliases
-            aliases = entity.get('aliases')
-            if aliases:
-                # Merge them into labels
-                to_write[constants.NAME].update(
-                    _return_aliases(qid, aliases))
-            else:
-                LOGGER.debug('%s has no aliases', qid)
-                no_aliases_count += 1
-            # Convert set to list for JSON serialization
-            to_write[constants.NAME] = list(to_write[constants.NAME])
-
-            # Descriptions
-            descriptions = entity.get('descriptions')
-            if descriptions:
-                to_write[constants.DESCRIPTION] = list(
-                    _return_monolingual_strings(qid, descriptions))
-            else:
-                LOGGER.debug('%s has no descriptions', qid)
-                no_descriptions_count += 1
-
-            # Sitelinks
-            sitelinks = entity.get('sitelinks')
-            if sitelinks:
-                to_write[constants.URL] = _return_sitelinks(sitelinks)
-            else:
-                LOGGER.debug('%s has no sitelinks', qid)
-                to_write[constants.URL] = set()
-                no_sitelinks_count += 1
-
-            # Third-party URLs
-            to_write[constants.URL].update(
-                _return_third_party_urls(qid, claims, url_pids, no_links_count))
-
-            # External ID URLs
-            to_write[constants.URL].update(_return_ext_id_urls(
-                qid, claims, ext_id_pids_to_urls, no_ext_ids_count))
-            # Convert set to list for JSON serialization
-            to_write[constants.URL] = list(to_write[constants.URL])
-
-            # Expected claims
-            to_write.update(_return_claims_for_linker(
-                qid, claims, no_claims_count))
-
-            fileout.write(json.dumps(to_write, ensure_ascii=False) + '\n')
+            fileout.write(processed_bucket)
             fileout.flush()
 
     LOGGER.info('QIDs: got %d with no labels, %d with no aliases, %d with no descriptions, %d with no sitelinks, %d with no third-party links, %d with no external ID links, %d with no expected claims',
@@ -563,7 +593,12 @@ def get_authenticated_session():
 def _make_request(bucket, params):
     params['ids'] = '|'.join(bucket)
     connection_is_ok = True
-    session = get_authenticated_session()
+
+    oldC = get_authenticated_session()
+
+    session = requests.Session()
+    session.cookies = oldC.cookies
+
     while True:
         try:
             response = session.get(WIKIDATA_API_URL, params=params)
