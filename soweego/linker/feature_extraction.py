@@ -358,10 +358,10 @@ class OccupationCompare(BaseCompareFeature):
         subclasses of each QID in the original set.
         """
 
+        
         expanded_set = set()
 
         for qid in occupation_qids:
-            LOGGER.info('Expanding qid %s', qid)
             expanded_set.add(qid)  # add qid to expanded set
 
             # check if we have the subclasses and superclasses
@@ -409,7 +409,7 @@ class OccupationCompare(BaseCompareFeature):
                 itm = itm.split(" ")
 
             return set(itm)
-
+        
         target_column = target_column.apply(to_set)
         source_column = source_column.apply(to_set)
 
