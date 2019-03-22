@@ -16,7 +16,7 @@ import click
 import recordlinkage as rl
 from numpy import mean, std
 from pandas import concat
-from sklearn.model_selection import KFold, train_test_split
+from sklearn.model_selection import StratifiedKFold, train_test_split
 
 from soweego.commons import constants, target_database
 from soweego.linker import train, workflow
@@ -75,9 +75,13 @@ def average_k_fold(classifier, catalog, entity, binarize, dir_io, k=5):
     predictions, precisions, recalls, fscores = None, [], [], []
     dataset, positive_samples_index = train.build_dataset(
         'training', catalog, entity, dir_io)
-    k_fold = KFold(n_splits=k, shuffle=True)
+    k_fold = StratifiedKFold(n_splits=k, shuffle=True)
+    # scikit's stratified k-fold no longer supports multi-label data representation.
+    # It expects a binary array instead, so build it based on the positive samples index
+    binary_target_variables = dataset.index.map(
+        lambda x: 1 if x in positive_samples_index else 0)
 
-    for train_index, test_index in k_fold.split(dataset):
+    for train_index, test_index in k_fold.split(dataset, binary_target_variables):
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
         model = workflow.init_model(classifier, binarize)
         model.fit(training, positive_samples_index & training.index)
@@ -100,9 +104,13 @@ def single_k_fold(classifier, catalog, entity, binarize, dir_io, k=5):
     predictions, test_set = None, []
     dataset, positive_samples_index = train.build_dataset(
         'training', catalog, entity, dir_io)
-    k_fold = KFold(n_splits=k, shuffle=True)
+    k_fold = StratifiedKFold(n_splits=k, shuffle=True)
+    # scikit's stratified k-fold no longer supports multi-label data representation.
+    # It expects a binary array instead, so build it based on the positive samples index
+    binary_target_variables = dataset.index.map(
+        lambda x: 1 if x in positive_samples_index else 0)
 
-    for train_index, test_index in k_fold.split(dataset):
+    for train_index, test_index in k_fold.split(dataset, binary_target_variables):
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
         test_set.append(test)
         model = workflow.init_model(classifier, binarize)
