@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """Set of techniques to index record pairs (read blocking)."""
-from typing import Iterable, Tuple
+from multiprocessing import Pool
+from typing import Tuple, Iterable
 
 from tqdm import tqdm
 
@@ -25,7 +26,7 @@ from soweego.linker.workflow import handle_goal
 LOGGER = logging.getLogger(__name__)
 
 
-def train_test_block(wikidata_df: pd.DataFrame, target_df: pd.DataFrame) -> pd.MultiIndex:
+def train__block(wikidata_df: pd.DataFrame, target_df: pd.DataFrame) -> pd.MultiIndex:
     blocking_column = constants.TID
 
     LOGGER.info(
@@ -69,9 +70,23 @@ def full_text_query_block(goal: str, catalog: str, wikidata_series: pd.Series, c
     return samples_index
 
 
-def _extract_target_candidates(wikidata_series: pd.Series, target_entity: constants.DB_ENTITY) -> Iterable[
-    Tuple[str, str]]:
-    for qid, terms in tqdm(wikidata_series.items(), total=len(wikidata_series)):
-        ids = list(map(lambda entity: entity.catalog_id, tokens_fulltext_search(target_entity, False, terms, None, 5)))
-        for id in ids:
-            yield (qid, id)
+def _multiprocessing_series_iterator(wikidata_series: pd.Series, target_entity: constants.DB_ENTITY) -> Iterable[
+    Tuple[str, str, constants.DB_ENTITY]]:
+    for qids, terms in wikidata_series.items():
+        yield qids, terms, target_entity
+
+
+def fulltext_search(qid_terms_target: Tuple[str, list, constants.DB_ENTITY]) -> Iterable[Tuple[str, str]]:
+    qid = qid_terms_target[0]
+    terms = qid_terms_target[1]
+    target_entity = qid_terms_target[2]
+    ids = list(map(lambda entity: entity.catalog_id, tokens_fulltext_search(target_entity, False, terms, None, 5)))
+    return [(qid, id) for id in ids]
+
+
+def _extract_target_candidates(wikidata_series: pd.Series, target_entity: constants.DB_ENTITY):
+    with Pool() as pool:
+        for res in tqdm(
+                pool.imap_unordered(fulltext_search, _multiprocessing_series_iterator(wikidata_series, target_entity)),
+                total=len(wikidata_series)):
+            yield from res
