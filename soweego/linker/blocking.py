@@ -26,7 +26,7 @@ from soweego.linker.workflow import handle_goal
 LOGGER = logging.getLogger(__name__)
 
 
-def train__block(wikidata_df: pd.DataFrame, target_df: pd.DataFrame) -> pd.MultiIndex:
+def train_test_block(wikidata_df: pd.DataFrame, target_df: pd.DataFrame) -> pd.MultiIndex:
     blocking_column = constants.TID
 
     LOGGER.info(
@@ -78,10 +78,8 @@ def _multiprocessing_series_iterator(wikidata_series: pd.Series, target_entity: 
 
 def fulltext_search(qid_terms_target: Tuple[str, list, constants.DB_ENTITY]) -> Iterable[Tuple[str, str]]:
     qid, terms, target_entity = qid_terms_target
-    terms = qid_terms_target[1]
-    target_entity = qid_terms_target[2]
-    ids = list(map(lambda entity: entity.catalog_id, tokens_fulltext_search(target_entity, False, terms, None, 5)))
-    return [(qid, id) for id in ids]
+    tids = list(map(lambda entity: entity.catalog_id, tokens_fulltext_search(target_entity, False, terms, None, 5)))
+    return [(qid, tid) for tid in tids]
 
 
 def _extract_target_candidates(wikidata_series: pd.Series, target_entity: constants.DB_ENTITY):
