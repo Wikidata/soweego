@@ -426,6 +426,7 @@ def _prepare_request(qids, props):
     }
     return qid_buckets, request_params
 
+
 @lru_cache()
 def get_authenticated_session():
     """
@@ -475,9 +476,13 @@ def get_authenticated_session():
 
             if bot_password == '':
                 # maximum bucket size when authenticated is 50
-                LOGGER.info('No password provided so unauthenticated session will be used')
-                BUCKET_SIZE = 50 
-                break
+                LOGGER.info('No password provided so unauthenticated session will be used '
+                            'for this execution.')
+                BUCKET_SIZE = 50
+
+                # we return the session at once since we don't
+                # want to persist an unauthenticated session to disk
+                return session
 
             # obtain token
             token_request = session.get(WIKIDATA_API_URL, params={
