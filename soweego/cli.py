@@ -38,9 +38,9 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 def cli(ctx, log_level):
     """Link Wikidata items to trusted external catalogs."""
 
-    # setup bot authentication
-    wikidata.api_requests.get_authenticated_session()
-    
     commons.logging.setup()
     for module, level in log_level:
         commons.logging.set_log_level(module, level)
+
+    # setup bot authentication
+    wikidata.api_requests.get_authenticated_session()
