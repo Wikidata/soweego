@@ -55,6 +55,7 @@ def full_text_query_block(goal: str, catalog: str, wikidata_series: pd.Series, c
     LOGGER.info(
         "Blocking on column '%s' via full-text query to get all samples ...", wikidata_series.name)
 
+    wikidata_series.dropna(inplace=True)
     qids_and_tids = _extract_target_candidates(wikidata_series, target_entity)
 
     samples_index = pd.MultiIndex.from_tuples(
