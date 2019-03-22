@@ -276,7 +276,6 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                                  datetime.datetime.now()-insert_start_time,
                                  len(entity_array))
 
-
             # commit remaining entities
             session.bulk_save_objects(entity_array)
             session.commit()
@@ -333,9 +332,17 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         # The array of primary professions gets translated to a list
         # of the QIDs that represent said professions in Wikidata
         if person_info.get('primaryProfession'):
-            person_entity.occupations = ' '.join(self._translate_professions(
+
+            # get QIDs of occupations for person
+            translated_occupations = self._translate_professions(
                 person_info.get('primaryProfession').split(',')
-            ))
+            )
+
+            # only save those occupations which are not the main
+            # occupation of the entity type (ie, for ActorEntity
+            # don't include 'actor' occupation since it is implicit)
+            person_entity.occupations = ' '.join(
+                occ for occ in translated_occupations if occ != person_entity.table_occupation)
 
         entity_array.append(person_entity)
 
