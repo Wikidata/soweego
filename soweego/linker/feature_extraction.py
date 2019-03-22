@@ -371,9 +371,12 @@ class OccupationCompare(BaseCompareFeature):
                 # if we do then add them to expanded set
                 expanded_set = expanded_set | self._expand_occupations_cache[qid]
 
+            # if we don't have them then we get them from
+            # wikidata and add them to the cache and
+            # `expanded_set`
             else:
 
-                # get subclasses ans superclasses
+                # get subclasses and superclasses
                 subclasses = sparql_queries.get_subclasses_of_qid(qid)
                 superclasses = sparql_queries.get_superclasses_of_qid(qid)
 
