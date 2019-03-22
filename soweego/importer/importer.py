@@ -31,7 +31,7 @@ LOGGER = logging.getLogger(__name__)
 @click.argument('catalog', type=click.Choice(target_database.available_targets()))
 @click.option('--resolve/--no-resolve', default=True,
               help='Resolves all the links to check if they are valid. Default: yes.')
-@click.option('--output', '-o', default='/app/shared', type=click.Path())
+@click.option('--output', '-o', default=const.SHARED_FOLDER, type=click.Path())
 def import_cli(catalog: str, resolve: bool, output: str) -> None:
     """Download, extract and import an available catalog."""
     importer = Importer()

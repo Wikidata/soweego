@@ -154,6 +154,8 @@ LINKER_MODEL = '%s_%s_%s_model.pkl'
 LINKER_RESULT = '%s_%s_%s_linker_result.csv.gz'
 LINKER_EVALUATION_PREDICTIONS = '%s_%s_%s_linker_evaluation_predictions.csv.gz'
 LINKER_PERFORMANCE = '%s_%s_%s_linker_performance.txt'
+WIKIDATA_API_SESSION = 'wiki_api_session.pkl'
+SHARED_FOLDER = '/app/shared/'
 
 # Supervised classification
 CLASSIFIERS = {

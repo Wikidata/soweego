@@ -40,8 +40,8 @@ WD_IO_FILENAME = 'wikidata_%s_dataset.jsonl.gz'
 @click.option('--upload/--no-upload', default=False, help='Upload check results to Wikidata. Default: no.')
 @click.option('--sandbox/--no-sandbox', default=False,
               help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
-@click.option('-o', '--output-dir', type=click.Path(file_okay=False), default='/app/shared',
-              help="default: '/app/shared'")
+@click.option('-o', '--output-dir', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER,
+              help="default: '%s" % constants.SHARED_FOLDER)
 def cli(target, target_type, strategy, check_dates, upload, sandbox, output_dir):
     """Rule-based matching strategies.
 
