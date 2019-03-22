@@ -475,6 +475,7 @@ def get_authenticated_session():
 
             if bot_password == '':
                 # maximum bucket size when authenticated is 50
+                LOGGER.info('No password provided so unauthenticated session will be used')
                 BUCKET_SIZE = 50 
                 break
 
