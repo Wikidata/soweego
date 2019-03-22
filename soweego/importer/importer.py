@@ -14,7 +14,7 @@ import logging
 import os
 
 import click
-from soweego.commons import target_database, url_utils
+from soweego.commons import target_database, url_utils, constants
 from soweego.commons import constants as const
 from soweego.commons import http_client as client
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
@@ -23,6 +23,8 @@ from soweego.importer.imdb_dump_extractor import ImdbDumpExtractor
 from soweego.importer.musicbrainz_dump_extractor import \
     MusicBrainzDumpExtractor
 from soweego.commons.db_manager import DBManager
+from multiprocessing import Pool
+from tqdm import tqdm
 
 LOGGER = logging.getLogger(__name__)
 
@@ -31,7 +33,7 @@ LOGGER = logging.getLogger(__name__)
 @click.argument('catalog', type=click.Choice(target_database.available_targets()))
 @click.option('--resolve/--no-resolve', default=True,
               help='Resolves all the links to check if they are valid. Default: yes.')
-@click.option('--output', '-o', default='/app/shared', type=click.Path())
+@click.option('--output', '-o', default=const.SHARED_FOLDER, type=click.Path())
 def import_cli(catalog: str, resolve: bool, output: str) -> None:
     """Download, extract and import an available catalog."""
     importer = Importer()
@@ -47,6 +49,10 @@ def import_cli(catalog: str, resolve: bool, output: str) -> None:
     importer.refresh_dump(output, extractor, resolve)
 
 
+def _resolve_url(res):
+    return url_utils.resolve(res.url), res
+
+
 @click.command()
 @click.argument('catalog', type=click.Choice(target_database.available_targets()))
 def validate_links_cli(catalog: str):
@@ -54,25 +60,36 @@ def validate_links_cli(catalog: str):
 
         LOGGER.info("Validating %s %s links..." % (catalog, entity_type))
         entity = target_database.get_link_entity(catalog, entity_type)
+        if not entity:
+            LOGGER.info("%s %s does not have a links table. Skipping..." % (catalog, entity_type))
+            continue
 
         session = DBManager.connect_to_db()
-        total = 0
+        total = session.query(entity).count()
         removed = 0
 
-        # Validate each link
-        for res in session.query(entity):
-            total += 1
-            if not url_utils.resolve(res.url):
-                # if not valid delete
-                session.delete(res)
-                session.commit()
-                removed += 1
+        with Pool() as pool:
+            # Validate each link
+            for resolved, res_entity in tqdm(pool.imap_unordered(_resolve_url,
+                                                                 session.query(entity)), total=total):
+                if not resolved:
+                    session_delete = DBManager.connect_to_db()
+                    # if not valid delete
+                    session_delete.delete(res_entity)
+                    try:
+                        session_delete.commit()
+                        removed += 1
+                    except:
+                        session.rollback()
+                        raise
+                    finally:
+                        session_delete.close()
 
         session.close()
         LOGGER.info("Removed %s/%s from %s %s" % (removed, total, catalog, entity_type))
 
 
-class Importer():
+class Importer:
 
     def refresh_dump(self, output_folder: str, downloader: BaseDumpExtractor, resolve: bool):
         """Downloads the dump, if necessary,
