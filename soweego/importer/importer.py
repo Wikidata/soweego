@@ -81,6 +81,7 @@ def validate_links_cli(catalog: str):
                         removed += 1
                     except:
                         session.rollback()
+                        raise
                     finally:
                         session_delete.close()
 
