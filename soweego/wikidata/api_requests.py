@@ -427,6 +427,72 @@ def _prepare_request(qids, props):
     return qid_buckets, request_params
 
 
+def _get_authentication_token(session: requests.Session) -> str:
+    """
+    Using a session instance, get a token we can use for authentication
+    """
+    token_request = session.get(WIKIDATA_API_URL, params={
+        'action': 'query',
+        'meta': 'tokens',
+        'type': 'login',
+        'format': 'json'
+    }).json()
+
+    return token_request['query']['tokens']['logintoken']
+
+
+def _do_bot_login(session: requests.Session, token: str, bot_password: str) -> bool:
+    """
+    Tries to login with a session, given token and password. Returns a boolean
+    stating whether the login was successful or not.
+
+    Cookies for authentication are automatically saved into the session.
+    """
+
+    login_r = session.post(WIKIDATA_API_URL, data={
+        'action': 'login',
+        'lgname': 'Soweego bot',
+        'lgpassword': bot_password,
+        'lgtoken': token,
+        'format': 'json'
+    }).json()
+
+    lg_success = login_r['login']['result'] != 'Failed'
+
+    # message is None when login is successful
+    lg_message = login_r['login'].get('reason', None)
+
+    return lg_success, lg_message
+
+
+def _load_cached_bot_session(dump_path: str) -> requests.Session:
+    """
+    Loads the pickled bot session checks if it is valid and returns session.
+
+    Raises `AssertionError` if session is not valid
+    Raises `FileNotFoundError` if path doesn't exist
+    """
+
+    with open(dump_path, 'rb') as file:
+        LOGGER.info('Previously authenticated session exists')
+        session = pickle.load(file)
+
+        # check if session is still valid
+        res = session.get(WIKIDATA_API_URL, params={
+            'action': 'query',
+            'assert': 'user',
+            'format': 'json'
+        })
+
+        # if the assert query failed then it means
+        # we need to renew the session
+        if 'error' in res.json().keys():
+            LOGGER.info('Session has expired and must be renewed')
+            raise AssertionError
+
+        return session
+
+
 @lru_cache()
 def get_authenticated_session():
     """
@@ -435,27 +501,11 @@ def get_authenticated_session():
     """
 
     wiki_api_dump_path = os.path.join(
-        constants.SHARED_FOLDER, constants.WIKIDATA_API_SESSION)
+        constants.SHARED_FOLDER,
+        constants.WIKIDATA_API_SESSION)
 
     try:
-        with open(wiki_api_dump_path, 'rb') as f:
-            LOGGER.info('Previously authenticated session exists')
-            session = pickle.load(f)
-
-            # check if session is still valid
-            res = session.get(WIKIDATA_API_URL, params={
-                'action': 'query',
-                'assert': 'user',
-                'format': 'json'
-            })
-
-            # if the assert query failed then it means
-            # we need to renew the session
-            if 'error' in res.json().keys():
-                LOGGER.info('Session has expired and will be renewed')
-                raise AssertionError
-
-            return session
+        return _load_cached_bot_session(wiki_api_dump_path)
 
     except (FileNotFoundError, AssertionError):
         LOGGER.info('Obtaining new authenticated session')
@@ -475,7 +525,7 @@ def get_authenticated_session():
             session = requests.Session()  # to automatically manage cookies
 
             if bot_password == '':
-                # maximum bucket size when authenticated is 50
+                # maximum bucket size when unauthenticated is 50
                 LOGGER.info('No password provided so unauthenticated session will be used '
                             'for this execution.')
 
@@ -486,37 +536,26 @@ def get_authenticated_session():
                 # want to persist an unauthenticated session to disk
                 return session
 
-            # obtain token
-            token_request = session.get(WIKIDATA_API_URL, params={
-                'action': 'query',
-                'meta': 'tokens',
-                'type': 'login',
-                'format': 'json'
-            }).json()
-
-            token = token_request['query']['tokens']['logintoken']
+            # get token
+            token = _get_authentication_token(session)
 
             # do login
-            login_r = session.post(WIKIDATA_API_URL, data={
-                'action': 'login',
-                'lgname': 'Soweego bot',
-                'lgpassword': bot_password,
-                'lgtoken': token,
-                'format': 'json'
-            }).json()
+            lg_success, lg_message = _do_bot_login(
+                session, token, bot_password)
 
-            if login_r['login']['result'] == 'Failed':
-                print("\nCouldn't login. Possibly the password is wrong.")
-                print('Reason given by server: ', login_r['login']['reason'])
-                print('Please try again ..')
-
-            else:
+            # if login successful then break, else try again
+            if lg_success:
                 print('Success!\n')
                 break
 
-        with open(wiki_api_dump_path, 'wb') as f:
+            else:
+                print("\nCouldn't login. Possibly the password is wrong.")
+                print('Reason given by server: ', lg_message)
+                print('Please try again ..')
+
+        with open(wiki_api_dump_path, 'wb') as file:
             LOGGER.info('Persisting session to disk')
-            pickle.dump(session, f)
+            pickle.dump(session, file)
 
         return session
 
