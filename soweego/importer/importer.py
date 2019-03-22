@@ -76,9 +76,13 @@ def validate_links_cli(catalog: str):
                     session_delete = DBManager.connect_to_db()
                     # if not valid delete
                     session_delete.delete(res_entity)
-                    session_delete.commit()
-                    removed += 1
-                    session_delete.close()
+                    try:
+                        session_delete.commit()
+                        removed += 1
+                    except:
+                        session.rollback()
+                    finally:
+                        session_delete.close()
 
         session.close()
         LOGGER.info("Removed %s/%s from %s %s" % (removed, total, catalog, entity_type))
