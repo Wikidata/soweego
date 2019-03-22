@@ -143,9 +143,11 @@ WD_CLASSIFICATION_SET = 'wikidata_%s_%s_classification_set.jsonl.gz'
 SAMPLES = '%s_%s_%s_samples%02d.pkl.gz'
 FEATURES = '%s_%s_%s_features%02d.pkl.gz'
 LINKER_MODEL = '%s_%s_%s_model.pkl'
-LINKER_RESULT = '%s_%s_linker_result.csv.gz'
+LINKER_RESULT = '%s_%s_%s_linker_result.csv.gz'
 LINKER_EVALUATION_PREDICTIONS = '%s_%s_%s_linker_evaluation_predictions.csv.gz'
 LINKER_PERFORMANCE = '%s_%s_%s_linker_performance.txt'
+WIKIDATA_API_SESSION = 'wiki_api_session.pkl'
+SHARED_FOLDER = '/app/shared/'
 
 # Supervised classification
 CLASSIFIERS = {

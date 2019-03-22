@@ -7,7 +7,7 @@ from typing import Iterable, Tuple
 
 import click
 import jellyfish
-from soweego.commons import data_gathering, target_database, text_utils
+from soweego.commons import data_gathering, target_database, text_utils, constants
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.ingestor import wikidata_bot
 from soweego.wikidata.api_requests import get_data_for_linker
@@ -28,8 +28,8 @@ WD_IO_FILENAME = 'wikidata_%s_dataset.jsonl.gz'
 @click.option('--upload/--no-upload', default=False, help='Upload check results to Wikidata. Default: no.')
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
 @click.option('--threshold', '-t', default=0, type=float, help="Edit distances with a higher value than this are treated as matches.")
-@click.option('-o', '--output-dir', type=click.Path(file_okay=False), default='/app/shared',
-              help="default: '/app/shared'")
+@click.option('-o', '--output-dir', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER,
+              help="default: '%s'" % constants.SHARED_FOLDER)
 def cli(target, target_type, strategy, upload, sandbox, threshold, output_dir):
     # Wikidata
     wd_io_path = path.join(output_dir, WD_IO_FILENAME % target)

@@ -18,13 +18,13 @@ from typing import Iterable
 
 import regex
 from pandas import read_sql
-from sqlalchemy import or_
-from sqlalchemy.orm.query import Query
-
 from soweego.commons import constants, target_database, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer import models
+from soweego.linker import workflow
 from soweego.wikidata import api_requests, sparql_queries, vocabulary
+from sqlalchemy import or_
+from sqlalchemy.orm.query import Query
 
 LOGGER = logging.getLogger(__name__)
 
@@ -128,22 +128,28 @@ def perfect_name_search(target_entity: constants.DB_ENTITY, to_search: str) -> I
         session.close()
 
 
+def perfect_name_search_bucket(target_entity: constants.DB_ENTITY, to_search: set) -> Iterable[constants.DB_ENTITY]:
+    session = DBManager.connect_to_db()
+    try:
+        for r in session.query(target_entity).filter(
+                target_entity.name.in_(to_search)).all():
+            yield r
+
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
 def gather_target_dataset(goal, entity_type, catalog, identifiers):
+    workflow.handle_goal(goal)
+
     base, link, nlp = target_database.get_entity(catalog, entity_type), target_database.get_link_entity(
         catalog, entity_type), target_database.get_nlp_entity(catalog, entity_type)
 
-    if goal == 'training':
-        condition = base.catalog_id.in_(identifiers)
-        to_log = 'training set'
-    elif goal == 'classification':
-        condition = ~base.catalog_id.in_(identifiers)
-        to_log = 'dataset'
-    else:
-        raise ValueError(
-            "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'" % goal)
-
     LOGGER.info(
-        'Gathering %s %s for the linker ...', catalog, to_log)
+        'Gathering %s %s for the linker ...', catalog, goal)
 
     db_engine = DBManager().get_engine().execution_options(stream_results=True)
 
@@ -160,9 +166,10 @@ def gather_target_dataset(goal, entity_type, catalog, identifiers):
     # make the join statements to join different tables
     for tb in tables:
         query = query.outerjoin(tb, base.catalog_id == tb.catalog_id)
-    
+
     # finally, add the filter condition to the query
-    query = query.filter(condition).enable_eagerloads(False)
+    query = query.filter(base.catalog_id.in_(
+        identifiers)).enable_eagerloads(False)
 
     statement = query.statement
     LOGGER.debug('SQL query to be fired: %s', statement)
@@ -186,10 +193,9 @@ def _build_dataset_relevant_fields(base, link, nlp):
     return fields
 
 
-
 def _dump_target_dataset_query_result(result, relevant_fields, fileout, chunk_size=1000):
     chunk = []
-    
+
     for res in result:
 
         # if it is only `base` then we convert is to a list
@@ -202,10 +208,10 @@ def _dump_target_dataset_query_result(result, relevant_fields, fileout, chunk_si
         parsed = {constants.TID: base.catalog_id}
 
         for field in relevant_fields:
-            
+
             # for every `table` in the results
             for tb in res:
-                
+
                 # we try to get the appropriate field for that table
                 try:
                     f_value = getattr(tb, field)
@@ -215,7 +221,7 @@ def _dump_target_dataset_query_result(result, relevant_fields, fileout, chunk_si
                     # serializable
                     if isinstance(f_value, (datetime.date, datetime.datetime)):
                         parsed[field] = f_value.isoformat()
-                        
+
                     else:
                         parsed[field] = f_value
 

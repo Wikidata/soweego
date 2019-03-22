@@ -11,10 +11,8 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import logging
 import os
-from itertools import tee
 
 import click
-import recordlinkage as rl
 from pandas import MultiIndex, concat
 from sklearn.externals import joblib
 
@@ -29,7 +27,8 @@ LOGGER = logging.getLogger(__name__)
 @click.argument('target', type=click.Choice(target_database.available_targets()))
 @click.argument('target_type', type=click.Choice(target_database.available_types()))
 @click.option('-b', '--binarize', default=0.1, help="Default: 0.1")
-@click.option('-d', '--dir-io', type=click.Path(file_okay=False), default='/app/shared', help="Input/output directory, default: '/app/shared'.")
+@click.option('-d', '--dir-io', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER,
+              help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER)
 def cli(classifier, target, target_type, binarize, dir_io):
     """Train a probabilistic linker."""
 
@@ -42,8 +41,17 @@ def cli(classifier, target, target_type, binarize, dir_io):
 
 
 def execute(classifier, catalog, entity, binarize, dir_io):
-    wd_reader = workflow.build_wikidata('training', catalog, entity, dir_io)
-    wd_generator = workflow.preprocess_wikidata('training', wd_reader)
+    goal = 'training'
+
+    feature_vectors, positive_samples_index = build_dataset(
+        goal, catalog, entity, dir_io)
+
+    return _train(classifier, feature_vectors, positive_samples_index, binarize)
+
+
+def build_dataset(goal, catalog, entity, dir_io):
+    wd_reader = workflow.build_wikidata(goal, catalog, entity, dir_io)
+    wd_generator = workflow.preprocess_wikidata(goal, wd_reader)
 
     positive_samples, feature_vectors = [], []
 
@@ -53,26 +61,28 @@ def execute(classifier, catalog, entity, binarize, dir_io):
 
         # Samples index from Wikidata
         all_samples = blocking.full_text_query_block(
-            'training', catalog, wd_chunk[constants.NAME_TOKENS], i, target_database.get_entity(catalog, entity), dir_io)
+            goal, catalog, wd_chunk[constants.NAME_TOKENS], i, target_database.get_entity(catalog, entity), dir_io)
 
         # Build target chunk based on samples
         target_reader = data_gathering.gather_target_dataset(
-            'training', entity, catalog, set(all_samples.get_level_values(constants.TID)))
+            goal, entity, catalog, set(all_samples.get_level_values(constants.TID)))
 
         # Preprocess target chunk
-        target_chunk = workflow.preprocess_target('training', target_reader)
+        target_chunk = workflow.preprocess_target(
+            goal, target_reader)
 
         features_path = os.path.join(
-            dir_io, constants.FEATURES % (catalog, entity, 'training', i))
+            dir_io, constants.FEATURES % (catalog, entity, goal, i))
+
         feature_vectors.append(workflow.extract_features(
             all_samples, wd_chunk, target_chunk, features_path))
 
     positive_samples = concat(positive_samples)
     positive_samples_index = MultiIndex.from_tuples(zip(
         positive_samples.index, positive_samples), names=[constants.QID, constants.TID])
-    LOGGER.info('Built positive samples index from Wikidata')
 
-    return _train(classifier, concat(feature_vectors), positive_samples_index, binarize)
+    LOGGER.info('Built positive samples index from Wikidata')
+    return concat(feature_vectors), positive_samples_index
 
 
 def _build_positive_samples_index(wd_reader1):

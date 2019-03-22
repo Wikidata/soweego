@@ -4,11 +4,6 @@
 """TODO module docstring"""
 from datetime import datetime
 
-import dateutil
-from dateutil.relativedelta import relativedelta
-
-from soweego.commons import constants
-
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
 __version__ = '1.0'
@@ -45,8 +40,8 @@ WD_IO_FILENAME = 'wikidata_%s_dataset.jsonl.gz'
 @click.option('--upload/--no-upload', default=False, help='Upload check results to Wikidata. Default: no.')
 @click.option('--sandbox/--no-sandbox', default=False,
               help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
-@click.option('-o', '--output-dir', type=click.Path(file_okay=False), default='/app/shared',
-              help="default: '/app/shared'")
+@click.option('-o', '--output-dir', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER,
+              help="default: '%s" % constants.SHARED_FOLDER)
 def cli(target, target_type, strategy, check_dates, upload, sandbox, output_dir):
     """Rule-based matching strategies.
 
@@ -126,14 +121,28 @@ def perfect_name_match(source_dataset, target_entity: BaseEntity, target_pid: st
     This strategy applies to any object that can be
     treated as a string: names, links, etc.
     """
-
-    for row_entity in tqdm(source_dataset, total=_count_num_lines_in_file(source_dataset)):
+    bucket_size = 100
+    bucket_names = set()
+    bucket = []
+    total = _count_num_lines_in_file(source_dataset)
+    missing = total
+    for row_entity in tqdm(source_dataset, total=total):
         entity = json.loads(row_entity)
-        qid = entity['qid']
-        for label in entity[constants.NAME]:
-            for res in data_gathering.perfect_name_search(target_entity, label):
-                if not compare_dates or birth_death_date_match(res, entity):
-                    yield (qid, target_pid, res.catalog_id)
+        bucket_names.update(entity[constants.NAME])
+        bucket.append(entity)
+        # After building a bucket of bucket_size wikidata entries,
+        # tries to search them and does a n^2 comparison to try to match
+        if len(bucket) >= bucket_size or missing < bucket_size:
+            missing -= len(bucket)
+            for res in data_gathering.perfect_name_search_bucket(target_entity, bucket_names):
+                for en in bucket:
+                    # wikidata entities have a list of names
+                    for name in en[constants.NAME]:
+                        if name.lower() == res.name.lower():
+                            if not compare_dates or birth_death_date_match(res, en):
+                                yield (en[constants.QID], target_pid, res.catalog_id)
+            bucket.clear()
+            bucket_names.clear()
 
 
 def similar_name_tokens_match(source, target, target_pid: str, compare_dates: bool) -> Iterable[Tuple[str, str, str]]:
@@ -146,7 +155,7 @@ def similar_name_tokens_match(source, target, target_pid: str, compare_dates: bo
 
     for row_entity in tqdm(source, total=_count_num_lines_in_file(source)):
         entity = json.loads(row_entity)
-        qid = entity['qid']
+        qid = entity[constants.QID]
         for label in entity[constants.NAME]:
             if not label:
                 continue
@@ -182,8 +191,8 @@ def similar_link_tokens_match(source, target, target_pid: str) -> Iterable[Tuple
 
     for row_entity in tqdm(source, total=_count_num_lines_in_file(source)):
         entity = json.loads(row_entity)
-        qid = entity['qid']
-        for url in entity['url']:
+        qid = entity[constants.QID]
+        for url in entity[constants.URL]:
             if not url:
                 continue
 
