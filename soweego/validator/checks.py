@@ -15,7 +15,7 @@ from collections import defaultdict
 
 import click
 
-from soweego.commons import constants, data_gathering, target_database
+from soweego.commons import constants, data_gathering, target_database, constants
 from soweego.commons.db_manager import DBManager
 from soweego.ingestor import wikidata_bot
 
@@ -29,8 +29,10 @@ LOGGER = logging.getLogger(__name__)
 @click.option('--upload/--no-upload', default=True, help='Upload check results to Wikidata. Default: yes.')
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
 @click.option('-c', '--cache', type=click.File(), default=None, help="Load Wikidata links previously dumped via '-w'. Default: no.")
-@click.option('-d', '--deprecated', type=click.File('w'), default='/app/shared/entities_deprecated_ids.json', help="Default: '/app/shared/entities_deprecated_ids.json'")
-@click.option('-w', '--wikidata', type=click.File('w'), default='/app/shared/wikidata_entities.json', help="Default: '/app/shared/wikidata_entities.json'")
+@click.option('-d', '--deprecated', type=click.File('w'), default=constants.SHARED_FOLDER + 'entities_deprecated_ids.json',
+              help="Default: '%sentities_deprecated_ids.json'" % constants.SHARED_FOLDER)
+@click.option('-w', '--wikidata', type=click.File('w'), default=constants.SHARED_FOLDER + 'wikidata_entities.json',
+              help="Default: '%swikidata_entities.json'" % constants.SHARED_FOLDER)
 def check_existence_cli(entity, catalog, wikidata_dump, upload, sandbox, cache, deprecated, wikidata):
     """Check the existence of identifier statements.
 
@@ -94,10 +96,14 @@ def check_existence(entity, catalog, wikidata_cache=None):
 @click.option('--upload/--no-upload', default=True, help='Upload check results to Wikidata. Default: yes.')
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
 @click.option('-c', '--cache', type=click.File(), default=None, help="Load Wikidata links previously dumped via '-w'. Default: no.")
-@click.option('-d', '--deprecated', type=click.File('w'), default='/app/shared/links_deprecated_ids.json', help="Default: '/app/shared/links_deprecated_ids.json'")
-@click.option('-e', '--ext-ids', type=click.File('w'), default='/app/shared/external_ids_to_be_added.tsv', help="Default: '/app/shared/external_ids_to_be_added.tsv'")
-@click.option('-u', '--urls', type=click.File('w'), default='/app/shared/urls_to_be_added.tsv', help="Default: '/app/shared/urls_to_be_added.tsv'")
-@click.option('-w', '--wikidata', type=click.File('w'), default='/app/shared/wikidata_links.json', help="Default: '/app/shared/wikidata_links.json'")
+@click.option('-d', '--deprecated', type=click.File('w'), default=constants.SHARED_FOLDER + 'links_deprecated_ids.json',
+              help="Default: '%slinks_deprecated_ids.json'" % constants.SHARED_FOLDER)
+@click.option('-e', '--ext-ids', type=click.File('w'), default=constants.SHARED_FOLDER + 'external_ids_to_be_added.tsv',
+              help="Default: '%sexternal_ids_to_be_added.tsv'" % constants.SHARED_FOLDER)
+@click.option('-u', '--urls', type=click.File('w'), default=constants.SHARED_FOLDER + 'urls_to_be_added.tsv',
+              help="Default: '%surls_to_be_added.tsv'" % constants.SHARED_FOLDER)
+@click.option('-w', '--wikidata', type=click.File('w'), default=constants.SHARED_FOLDER + 'wikidata_links.json',
+              help="Default: '%swikidata_links.json'" % constants.SHARED_FOLDER)
 def check_links_cli(entity, catalog, wikidata_dump, upload, sandbox, cache, deprecated, ext_ids, urls, wikidata):
     """Check the validity of identifier statements based on the available links.
 
@@ -181,9 +187,12 @@ def check_links(entity, catalog, wikidata_cache=None):
 @click.option('--upload/--no-upload', default=True, help='Upload check results to Wikidata. Default: yes.')
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
 @click.option('-c', '--cache', type=click.File(), default=None, help="Load Wikidata metadata previously dumped via '-w'. Default: no.")
-@click.option('-d', '--deprecated', type=click.File('w'), default='/app/shared/metadata_deprecated_ids.json', help="Default: '/app/shared/metadata_deprecated_ids.json'")
-@click.option('-a', '--added', type=click.File('w'), default='/app/shared/statements_to_be_added.tsv', help="Default: '/app/shared/statements_to_be_added.tsv'")
-@click.option('-w', '--wikidata', type=click.File('w'), default='/app/shared/wikidata_metadata.json', help="Default: '/app/shared/wikidata_metadata.json'")
+@click.option('-d', '--deprecated', type=click.File('w'), default=constants.SHARED_FOLDER + 'metadata_deprecated_ids.json',
+              help="Default: '%smetadata_deprecated_ids.json'" % constants.SHARED_FOLDER)
+@click.option('-a', '--added', type=click.File('w'), default=constants.SHARED_FOLDER + 'statements_to_be_added.tsv',
+              help="Default: '%sstatements_to_be_added.tsv'" % constants.SHARED_FOLDER)
+@click.option('-w', '--wikidata', type=click.File('w'), default=constants.SHARED_FOLDER + 'wikidata_metadata.json',
+              help="Default: '%swikidata_metadata.json'" % constants.SHARED_FOLDER)
 def check_metadata_cli(entity, catalog, wikidata_dump, upload, sandbox, cache, deprecated, added, wikidata):
     """Check the validity of identifier statements based on the availability
     of the following metadata: birth/death date, birth/death place, gender.

@@ -13,11 +13,14 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import json
 import logging
+import os
+import pickle
 from collections import defaultdict
+from functools import lru_cache
 from typing import Generator, TextIO
 from urllib.parse import urlunsplit
 
-from requests import get
+import requests
 from requests.exceptions import ChunkedEncodingError
 from tqdm import tqdm
 
@@ -28,7 +31,7 @@ from soweego.wikidata import vocabulary
 LOGGER = logging.getLogger(__name__)
 
 WIKIDATA_API_URL = 'https://www.wikidata.org/w/api.php'
-BUCKET_SIZE = 50
+BUCKET_SIZE = 500
 
 
 # Values: plain strings (includes URLs), monolingual strings,
@@ -424,12 +427,146 @@ def _prepare_request(qids, props):
     return qid_buckets, request_params
 
 
+def _get_authentication_token(session: requests.Session) -> str:
+    """
+    Using a session instance, get a token we can use for authentication
+    """
+    token_request = session.get(WIKIDATA_API_URL, params={
+        'action': 'query',
+        'meta': 'tokens',
+        'type': 'login',
+        'format': 'json'
+    }).json()
+
+    return token_request['query']['tokens']['logintoken']
+
+
+def _do_bot_login(session: requests.Session, token: str, bot_password: str) -> bool:
+    """
+    Tries to login with a session, given token and password. Returns a boolean
+    stating whether the login was successful or not.
+
+    Cookies for authentication are automatically saved into the session.
+    """
+
+    login_r = session.post(WIKIDATA_API_URL, data={
+        'action': 'login',
+        'lgname': 'Soweego bot',
+        'lgpassword': bot_password,
+        'lgtoken': token,
+        'format': 'json'
+    }).json()
+
+    lg_success = login_r['login']['result'] != 'Failed'
+
+    # message is None when login is successful
+    lg_message = login_r['login'].get('reason', None)
+
+    return lg_success, lg_message
+
+
+def _load_cached_bot_session(dump_path: str) -> requests.Session:
+    """
+    Loads the pickled bot session checks if it is valid and returns session.
+
+    Raises `AssertionError` if session is not valid
+    Raises `FileNotFoundError` if path doesn't exist
+    """
+
+    with open(dump_path, 'rb') as file:
+        LOGGER.info('Previously authenticated session exists')
+        session = pickle.load(file)
+
+        # check if session is still valid
+        res = session.get(WIKIDATA_API_URL, params={
+            'action': 'query',
+            'assert': 'user',
+            'format': 'json'
+        })
+
+        # if the assert query failed then it means
+        # we need to renew the session
+        if 'error' in res.json().keys():
+            LOGGER.info('Session has expired and must be renewed')
+            raise AssertionError
+
+        return session
+
+
+@lru_cache()
+def get_authenticated_session():
+    """
+    Returns the token to be used for authentication.
+    If token is not valid then a new one will be generated
+    """
+
+    wiki_api_dump_path = os.path.join(
+        constants.SHARED_FOLDER,
+        constants.WIKIDATA_API_SESSION)
+
+    try:
+        return _load_cached_bot_session(wiki_api_dump_path)
+
+    except (FileNotFoundError, AssertionError):
+        LOGGER.info('Obtaining new authenticated session')
+
+        # The first thing we need to do is for the user to input
+        # the password. This will be asked for interactively.
+        # If no password is provided then we don't login, and
+        # proceed.
+
+        print('\n----- Authentication for the bot required -----')
+        print('Please input the password to authenticate the bot, or leave blank if '
+              "you don't want to authenticate")
+
+        while True:
+            bot_password = input('Password: ')
+
+            session = requests.Session()  # to automatically manage cookies
+
+            if bot_password == '':
+                # maximum bucket size when unauthenticated is 50
+                LOGGER.info('No password provided so unauthenticated session will be used '
+                            'for this execution.')
+
+                global BUCKET_SIZE
+                BUCKET_SIZE = 50
+
+                # we return the session at once since we don't
+                # want to persist an unauthenticated session to disk
+                return session
+
+            # get token
+            token = _get_authentication_token(session)
+
+            # do login
+            lg_success, lg_message = _do_bot_login(
+                session, token, bot_password)
+
+            # if login successful then break, else try again
+            if lg_success:
+                print('Success!\n')
+                break
+
+            else:
+                print("\nCouldn't login. Possibly the password is wrong.")
+                print('Reason given by server: ', lg_message)
+                print('Please try again ..')
+
+        with open(wiki_api_dump_path, 'wb') as file:
+            LOGGER.info('Persisting session to disk')
+            pickle.dump(session, file)
+
+        return session
+
+
 def _make_request(bucket, params):
     params['ids'] = '|'.join(bucket)
     connection_is_ok = True
+    session = get_authenticated_session()
     while True:
         try:
-            response = get(WIKIDATA_API_URL, params=params)
+            response = session.get(WIKIDATA_API_URL, params=params)
             log_request_data(response, LOGGER)
         except ChunkedEncodingError:
             LOGGER.warning(
