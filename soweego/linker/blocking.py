@@ -77,7 +77,7 @@ def _multiprocessing_series_iterator(wikidata_series: pd.Series, target_entity: 
 
 
 def fulltext_search(qid_terms_target: Tuple[str, list, constants.DB_ENTITY]) -> Iterable[Tuple[str, str]]:
-    qid = qid_terms_target[0]
+    qid, terms, target_entity = qid_terms_target
     terms = qid_terms_target[1]
     target_entity = qid_terms_target[2]
     ids = list(map(lambda entity: entity.catalog_id, tokens_fulltext_search(target_entity, False, terms, None, 5)))
