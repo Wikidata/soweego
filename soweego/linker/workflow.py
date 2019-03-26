@@ -25,7 +25,8 @@ from pandas.io.json.json import JsonReader
 from soweego.commons import (constants, data_gathering, target_database,
                              text_utils, url_utils)
 from soweego.commons.logging import log_dataframe_info
-from soweego.linker.feature_extraction import StringList, UrlList, DateCompare, SimilarTokens
+from soweego.linker.feature_extraction import (DateCompare, SimilarTokens,
+                                               StringList, UrlList)
 from soweego.wikidata import api_requests, vocabulary
 
 LOGGER = logging.getLogger(__name__)
@@ -123,7 +124,7 @@ def train_test_build(catalog, entity, dir_io):
 
 
 def preprocess(goal: str, wikidata_reader: JsonReader, target_reader: JsonReader) -> Tuple[
-    Generator[pd.DataFrame, None, None], Generator[pd.DataFrame, None, None]]:
+        Generator[pd.DataFrame, None, None], Generator[pd.DataFrame, None, None]]:
     handle_goal(goal)
     return preprocess_wikidata(goal, wikidata_reader), preprocess_target(goal, target_reader)
 
@@ -141,14 +142,7 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
         return (col in wikidata.columns) and (col in target.columns)
 
     compare = rl.Compare(n_jobs=cpu_count())
-    # TODO similar name match as a feature
     # TODO feature engineering on more fields
-    # wikidata columns = Index(['tid', 'label', 'alias', 'description', 'url', 'given_name',
-    #    'date_of_birth', 'date_of_death', 'place_of_death', 'birth_name',
-    #    'place_of_birth', 'sex_or_gender', 'family_name', 'pseudonym'],
-    # discogs columns = Index(['description_tokens', 'name_tokens', 'description', 'url', 'url_tokens',
-    #    'name', 'born', 'born_precision', 'real_name', 'is_wiki',
-    #    'data_quality', 'died', 'died_precision', 'identifier'],
 
     # Feature 1: exact match on URLs
     if in_both_datasets(constants.URL):
@@ -158,18 +152,20 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
     if in_both_datasets(constants.DATE_OF_BIRTH):
         compare.add(DateCompare(constants.DATE_OF_BIRTH,
                                 constants.DATE_OF_BIRTH, label='date_of_birth'))
-
     if in_both_datasets(constants.DATE_OF_DEATH):
         compare.add(DateCompare(constants.DATE_OF_DEATH,
                                 constants.DATE_OF_DEATH, label='date_of_death'))
 
-    # Feature 3: Levenshtein distance on names and similar tokens
+    # Feature 3: Levenshtein distance on name tokens
     if in_both_datasets(constants.NAME_TOKENS):
         compare.add(StringList(constants.NAME_TOKENS,
                                constants.NAME_TOKENS, label='name_levenshtein'))
-        compare.add(SimilarTokens(constants.NAME_TOKENS, constants.NAME_TOKENS, label='similar_name_tokens'))
 
-    # Feature 4: cosine similarity on descriptions
+    # Feature 4: similar name tokens
+        compare.add(SimilarTokens(constants.NAME_TOKENS,
+                                  constants.NAME_TOKENS, label='similar_name_tokens'))
+
+    # Feature 5: cosine similarity on descriptions
     if in_both_datasets(constants.DESCRIPTION):
         compare.add(StringList(constants.DESCRIPTION, constants.DESCRIPTION,
                                algorithm='cosine', analyzer='soweego', label='description_cosine'))

@@ -76,13 +76,13 @@ def build_dataset(goal, catalog, entity, dir_io):
 
         feature_vectors.append(workflow.extract_features(
             all_samples, wd_chunk, target_chunk, features_path))
-    
+
     positive_samples = concat(positive_samples)
     positive_samples_index = MultiIndex.from_tuples(zip(
         positive_samples.index, positive_samples), names=[constants.QID, constants.TID])
 
     LOGGER.info('Built positive samples index from Wikidata')
-    return concat(feature_vectors, sort=False).fillna(0), positive_samples_index
+    return concat(feature_vectors, sort=False).fillna(constants.FEATURE_MISSING_VALUE), positive_samples_index
 
 
 def _build_positive_samples_index(wd_reader1):
