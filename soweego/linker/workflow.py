@@ -214,8 +214,9 @@ def preprocess_wikidata(goal, wikidata_reader):
 
         # 4. Tokenize & join strings lists columns
         for column in (constants.NAME, constants.PSEUDONYM):
-            chunk[f'{column}_tokens'] = chunk[column].apply(
-                tokenize_values, args=(text_utils.tokenize,))
+            if chunk.get(column) is not None:
+                chunk[f'{column}_tokens'] = chunk[column].apply(
+                    tokenize_values, args=(text_utils.tokenize,))
 
         # 5. Tokenize & join URLs lists
         chunk[constants.URL_TOKENS] = chunk[constants.URL].apply(
