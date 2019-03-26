@@ -14,7 +14,7 @@ import os
 
 import click
 import recordlinkage as rl
-from numpy import zeros
+from numpy import full
 from sklearn.externals import joblib
 
 from soweego.commons import constants, data_gathering, target_database
@@ -77,16 +77,21 @@ def execute(catalog, entity, model, threshold, dir_io):
 
         feature_vectors = workflow.extract_features(
             samples, wd_chunk, target_chunk, features_path)
-        
-        expected_features = len(classifier.kernel._binarizers)
-        actual_features = feature_vectors.shape[1]
-        if actual_features != expected_features:
-            difference = expected_features - actual_features
-            length = len(feature_vectors)
-            for i in range(difference):
-                feature_vectors[f'missing_{i}'] = zeros(length)
+
+        _add_missing_feature_columns(classifier, feature_vectors)
 
         predictions = classifier.prob(feature_vectors)
 
         LOGGER.info('Chunk %d classified', i)
         yield predictions[predictions >= threshold]
+
+
+def _add_missing_feature_columns(classifier, feature_vectors):
+    expected_features = len(classifier.kernel._binarizers)
+    actual_features = feature_vectors.shape[1]
+    if expected_features != actual_features:
+        LOGGER.info('Feature vectors have %d features, but %s expected %d. Will add missing ones',
+                    actual_features, classifier.__class__.__name__, expected_features)
+        for i in range(expected_features - actual_features):
+            feature_vectors[f'missing_{i}'] = full(
+                len(feature_vectors), constants.FEATURE_MISSING_VALUE)
