@@ -14,6 +14,7 @@ import os
 
 import click
 import recordlinkage as rl
+from numpy import zeros
 from sklearn.externals import joblib
 
 from soweego.commons import constants, data_gathering, target_database
@@ -39,7 +40,7 @@ def cli(target, target_type, model, upload, sandbox, threshold, dir_io):
         if upload:
             _upload(chunk, target, sandbox)
         chunk.to_csv(os.path.join(dir_io, constants.LINKER_RESULT %
-                                  (target, target_type, model)), mode='a', header=True)
+                                  (target, target_type, 'nb')), mode='a', header=True)
 
 
 def _upload(predictions, catalog, sandbox):
@@ -76,6 +77,14 @@ def execute(catalog, entity, model, threshold, dir_io):
 
         feature_vectors = workflow.extract_features(
             samples, wd_chunk, target_chunk, features_path)
+        
+        expected_features = len(classifier.kernel._binarizers)
+        actual_features = feature_vectors.shape[1]
+        if actual_features != expected_features:
+            difference = expected_features - actual_features
+            length = len(feature_vectors)
+            for i in range(difference):
+                feature_vectors[f'missing_{i}'] = zeros(length)
 
         predictions = classifier.prob(feature_vectors)
 
