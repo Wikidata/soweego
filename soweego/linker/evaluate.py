@@ -30,7 +30,7 @@ LOGGER = logging.getLogger(__name__)
 @click.argument('target_type', type=click.Choice(target_database.available_types()))
 @click.option('--single', is_flag=True, help='Compute a single evaluation over all k folds, instead of k evaluations.')
 @click.option('-b', '--binarize', default=0.1, help="Default: 0.1.")
-@click.option('-d', '--dir-io', type=click.Path(file_okay=False), default='/app/shared', help="Input/output directory, default: '/app/shared'.")
+@click.option('-d', '--dir-io', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER, help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER)
 def cli(classifier, target, target_type, binarize, single, dir_io):
     """Evaluate the performance of a probabilistic linker."""
     if not single:
