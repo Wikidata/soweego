@@ -358,7 +358,6 @@ class OccupationQidSetCompare(BaseCompareFeature):
         subclasses of each QID in the original set.
         """
 
-        
         expanded_set = set()
 
         for qid in occupation_qids:
@@ -392,34 +391,11 @@ class OccupationQidSetCompare(BaseCompareFeature):
 
     def _compute_vectorized(self, source_column: pd.Series, target_column: pd.Series):
 
-        # each item in `source_column` is already an array composed
-        # of QID strings representing the occupations of a person.
-        # On the other hand, each item in `target_column` is a
-        # string of space separated QIDs, so we need to first convert
-        # those into lists
-        # then we also convert each item both the source and target
-        # from arrays to sets, so that they're easier to compare
-        
-        def to_set(itm):
-            # if it is an empty array (from source), or an
-            # empty string (from target)
-            if not itm:
-                return set()
-
-            # if it is a string with length > 0 split it into
-            # its components
-            itm = itm.split()
-
-            return set(itm)
-        
-        target_column = target_column.apply(to_set)
-        source_column = source_column.apply(to_set)
-
-        # finally, we want to expand the target_column (add the
+        # we want to expand the target_column (add the
         # superclasses and subclasses of each occupation)
         target_column = target_column.apply(self._expand_occupations)
 
-        # we then zip together the source column and the target column so that
+        # finally, we then zip together the source column and the target column so that
         # they're easier to process
         concatenated = pd.Series(list(zip(source_column, target_column)))
 
@@ -429,7 +405,7 @@ class OccupationQidSetCompare(BaseCompareFeature):
 
             # explicitly check if set is empty
             if _pair_has_any_null(pair):
-                LOGGER.warn(
+                LOGGER.debug(
                     "Can't compare occupations, either the Wikidata or Target value is null. Pair: %s", pair)
                 return np.nan
 

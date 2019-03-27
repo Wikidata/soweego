@@ -25,7 +25,7 @@ from pandas.io.json.json import JsonReader
 from soweego.commons import (constants, data_gathering, target_database,
                              text_utils, url_utils)
 from soweego.commons.logging import log_dataframe_info
-from soweego.linker.feature_extraction import (DateCompare, OccupationCompare,
+from soweego.linker.feature_extraction import (DateCompare, OccupationQidSetCompare,
                                                SimilarTokens, StringList,
                                                UrlList)
 from soweego.wikidata import api_requests, vocabulary
@@ -164,7 +164,7 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
     if in_both_datasets(constants.DATE_OF_DEATH):
         compare.add(DateCompare(constants.DATE_OF_DEATH,
                                 constants.DATE_OF_DEATH, label='date_of_death'))
-    
+
     # Feature 3: Levenshtein distance on names and similar tokens
     if in_both_datasets(constants.NAME_TOKENS):
         compare.add(StringList(constants.NAME_TOKENS,
@@ -180,8 +180,9 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
     # Feature 5: comparison of occupations
     occupations_col_name = vocabulary.LINKER_PIDS[vocabulary.OCCUPATION]
     if in_both_datasets(occupations_col_name):
-        compare.add(OccupationCompare(occupations_col_name, occupations_col_name,
-                               label='occupation_comp'))
+        compare.add(OccupationQidSetCompare(occupations_col_name,
+                                            occupations_col_name,
+                                            label='occupation_qid_compare'))
 
     feature_vectors = compare.compute(candidate_pairs, wikidata, target)
     pd.to_pickle(feature_vectors, path_io)
@@ -307,10 +308,13 @@ def _shared_preprocessing(df, will_handle_dates):
     LOGGER.info('Joining descriptions ...')
     _join_descriptions(df)
 
+    LOGGER.info('Transforming list of occupations into set ... ')
+    _occupations_to_set(df)
+
     if will_handle_dates:
         LOGGER.info('Handling dates ...')
         _handle_dates(df)
-
+        
     LOGGER.info('Stringifying lists with a single value ...')
     df = _pull_out_from_single_value_list(df)
 
@@ -412,6 +416,32 @@ def _pull_out_from_single_value_list(df):
     log_dataframe_info(LOGGER, df, 'Stringified lists with a single value')
     return df
 
+def _occupations_to_set(df):
+    col_name = vocabulary.LINKER_PIDS[vocabulary.OCCUPATION]
+
+    if col_name not in df.columns:
+        LOGGER.info("No '%s' column in DataFrame, transformation will be made", col_name)
+        return
+
+    def to_set(itm):
+        # if it is an empty array (from source), or an
+        # empty string (from target)
+        if not itm:
+            return set()
+
+        # when coming from the DB, the occupations for target
+        # are an array with only one element which is a string
+        # of space separated occupations (or an empty string
+        # in case there are no occupations)
+        if len(itm) == 1:
+
+            # get inner occupation ids and remove empty occupations
+            itm = [x for x in itm[0].split() if x]
+
+        return set(itm)
+
+    df[col_name] = df[col_name].apply(to_set)
+    
 
 def _join_descriptions(df):
     # TODO It certainly doesn't make sense to compare descriptions in different languages
