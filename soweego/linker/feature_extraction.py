@@ -38,7 +38,7 @@ class StringList(BaseCompareFeature):
                  right_on,
                  algorithm='levenshtein',
                  threshold=None,
-                 missing_value=0.0,
+                 missing_value=constants.FEATURE_MISSING_VALUE,
                  analyzer=None,
                  ngram_range=(2, 2),
                  label=None):
@@ -149,7 +149,7 @@ class UrlList(BaseCompareFeature):
     name = 'url_list'
     description = 'Compare pairs of lists with URL values'
 
-    def __init__(self, left_on, right_on, agree_value=1.0, disagree_value=0.0, missing_value=0.0, label=None):
+    def __init__(self, left_on, right_on, agree_value=1.0, disagree_value=0.0, missing_value=constants.FEATURE_MISSING_VALUE, label=None):
         super(UrlList, self).__init__(left_on, right_on, label=label)
         self.agree_value = agree_value
         self.disagree_value = disagree_value
@@ -191,7 +191,7 @@ class DateCompare(BaseCompareFeature):
     def __init__(self,
                  left_on,
                  right_on,
-                 missing_value=0.0,
+                 missing_value=constants.FEATURE_MISSING_VALUE,
                  label=None):
         super(DateCompare, self).__init__(left_on, right_on, label=label)
 
@@ -297,7 +297,7 @@ class SimilarTokens(BaseCompareFeature):
     name = 'SimilarTokens'
     description = 'Compare pairs of lists with string values based on shared tokens'
 
-    def __init__(self, left_on, right_on, agree_value=1.0, disagree_value=0.0, missing_value=0.0, label=None):
+    def __init__(self, left_on, right_on, agree_value=1.0, disagree_value=0.0, missing_value=constants.FEATURE_MISSING_VALUE, label=None):
         super(SimilarTokens, self).__init__(left_on, right_on, label=label)
         self.agree_value = agree_value
         self.disagree_value = disagree_value

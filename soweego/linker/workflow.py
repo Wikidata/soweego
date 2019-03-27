@@ -143,14 +143,7 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
         return (col in wikidata.columns) and (col in target.columns)
 
     compare = rl.Compare(n_jobs=cpu_count())
-    # TODO similar name match as a feature
     # TODO feature engineering on more fields
-    # wikidata columns = Index(['tid', 'label', 'alias', 'description', 'url', 'given_name',
-    #    'date_of_birth', 'date_of_death', 'place_of_death', 'birth_name',
-    #    'place_of_birth', 'sex_or_gender', 'family_name', 'pseudonym'],
-    # discogs columns = Index(['description_tokens', 'name_tokens', 'description', 'url', 'url_tokens',
-    #    'name', 'born', 'born_precision', 'real_name', 'is_wiki',
-    #    'data_quality', 'died', 'died_precision', 'identifier'],
 
     # Feature 1: exact match on URLs
     if in_both_datasets(constants.URL):
@@ -160,24 +153,25 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
     if in_both_datasets(constants.DATE_OF_BIRTH):
         compare.add(DateCompare(constants.DATE_OF_BIRTH,
                                 constants.DATE_OF_BIRTH, label='date_of_birth'))
-
     if in_both_datasets(constants.DATE_OF_DEATH):
         compare.add(DateCompare(constants.DATE_OF_DEATH,
                                 constants.DATE_OF_DEATH, label='date_of_death'))
 
-    # Feature 3: Levenshtein distance on names and similar tokens
+    # Feature 3: Levenshtein distance on name tokens
     if in_both_datasets(constants.NAME_TOKENS):
         compare.add(StringList(constants.NAME_TOKENS,
                                constants.NAME_TOKENS, label='name_levenshtein'))
+
+    # Feature 4: similar name tokens
         compare.add(SimilarTokens(constants.NAME_TOKENS,
                                   constants.NAME_TOKENS, label='similar_name_tokens'))
 
-    # Feature 4: cosine similarity on descriptions
+    # Feature 5: cosine similarity on descriptions
     if in_both_datasets(constants.DESCRIPTION):
         compare.add(StringList(constants.DESCRIPTION, constants.DESCRIPTION,
                                algorithm='cosine', analyzer='soweego', label='description_cosine'))
 
-    # Feature 5: comparison of occupations
+    # Feature 6: occupation QIDs
     occupations_col_name = vocabulary.LINKER_PIDS[vocabulary.OCCUPATION]
     if in_both_datasets(occupations_col_name):
         compare.add(OccupationQidSet(occupations_col_name,
@@ -224,8 +218,9 @@ def preprocess_wikidata(goal, wikidata_reader):
 
         # 4. Tokenize & join strings lists columns
         for column in (constants.NAME, constants.PSEUDONYM):
-            chunk[f'{column}_tokens'] = chunk[column].apply(
-                tokenize_values, args=(text_utils.tokenize,))
+            if chunk.get(column) is not None:
+                chunk[f'{column}_tokens'] = chunk[column].apply(
+                    tokenize_values, args=(text_utils.tokenize,))
 
         # 5. Tokenize & join URLs lists
         chunk[constants.URL_TOKENS] = chunk[constants.URL].apply(

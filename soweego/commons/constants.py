@@ -123,7 +123,6 @@ REQUIRE_OCCUPATIONS = [
     'imdb'
 ]
 
-
 # Wikidata field & target column names
 INTERNAL_ID = 'internal_id'
 CATALOG_ID = 'catalog_id'
@@ -166,7 +165,7 @@ CLASSIFIERS = {
 }
 CLASSIFICATION_RETURN_SERIES = ('classification.return_type', 'series')
 CONFIDENCE_THRESHOLD = 0.5
-
+FEATURE_MISSING_VALUE = 0.0
 
 # precisions for the `pandas.Period` class.
 # Listed from least to most precise, as defined here:

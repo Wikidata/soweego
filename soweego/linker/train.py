@@ -82,7 +82,7 @@ def build_dataset(goal, catalog, entity, dir_io):
         positive_samples.index, positive_samples), names=[constants.QID, constants.TID])
 
     LOGGER.info('Built positive samples index from Wikidata')
-    return concat(feature_vectors), positive_samples_index
+    return concat(feature_vectors, sort=False).fillna(constants.FEATURE_MISSING_VALUE), positive_samples_index
 
 
 def _build_positive_samples_index(wd_reader1):
