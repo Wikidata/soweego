@@ -25,7 +25,7 @@ from pandas.io.json.json import JsonReader
 from soweego.commons import (constants, data_gathering, target_database,
                              text_utils, url_utils)
 from soweego.commons.logging import log_dataframe_info
-from soweego.linker.feature_extraction import (DateCompare, OccupationQidSetCompare,
+from soweego.linker.feature_extraction import (DateCompare, OccupationQidSet,
                                                SimilarTokens, StringList,
                                                UrlList)
 from soweego.wikidata import api_requests, vocabulary
@@ -180,9 +180,9 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
     # Feature 5: comparison of occupations
     occupations_col_name = vocabulary.LINKER_PIDS[vocabulary.OCCUPATION]
     if in_both_datasets(occupations_col_name):
-        compare.add(OccupationQidSetCompare(occupations_col_name,
+        compare.add(OccupationQidSet(occupations_col_name,
                                             occupations_col_name,
-                                            label='occupation_qid_compare'))
+                                            label='occupation_qids))
 
     feature_vectors = compare.compute(candidate_pairs, wikidata, target)
     pd.to_pickle(feature_vectors, path_io)

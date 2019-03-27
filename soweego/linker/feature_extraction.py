@@ -330,10 +330,10 @@ class SimilarTokens(BaseCompareFeature):
         return fillna(concatenated.apply(intersection_percentage_size), self.missing_value)
 
 
-class OccupationQidSetCompare(BaseCompareFeature):
+class OccupationQidSet(BaseCompareFeature):
 
-    name = "occupation_qid_set_compare"
-    description = "Compares occupations attribute of record pairs."
+    name = 'occupation_qid_set'
+    description = 'Compare pairs of sets containing occupation QIDs.'
 
     # when expanding the occupations in `_expand_occupations` it
     # is useful to have a dict were we can cache each result, so that
@@ -345,7 +345,7 @@ class OccupationQidSetCompare(BaseCompareFeature):
                  right_on,
                  missing_value=0.0,
                  label=None):
-        super(OccupationQidSetCompare, self).__init__(left_on, right_on, label=label)
+        super(OccupationQidSet, self).__init__(left_on, right_on, label=label)
 
         self.missing_value = missing_value
 
