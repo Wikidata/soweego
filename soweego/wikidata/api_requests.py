@@ -672,10 +672,3 @@ def _make_buckets(qids):
     LOGGER.info('Made %d buckets of size %d out of %d QIDs to comply with the Wikidata API limits',
                 len(buckets), BUCKET_SIZE, len(qids))
     return buckets
-
-
-if __name__ == "__main__":
-    import io
-    # def get_data_for_linker(catalog: str, qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> Generator[tuple]:
-    get_data_for_linker('imdb',
-        set(['Q1409', 'Q1405', 'Q1407']), set(), dict(), io.StringIO(), dict())
