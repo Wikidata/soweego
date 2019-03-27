@@ -330,9 +330,9 @@ class SimilarTokens(BaseCompareFeature):
         return fillna(concatenated.apply(intersection_percentage_size), self.missing_value)
 
 
-class OccupationCompare(BaseCompareFeature):
+class OccupationQidSetCompare(BaseCompareFeature):
 
-    name = "occupation_compare"
+    name = "occupation_qid_set_compare"
     description = "Compares occupations attribute of record pairs."
 
     # when expanding the occupations in `_expand_occupations` it
