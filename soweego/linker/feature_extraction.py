@@ -345,7 +345,7 @@ class OccupationQidSetCompare(BaseCompareFeature):
                  right_on,
                  missing_value=0.0,
                  label=None):
-        super(OccupationCompare, self).__init__(left_on, right_on, label=label)
+        super(OccupationQidSetCompare, self).__init__(left_on, right_on, label=label)
 
         self.missing_value = missing_value
 
@@ -408,8 +408,7 @@ class OccupationQidSetCompare(BaseCompareFeature):
 
             # if it is a string with length > 0 split it into
             # its components
-            elif isinstance(itm, str):
-                itm = itm.split()
+            itm = itm.split()
 
             return set(itm)
         
@@ -427,20 +426,16 @@ class OccupationQidSetCompare(BaseCompareFeature):
         def check_occupation_equality(pair: Tuple[Set[str], Set[str]]):
             """Given 2 sets, returns the percentage of items that the
             smallest set shares with the larger set"""
+
+            # explicitly check if set is empty
+            if _pair_has_any_null(pair):
+                LOGGER.warn(
+                    "Can't compare occupations, either the Wikidata or Target value is null. Pair: %s", pair)
+                return np.nan
+
             s_item: Set
             t_item: Set
             s_item, t_item = pair
-
-            # explicitly check if set is empty
-            if not s_item:
-                LOGGER.debug(
-                    "Can't compare occupations, the wikidata value is null. Pair: %s", pair)
-                return np.nan
-
-            if not t_item:
-                LOGGER.debug(
-                    "Can't compare occupations, the target value is null. Pair: %s", pair)
-                return np.nan
 
             min_length = min(len(s_item), len(t_item))
             n_shared_items = len(s_item & t_item)
