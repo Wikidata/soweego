@@ -369,7 +369,7 @@ class OccupationCompare(BaseCompareFeature):
             if qid in self._expand_occupations_cache:
 
                 # if we do then add them to expanded set
-                expanded_set = expanded_set | self._expand_occupations_cache[qid]
+                expanded_set |= self._expand_occupations_cache[qid]
 
             # if we don't have them then we get them from
             # wikidata and add them to the cache and
@@ -386,7 +386,7 @@ class OccupationCompare(BaseCompareFeature):
                 self._expand_occupations_cache[qid] = joined
 
                 # finally add them to expanded set
-                expanded_set = expanded_set | joined
+                expanded_set |= joined
 
         return expanded_set
 
