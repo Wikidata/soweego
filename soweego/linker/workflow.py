@@ -303,7 +303,6 @@ def _shared_preprocessing(df, will_handle_dates):
     LOGGER.info('Joining descriptions ...')
     _join_descriptions(df)
 
-    LOGGER.info('Transforming list of occupations into set ... ')
     _occupations_to_set(df)
 
     if will_handle_dates:
@@ -415,7 +414,7 @@ def _occupations_to_set(df):
     col_name = vocabulary.LINKER_PIDS[vocabulary.OCCUPATION]
 
     if col_name not in df.columns:
-        LOGGER.info("No '%s' column in DataFrame, transformation will be made", col_name)
+        LOGGER.info("No '%s' column in DataFrame, won't handle them", col_name)
         return
 
     def to_set(itm):
@@ -435,6 +434,7 @@ def _occupations_to_set(df):
 
         return set(itm)
 
+    LOGGER.info('Converting list of occupations into set ...')
     df[col_name] = df[col_name].apply(to_set)
     
 
