@@ -185,7 +185,7 @@ class DateCompare(BaseCompareFeature):
     account their maximum precisions.
     """
 
-    name = "DateCompare"
+    name = "date_compare"
     description = "Compares the date attribute of record pairs."
 
     def __init__(self,
@@ -332,7 +332,7 @@ class SimilarTokens(BaseCompareFeature):
 
 class OccupationCompare(BaseCompareFeature):
 
-    name = "OccupationCompare"
+    name = "occupation_compare"
     description = "Compares occupations attribute of record pairs."
 
     # when expanding the occupations in `_expand_occupations` it
