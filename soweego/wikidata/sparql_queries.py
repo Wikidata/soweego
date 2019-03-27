@@ -69,6 +69,12 @@ EXT_ID_PIDS_AND_URLS_QUERY = 'SELECT * WHERE { ' + PROPERTY_BINDING + \
     ' . OPTIONAL { ' + PROPERTY_BINDING + ' wdt:P1793 ' + \
     FORMATTER_REGEX_BINDING + ' . } . }'
 
+SUBCLASSES_OF_QID = ('SELECT DISTINCT ' + ITEM_BINDING + ' WHERE { '
+                     + ITEM_BINDING + ' wdt:P279* wd:%s . }')
+
+SUPERCLASSES_OF_QID = ('SELECT DISTINCT ' + ITEM_BINDING + ' WHERE { '
+                       + ' wd:%s wdt:P279* ' + ITEM_BINDING + ' . }')
+
 
 @click.command()
 @click.argument('ontology_class')
@@ -426,13 +432,9 @@ def get_subclasses_of_qid(QID: str) -> Set[str]:
     """
 
     # subclasses (?res is subclass of QID)
-    result = make_request("""
-                SELECT DISTINCT ?res WHERE {
-                    ?res wdt:P279* wd:%s .
-                } 
-            """ % QID)
+    result = make_request(SUBCLASSES_OF_QID % QID)
 
-    return set(item['?res'].strip('>').split('/')[-1]
+    return set(_get_valid_qid(item).group()
                for item in result)
 
 
@@ -446,11 +448,7 @@ def get_superclasses_of_qid(QID: str) -> Set[str]:
     """
 
     # superclasses (QID is subclass or ?res)
-    result = make_request("""
-                SELECT DISTINCT ?res WHERE {
-                    wd:%s wdt:P279* ?res .
-                } 
-            """ % QID)
+    result = make_request(SUPERCLASSES_OF_QID % QID)
 
-    return set(item['?res'].strip('>').split('/')[-1]
+    return set(_get_valid_qid(item).group()
                for item in result)
