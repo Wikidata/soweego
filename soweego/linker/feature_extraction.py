@@ -403,7 +403,7 @@ class OccupationCompare(BaseCompareFeature):
         def to_set(itm):
             # if it is an empty array (from source), or an
             # empty string (from target)
-            if len(itm) == 0:
+            if not itm:
                 return set()
 
             # if it is a string with length > 0 split it into
@@ -432,12 +432,12 @@ class OccupationCompare(BaseCompareFeature):
             s_item, t_item = pair
 
             # explicitly check if set is empty
-            if s_item == set():
+            if not s_item:
                 LOGGER.debug(
                     "Can't compare occupations, the wikidata value is null. Pair: %s", pair)
                 return np.nan
 
-            if t_item == set():
+            if not t_item:
                 LOGGER.debug(
                     "Can't compare occupations, the target value is null. Pair: %s", pair)
                 return np.nan
