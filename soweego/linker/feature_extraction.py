@@ -409,7 +409,7 @@ class OccupationCompare(BaseCompareFeature):
             # if it is a string with length > 0 split it into
             # its components
             elif isinstance(itm, str):
-                itm = itm.split(" ")
+                itm = itm.split()
 
             return set(itm)
         
@@ -442,9 +442,9 @@ class OccupationCompare(BaseCompareFeature):
                     "Can't compare occupations, the target value is null. Pair: %s", pair)
                 return np.nan
 
-            smaller_length = min(len(s_item), len(t_item))
-            n_shared_items = len(s_item.intersection(t_item))
+            min_length = min(len(s_item), len(t_item))
+            n_shared_items = len(s_item & t_item)
 
-            return n_shared_items / smaller_length
+            return n_shared_items / min_length
 
         return fillna(concatenated.apply(check_occupation_equality), self.missing_value)
