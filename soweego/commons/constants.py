@@ -116,6 +116,13 @@ TARGET_CATALOGS = {
     }
 }
 
+# When building the wikidata dump for catalogs in this array
+# also the QIDs of a person's occupations will be included
+# as part of the dump
+REQUIRE_OCCUPATIONS = [
+    'imdb'
+]
+
 # Wikidata field & target column names
 INTERNAL_ID = 'internal_id'
 CATALOG_ID = 'catalog_id'

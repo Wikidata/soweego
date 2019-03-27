@@ -29,13 +29,14 @@ LOGGER = logging.getLogger(__name__)
 @click.argument('target', type=click.Choice(target_database.available_targets()))
 @click.argument('target_type', type=click.Choice(target_database.available_types()))
 @click.option('--single', is_flag=True, help='Compute a single evaluation over all k folds, instead of k evaluations.')
+@click.option('-k', '--k-folds', default=5, help="Number of folds, default: 5.")
 @click.option('-b', '--binarize', default=0.1, help="Default: 0.1.")
-@click.option('-d', '--dir-io', type=click.Path(file_okay=False), default='/app/shared', help="Input/output directory, default: '/app/shared'.")
-def cli(classifier, target, target_type, binarize, single, dir_io):
+@click.option('-d', '--dir-io', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER, help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER)
+def cli(classifier, target, target_type, single, k_folds, binarize, dir_io):
     """Evaluate the performance of a probabilistic linker."""
     if not single:
         predictions, p_mean, p_std, r_mean, r_std, fscore_mean, fscore_std = average_k_fold(
-            constants.CLASSIFIERS[classifier], target, target_type, binarize, dir_io)
+            constants.CLASSIFIERS[classifier], target, target_type, binarize, dir_io, k=k_folds)
         LOGGER.info('Precision: mean = %s; std = %s; Recall: mean = %s; std = %s; F-score: mean = %s; std = %s',
                     p_mean, p_std, r_mean, r_std, fscore_mean, fscore_std)
 
@@ -46,7 +47,7 @@ def cli(classifier, target, target_type, binarize, single, dir_io):
                 f'Precision:\n\tmean = {p_mean}\n\tstandard deviation = {p_std}\nRecall:\n\tmean = {r_mean}\n\tstandard deviation = {r_std}\nF-score:\n\tmean = {fscore_mean}\n\tstandard deviation = {fscore_std}\n')
     else:
         predictions, (precision, recall, fscore, confusion_matrix) = single_k_fold(
-            constants.CLASSIFIERS[classifier], target, target_type, binarize, dir_io)
+            constants.CLASSIFIERS[classifier], target, target_type, binarize, dir_io, k=k_folds)
 
         predictions.to_series().to_csv(os.path.join(dir_io, constants.LINKER_EVALUATION_PREDICTIONS %
                                                     (target, target_type, classifier)), columns=[], header=True)

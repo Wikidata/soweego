@@ -25,8 +25,9 @@ from pandas.io.json.json import JsonReader
 from soweego.commons import (constants, data_gathering, target_database,
                              text_utils, url_utils)
 from soweego.commons.logging import log_dataframe_info
-from soweego.linker.feature_extraction import (DateCompare, SimilarTokens,
-                                               StringList, UrlList)
+from soweego.linker.feature_extraction import (DateCompare, OccupationQidSet,
+                                               SimilarTokens, StringList,
+                                               UrlList)
 from soweego.wikidata import api_requests, vocabulary
 
 LOGGER = logging.getLogger(__name__)
@@ -72,8 +73,8 @@ def build_wikidata(goal, catalog, entity, dir_io):
 
         url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
         with gzip.open(wd_io_path, 'wt') as wd_io:
-            api_requests.get_data_for_linker(
-                qids, url_pids, ext_id_pids_to_urls, wd_io, qids_and_tids)
+            api_requests.get_data_for_linker(catalog,
+                                             qids, url_pids, ext_id_pids_to_urls, wd_io, qids_and_tids)
 
     wd_df_reader = pd.read_json(wd_io_path, lines=True, chunksize=1000)
 
@@ -169,6 +170,13 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
     if in_both_datasets(constants.DESCRIPTION):
         compare.add(StringList(constants.DESCRIPTION, constants.DESCRIPTION,
                                algorithm='cosine', analyzer='soweego', label='description_cosine'))
+
+    # Feature 6: occupation QIDs
+    occupations_col_name = vocabulary.LINKER_PIDS[vocabulary.OCCUPATION]
+    if in_both_datasets(occupations_col_name):
+        compare.add(OccupationQidSet(occupations_col_name,
+                                            occupations_col_name,
+                                            label='occupation_qids))
 
     feature_vectors = compare.compute(candidate_pairs, wikidata, target)
     pd.to_pickle(feature_vectors, path_io)
@@ -284,7 +292,6 @@ def preprocess_target(goal, target_reader):
     target = target.groupby(constants.TID).agg(lambda x: list(set(x)))
     log_dataframe_info(
         LOGGER, target, f"Data indexed and aggregated on '{constants.TID}' column")
-
     # 6. Shared preprocessing
     target = _shared_preprocessing(target, will_handle_dates)
 
@@ -296,10 +303,13 @@ def _shared_preprocessing(df, will_handle_dates):
     LOGGER.info('Joining descriptions ...')
     _join_descriptions(df)
 
+    LOGGER.info('Transforming list of occupations into set ... ')
+    _occupations_to_set(df)
+
     if will_handle_dates:
         LOGGER.info('Handling dates ...')
         _handle_dates(df)
-
+        
     LOGGER.info('Stringifying lists with a single value ...')
     df = _pull_out_from_single_value_list(df)
 
@@ -401,6 +411,32 @@ def _pull_out_from_single_value_list(df):
     log_dataframe_info(LOGGER, df, 'Stringified lists with a single value')
     return df
 
+def _occupations_to_set(df):
+    col_name = vocabulary.LINKER_PIDS[vocabulary.OCCUPATION]
+
+    if col_name not in df.columns:
+        LOGGER.info("No '%s' column in DataFrame, transformation will be made", col_name)
+        return
+
+    def to_set(itm):
+        # if it is an empty array (from source), or an
+        # empty string (from target)
+        if not itm:
+            return set()
+
+        # when coming from the DB, the occupations for target
+        # are an array with only one element which is a string
+        # of space separated occupations (or an empty string
+        # in case there are no occupations)
+        if len(itm) == 1:
+
+            # get inner occupation ids and remove empty occupations
+            itm = [x for x in itm[0].split() if x]
+
+        return set(itm)
+
+    df[col_name] = df[col_name].apply(to_set)
+    
 
 def _join_descriptions(df):
     # TODO It certainly doesn't make sense to compare descriptions in different languages
