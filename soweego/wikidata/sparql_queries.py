@@ -17,7 +17,7 @@ import os
 from csv import DictReader
 from functools import lru_cache
 from re import search
-from typing import Generator
+from typing import Generator, Set
 
 import click
 from requests import get
@@ -68,6 +68,12 @@ EXT_ID_PIDS_AND_URLS_QUERY = 'SELECT * WHERE { ' + PROPERTY_BINDING + \
     FORMATTER_URL_BINDING + \
     ' . OPTIONAL { ' + PROPERTY_BINDING + ' wdt:P1793 ' + \
     FORMATTER_REGEX_BINDING + ' . } . }'
+
+SUBCLASSES_OF_QID = ('SELECT DISTINCT ' + ITEM_BINDING + ' WHERE { '
+                     + ITEM_BINDING + ' wdt:P279* wd:%s . }')
+
+SUPERCLASSES_OF_QID = ('SELECT DISTINCT ' + ITEM_BINDING + ' WHERE { '
+                       + ' wd:%s wdt:P279* ' + ITEM_BINDING + ' . }')
 
 
 @click.command()
@@ -414,3 +420,35 @@ def query_birth_death(qids_bucket):
     query += """}"""
 
     return query
+
+
+def get_subclasses_of_qid(QID: str) -> Set[str]:
+    """
+    Given a QID, return the QID of it's subclasses
+
+    :param qid: QID we want to get the subclasses for
+
+    :return: set with QIDs of subclasses
+    """
+
+    # subclasses (?res is subclass of QID)
+    result = make_request(SUBCLASSES_OF_QID % QID)
+
+    return set(_get_valid_qid(item).group()
+               for item in result)
+
+
+def get_superclasses_of_qid(QID: str) -> Set[str]:
+    """
+    Given a QID, return the QID of it's superclasses
+
+    :param qid: QID we want to get the superclasses for
+
+    :return: set with QIDs of superclasses
+    """
+
+    # superclasses (QID is subclass or ?res)
+    result = make_request(SUPERCLASSES_OF_QID % QID)
+
+    return set(_get_valid_qid(item).group()
+               for item in result)

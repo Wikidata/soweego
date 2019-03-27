@@ -81,7 +81,7 @@ def _lookup_label(item_value):
     return _return_monolingual_strings(item_value, labels)
 
 
-def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> None:
+def get_data_for_linker(catalog: str, qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> None:
     no_labels_count = 0
     no_aliases_count = 0
     no_descriptions_count = 0
@@ -163,9 +163,10 @@ def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fil
             to_write[constants.URL] = list(to_write[constants.URL])
 
             # Expected claims
+            needs_occupations = catalog in constants.REQUIRE_OCCUPATIONS
             to_write.update(_return_claims_for_linker(
-                qid, claims, no_claims_count))
-
+                qid, claims, no_claims_count, needs_occupations))
+                
             fileout.write(json.dumps(to_write, ensure_ascii=False) + '\n')
             fileout.flush()
 
@@ -294,30 +295,49 @@ def _return_third_party_urls(qid, claims, url_pids, no_count):
     return to_return
 
 
-def _return_claims_for_linker(qid, claims, no_count):
+def _return_claims_for_linker(qid, claims, no_count, need_occupations):
     to_return = defaultdict(set)
     expected_pids = set(vocabulary.LINKER_PIDS.keys())
+    
+    if not need_occupations:
+        expected_pids.remove(vocabulary.OCCUPATION)
+
     available = expected_pids.intersection(claims.keys())
     if available:
         LOGGER.debug('Available claim PIDs for %s: %s', qid, available)
         for pid in available:
             for pid_claim in claims[pid]:
+                
                 value = _extract_value_from_claim(pid_claim, pid, qid)
                 if not value:
                     continue
+                
                 pid_label = vocabulary.LINKER_PIDS.get(pid)
+
                 if not pid_label:
                     LOGGER.critical('PID label lookup failed: %s. The PID should be one of %s',
                                     pid, expected_pids)
                     raise ValueError('PID label lookup failed: %s. The PID should be one of %s' % (
                         pid, expected_pids))
-                parsed_value = parse_wikidata_value(value)
+
+                if pid == vocabulary.OCCUPATION:
+                    # for occupations we only need their QID
+                    # so we add it to `to_return` and continue,
+                    # since we don't need to extract labels
+                    parsed_value = value.get('id')
+
+                else:
+                    parsed_value = parse_wikidata_value(value)
+
                 if not parsed_value:
                     continue
+
                 if isinstance(parsed_value, set):  # Labels
                     to_return[pid_label].update(parsed_value)
+
                 else:
                     to_return[pid_label].add(parsed_value)
+
     else:
         LOGGER.debug('No %s expected claims for %s', expected_pids, qid)
         no_count += 1
@@ -652,10 +672,3 @@ def _make_buckets(qids):
     LOGGER.info('Made %d buckets of size %d out of %d QIDs to comply with the Wikidata API limits',
                 len(buckets), BUCKET_SIZE, len(qids))
     return buckets
-
-
-if __name__ == "__main__":
-    import io
-    # def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> Generator[tuple]:
-    get_data_for_linker(
-        set(['Q1409', 'Q1405', 'Q1407']), set(), dict(), io.StringIO(), dict())

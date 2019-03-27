@@ -10,7 +10,7 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import logging
-from typing import List, Tuple, Union
+from typing import List, Set, Tuple, Union
 
 import jellyfish
 import numpy as np
@@ -20,6 +20,7 @@ from recordlinkage.utils import fillna
 from sklearn.feature_extraction.text import CountVectorizer
 
 from soweego.commons import constants, text_utils
+from soweego.wikidata import sparql_queries
 
 LOGGER = logging.getLogger(__name__)
 
@@ -89,7 +90,7 @@ class StringList(BaseCompareFeature):
                 for target in target_values:
                     try:
                         score = 1 - jellyfish.levenshtein_distance(source, target) \
-                                / np.max([len(source), len(target)])
+                            / np.max([len(source), len(target)])
                         scores.append(score)
                     except TypeError:
                         if pd.isnull(source) or pd.isnull(target):
@@ -184,7 +185,7 @@ class DateCompare(BaseCompareFeature):
     account their maximum precisions.
     """
 
-    name = "DateCompare"
+    name = "date_compare"
     description = "Compares the date attribute of record pairs."
 
     def __init__(self,
@@ -327,3 +328,94 @@ class SimilarTokens(BaseCompareFeature):
             return count_intersect / count_total if count_total > 0 else np.nan
 
         return fillna(concatenated.apply(intersection_percentage_size), self.missing_value)
+
+
+class OccupationQidSet(BaseCompareFeature):
+
+    name = 'occupation_qid_set'
+    description = 'Compare pairs of sets containing occupation QIDs.'
+
+    # when expanding the occupations in `_expand_occupations` it
+    # is useful to have a dict were we can cache each result, so that
+    # we don't have to do a sparql query every time.
+    _expand_occupations_cache = {}
+
+    def __init__(self,
+                 left_on,
+                 right_on,
+                 missing_value=0.0,
+                 label=None):
+        super(OccupationQidSet, self).__init__(left_on, right_on, label=label)
+
+        self.missing_value = missing_value
+
+    def _expand_occupations(self, occupation_qids: Set[str]) -> Set[str]:
+        """
+        This should be applied to a pandas.Series, where each element
+        is a set of QIDs.
+
+        This function will expand the set to include all superclasses and
+        subclasses of each QID in the original set.
+        """
+
+        expanded_set = set()
+
+        for qid in occupation_qids:
+            expanded_set.add(qid)  # add qid to expanded set
+
+            # check if we have the subclasses and superclasses
+            # of this specific qid in memory
+            if qid in self._expand_occupations_cache:
+
+                # if we do then add them to expanded set
+                expanded_set |= self._expand_occupations_cache[qid]
+
+            # if we don't have them then we get them from
+            # wikidata and add them to the cache and
+            # `expanded_set`
+            else:
+
+                # get subclasses and superclasses
+                subclasses = sparql_queries.get_subclasses_of_qid(qid)
+                superclasses = sparql_queries.get_superclasses_of_qid(qid)
+
+                joined = subclasses | superclasses
+
+                # add joined to cache
+                self._expand_occupations_cache[qid] = joined
+
+                # finally add them to expanded set
+                expanded_set |= joined
+
+        return expanded_set
+
+    def _compute_vectorized(self, source_column: pd.Series, target_column: pd.Series):
+
+        # we want to expand the target_column (add the
+        # superclasses and subclasses of each occupation)
+        target_column = target_column.apply(self._expand_occupations)
+
+        # finally, we then zip together the source column and the target column so that
+        # they're easier to process
+        concatenated = pd.Series(list(zip(source_column, target_column)))
+
+        def check_occupation_equality(pair: Tuple[Set[str], Set[str]]):
+            """Given 2 sets, returns the percentage of items that the
+            smallest set shares with the larger set"""
+
+            # explicitly check if set is empty
+            if _pair_has_any_null(pair):
+                LOGGER.debug(
+                    "Can't compare occupations, either the Wikidata or Target value is null. Pair: %s", pair)
+                return np.nan
+
+            s_item: Set
+            t_item: Set
+            s_item, t_item = pair
+
+            min_length = min(len(s_item), len(t_item))
+            n_shared_items = len(s_item & t_item)
+
+            return n_shared_items / min_length
+
+        return fillna(concatenated.apply(check_occupation_equality), self.missing_value)
