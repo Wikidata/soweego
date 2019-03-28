@@ -191,8 +191,11 @@ def init_model(classifier, binarize):
     if classifier is rl.NaiveBayesClassifier:
         model = classifier(binarize=binarize)
     elif classifier is rl.SVMClassifier:
-        # TODO implement SVM
-        raise NotImplementedError
+        model = classifier()
+    else:
+        err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
+        LOGGER.critical(err_msg)
+        raise ValueError(err_msg)
     return model
 
 
@@ -308,7 +311,7 @@ def _shared_preprocessing(df, will_handle_dates):
     if will_handle_dates:
         LOGGER.info('Handling dates ...')
         _handle_dates(df)
-        
+
     LOGGER.info('Stringifying lists with a single value ...')
     df = _pull_out_from_single_value_list(df)
 
@@ -410,6 +413,7 @@ def _pull_out_from_single_value_list(df):
     log_dataframe_info(LOGGER, df, 'Stringified lists with a single value')
     return df
 
+
 def _occupations_to_set(df):
     col_name = vocabulary.LINKER_PIDS[vocabulary.OCCUPATION]
 
@@ -436,7 +440,7 @@ def _occupations_to_set(df):
 
     LOGGER.info('Converting list of occupations into set ...')
     df[col_name] = df[col_name].apply(to_set)
-    
+
 
 def _join_descriptions(df):
     # TODO It certainly doesn't make sense to compare descriptions in different languages
