@@ -37,13 +37,13 @@ def cli(target, target_type, classifier, upload, sandbox, threshold, dir_io):
     """Run a probabilistic linker."""
 
     # load model from the specified classifier+target+target_type
-    model_name = constants.LINKER_MODEL % (target, target_type, classifier)
-    model_path = os.path.join(dir_io, model_name)
+    model_path = os.path.join(dir_io, constants.LINKER_MODEL %
+                              (target, target_type, classifier))
 
     # ensure that model exists
     if not os.path.isfile(model_path):
-        err_msg = 'File does not exist - No classifier model found at path: %s ' % model_path
-        LOGGER.critical(err_msg)
+        err_msg = 'No classifier model found at path: %s ' % model_path
+        LOGGER.critical('File does not exist - ' + err_msg)
         raise FileExistsError(err_msg)
 
     for chunk in execute(target, target_type, model_path, threshold, dir_io):
