@@ -176,6 +176,12 @@ def delete_or_deprecate_identifiers(action: str, invalid: dict, catalog_name: st
 
 def _add_or_reference(subject: str, predicate: str, value: str, stated_in: str) -> None:
     item = pywikibot.ItemPage(REPO, subject)
+
+    # get redirect target recursively in case a redirect points
+    # to another redirect
+    while item.isRedirectPage():
+        item = item.getRedirectTarget()
+
     data = item.get()
     # No data at all
     if not data:
