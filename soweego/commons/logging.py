@@ -3,7 +3,6 @@
 # Adapted from https://github.com/Wikidata/StrepHit/blob/master/strephit/commons/logging.py
 
 """Logging facility"""
-import json
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -11,11 +10,14 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+import json
 import logging
 import logging.config
 import os
 from io import StringIO
 from urllib.parse import unquote_plus
+
+import tqdm
 
 LEVELS = {
     'DEBUG': logging.DEBUG,
@@ -46,7 +48,7 @@ DEFAULT_CONFIG = {
     'handlers': {
         'console': {
             'formatter': 'soweego',
-            'class': 'logging.StreamHandler',
+            'class': 'soweego.commons.logging.TqdmLoggingHandler',
             'level': 'INFO'
         },
         'debug_file_handler': {
@@ -59,6 +61,30 @@ DEFAULT_CONFIG = {
         }
     }
 }
+
+
+class TqdmLoggingHandler (logging.StreamHandler):
+    """
+    Custom logging handler. This ensures that TQDM
+    progress bars always stay at the bottom of the
+    terminal instead of being printed as normal
+    messages
+    """
+
+    def __init__(self, stream=None):
+        super().__init__(stream)
+
+    # we only overwrite `Logging.StreamHandler`
+    # emit method. Everything else is
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            tqdm.tqdm.write(msg)
+            self.flush()
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:
+            self.handleError(record)
 
 
 def setup():
