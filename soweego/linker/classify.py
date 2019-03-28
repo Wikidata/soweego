@@ -2,7 +2,18 @@
 # -*- coding: utf-8 -*-
 
 """Supervised linking."""
+import logging
+import os
+
+import click
+from numpy import full
+
 import ipdb
+import recordlinkage as rl
+from sklearn.externals import joblib
+from soweego.commons import constants, data_gathering, target_database
+from soweego.ingestor import wikidata_bot
+from soweego.linker import blocking, workflow
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -10,16 +21,6 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
-import logging
-import os
-
-import click
-import recordlinkage as rl
-from sklearn.externals import joblib
-
-from soweego.commons import constants, data_gathering, target_database
-from soweego.ingestor import wikidata_bot
-from soweego.linker import blocking, workflow
 
 LOGGER = logging.getLogger(__name__)
 
@@ -80,7 +81,20 @@ def execute(catalog, entity, model, threshold, dir_io):
         feature_vectors = workflow.extract_features(
             samples, wd_chunk, target_chunk, features_path)
 
+        _add_missing_feature_columns(classifier, feature_vectors)
+
         predictions = classifier.prob(feature_vectors)
 
         LOGGER.info('Chunk %d classified', i)
         yield predictions[predictions >= threshold]
+
+
+def _add_missing_feature_columns(classifier, feature_vectors):
+    expected_features = len(classifier.kernel._binarizers)
+    actual_features = feature_vectors.shape[1]
+    if expected_features != actual_features:
+        LOGGER.info('Feature vectors have %d features, but %s expected %d. Will add missing ones',
+                    actual_features, classifier.__class__.__name__, expected_features)
+        for i in range(expected_features - actual_features):
+            feature_vectors[f'missing_{i}'] = full(
+                len(feature_vectors), constants.FEATURE_MISSING_VALUE)
