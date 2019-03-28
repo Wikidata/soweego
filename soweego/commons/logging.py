@@ -75,7 +75,7 @@ class TqdmLoggingHandler (logging.StreamHandler):
         super().__init__(stream)
 
     # we only overwrite `Logging.StreamHandler`
-    # emit method. Everything else is
+    # emit method 
     def emit(self, record):
         try:
             msg = self.format(record)
