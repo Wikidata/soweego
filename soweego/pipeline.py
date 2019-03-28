@@ -63,7 +63,7 @@ def _linker(target: str, upload: bool):
         _invoke_no_exit(evaluate.cli, ['nb', target, target_type])
         _invoke_no_exit(train.cli, ['nb', target, target_type])
         _invoke_no_exit(classify.cli,
-                        [target, target_type, '/app/shared/musicbrainz_%s_nb_model.pkl'.format(target_type),
+                        ['nb', target, target_type, '/app/shared/musicbrainz_%s_nb_model.pkl'.format(target_type),
                          upload_option])
 
 
