@@ -191,8 +191,11 @@ def init_model(classifier, binarize):
     if classifier is rl.NaiveBayesClassifier:
         model = classifier(binarize=binarize)
     elif classifier is rl.SVMClassifier:
-        # TODO implement SVM
-        raise NotImplementedError
+        model = classifier()
+    else:
+        err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
+        LOGGER.critical(err_msg)
+        raise ValueError(err_msg)
     return model
 
 
