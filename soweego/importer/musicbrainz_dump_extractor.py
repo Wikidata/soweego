@@ -19,6 +19,7 @@ from datetime import date, datetime
 from typing import Iterable, Tuple
 
 import requests
+import shutil
 
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
@@ -118,6 +119,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         LOGGER.debug("Added %s/%s relationships records",
                      *relationships_count)
+        shutil.rmtree(dump_path, ignore_errors=True)
 
     def _add_entities_from_generator(self, db_manager,
                                      generator_, *args) -> Tuple[int, int]:

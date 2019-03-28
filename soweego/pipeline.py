@@ -8,10 +8,8 @@ from soweego.importer.importer import import_cli, validate_links_cli
 from soweego.linker import baseline, evaluate, train, classify
 from soweego.validator.checks import (check_existence_cli, check_links_cli,
                                       check_metadata_cli)
-from click.testing import CliRunner
 
 LOGGER = logging.getLogger(__name__)
-runner = CliRunner()
 
 
 @click.command()
