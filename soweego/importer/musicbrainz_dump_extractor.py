@@ -137,19 +137,13 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         session = db_manager.new_session()
 
-        # we construct the generator
-        blt_gen = generator_(*args)
-
-        # and obtain the first item, which is
-        # the number of rows that the generator will yield
-        n_rows = next(blt_gen)
-
         entity_array = []  # array to which we'll add the entities
 
         # the generator will give us a new entity each loop
         # so we just add this to the `entity_array` and commit
         # it once it is large enough (self._sqlalchemy_commit_every)
-        for entity in tqdm(blt_gen, total=n_rows):
+        for entity in generator_(*args):
+
             try:
                 n_total_entities += 1
                 entity_array.append(entity)
@@ -252,12 +246,12 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         with open(artist_path, 'r') as artistfile:
 
             n_rows = self._count_num_lines_in_file(artistfile)
+            artist_link_reader = DictReader(artistfile, delimiter='\t',
+                                            fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
+                                                        'd_year', 'd_month', 'd_day', 'type_id'])
 
-            yield n_rows  # first yield is always the number of rows
+            for artist in tqdm(artist_link_reader, total=n_rows):
 
-            for artist in DictReader(artistfile, delimiter='\t',
-                                     fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
-                                                 'd_year', 'd_month', 'd_day', 'type_id']):
                 if artist['id'] in artistid_url:
                     for link in artistid_url[artist['id']]:
                         if self._check_person(artist['type_id']):
@@ -306,11 +300,11 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
             n_rows = self._count_num_lines_in_file(artistfile)
 
-            yield n_rows  # first yield is always the number of rows
+            artist_isni_reader = DictReader(artistfile, delimiter='\t',
+                                            fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
+                                                        'd_year', 'd_month', 'd_day', 'type_id'])
 
-            for artist in DictReader(artistfile, delimiter='\t',
-                                     fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
-                                                 'd_year', 'd_month', 'd_day', 'type_id']):
+            for artist in tqdm(artist_isni_reader, total=n_rows):
                 try:
                     # Checks if artist has isni
                     link = artist_link[artist['id']]
@@ -356,12 +350,12 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
             n_rows = self._count_num_lines_in_file(artistfile)
 
-            yield n_rows  # first yield is always the number of rows
+            artist_reader = DictReader(artistfile, delimiter='\t',
+                                       fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
+                                                   'd_year', 'd_month', 'd_day', 'type_id', 'area', 'gender', 'ND1',
+                                                   'ND2', 'ND3', 'ND4', 'b_place', 'd_place'])
 
-            for artist in DictReader(artistfile, delimiter='\t',
-                                     fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
-                                                 'd_year', 'd_month', 'd_day', 'type_id', 'area', 'gender', 'ND1',
-                                                 'ND2', 'ND3', 'ND4', 'b_place', 'd_place']):
+            for artist in tqdm(artist_reader, total=n_rows):
                 if self._check_person(artist['type_id']):
                     current_entity = MusicbrainzArtistEntity()
 
@@ -444,9 +438,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         LOGGER.info('Adding relationships into DB')
 
-        yield len(relationships)  # first yield is always the number of rows
-
-        for relation in relationships:
+        for relation in tqdm(relationships):
             translation0, translation1 = ids_translator[relation[0]
                                                         ], ids_translator[relation[1]]
 
