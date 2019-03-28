@@ -25,18 +25,28 @@ LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
+@click.argument('classifier', type=click.Choice(constants.CLASSIFIERS))
 @click.argument('target', type=click.Choice(target_database.available_targets()))
 @click.argument('target_type', type=click.Choice(target_database.available_types()))
-@click.argument('model', type=click.Path(exists=True, dir_okay=False, writable=False))
 @click.option('--upload/--no-upload', default=False, help='Upload links to Wikidata. Default: no.')
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
 @click.option('-t', '--threshold', default=constants.CONFIDENCE_THRESHOLD, help="Probability score threshold, default: 0.5.")
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER,
               help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER)
-def cli(target, target_type, model, upload, sandbox, threshold, dir_io):
+def cli(target, target_type, classifier, upload, sandbox, threshold, dir_io):
     """Run a probabilistic linker."""
 
-    for chunk in execute(target, target_type, model, threshold, dir_io):
+    # load model from the specified classifier+target+target_type
+    model_path = os.path.join(dir_io, constants.LINKER_MODEL %
+                              (target, target_type, classifier))
+
+    # ensure that model exists
+    if not os.path.isfile(model_path):
+        err_msg = 'No classifier model found at path: %s ' % model_path
+        LOGGER.critical('File does not exist - ' + err_msg)
+        raise FileExistsError(err_msg)
+
+    for chunk in execute(target, target_type, model_path, threshold, dir_io):
         if upload:
             _upload(chunk, target, sandbox)
         chunk.to_csv(os.path.join(dir_io, constants.LINKER_RESULT %
