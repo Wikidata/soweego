@@ -191,6 +191,9 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             end - start, self.total_entities, self.musicians, self.musician_links, self.bands, self.band_links,
             self.dead_links)
 
+        # once the import process is complete, we can safely delete the extracted discogs dump
+        os.remove(extracted_path)
+
     def _populate_band(self, entity_array, entity: discogs_entity.DiscogsGroupEntity, identifier, name, links, node):
         # Main entity
         self._fill_entity(entity, identifier, name, node)
