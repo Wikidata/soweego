@@ -644,10 +644,8 @@ def _make_request(bucket, params):
     params['ids'] = '|'.join(bucket)
     connection_is_ok = True
 
-    oldC = get_authenticated_session()
-
     session = requests.Session()
-    session.cookies = oldC.cookies
+    session.cookies = get_authenticated_session().cookies
 
     while True:
         try:
