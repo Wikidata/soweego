@@ -111,10 +111,13 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         LOGGER.info("Dropped and created tables %s", tables)
         LOGGER.info("Importing relationships artist-band")
 
+        def relationships_uniqueness_filter():
+            yield from [MusicBrainzArtistBandRelationship(item[0], item[1]) for item in
+                        set(self._artist_band_relationship_generator(dump_path))]
+
         relationships_count = self._add_entities_from_generator(
             db_manager,
-            self._artist_band_relationship_generator,
-            dump_path
+            relationships_uniqueness_filter
         )
 
         LOGGER.debug("Added %s/%s relationships records",
@@ -248,7 +251,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
             n_rows = self._count_num_lines_in_file(artistfile)
             artist_link_reader = DictReader(artistfile, delimiter='\t',
-                                            fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
+                                            fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month',
+                                                        'b_day',
                                                         'd_year', 'd_month', 'd_day', 'type_id'])
 
             for artist in tqdm(artist_link_reader, total=n_rows):
@@ -302,7 +306,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             n_rows = self._count_num_lines_in_file(artistfile)
 
             artist_isni_reader = DictReader(artistfile, delimiter='\t',
-                                            fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
+                                            fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month',
+                                                        'b_day',
                                                         'd_year', 'd_month', 'd_day', 'type_id'])
 
             for artist in tqdm(artist_isni_reader, total=n_rows):
@@ -445,9 +450,9 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
             if translation0 and translation1:
                 if relation in to_invert:
-                    yield MusicBrainzArtistBandRelationship(translation1, translation0)
+                    yield (translation1, translation0)
                 else:
-                    yield MusicBrainzArtistBandRelationship(translation0, translation1)
+                    yield (translation0, translation1)
             else:
                 LOGGER.warning("Artist id missing translation: %s to (%s, %s)",
                                relation, translation0, translation1)
