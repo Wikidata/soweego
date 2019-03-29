@@ -97,7 +97,7 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
     if not response_body:
         return ''
 
-    # Each bucket is composed of of different entities.
+    # Each bucket is composed of different entities.
     # In this list we'll keep track of the results
     # when processing each of them
     bucket_results = []
