@@ -2,13 +2,6 @@
 # -*- coding: utf-8 -*-
 
 """Supervised linking."""
-
-__author__ = 'Marco Fossati'
-__email__ = 'fossati@spaziodati.eu'
-__version__ = '1.0'
-__license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2018, Hjfocs'
-
 import logging
 import os
 
@@ -21,6 +14,12 @@ from soweego.commons import constants, data_gathering, target_database
 from soweego.ingestor import wikidata_bot
 from soweego.linker import blocking, workflow
 
+__author__ = 'Marco Fossati'
+__email__ = 'fossati@spaziodati.eu'
+__version__ = '1.0'
+__license__ = 'GPL-3.0'
+__copyright__ = 'Copyleft 2018, Hjfocs'
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -29,8 +28,10 @@ LOGGER = logging.getLogger(__name__)
 @click.argument('target', type=click.Choice(target_database.available_targets()))
 @click.argument('target_type', type=click.Choice(target_database.available_types()))
 @click.option('--upload/--no-upload', default=False, help='Upload links to Wikidata. Default: no.')
-@click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
-@click.option('-t', '--threshold', default=constants.CONFIDENCE_THRESHOLD, help="Probability score threshold, default: 0.5.")
+@click.option('--sandbox/--no-sandbox', default=False,
+              help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
+@click.option('-t', '--threshold', default=constants.CONFIDENCE_THRESHOLD,
+              help="Probability score threshold, default: 0.5.")
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER,
               help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER)
 def cli(target, target_type, classifier, upload, sandbox, threshold, dir_io):
@@ -49,6 +50,7 @@ def cli(target, target_type, classifier, upload, sandbox, threshold, dir_io):
     for chunk in execute(target, target_type, model_path, threshold, dir_io):
         if upload:
             _upload(chunk, target, sandbox)
+
         chunk.to_csv(os.path.join(dir_io, constants.LINKER_RESULT %
                                   (target, target_type, classifier)), mode='a', header=True)
 
@@ -60,7 +62,6 @@ def _upload(predictions, catalog, sandbox):
 
 
 def execute(catalog, entity, model, threshold, dir_io):
-
     wd_reader = workflow.build_wikidata(
         'classification', catalog, entity, dir_io)
     wd_generator = workflow.preprocess_wikidata('classification', wd_reader)

@@ -18,14 +18,13 @@ from typing import Iterable
 
 import regex
 from pandas import read_sql
-from sqlalchemy import or_
-from sqlalchemy.orm.query import Query
-
 from soweego.commons import constants, target_database, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer import models
 from soweego.linker import workflow
 from soweego.wikidata import api_requests, sparql_queries, vocabulary
+from sqlalchemy import or_
+from sqlalchemy.orm.query import Query
 
 LOGGER = logging.getLogger(__name__)
 
@@ -59,7 +58,7 @@ def gather_target_metadata(entity_type, catalog):
 
 
 def tokens_fulltext_search(target_entity: constants.DB_ENTITY, boolean_mode: bool, tokens: Iterable[str],
-                           where_clause: filter = None, limit: int = 10) -> Iterable[constants.DB_ENTITY]:
+                           where_clause=None, limit: int = 10) -> Iterable[constants.DB_ENTITY]:
     if issubclass(target_entity, models.base_entity.BaseEntity):
         column = target_entity.name_tokens
     elif issubclass(target_entity, models.base_link_entity.BaseLinkEntity):
@@ -149,7 +148,6 @@ def gather_target_dataset(goal, entity_type, catalog, identifiers):
     base, link, nlp = target_database.get_entity(catalog, entity_type), target_database.get_link_entity(
         catalog, entity_type), target_database.get_nlp_entity(catalog, entity_type)
 
-    
     LOGGER.info(
         'Gathering %s %s for the linker ...', catalog, goal)
 
@@ -170,7 +168,8 @@ def gather_target_dataset(goal, entity_type, catalog, identifiers):
         query = query.outerjoin(tb, base.catalog_id == tb.catalog_id)
 
     # finally, add the filter condition to the query
-    query = query.filter(base.catalog_id.in_(identifiers)).enable_eagerloads(False)
+    query = query.filter(base.catalog_id.in_(
+        identifiers)).enable_eagerloads(False)
 
     statement = query.statement
     LOGGER.debug('SQL query to be fired: %s', statement)

@@ -23,7 +23,7 @@ class BaseEntity(AbstractConcreteBase, BASE):
     # Catalog identifier, indexed
     catalog_id = Column(String(50), nullable=False, index=True)
     # Full name
-    name = Column(String(255), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
     # Tokenized full name, can be null. See text_utils#tokenize
     name_tokens = Column(String(255))
     # Date of birth
@@ -39,8 +39,6 @@ class BaseEntity(AbstractConcreteBase, BASE):
     @declared_attr
     def __table_args__(cls):
         return (
-            Index('ftix_name_%s' % cls.__tablename__,
-                  "name", mysql_prefix="FULLTEXT"),
             Index('ftix_name_tokens_%s' % cls.__tablename__,
                   "name_tokens", mysql_prefix="FULLTEXT"),
             {'mysql_charset': 'utf8mb4'}

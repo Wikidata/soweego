@@ -17,11 +17,11 @@ import os
 from multiprocessing import cpu_count
 from typing import Generator, Tuple
 
+from numpy import nan
+
 import pandas as pd
 import recordlinkage as rl
-from numpy import nan
 from pandas.io.json.json import JsonReader
-
 from soweego.commons import (constants, data_gathering, target_database,
                              text_utils, url_utils)
 from soweego.commons.logging import log_dataframe_info
