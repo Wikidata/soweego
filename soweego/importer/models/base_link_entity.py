@@ -9,8 +9,7 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
-
-from sqlalchemy import Boolean, Column, Index, Integer, String
+from sqlalchemy import Boolean, Column, Index, Integer, String, Text
 from sqlalchemy.ext.declarative import (AbstractConcreteBase, declarative_base,
                                         declared_attr)
 
@@ -24,11 +23,11 @@ class BaseLinkEntity(AbstractConcreteBase, BASE):
     # Catalog identifier of the entity having the link, indexed
     catalog_id = Column(String(50), nullable=False, index=True)
     # Full URL
-    url = Column(String(255))
+    url = Column(Text)
     # Whether the URL is a Wiki link
     is_wiki = Column(Boolean)
     # Tokenized URL
-    url_tokens = Column(String(255))
+    url_tokens = Column(Text)
 
     # Full-text index over 'url_tokens'
     @declared_attr
