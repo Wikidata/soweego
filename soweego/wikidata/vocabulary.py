@@ -78,7 +78,6 @@ TALENT_AGENT = 'Q1344174'
 VISUAL_EFFECTS_ARTIST = 'Q1224742'
 
 
-
 # Target catalogs helper dictionary
 CATALOG_MAPPING = {
     'discogs': {
@@ -134,7 +133,8 @@ LINKER_PIDS = {
     BIRTH_NAME: 'birth_name',
     FAMILY_NAME: 'family_name',
     GIVEN_NAME: 'given_name',
-    PSEUDONYM: 'pseudonym'
+    PSEUDONYM: 'pseudonym',
+    OCCUPATION: 'occupations'
 }
 
 # Music domain properties for linking

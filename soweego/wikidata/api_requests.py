@@ -79,13 +79,20 @@ def _lookup_label(item_value):
     if not labels:
         LOGGER.info('No label for %s', item_value)
         return None
+
     return _return_monolingual_strings(item_value, labels)
 
 
-def _pall_process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_and_tids,
-                         no_labels_count, no_aliases_count, no_descriptions_count,
-                         no_sitelinks_count, no_links_count, no_ext_ids_count, no_claims_count) -> str:
+def _parallel_bucket_processing(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_and_tids,
+                                no_labels_count, no_aliases_count, no_descriptions_count,
+                                no_sitelinks_count, no_links_count, no_ext_ids_count, no_claims_count,
+                                needs_occupations) -> str:
 
+    """
+    This function will be consumed by the `get_data_for_linker`
+    function in this module. It allows the buckets coming from
+    wikidata to be processed in parallel
+    """
     response_body = _make_request(bucket, request_params)
 
     if not response_body:
@@ -160,14 +167,14 @@ def _pall_process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, 
 
         # Expected claims
         to_write.update(_return_claims_for_linker(
-            qid, claims, no_claims_count))
+            qid, claims, no_claims_count, needs_occupations))
 
         bucket_results.append(json.dumps(to_write, ensure_ascii=False) + '\n')
 
     return ''.join(bucket_results)
 
 
-def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> None:
+def get_data_for_linker(catalog: str, qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> None:
     no_labels_count = 0
     no_aliases_count = 0
     no_descriptions_count = 0
@@ -179,6 +186,7 @@ def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fil
     qid_buckets, request_params = _prepare_request(
         qids, 'labels|aliases|descriptions|sitelinks|claims')
 
+    needs_occupations = catalog in constants.REQUIRE_OCCUPATIONS
     pool_function = partial(_pall_process_bucket,
                             request_params=request_params,
                             url_pids=url_pids,
@@ -190,7 +198,8 @@ def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fil
                             no_sitelinks_count=no_sitelinks_count,
                             no_links_count=no_links_count,
                             no_ext_ids_count=no_ext_ids_count,
-                            no_claims_count=no_claims_count,)
+                            no_claims_count=no_claims_count,
+                            needs_occupations=needs_occupations)
 
     with Pool() as pool:
         for processed_bucket in pool.imap_unordered(pool_function,
@@ -324,30 +333,49 @@ def _return_third_party_urls(qid, claims, url_pids, no_count):
     return to_return
 
 
-def _return_claims_for_linker(qid, claims, no_count):
+def _return_claims_for_linker(qid, claims, no_count, need_occupations):
     to_return = defaultdict(set)
     expected_pids = set(vocabulary.LINKER_PIDS.keys())
+
+    if not need_occupations:
+        expected_pids.remove(vocabulary.OCCUPATION)
+
     available = expected_pids.intersection(claims.keys())
     if available:
         LOGGER.debug('Available claim PIDs for %s: %s', qid, available)
         for pid in available:
             for pid_claim in claims[pid]:
+
                 value = _extract_value_from_claim(pid_claim, pid, qid)
                 if not value:
                     continue
+
                 pid_label = vocabulary.LINKER_PIDS.get(pid)
+
                 if not pid_label:
                     LOGGER.critical('PID label lookup failed: %s. The PID should be one of %s',
                                     pid, expected_pids)
                     raise ValueError('PID label lookup failed: %s. The PID should be one of %s' % (
                         pid, expected_pids))
-                parsed_value = parse_wikidata_value(value)
+
+                if pid == vocabulary.OCCUPATION:
+                    # for occupations we only need their QID
+                    # so we add it to `to_return` and continue,
+                    # since we don't need to extract labels
+                    parsed_value = value.get('id')
+
+                else:
+                    parsed_value = parse_wikidata_value(value)
+
                 if not parsed_value:
                     continue
+
                 if isinstance(parsed_value, set):  # Labels
                     to_return[pid_label].update(parsed_value)
+
                 else:
                     to_return[pid_label].add(parsed_value)
+
     else:
         LOGGER.debug('No %s expected claims for %s', expected_pids, qid)
         no_count += 1
@@ -687,10 +715,3 @@ def _make_buckets(qids):
     LOGGER.info('Made %d buckets of size %d out of %d QIDs to comply with the Wikidata API limits',
                 len(buckets), BUCKET_SIZE, len(qids))
     return buckets
-
-
-if __name__ == "__main__":
-    import io
-    # def get_data_for_linker(qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> Generator[tuple]:
-    get_data_for_linker(
-        set(['Q1409', 'Q1405', 'Q1407']), set(), dict(), io.StringIO(), dict())

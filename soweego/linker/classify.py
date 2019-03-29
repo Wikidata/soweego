@@ -2,6 +2,17 @@
 # -*- coding: utf-8 -*-
 
 """Supervised linking."""
+import logging
+import os
+
+import click
+import recordlinkage as rl
+from numpy import full
+from sklearn.externals import joblib
+
+from soweego.commons import constants, data_gathering, target_database
+from soweego.ingestor import wikidata_bot
+from soweego.linker import blocking, workflow
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -9,37 +20,39 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
-import logging
-import os
-
-import click
-import recordlinkage as rl
-from sklearn.externals import joblib
-
-from soweego.commons import constants, data_gathering, target_database
-from soweego.ingestor import wikidata_bot
-from soweego.linker import blocking, workflow
-
 LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
+@click.argument('classifier', type=click.Choice(constants.CLASSIFIERS))
 @click.argument('target', type=click.Choice(target_database.available_targets()))
 @click.argument('target_type', type=click.Choice(target_database.available_types()))
-@click.argument('model', type=click.Path(exists=True, dir_okay=False, writable=False))
 @click.option('--upload/--no-upload', default=False, help='Upload links to Wikidata. Default: no.')
-@click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
-@click.option('-t', '--threshold', default=constants.CONFIDENCE_THRESHOLD, help="Probability score threshold, default: 0.5.")
+@click.option('--sandbox/--no-sandbox', default=False,
+              help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
+@click.option('-t', '--threshold', default=constants.CONFIDENCE_THRESHOLD,
+              help="Probability score threshold, default: 0.5.")
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER,
               help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER)
-def cli(target, target_type, model, upload, sandbox, threshold, dir_io):
+def cli(target, target_type, classifier, upload, sandbox, threshold, dir_io):
     """Run a probabilistic linker."""
 
-    for chunk in execute(target, target_type, model, threshold, dir_io):
+    # load model from the specified classifier+target+target_type
+    model_path = os.path.join(dir_io, constants.LINKER_MODEL %
+                              (target, target_type, classifier))
+
+    # ensure that model exists
+    if not os.path.isfile(model_path):
+        err_msg = 'No classifier model found at path: %s ' % model_path
+        LOGGER.critical('File does not exist - ' + err_msg)
+        raise FileExistsError(err_msg)
+
+    for chunk in execute(target, target_type, model_path, threshold, dir_io):
         if upload:
             _upload(chunk, target, sandbox)
+
         chunk.to_csv(os.path.join(dir_io, constants.LINKER_RESULT %
-                                  (target, target_type, model)), mode='a', header=True)
+                                  (target, target_type, classifier)), mode='a', header=True)
 
 
 def _upload(predictions, catalog, sandbox):
@@ -49,7 +62,6 @@ def _upload(predictions, catalog, sandbox):
 
 
 def execute(catalog, entity, model, threshold, dir_io):
-
     wd_reader = workflow.build_wikidata(
         'classification', catalog, entity, dir_io)
     wd_generator = workflow.preprocess_wikidata('classification', wd_reader)
@@ -77,7 +89,35 @@ def execute(catalog, entity, model, threshold, dir_io):
         feature_vectors = workflow.extract_features(
             samples, wd_chunk, target_chunk, features_path)
 
-        predictions = classifier.prob(feature_vectors)
+        _add_missing_feature_columns(classifier, feature_vectors)
+
+        if isinstance(classifier, rl.NaiveBayesClassifier):
+            predictions = classifier.prob(feature_vectors)
+        elif isinstance(classifier, rl.SVMClassifier):
+            predictions = classifier.predict(feature_vectors)
+        else:
+            err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
+            LOGGER.critical(err_msg)
+            raise ValueError(err_msg)
 
         LOGGER.info('Chunk %d classified', i)
         yield predictions[predictions >= threshold]
+
+
+def _add_missing_feature_columns(classifier, feature_vectors):
+    if isinstance(classifier, rl.NaiveBayesClassifier):
+        expected_features = len(classifier.kernel._binarizers)
+    elif isinstance(classifier, rl.SVMClassifier):
+        expected_features = classifier.kernel.coef_.shape[1]
+    else:
+        err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
+        LOGGER.critical(err_msg)
+        raise ValueError(err_msg)
+
+    actual_features = feature_vectors.shape[1]
+    if expected_features != actual_features:
+        LOGGER.info('Feature vectors have %d features, but %s expected %d. Will add missing ones',
+                    actual_features, classifier.__class__.__name__, expected_features)
+        for i in range(expected_features - actual_features):
+            feature_vectors[f'missing_{i}'] = full(
+                len(feature_vectors), constants.FEATURE_MISSING_VALUE)

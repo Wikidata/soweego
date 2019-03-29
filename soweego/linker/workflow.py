@@ -17,15 +17,17 @@ import os
 from multiprocessing import cpu_count
 from typing import Generator, Tuple
 
+from numpy import nan
+
 import pandas as pd
 import recordlinkage as rl
-from numpy import nan
 from pandas.io.json.json import JsonReader
-
 from soweego.commons import (constants, data_gathering, target_database,
                              text_utils, url_utils)
 from soweego.commons.logging import log_dataframe_info
-from soweego.linker.feature_extraction import StringList, UrlList, DateCompare, SimilarTokens
+from soweego.linker.feature_extraction import (DateCompare, OccupationQidSet,
+                                               SimilarTokens, StringList,
+                                               UrlList)
 from soweego.wikidata import api_requests, vocabulary
 
 LOGGER = logging.getLogger(__name__)
@@ -71,8 +73,8 @@ def build_wikidata(goal, catalog, entity, dir_io):
 
         url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
         with gzip.open(wd_io_path, 'wt') as wd_io:
-            api_requests.get_data_for_linker(
-                qids, url_pids, ext_id_pids_to_urls, wd_io, qids_and_tids)
+            api_requests.get_data_for_linker(catalog,
+                                             qids, url_pids, ext_id_pids_to_urls, wd_io, qids_and_tids)
 
     wd_df_reader = pd.read_json(wd_io_path, lines=True, chunksize=1000)
 
@@ -123,7 +125,7 @@ def train_test_build(catalog, entity, dir_io):
 
 
 def preprocess(goal: str, wikidata_reader: JsonReader, target_reader: JsonReader) -> Tuple[
-    Generator[pd.DataFrame, None, None], Generator[pd.DataFrame, None, None]]:
+        Generator[pd.DataFrame, None, None], Generator[pd.DataFrame, None, None]]:
     handle_goal(goal)
     return preprocess_wikidata(goal, wikidata_reader), preprocess_target(goal, target_reader)
 
@@ -141,14 +143,7 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
         return (col in wikidata.columns) and (col in target.columns)
 
     compare = rl.Compare(n_jobs=cpu_count())
-    # TODO similar name match as a feature
     # TODO feature engineering on more fields
-    # wikidata columns = Index(['tid', 'label', 'alias', 'description', 'url', 'given_name',
-    #    'date_of_birth', 'date_of_death', 'place_of_death', 'birth_name',
-    #    'place_of_birth', 'sex_or_gender', 'family_name', 'pseudonym'],
-    # discogs columns = Index(['description_tokens', 'name_tokens', 'description', 'url', 'url_tokens',
-    #    'name', 'born', 'born_precision', 'real_name', 'is_wiki',
-    #    'data_quality', 'died', 'died_precision', 'identifier'],
 
     # Feature 1: exact match on URLs
     if in_both_datasets(constants.URL):
@@ -158,21 +153,30 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
     if in_both_datasets(constants.DATE_OF_BIRTH):
         compare.add(DateCompare(constants.DATE_OF_BIRTH,
                                 constants.DATE_OF_BIRTH, label='date_of_birth'))
-
     if in_both_datasets(constants.DATE_OF_DEATH):
         compare.add(DateCompare(constants.DATE_OF_DEATH,
                                 constants.DATE_OF_DEATH, label='date_of_death'))
 
-    # Feature 3: Levenshtein distance on names and similar tokens
+    # Feature 3: Levenshtein distance on name tokens
     if in_both_datasets(constants.NAME_TOKENS):
         compare.add(StringList(constants.NAME_TOKENS,
                                constants.NAME_TOKENS, label='name_levenshtein'))
-        compare.add(SimilarTokens(constants.NAME_TOKENS, constants.NAME_TOKENS, label='similar_name_tokens'))
 
-    # Feature 4: cosine similarity on descriptions
+    # Feature 4: similar name tokens
+        compare.add(SimilarTokens(constants.NAME_TOKENS,
+                                  constants.NAME_TOKENS, label='similar_name_tokens'))
+
+    # Feature 5: cosine similarity on descriptions
     if in_both_datasets(constants.DESCRIPTION):
         compare.add(StringList(constants.DESCRIPTION, constants.DESCRIPTION,
                                algorithm='cosine', analyzer='soweego', label='description_cosine'))
+
+    # Feature 6: occupation QIDs
+    occupations_col_name = vocabulary.LINKER_PIDS[vocabulary.OCCUPATION]
+    if in_both_datasets(occupations_col_name):
+        compare.add(OccupationQidSet(occupations_col_name,
+                                     occupations_col_name,
+                                     label='occupation_qids'))
 
     feature_vectors = compare.compute(candidate_pairs, wikidata, target)
     pd.to_pickle(feature_vectors, path_io)
@@ -187,8 +191,11 @@ def init_model(classifier, binarize):
     if classifier is rl.NaiveBayesClassifier:
         model = classifier(binarize=binarize)
     elif classifier is rl.SVMClassifier:
-        # TODO implement SVM
-        raise NotImplementedError
+        model = classifier()
+    else:
+        err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
+        LOGGER.critical(err_msg)
+        raise ValueError(err_msg)
     return model
 
 
@@ -214,8 +221,9 @@ def preprocess_wikidata(goal, wikidata_reader):
 
         # 4. Tokenize & join strings lists columns
         for column in (constants.NAME, constants.PSEUDONYM):
-            chunk[f'{column}_tokens'] = chunk[column].apply(
-                tokenize_values, args=(text_utils.tokenize,))
+            if chunk.get(column) is not None:
+                chunk[f'{column}_tokens'] = chunk[column].apply(
+                    tokenize_values, args=(text_utils.tokenize,))
 
         # 5. Tokenize & join URLs lists
         chunk[constants.URL_TOKENS] = chunk[constants.URL].apply(
@@ -287,7 +295,6 @@ def preprocess_target(goal, target_reader):
     target = target.groupby(constants.TID).agg(lambda x: list(set(x)))
     log_dataframe_info(
         LOGGER, target, f"Data indexed and aggregated on '{constants.TID}' column")
-
     # 6. Shared preprocessing
     target = _shared_preprocessing(target, will_handle_dates)
 
@@ -298,6 +305,8 @@ def preprocess_target(goal, target_reader):
 def _shared_preprocessing(df, will_handle_dates):
     LOGGER.info('Joining descriptions ...')
     _join_descriptions(df)
+
+    _occupations_to_set(df)
 
     if will_handle_dates:
         LOGGER.info('Handling dates ...')
@@ -403,6 +412,34 @@ def _pull_out_from_single_value_list(df):
         cell, list) and len(cell) == 1 else cell)
     log_dataframe_info(LOGGER, df, 'Stringified lists with a single value')
     return df
+
+
+def _occupations_to_set(df):
+    col_name = vocabulary.LINKER_PIDS[vocabulary.OCCUPATION]
+
+    if col_name not in df.columns:
+        LOGGER.info("No '%s' column in DataFrame, won't handle them", col_name)
+        return
+
+    def to_set(itm):
+        # if it is an empty array (from source), or an
+        # empty string (from target)
+        if not itm:
+            return set()
+
+        # when coming from the DB, the occupations for target
+        # are an array with only one element which is a string
+        # of space separated occupations (or an empty string
+        # in case there are no occupations)
+        if len(itm) == 1:
+
+            # get inner occupation ids and remove empty occupations
+            itm = [x for x in itm[0].split() if x]
+
+        return set(itm)
+
+    LOGGER.info('Converting list of occupations into set ...')
+    df[col_name] = df[col_name].apply(to_set)
 
 
 def _join_descriptions(df):
