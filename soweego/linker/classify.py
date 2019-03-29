@@ -6,11 +6,10 @@ import logging
 import os
 
 import click
-from numpy import full
-
-import ipdb
 import recordlinkage as rl
+from numpy import full
 from sklearn.externals import joblib
+
 from soweego.commons import constants, data_gathering, target_database
 from soweego.ingestor import wikidata_bot
 from soweego.linker import blocking, workflow
@@ -20,7 +19,6 @@ __email__ = 'fossati@spaziodati.eu'
 __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -54,7 +52,7 @@ def cli(target, target_type, classifier, upload, sandbox, threshold, dir_io):
             _upload(chunk, target, sandbox)
 
         chunk.to_csv(os.path.join(dir_io, constants.LINKER_RESULT %
-                                  (target, target_type, os.path.basename(model))), mode='a', header=True)
+                                  (target, target_type, os.path.basename(model_path))), mode='a', header=True)
 
 
 def _upload(predictions, catalog, sandbox):
