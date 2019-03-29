@@ -93,9 +93,12 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
     wikidata to be processed in parallel.
     """
     response_body = _make_request(bucket, request_params)
-
+    
+    # If there is no response then
+    # we treat it as if there were no entities in
+    # the bucket, and return an empty list
     if not response_body:
-        return ''
+        return [] 
 
     # Each bucket is composed of different entities.
     # In this list we'll keep track of the results
