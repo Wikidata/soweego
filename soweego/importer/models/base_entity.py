@@ -39,8 +39,6 @@ class BaseEntity(AbstractConcreteBase, BASE):
     @declared_attr
     def __table_args__(cls):
         return (
-            Index('ftix_name_%s' % cls.__tablename__,
-                  "name", mysql_prefix="FULLTEXT"),
             Index('ftix_name_tokens_%s' % cls.__tablename__,
                   "name_tokens", mysql_prefix="FULLTEXT"),
             {'mysql_charset': 'utf8mb4'}
