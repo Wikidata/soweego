@@ -18,7 +18,7 @@ import pickle
 from collections import defaultdict
 from functools import lru_cache, partial
 from multiprocessing.pool import Pool
-from typing import Generator, TextIO
+from typing import Dict, Generator, List, TextIO
 from urllib.parse import urlunsplit
 
 import requests
@@ -86,7 +86,7 @@ def _lookup_label(item_value):
 def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_and_tids,
                     no_labels_count, no_aliases_count, no_descriptions_count,
                     no_sitelinks_count, no_links_count, no_ext_ids_count, no_claims_count,
-                    needs_occupations) -> str:
+                    needs_occupations) -> List[Dict]:
     """
     This function will be consumed by the `get_data_for_linker`
     function in this module. It allows the buckets coming from
