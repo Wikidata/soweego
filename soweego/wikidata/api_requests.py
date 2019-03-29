@@ -83,25 +83,28 @@ def _lookup_label(item_value):
     return _return_monolingual_strings(item_value, labels)
 
 
-def _parallel_bucket_processing(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_and_tids,
-                                no_labels_count, no_aliases_count, no_descriptions_count,
-                                no_sitelinks_count, no_links_count, no_ext_ids_count, no_claims_count,
-                                needs_occupations) -> str:
-
+def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_and_tids,
+                    no_labels_count, no_aliases_count, no_descriptions_count,
+                    no_sitelinks_count, no_links_count, no_ext_ids_count, no_claims_count,
+                    needs_occupations) -> str:
     """
     This function will be consumed by the `get_data_for_linker`
     function in this module. It allows the buckets coming from
-    wikidata to be processed in parallel
+    wikidata to be processed in parallel.
     """
     response_body = _make_request(bucket, request_params)
 
     if not response_body:
         return ''
 
+    # Each bucket is composed of of different entities.
+    # In this list we'll keep track of the results
+    # when processing each of them
     bucket_results = []
 
     for qid in response_body['entities']:
         to_write = {}
+
         # Stick target ids if given
         if qids_and_tids:
             tids = qids_and_tids.get(qid)
@@ -169,9 +172,10 @@ def _parallel_bucket_processing(bucket, request_params, url_pids, ext_id_pids_to
         to_write.update(_return_claims_for_linker(
             qid, claims, no_claims_count, needs_occupations))
 
-        bucket_results.append(json.dumps(to_write, ensure_ascii=False) + '\n')
+        # add result to `bucket_results`
+        bucket_results.append(to_write)
 
-    return ''.join(bucket_results)
+    return bucket_results
 
 
 def get_data_for_linker(catalog: str, qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> None:
@@ -186,8 +190,17 @@ def get_data_for_linker(catalog: str, qids: set, url_pids: set, ext_id_pids_to_u
     qid_buckets, request_params = _prepare_request(
         qids, 'labels|aliases|descriptions|sitelinks|claims')
 
+    # check if for this specific catalog
+    # we need to get the occupations
     needs_occupations = catalog in constants.REQUIRE_OCCUPATIONS
-    pool_function = partial(_pall_process_bucket,
+
+    # create a partial function. Here all parameters, except
+    # for the actual `bucket` are given to `_process_bucket`.
+    # This means that when we call `pool_function` we only need
+    # to give it one parameter, which is the bucket.
+    # This is done so that we can easily map the list of
+    # buckets with this function using `multiprocessing.Pool`
+    pool_function = partial(_process_bucket,
                             request_params=request_params,
                             url_pids=url_pids,
                             ext_id_pids_to_urls=ext_id_pids_to_urls,
@@ -201,11 +214,20 @@ def get_data_for_linker(catalog: str, qids: set, url_pids: set, ext_id_pids_to_u
                             no_claims_count=no_claims_count,
                             needs_occupations=needs_occupations)
 
+    # create a pool of threads and map the list of buckets using `pool_function`
     with Pool() as pool:
+
+        # `processed_bucket` will be a list of dicts, where each dict
+        # is a processed entity from the bucket
         for processed_bucket in pool.imap_unordered(pool_function,
                                                     tqdm(qid_buckets, total=len(qid_buckets))):
 
-            fileout.write(processed_bucket)
+            # join results into a string so that we can write them to
+            # the dump file
+            to_write = ''.join(json.dumps(result, ensure_ascii=False) + '\n' for
+                               result in processed_bucket)
+
+            fileout.write(to_write)
             fileout.flush()
 
     LOGGER.info('QIDs: got %d with no labels, %d with no aliases, %d with no descriptions, %d with no sitelinks, %d with no third-party links, %d with no external ID links, %d with no expected claims',
