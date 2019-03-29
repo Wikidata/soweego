@@ -50,7 +50,7 @@ def cli(target, target_type, classifier, upload, sandbox, threshold, dir_io):
         if upload:
             _upload(chunk, target, sandbox)
         chunk.to_csv(os.path.join(dir_io, constants.LINKER_RESULT %
-                                  (target, target_type, 'nb')), mode='a', header=True)
+                                  (target, target_type, classifier)), mode='a', header=True)
 
 
 def _upload(predictions, catalog, sandbox):
