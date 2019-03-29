@@ -16,8 +16,9 @@ import logging
 import os
 import pickle
 from collections import defaultdict
-from functools import lru_cache
-from typing import Generator, TextIO
+from functools import lru_cache, partial
+from multiprocessing.pool import Pool
+from typing import Dict, Generator, List, TextIO
 from urllib.parse import urlunsplit
 
 import requests
@@ -78,7 +79,106 @@ def _lookup_label(item_value):
     if not labels:
         LOGGER.info('No label for %s', item_value)
         return None
+
     return _return_monolingual_strings(item_value, labels)
+
+
+def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_and_tids,
+                    no_labels_count, no_aliases_count, no_descriptions_count,
+                    no_sitelinks_count, no_links_count, no_ext_ids_count, no_claims_count,
+                    needs_occupations) -> List[Dict]:
+    """
+    This function will be consumed by the `get_data_for_linker`
+    function in this module. It allows the buckets coming from
+    wikidata to be processed in parallel.
+    """
+    response_body = _make_request(bucket, request_params)
+    
+    # If there is no response then
+    # we treat it as if there were no entities in
+    # the bucket, and return an empty list
+    if not response_body:
+        return [] 
+
+    # Each bucket is composed of different entities.
+    # In this list we'll keep track of the results
+    # when processing each of them
+    bucket_results = []
+
+    for qid in response_body['entities']:
+        to_write = {}
+
+        # Stick target ids if given
+        if qids_and_tids:
+            tids = qids_and_tids.get(qid)
+            if tids:
+                to_write[constants.TID] = list(tids[constants.TID])
+
+        entity = response_body['entities'][qid]
+        claims = entity.get('claims')
+        if not claims:
+            LOGGER.info('Skipping QID with no claims: %s', qid)
+            no_claims_count += 1
+            continue
+
+        # Labels
+        labels = entity.get('labels')
+        if not labels:
+            LOGGER.info('Skipping QID with no labels: %s', qid)
+            no_labels_count += 1
+            continue
+        to_write[constants.QID] = qid
+        to_write[constants.NAME] = _return_monolingual_strings(
+            qid, labels)
+
+        # Aliases
+        aliases = entity.get('aliases')
+        if aliases:
+            # Merge them into labels
+            to_write[constants.NAME].update(
+                _return_aliases(qid, aliases))
+        else:
+            LOGGER.debug('%s has no aliases', qid)
+            no_aliases_count += 1
+        # Convert set to list for JSON serialization
+        to_write[constants.NAME] = list(to_write[constants.NAME])
+
+        # Descriptions
+        descriptions = entity.get('descriptions')
+        if descriptions:
+            to_write[constants.DESCRIPTION] = list(
+                _return_monolingual_strings(qid, descriptions))
+        else:
+            LOGGER.debug('%s has no descriptions', qid)
+            no_descriptions_count += 1
+
+        # Sitelinks
+        sitelinks = entity.get('sitelinks')
+        if sitelinks:
+            to_write[constants.URL] = _return_sitelinks(sitelinks)
+        else:
+            LOGGER.debug('%s has no sitelinks', qid)
+            to_write[constants.URL] = set()
+            no_sitelinks_count += 1
+
+        # Third-party URLs
+        to_write[constants.URL].update(
+            _return_third_party_urls(qid, claims, url_pids, no_links_count))
+
+        # External ID URLs
+        to_write[constants.URL].update(_return_ext_id_urls(
+            qid, claims, ext_id_pids_to_urls, no_ext_ids_count))
+        # Convert set to list for JSON serialization
+        to_write[constants.URL] = list(to_write[constants.URL])
+
+        # Expected claims
+        to_write.update(_return_claims_for_linker(
+            qid, claims, no_claims_count, needs_occupations))
+
+        # add result to `bucket_results`
+        bucket_results.append(to_write)
+
+    return bucket_results
 
 
 def get_data_for_linker(catalog: str, qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> None:
@@ -92,82 +192,45 @@ def get_data_for_linker(catalog: str, qids: set, url_pids: set, ext_id_pids_to_u
 
     qid_buckets, request_params = _prepare_request(
         qids, 'labels|aliases|descriptions|sitelinks|claims')
-    for bucket in tqdm(qid_buckets):
-        response_body = _make_request(bucket, request_params)
-        if not response_body:
-            continue
 
-        for qid in response_body['entities']:
-            to_write = {}
-            # Stick target ids if given
-            if qids_and_tids:
-                tids = qids_and_tids.get(qid)
-                if tids:
-                    to_write[constants.TID] = list(tids[constants.TID])
+    # check if for this specific catalog
+    # we need to get the occupations
+    needs_occupations = catalog in constants.REQUIRE_OCCUPATIONS
 
-            entity = response_body['entities'][qid]
-            claims = entity.get('claims')
-            if not claims:
-                LOGGER.info('Skipping QID with no claims: %s', qid)
-                no_claims_count += 1
-                continue
+    # create a partial function. Here all parameters, except
+    # for the actual `bucket` are given to `_process_bucket`.
+    # This means that when we call `pool_function` we only need
+    # to give it one parameter, which is the bucket.
+    # This is done so that we can easily map the list of
+    # buckets with this function using `multiprocessing.Pool`
+    pool_function = partial(_process_bucket,
+                            request_params=request_params,
+                            url_pids=url_pids,
+                            ext_id_pids_to_urls=ext_id_pids_to_urls,
+                            qids_and_tids=qids_and_tids,
+                            no_labels_count=no_labels_count,
+                            no_aliases_count=no_aliases_count,
+                            no_descriptions_count=no_descriptions_count,
+                            no_sitelinks_count=no_sitelinks_count,
+                            no_links_count=no_links_count,
+                            no_ext_ids_count=no_ext_ids_count,
+                            no_claims_count=no_claims_count,
+                            needs_occupations=needs_occupations)
 
-            # Labels
-            labels = entity.get('labels')
-            if not labels:
-                LOGGER.info('Skipping QID with no labels: %s', qid)
-                no_labels_count += 1
-                continue
-            to_write[constants.QID] = qid
-            to_write[constants.NAME] = _return_monolingual_strings(
-                qid, labels)
+    # create a pool of threads and map the list of buckets using `pool_function`
+    with Pool() as pool:
 
-            # Aliases
-            aliases = entity.get('aliases')
-            if aliases:
-                # Merge them into labels
-                to_write[constants.NAME].update(
-                    _return_aliases(qid, aliases))
-            else:
-                LOGGER.debug('%s has no aliases', qid)
-                no_aliases_count += 1
-            # Convert set to list for JSON serialization
-            to_write[constants.NAME] = list(to_write[constants.NAME])
+        # `processed_bucket` will be a list of dicts, where each dict
+        # is a processed entity from the bucket
+        for processed_bucket in pool.imap_unordered(pool_function,
+                                                    tqdm(qid_buckets, total=len(qid_buckets))):
 
-            # Descriptions
-            descriptions = entity.get('descriptions')
-            if descriptions:
-                to_write[constants.DESCRIPTION] = list(
-                    _return_monolingual_strings(qid, descriptions))
-            else:
-                LOGGER.debug('%s has no descriptions', qid)
-                no_descriptions_count += 1
+            # join results into a string so that we can write them to
+            # the dump file
+            to_write = ''.join(json.dumps(result, ensure_ascii=False) + '\n' for
+                               result in processed_bucket)
 
-            # Sitelinks
-            sitelinks = entity.get('sitelinks')
-            if sitelinks:
-                to_write[constants.URL] = _return_sitelinks(sitelinks)
-            else:
-                LOGGER.debug('%s has no sitelinks', qid)
-                to_write[constants.URL] = set()
-                no_sitelinks_count += 1
-
-            # Third-party URLs
-            to_write[constants.URL].update(
-                _return_third_party_urls(qid, claims, url_pids, no_links_count))
-
-            # External ID URLs
-            to_write[constants.URL].update(_return_ext_id_urls(
-                qid, claims, ext_id_pids_to_urls, no_ext_ids_count))
-            # Convert set to list for JSON serialization
-            to_write[constants.URL] = list(to_write[constants.URL])
-
-            # Expected claims
-            needs_occupations = catalog in constants.REQUIRE_OCCUPATIONS
-            to_write.update(_return_claims_for_linker(
-                qid, claims, no_claims_count, needs_occupations))
-                
-            fileout.write(json.dumps(to_write, ensure_ascii=False) + '\n')
+            fileout.write(to_write)
             fileout.flush()
 
     LOGGER.info('QIDs: got %d with no labels, %d with no aliases, %d with no descriptions, %d with no sitelinks, %d with no third-party links, %d with no external ID links, %d with no expected claims',
@@ -298,7 +361,7 @@ def _return_third_party_urls(qid, claims, url_pids, no_count):
 def _return_claims_for_linker(qid, claims, no_count, need_occupations):
     to_return = defaultdict(set)
     expected_pids = set(vocabulary.LINKER_PIDS.keys())
-    
+
     if not need_occupations:
         expected_pids.remove(vocabulary.OCCUPATION)
 
@@ -307,11 +370,11 @@ def _return_claims_for_linker(qid, claims, no_count, need_occupations):
         LOGGER.debug('Available claim PIDs for %s: %s', qid, available)
         for pid in available:
             for pid_claim in claims[pid]:
-                
+
                 value = _extract_value_from_claim(pid_claim, pid, qid)
                 if not value:
                     continue
-                
+
                 pid_label = vocabulary.LINKER_PIDS.get(pid)
 
                 if not pid_label:
@@ -583,7 +646,10 @@ def get_authenticated_session():
 def _make_request(bucket, params):
     params['ids'] = '|'.join(bucket)
     connection_is_ok = True
-    session = get_authenticated_session()
+
+    session = requests.Session()
+    session.cookies = get_authenticated_session().cookies
+
     while True:
         try:
             response = session.get(WIKIDATA_API_URL, params=params)
