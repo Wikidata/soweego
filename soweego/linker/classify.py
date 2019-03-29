@@ -93,14 +93,29 @@ def execute(catalog, entity, model, threshold, dir_io):
 
         _add_missing_feature_columns(classifier, feature_vectors)
 
-        predictions = classifier.prob(feature_vectors)
+        if isinstance(classifier, rl.NaiveBayesClassifier):
+            predictions = classifier.prob(feature_vectors)
+        elif isinstance(classifier, rl.SVMClassifier):
+            predictions = classifier.predict(feature_vectors)
+        else:
+            err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
+            LOGGER.critical(err_msg)
+            raise ValueError(err_msg)
 
         LOGGER.info('Chunk %d classified', i)
         yield predictions[predictions >= threshold]
 
 
 def _add_missing_feature_columns(classifier, feature_vectors):
-    expected_features = len(classifier.kernel._binarizers)
+    if isinstance(classifier, rl.NaiveBayesClassifier):
+        expected_features = len(classifier.kernel._binarizers)
+    elif isinstance(classifier, rl.SVMClassifier):
+        expected_features = classifier.kernel.coef_.shape[1]
+    else:
+        err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
+        LOGGER.critical(err_msg)
+        raise ValueError(err_msg)
+
     actual_features = feature_vectors.shape[1]
     if expected_features != actual_features:
         LOGGER.info('Feature vectors have %d features, but %s expected %d. Will add missing ones',
