@@ -7,7 +7,8 @@ import os
 
 import click
 import recordlinkage as rl
-from numpy import full
+from numpy import full, nan
+from pandas import DataFrame
 from sklearn.externals import joblib
 
 from soweego.commons import constants, data_gathering, target_database
@@ -100,8 +101,22 @@ def execute(catalog, entity, model, threshold, dir_io):
             LOGGER.critical(err_msg)
             raise ValueError(err_msg)
 
+        # See https://stackoverflow.com/a/18317089/10719765
+        predictions = DataFrame(predictions).apply(
+            _zero_when_different_names, axis=1, args=(wd_chunk, target_chunk))
+
         LOGGER.info('Chunk %d classified', i)
         yield predictions[predictions >= threshold]
+
+
+def _zero_when_different_names(prediction, wikidata, target):
+    qid, tid = prediction.name
+    wd_names = wikidata.loc[qid][constants.NAME]
+    target_names = target.loc[tid][constants.NAME]
+    wd_names = set(wd_names) if isinstance(wd_names, list) else set([wd_names])
+    target_names = set(target_names) if isinstance(
+        target_names, list) else set([target_names])
+    return 0.0 if wd_names.isdisjoint(target_names) else prediction[0]
 
 
 def _add_missing_feature_columns(classifier, feature_vectors):
