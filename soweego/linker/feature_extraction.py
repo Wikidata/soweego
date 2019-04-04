@@ -9,6 +9,7 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+import itertools
 import logging
 from typing import List, Set, Tuple, Union
 
@@ -80,11 +81,6 @@ class StringList(BaseCompareFeature):
 
             scores = []
             source_values, target_values = pair
-            # Paranoid checks to ensure we work on lists
-            if isinstance(source_values, str):
-                source_values = [source_values]
-            if isinstance(target_values, str):
-                target_values = [target_values]
 
             for source in source_values:
                 for target in target_values:
