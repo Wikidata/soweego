@@ -211,34 +211,40 @@ class DateCompare(BaseCompareFeature):
             Returns the most optimistic match
             """
 
-            s_item, t_item = pair
+            s_items, t_items = pair
 
-            # if t_item is NaT then we can't compare, and we skip this pair
-            if pd.isna(t_item):
+            # if t_items or s_items is NaT then we can't compare, and we skip this pair
+            # we check if `items` is list so that we don't encounter the:
+            #   'truth value of an array with more than one element is ambiguous'
+            # error (`pd.isna` is applied elementwise). When any of the `items` is a list
+            # we know that it is also NaN, but we check for it anyway, just to be sure
+            # (and to catch possible bugs if this behavior is changed in the future)
+            if not isinstance(t_items, list) and pd.isna(t_items):
                 LOGGER.debug(
-                    "Can't compare dates, the target value is null. Pair: %s", pair)
+                    "Can't compare dates, the target value is NaN. Pair: %s", pair)
                 return np.nan
 
-            # convert `s_item` to a list if it isn't already
-            if not isinstance(s_item, list):
-                s_item = [s_item]
+            if not isinstance(s_items, list) and pd.isna(s_items):
+                LOGGER.debug(
+                    "Can't compare dates, the source value is NaN. Pair: %s", pair)
+                return np.nan
 
             # will help us to keep track of the best score
             best = 0
 
-            for s_date in s_item:
+            for s_date, t_date in itertools.product(s_items, t_items):
 
                 # if the current s_date is NaT then we can't compare, so we skip it
                 if pd.isna(s_date):
                     LOGGER.debug(
-                        "Can't compare dates, the current Wikidata value is null. Current pair: %s", (s_date, t_item))
+                        "Can't compare dates, the current Wikidata value is null. Current pair: %s", (s_date, t_date))
                     continue
 
                 # get precision number for both dates
                 s_precision = constants.PD_PERIOD_PRECISIONS.index(
                     s_date.freq.name)
                 t_precision = constants.PD_PERIOD_PRECISIONS.index(
-                    t_item.freq.name)
+                    t_date.freq.name)
 
                 # we choose to compare on the lowest precision
                 # since it's the maximum precision on which both
@@ -252,14 +258,14 @@ class DateCompare(BaseCompareFeature):
                 # and the precision that stands for said attribute
                 for min_required_prec, d_attr in enumerate(['year', 'month', 'day', 'hour', 'minute', 'second']):
 
-                    # If both `s_date` and `t_item` have a precision which allows the
+                    # If both `s_date` and `t_date` have a precision which allows the
                     # current attribute to be compared then we do so. If the attribute
                     # matches then we add 1 to `c_r`, if not then we break the loop.
                     # We consider from lowest to highest precision. If a lowest
                     # precision attribute (ie, year) doesn't match then we say that
                     # the dates don't match at all (we don't check if higher precision
                     # attributes match)
-                    if lowest_prec >= min_required_prec and getattr(s_date, d_attr) == getattr(t_item, d_attr):
+                    if lowest_prec >= min_required_prec and getattr(s_date, d_attr) == getattr(t_date, d_attr):
                         c_r += 1
                     else:
                         break
