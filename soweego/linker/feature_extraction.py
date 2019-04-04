@@ -207,34 +207,17 @@ class DateCompare(BaseCompareFeature):
             Returns the most optimistic match
             """
 
+            if _pair_has_any_null(pair):
+                LOGGER.debug(
+                    "Can't compare dates, the one of the values is NaN. Pair: %s", pair)
+                return np.nan
+
             s_items, t_items = pair
-
-            # if t_items or s_items is NaT then we can't compare, and we skip this pair
-            # we check if `items` is list so that we don't encounter the:
-            #   'truth value of an array with more than one element is ambiguous'
-            # error (`pd.isna` is applied elementwise). When any of the `items` is a list
-            # we know that it is also NaN, but we check for it anyway, just to be sure
-            # (and to catch possible bugs if this behavior is changed in the future)
-            if not isinstance(t_items, list) and pd.isna(t_items):
-                LOGGER.debug(
-                    "Can't compare dates, the target value is NaN. Pair: %s", pair)
-                return np.nan
-
-            if not isinstance(s_items, list) and pd.isna(s_items):
-                LOGGER.debug(
-                    "Can't compare dates, the source value is NaN. Pair: %s", pair)
-                return np.nan
 
             # will help us to keep track of the best score
             best = 0
 
             for s_date, t_date in itertools.product(s_items, t_items):
-
-                # if the current s_date is NaT then we can't compare, so we skip it
-                if pd.isna(s_date):
-                    LOGGER.debug(
-                        "Can't compare dates, the current Wikidata value is null. Current pair: %s", (s_date, t_date))
-                    continue
 
                 # get precision number for both dates
                 s_precision = constants.PD_PERIOD_PRECISIONS.index(
