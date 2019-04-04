@@ -314,8 +314,7 @@ class SimilarTokens(BaseCompareFeature):
                     "Can't compare Tokens, the pair contains null values: %s", pair)
                 return np.nan
 
-            source_labels = [pair[0]] if isinstance(pair[0], str) else pair[0]
-            target_labels = [pair[1]] if isinstance(pair[1], str) else pair[1]
+            source_labels, target_labels = pair
 
             first_set = set(source_labels)
             second_set = set()
