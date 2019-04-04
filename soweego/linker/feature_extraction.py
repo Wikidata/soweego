@@ -198,8 +198,8 @@ class DateCompare(BaseCompareFeature):
         # we zip together the source column and the target column so that
         # they're easier to process
         concatenated = pd.Series(list(zip(source_column, target_column)))
-
-        def check_date_equality(pair: Tuple[Union[pd.Period, List[pd.Period]], pd.Period]):
+        
+        def check_date_equality(pair: Tuple[List[pd.Period], List[pd.Period]]):
             """
             Compares a target pd.Period with the source pd.Periods which represent either
             a birth or death date. The source date can be a list of possible dates.
@@ -209,7 +209,7 @@ class DateCompare(BaseCompareFeature):
 
             if _pair_has_any_null(pair):
                 LOGGER.debug(
-                    "Can't compare dates, the one of the values is NaN. Pair: %s", pair)
+                    "Can't compare dates, one of the values is NaN. Pair: %s", pair)
                 return np.nan
 
             s_items, t_items = pair
