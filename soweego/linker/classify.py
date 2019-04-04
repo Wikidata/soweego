@@ -28,6 +28,8 @@ LOGGER = logging.getLogger(__name__)
 @click.argument('classifier', type=click.Choice(constants.CLASSIFIERS))
 @click.argument('target', type=click.Choice(target_database.available_targets()))
 @click.argument('target_type', type=click.Choice(target_database.available_types()))
+@click.option('--name-rule/--no-name-rule', default=False,
+              help='Activate post-classification rule on full names: links with different full names will be filtered. Default: no.')
 @click.option('--upload/--no-upload', default=False, help='Upload links to Wikidata. Default: no.')
 @click.option('--sandbox/--no-sandbox', default=False,
               help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
@@ -35,20 +37,20 @@ LOGGER = logging.getLogger(__name__)
               help="Probability score threshold, default: 0.5.")
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER,
               help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER)
-def cli(target, target_type, classifier, upload, sandbox, threshold, dir_io):
+def cli(classifier, target, target_type, name_rule, upload, sandbox, threshold, dir_io):
     """Run a probabilistic linker."""
 
-    # load model from the specified classifier+target+target_type
+    # Load model from the specified classifier+target+target_type
     model_path = os.path.join(dir_io, constants.LINKER_MODEL %
                               (target, target_type, classifier))
 
-    # ensure that model exists
+    # Ensure that the model exists
     if not os.path.isfile(model_path):
         err_msg = 'No classifier model found at path: %s ' % model_path
         LOGGER.critical('File does not exist - ' + err_msg)
         raise FileExistsError(err_msg)
 
-    for chunk in execute(target, target_type, model_path, threshold, dir_io):
+    for chunk in execute(target, target_type, model_path, name_rule, threshold, dir_io):
         if upload:
             _upload(chunk, target, sandbox)
 
@@ -62,7 +64,7 @@ def _upload(predictions, catalog, sandbox):
     wikidata_bot.add_identifiers(links, catalog, sandbox)
 
 
-def execute(catalog, entity, model, threshold, dir_io):
+def execute(catalog, entity, model, name_rule, threshold, dir_io):
     wd_reader = workflow.build_wikidata(
         'classification', catalog, entity, dir_io)
     wd_generator = workflow.preprocess_wikidata('classification', wd_reader)
@@ -102,8 +104,10 @@ def execute(catalog, entity, model, threshold, dir_io):
             raise ValueError(err_msg)
 
         # See https://stackoverflow.com/a/18317089/10719765
-        predictions = DataFrame(predictions).apply(
-            _zero_when_different_names, axis=1, args=(wd_chunk, target_chunk))
+        if name_rule:
+            LOGGER.info('Applying full names rule ...')
+            predictions = DataFrame(predictions).apply(
+                _zero_when_different_names, axis=1, args=(wd_chunk, target_chunk))
 
         LOGGER.info('Chunk %d classified', i)
         yield predictions[predictions >= threshold].drop_duplicates()
