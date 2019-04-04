@@ -106,7 +106,7 @@ def execute(catalog, entity, model, threshold, dir_io):
             _zero_when_different_names, axis=1, args=(wd_chunk, target_chunk))
 
         LOGGER.info('Chunk %d classified', i)
-        yield predictions[predictions >= threshold]
+        yield predictions[predictions >= threshold].drop_duplicates()
 
 
 def _zero_when_different_names(prediction, wikidata, target):
