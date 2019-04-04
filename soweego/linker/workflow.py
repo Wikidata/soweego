@@ -111,19 +111,6 @@ def _get_tids(qids_and_tids):
     return tids
 
 
-def train_test_build(catalog, entity, dir_io):
-    LOGGER.info("Building %s %s dataset for training and test, I/O directory: '%s'",
-                catalog, entity, dir_io)
-
-    # Wikidata
-    wd_df_reader = build_wikidata('training', catalog, entity, dir_io)
-
-    # Target
-    target_df_reader = build_target('training', catalog, entity, qids_and_tids)
-
-    return wd_df_reader, target_df_reader
-
-
 def preprocess(goal: str, wikidata_reader: JsonReader, target_reader: JsonReader) -> Tuple[
         Generator[pd.DataFrame, None, None], Generator[pd.DataFrame, None, None]]:
     handle_goal(goal)
