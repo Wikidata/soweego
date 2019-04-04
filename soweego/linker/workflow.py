@@ -312,9 +312,6 @@ def _shared_preprocessing(df, will_handle_dates):
         LOGGER.info('Handling dates ...')
         _handle_dates(df)
 
-    LOGGER.info('Stringifying lists with a single value ...')
-    df = _pull_out_from_single_value_list(df)
-
     return df
 
 
@@ -404,14 +401,6 @@ def handle_goal(goal):
     if goal not in ('training', 'classification'):
         raise ValueError(
             "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'" % goal)
-
-
-def _pull_out_from_single_value_list(df):
-    # TODO this produces columns with either strings or lists, probably not ideal
-    df = df.applymap(lambda cell: cell[0] if isinstance(
-        cell, list) and len(cell) == 1 else cell)
-    log_dataframe_info(LOGGER, df, 'Stringified lists with a single value')
-    return df
 
 
 def _occupations_to_set(df):
