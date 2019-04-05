@@ -5,7 +5,7 @@
 import functools
 import logging
 import os
-from typing import Callable
+from typing import Callable, List
 
 import click
 import pandas as pd
@@ -30,8 +30,6 @@ LOGGER = logging.getLogger(__name__)
 @click.argument('classifier', type=click.Choice(constants.CLASSIFIERS))
 @click.argument('target', type=click.Choice(target_database.available_targets()))
 @click.argument('target_type', type=click.Choice(target_database.available_types()))
-@click.option('--name-rule/--no-name-rule', default=False,
-              help='Activate post-classification rule on full names: links with different full names will be filtered. Default: no.')
 @click.option('--upload/--no-upload', default=False, help='Upload links to Wikidata. Default: no.')
 @click.option('--sandbox/--no-sandbox', default=False,
               help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
@@ -39,7 +37,14 @@ LOGGER = logging.getLogger(__name__)
               help="Probability score threshold, default: 0.5.")
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER,
               help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER)
-def cli(classifier, target, target_type, name_rule, upload, sandbox, threshold, dir_io):
+@click.option('-b', '--block-fields',
+              type=click.Choice([
+                  constants.NAME,
+                  constants.URL,
+              ]),
+              multiple=True,
+              help='Fields on which to perform the post-classification blocking.')
+def cli(classifier, target, target_type, block_fields, upload, sandbox, threshold, dir_io):
     """Run a probabilistic linker."""
 
     # Load model from the specified classifier+target+target_type
@@ -52,7 +57,7 @@ def cli(classifier, target, target_type, name_rule, upload, sandbox, threshold, 
         LOGGER.critical('File does not exist - ' + err_msg)
         raise FileExistsError(err_msg)
 
-    for chunk in execute(target, target_type, model_path, name_rule, threshold, dir_io):
+    for chunk in execute(target, target_type, model_path, block_fields, threshold, dir_io):
         if upload:
             _upload(chunk, target, sandbox)
 
@@ -66,7 +71,7 @@ def _upload(predictions, catalog, sandbox):
     wikidata_bot.add_identifiers(links, catalog, sandbox)
 
 
-def execute(catalog, entity, model, name_rule, threshold, dir_io):
+def execute(catalog, entity, model, block_fields, threshold, dir_io):
     wd_reader = workflow.build_wikidata(
         'classification', catalog, entity, dir_io)
     wd_generator = workflow.preprocess_wikidata('classification', wd_reader)
@@ -108,15 +113,14 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
         predictions = _post_classification_blocking(predictions,
                                                     wd_chunk,
                                                     target_chunk,
-                                                    name_blocking=name_rule,
-                                                    url_blocking=False)
+                                                    block_fields)
 
         LOGGER.info('Chunk %d classified', i)
         yield predictions[predictions >= threshold].drop_duplicates()
 
 
 def _post_classification_blocking(predictions: pd.Series, wd_chunk: pd.DataFrame, target_chunk: pd.DataFrame,
-                                  name_blocking: bool, url_blocking: bool) -> pd.Series:
+                                  block_fields: List[str]) -> pd.Series:
 
     def partial_blocking_func(field: str) -> Callable[[float], float]:
         # the resulting function will take only a specific prediction as input
@@ -126,14 +130,13 @@ def _post_classification_blocking(predictions: pd.Series, wd_chunk: pd.DataFrame
                                  field=field,
                                  target=target_chunk)
 
-    if name_blocking:
+    for field in block_fields:
+        LOGGER.info(
+            f"Applying post-classification blocking on '{field}' field ...")
+            
         # See https://stackoverflow.com/a/18317089/10719765
         predictions = pd.DataFrame(predictions).apply(
-            partial_blocking_func(constants.NAME), axis=1)
-
-    if url_blocking:
-        predictions = pd.DataFrame(predictions).apply(
-            partial_blocking_func(constants.URL), axis=1)
+            partial_blocking_func(field), axis=1)
 
     return predictions
 
@@ -145,9 +148,6 @@ def _zero_when_not_exact_match(prediction: pd.Series, field: str,
         err_m = f"Can't block on field '{field}' since it is not present in both dataframes."
         LOGGER.critical(err_m)
         raise ValueError(err_m)
-
-    LOGGER.info(
-        f"Applying post-classification blocking on '{field}' field ...")
 
     qid, tid = prediction.name
     wd_fields = wikidata.loc[qid][field]
