@@ -531,10 +531,12 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         return (date(int(date_list[0]), int(date_list[1]), int(date_list[2])), precision)
 
     def _check_person(self, type_code):
-        return type_code in ['1', '4', '3', '\\N']
+        # person, character
+        return type_code in ['1', '4']
 
     def _check_band(self, type_code):
-        return type_code in ['2', '5', '6', '3', '\\N']
+        # group, orchestra, choir
+        return type_code in ['2', '5', '6']
 
     def _artist_gender(self, gender_code):
         genders = {'1': 'male', '2': 'female'}
