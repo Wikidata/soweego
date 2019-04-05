@@ -109,7 +109,7 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
                                                     wd_chunk,
                                                     target_chunk,
                                                     name_blocking=name_rule,
-                                                    url_blocking=True)
+                                                    url_blocking=False)
 
         LOGGER.info('Chunk %d classified', i)
         yield predictions[predictions >= threshold].drop_duplicates()
@@ -127,7 +127,6 @@ def _post_classification_blocking(predictions: pd.Series, wd_chunk: pd.DataFrame
                                  target=target_chunk)
 
     if name_blocking:
-        LOGGER.info('Applying full names rule ...')
         # See https://stackoverflow.com/a/18317089/10719765
         predictions = pd.DataFrame(predictions).apply(
             partial_blocking_func(constants.NAME), axis=1)
@@ -141,6 +140,15 @@ def _post_classification_blocking(predictions: pd.Series, wd_chunk: pd.DataFrame
 
 def _zero_when_not_exact_match(prediction: pd.Series, field: str,
                                wikidata: pd.DataFrame, target: pd.DataFrame) -> float:
+
+    if any(field not in data.columns for data in [wikidata, target]):
+        err_m = f"Can't block on field '{field}' since it is not present in both dataframes."
+        LOGGER.critical(err_m)
+        raise ValueError(err_m)
+
+    LOGGER.info(
+        f"Applying post-classification blocking on '{field}' field ...")
+
     qid, tid = prediction.name
     wd_fields = wikidata.loc[qid][field]
     wd_fields = set(wd_fields) if isinstance(
