@@ -2,13 +2,15 @@
 # -*- coding: utf-8 -*-
 
 """Supervised linking."""
+import functools
 import logging
 import os
+from typing import Callable
 
 import click
+import pandas as pd
 import recordlinkage as rl
 from numpy import full, nan
-from pandas import DataFrame
 from sklearn.externals import joblib
 
 from soweego.commons import constants, data_gathering, target_database
@@ -103,24 +105,52 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
             LOGGER.critical(err_msg)
             raise ValueError(err_msg)
 
-        # See https://stackoverflow.com/a/18317089/10719765
-        if name_rule:
-            LOGGER.info('Applying full names rule ...')
-            predictions = DataFrame(predictions).apply(
-                _zero_when_different_names, axis=1, args=(wd_chunk, target_chunk))
+        predictions = _post_classification_blocking(predictions,
+                                                    wd_chunk,
+                                                    target_chunk,
+                                                    name_blocking=name_rule,
+                                                    url_blocking=True)
 
         LOGGER.info('Chunk %d classified', i)
         yield predictions[predictions >= threshold].drop_duplicates()
 
 
-def _zero_when_different_names(prediction, wikidata, target):
+def _post_classification_blocking(predictions: pd.Series, wd_chunk: pd.DataFrame, target_chunk: pd.DataFrame,
+                                  name_blocking: bool, url_blocking: bool) -> pd.Series:
+
+    def partial_blocking_func(field: str) -> Callable[[float], float]:
+        # the resulting function will take only a specific prediction as input
+        # and either yield the prediction if the match is satisfied or yield 0 (no match)
+        return functools.partial(_zero_when_not_exact_match,
+                                 wikidata=wd_chunk,
+                                 field=field,
+                                 target=target_chunk)
+
+    if name_blocking:
+        LOGGER.info('Applying full names rule ...')
+        # See https://stackoverflow.com/a/18317089/10719765
+        predictions = pd.DataFrame(predictions).apply(
+            partial_blocking_func(constants.NAME), axis=1)
+
+    if url_blocking:
+        predictions = pd.DataFrame(predictions).apply(
+            partial_blocking_func(constants.URL), axis=1)
+
+    return predictions
+
+
+def _zero_when_not_exact_match(prediction: pd.Series, field: str,
+                               wikidata: pd.DataFrame, target: pd.DataFrame) -> float:
     qid, tid = prediction.name
-    wd_names = wikidata.loc[qid][constants.NAME]
-    target_names = target.loc[tid][constants.NAME]
-    wd_names = set(wd_names) if isinstance(wd_names, list) else set([wd_names])
-    target_names = set(target_names) if isinstance(
-        target_names, list) else set([target_names])
-    return 0.0 if wd_names.isdisjoint(target_names) else prediction[0]
+    wd_fields = wikidata.loc[qid][field]
+    wd_fields = set(wd_fields) if isinstance(
+        wd_fields, list) else set([wd_fields])
+
+    target_fields = target.loc[tid][field]
+    target_fields = set(target_fields) if isinstance(
+        target_fields, list) else set([target_fields])
+
+    return 0.0 if wd_fields.isdisjoint(target_fields) else prediction[0]
 
 
 def _add_missing_feature_columns(classifier, feature_vectors):
