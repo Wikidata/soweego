@@ -114,13 +114,18 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
 
 
 def _zero_when_different_names(prediction, wikidata, target):
+    wd_names, target_names = set(), set()
     qid, tid = prediction.name
-    # TODO use constants.NAME_FIELDS, not only constants.NAME
-    wd_names = wikidata.loc[qid][constants.NAME]
-    target_names = target.loc[tid][constants.NAME]
-    wd_names = set(wd_names) if isinstance(wd_names, list) else set([wd_names])
-    target_names = set(target_names) if isinstance(
-        target_names, list) else set([target_names])
+    for column in constants.NAME_FIELDS:
+        if wikidata.get(column) is not None:
+            values = wikidata.loc[qid][column]
+            if values is not nan:
+                wd_names.update(set(values))
+        if target.get(column) is not None:
+            values = target.loc[tid][column]
+            if values is not nan:
+                target_names.update(set(values))
+
     return 0.0 if wd_names.isdisjoint(target_names) else prediction[0]
 
 
