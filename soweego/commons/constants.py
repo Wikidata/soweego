@@ -129,7 +129,10 @@ CATALOG_ID = 'catalog_id'
 QID = 'qid'
 TID = 'tid'
 ALIAS = 'alias'
-PSEUDONYM = 'pseudonym'
+BIRTH_NAME = vocabulary.LINKER_PIDS[vocabulary.BIRTH_NAME]
+FAMILY_NAME = vocabulary.LINKER_PIDS[vocabulary.FAMILY_NAME]
+GIVEN_NAME = vocabulary.LINKER_PIDS[vocabulary.GIVEN_NAME]
+PSEUDONYM = vocabulary.LINKER_PIDS[vocabulary.PSEUDONYM]
 DATE_OF_BIRTH = vocabulary.LINKER_PIDS[vocabulary.DATE_OF_BIRTH]
 DATE_OF_DEATH = vocabulary.LINKER_PIDS[vocabulary.DATE_OF_DEATH]
 # Consistent with BaseEntity
@@ -143,6 +146,11 @@ URL_TOKENS = 'url_tokens'
 # Consistent with BaseNlpEntity
 DESCRIPTION = 'description'
 DESCRIPTION_TOKENS = 'description_tokens'
+# Target-specific column names
+REAL_NAME = 'real_name'
+# Cluster of fields with names
+NAME_FIELDS = (NAME, ALIAS, BIRTH_NAME, FAMILY_NAME,
+               GIVEN_NAME, PSEUDONYM, REAL_NAME)
 
 # File names
 WD_TRAINING_SET = 'wikidata_%s_%s_training_set.jsonl.gz'
