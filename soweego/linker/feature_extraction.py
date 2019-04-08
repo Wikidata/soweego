@@ -202,7 +202,7 @@ class DateCompare(BaseCompareFeature):
         def check_date_equality(pair: Tuple[List[pd.Period], List[pd.Period]]):
             """
             Compares the target pd.Periods with the source pd.Periods which represent either
-            a birth or death date.
+            a birth or a death date.
 
             Returns the most optimistic match
             """
