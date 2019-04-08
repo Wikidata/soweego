@@ -48,7 +48,7 @@ def cli(classifier, target, target_type, name_rule, upload, sandbox, threshold, 
     if not os.path.isfile(model_path):
         err_msg = 'No classifier model found at path: %s ' % model_path
         LOGGER.critical('File does not exist - ' + err_msg)
-        raise FileExistsError(err_msg)
+        raise FileNotFoundError(err_msg)
 
     for chunk in execute(target, target_type, model_path, name_rule, threshold, dir_io):
         if upload:
@@ -115,6 +115,7 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
 
 def _zero_when_different_names(prediction, wikidata, target):
     qid, tid = prediction.name
+    # TODO use constants.NAME_FIELDS, not only constants.NAME
     wd_names = wikidata.loc[qid][constants.NAME]
     target_names = target.loc[tid][constants.NAME]
     wd_names = set(wd_names) if isinstance(wd_names, list) else set([wd_names])
