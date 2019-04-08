@@ -17,11 +17,11 @@ import os
 from multiprocessing import cpu_count
 from typing import Generator, Tuple
 
-from numpy import nan
-
 import pandas as pd
 import recordlinkage as rl
+from numpy import nan
 from pandas.io.json.json import JsonReader
+
 from soweego.commons import (constants, data_gathering, target_database,
                              text_utils, url_utils)
 from soweego.commons.logging import log_dataframe_info
@@ -207,7 +207,7 @@ def preprocess_wikidata(goal, wikidata_reader):
                 lambda cell: cell[0] if isinstance(cell, list) else cell)
 
         # 4. Tokenize & join strings lists columns
-        for column in (constants.NAME, constants.PSEUDONYM):
+        for column in constants.NAME_FIELDS:
             if chunk.get(column) is not None:
                 chunk[f'{column}_tokens'] = chunk[column].apply(
                     tokenize_values, args=(text_utils.tokenize,))
@@ -290,6 +290,11 @@ def preprocess_target(goal, target_reader):
 
 
 def _shared_preprocessing(df, will_handle_dates):
+    LOGGER.info('Normalizing fields with names ...')
+    for column in constants.NAME_FIELDS:
+        if df.get(column) is not None:
+            df[column] = df[column].map(_normalize_values)
+
     LOGGER.info('Joining descriptions ...')
     _join_descriptions(df)
 
@@ -300,6 +305,16 @@ def _shared_preprocessing(df, will_handle_dates):
         _handle_dates(df)
 
     return df
+
+
+def _normalize_values(values):
+    normalized_values = set()
+    if values is nan:
+        return nan
+    for value in values:
+        _, normalized = text_utils.normalize(value)
+        normalized_values.add(normalized)
+    return list(normalized_values) if normalized_values else nan
 
 
 def _drop_null_columns(target):
