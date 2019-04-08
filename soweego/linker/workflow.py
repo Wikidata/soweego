@@ -25,9 +25,9 @@ from pandas.io.json.json import JsonReader
 from soweego.commons import (constants, data_gathering, target_database,
                              text_utils, url_utils)
 from soweego.commons.logging import log_dataframe_info
-from soweego.linker.feature_extraction import (DateCompare, OccupationQidSet,
-                                               SimilarTokens, StringList,
-                                               UrlList)
+from soweego.linker.feature_extraction import (DateCompare, ExactList,
+                                               OccupationQidSet, SimilarTokens,
+                                               StringList)
 from soweego.wikidata import api_requests, vocabulary
 
 LOGGER = logging.getLogger(__name__)
@@ -131,12 +131,16 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
 
     compare = rl.Compare(n_jobs=cpu_count())
     # TODO feature engineering on more fields
+    # Feature 1: exact match on names
+    if in_both_datasets(constants.NAME):
+        compare.add(ExactList(constants.NAME,
+                              constants.NAME, label='name_exact'))
 
-    # Feature 1: exact match on URLs
+    # Feature 2: exact match on URLs
     if in_both_datasets(constants.URL):
-        compare.add(UrlList(constants.URL, constants.URL, label='url_exact'))
+        compare.add(ExactList(constants.URL, constants.URL, label='url_exact'))
 
-    # Feature 2: dates
+    # Feature 3: dates
     if in_both_datasets(constants.DATE_OF_BIRTH):
         compare.add(DateCompare(constants.DATE_OF_BIRTH,
                                 constants.DATE_OF_BIRTH, label='date_of_birth'))
@@ -144,21 +148,21 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
         compare.add(DateCompare(constants.DATE_OF_DEATH,
                                 constants.DATE_OF_DEATH, label='date_of_death'))
 
-    # Feature 3: Levenshtein distance on name tokens
+    # Feature 4: Levenshtein distance on name tokens
     if in_both_datasets(constants.NAME_TOKENS):
         compare.add(StringList(constants.NAME_TOKENS,
                                constants.NAME_TOKENS, label='name_levenshtein'))
 
-    # Feature 4: similar name tokens
+    # Feature 5: similar name tokens
         compare.add(SimilarTokens(constants.NAME_TOKENS,
                                   constants.NAME_TOKENS, label='similar_name_tokens'))
 
-    # Feature 5: cosine similarity on descriptions
+    # Feature 6: cosine similarity on descriptions
     if in_both_datasets(constants.DESCRIPTION):
         compare.add(StringList(constants.DESCRIPTION, constants.DESCRIPTION,
                                algorithm='cosine', analyzer='soweego', label='description_cosine'))
 
-    # Feature 6: occupation QIDs
+    # Feature 7: occupation QIDs
     occupations_col_name = vocabulary.LINKER_PIDS[vocabulary.OCCUPATION]
     if in_both_datasets(occupations_col_name):
         compare.add(OccupationQidSet(occupations_col_name,
