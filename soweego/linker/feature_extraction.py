@@ -141,12 +141,12 @@ class StringList(BaseCompareFeature):
         return _metric_sparse_cosine(vectors[:len(source_column)], vectors[len(source_column):])
 
 
-class UrlList(BaseCompareFeature):
-    name = 'url_list'
-    description = 'Compare pairs of lists with URL values'
+class ExactList(BaseCompareFeature):
+    name = 'exact_list'
+    description = 'Compare pairs of lists through exact match on each pair of elements.'
 
     def __init__(self, left_on, right_on, agree_value=1.0, disagree_value=0.0, missing_value=constants.FEATURE_MISSING_VALUE, label=None):
-        super(UrlList, self).__init__(left_on, right_on, label=label)
+        super(ExactList, self).__init__(left_on, right_on, label=label)
         self.agree_value = agree_value
         self.disagree_value = disagree_value
         self.missing_value = missing_value
@@ -157,7 +157,7 @@ class UrlList(BaseCompareFeature):
         def exact_apply(pair):
             if _pair_has_any_null(pair):
                 LOGGER.debug(
-                    "Can't compare URLs, the pair contains null values: %s", pair)
+                    "Can't compare, the pair contains null values: %s", pair)
                 return np.nan
 
             scores = []
@@ -198,7 +198,7 @@ class DateCompare(BaseCompareFeature):
         # we zip together the source column and the target column so that
         # they're easier to process
         concatenated = pd.Series(list(zip(source_column, target_column)))
-        
+
         def check_date_equality(pair: Tuple[List[pd.Period], List[pd.Period]]):
             """
             Compares the target pd.Periods with the source pd.Periods which represent either
@@ -262,25 +262,9 @@ class DateCompare(BaseCompareFeature):
         return fillna(concatenated.apply(check_date_equality), self.missing_value)
 
 
-def _pair_has_any_null(pair):
-    if not all(pair):
-        return True
-
-    source_is_null, target_is_null = pd.isna(pair[0]), pd.isna(pair[1])
-    if isinstance(source_is_null, np.ndarray):
-        source_is_null = source_is_null.all()
-    if isinstance(target_is_null, np.ndarray):
-        target_is_null = target_is_null.all()
-
-    if source_is_null or target_is_null:
-        return True
-
-    return False
-
-
 class SimilarTokens(BaseCompareFeature):
     name = 'SimilarTokens'
-    description = 'Compare pairs of lists with string values based on shared tokens'
+    description = 'Compare pairs of lists with string values based on shared tokens.'
 
     def __init__(self, left_on, right_on, agree_value=1.0, disagree_value=0.0, missing_value=constants.FEATURE_MISSING_VALUE, label=None):
         super(SimilarTokens, self).__init__(left_on, right_on, label=label)
@@ -403,3 +387,19 @@ class OccupationQidSet(BaseCompareFeature):
             return n_shared_items / min_length
 
         return fillna(concatenated.apply(check_occupation_equality), self.missing_value)
+
+
+def _pair_has_any_null(pair):
+    if not all(pair):
+        return True
+
+    source_is_null, target_is_null = pd.isna(pair[0]), pd.isna(pair[1])
+    if isinstance(source_is_null, np.ndarray):
+        source_is_null = source_is_null.all()
+    if isinstance(target_is_null, np.ndarray):
+        target_is_null = target_is_null.all()
+
+    if source_is_null or target_is_null:
+        return True
+
+    return False
