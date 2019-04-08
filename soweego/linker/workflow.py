@@ -309,9 +309,11 @@ def _shared_preprocessing(df, will_handle_dates):
 
 def _normalize_values(values):
     normalized_values = set()
-    if values is nan:
+    if values is nan or not all(values):
         return nan
     for value in values:
+        if not value:
+            continue
         _, normalized = text_utils.normalize(value)
         normalized_values.add(normalized)
     return list(normalized_values) if normalized_values else nan
