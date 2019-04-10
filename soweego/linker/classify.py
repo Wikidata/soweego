@@ -48,14 +48,14 @@ def cli(classifier, target, target_type, name_rule, upload, sandbox, threshold, 
     if not os.path.isfile(model_path):
         err_msg = 'No classifier model found at path: %s ' % model_path
         LOGGER.critical('File does not exist - ' + err_msg)
-        raise FileExistsError(err_msg)
+        raise FileNotFoundError(err_msg)
 
     for chunk in execute(target, target_type, model_path, name_rule, threshold, dir_io):
         if upload:
             _upload(chunk, target, sandbox)
 
         chunk.to_csv(os.path.join(dir_io, constants.LINKER_RESULT %
-                                  (target, target_type, classifier)), mode='a', header=True)
+                                  (target, target_type, classifier)), mode='a', header=False)
 
 
 def _upload(predictions, catalog, sandbox):
@@ -114,12 +114,18 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
 
 
 def _zero_when_different_names(prediction, wikidata, target):
+    wd_names, target_names = set(), set()
     qid, tid = prediction.name
-    wd_names = wikidata.loc[qid][constants.NAME]
-    target_names = target.loc[tid][constants.NAME]
-    wd_names = set(wd_names) if isinstance(wd_names, list) else set([wd_names])
-    target_names = set(target_names) if isinstance(
-        target_names, list) else set([target_names])
+    for column in constants.NAME_FIELDS:
+        if wikidata.get(column) is not None:
+            values = wikidata.loc[qid][column]
+            if values is not nan:
+                wd_names.update(set(values))
+        if target.get(column) is not None:
+            values = target.loc[tid][column]
+            if values is not nan:
+                target_names.update(set(values))
+
     return 0.0 if wd_names.isdisjoint(target_names) else prediction[0]
 
 

@@ -26,9 +26,9 @@ from soweego.commons import (constants, data_gathering, target_database,
                              text_utils, url_utils)
 from soweego.commons.logging import log_dataframe_info
 from soweego.linker import neural_networks
-from soweego.linker.feature_extraction import (DateCompare, OccupationQidSet,
-                                               SimilarTokens, StringList,
-                                               UrlList)
+from soweego.linker.feature_extraction import (DateCompare, ExactList,
+                                               OccupationQidSet, SimilarTokens,
+                                               StringList)
 from soweego.wikidata import api_requests, vocabulary
 
 LOGGER = logging.getLogger(__name__)
@@ -132,12 +132,16 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
 
     compare = rl.Compare(n_jobs=cpu_count())
     # TODO feature engineering on more fields
+    # Feature 1: exact match on names
+    if in_both_datasets(constants.NAME):
+        compare.add(ExactList(constants.NAME,
+                              constants.NAME, label='name_exact'))
 
-    # Feature 1: exact match on URLs
+    # Feature 2: exact match on URLs
     if in_both_datasets(constants.URL):
-        compare.add(UrlList(constants.URL, constants.URL, label='url_exact'))
+        compare.add(ExactList(constants.URL, constants.URL, label='url_exact'))
 
-    # Feature 2: dates
+    # Feature 3: dates
     if in_both_datasets(constants.DATE_OF_BIRTH):
         compare.add(DateCompare(constants.DATE_OF_BIRTH,
                                 constants.DATE_OF_BIRTH, label='date_of_birth'))
@@ -145,21 +149,21 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
         compare.add(DateCompare(constants.DATE_OF_DEATH,
                                 constants.DATE_OF_DEATH, label='date_of_death'))
 
-    # Feature 3: Levenshtein distance on name tokens
+    # Feature 4: Levenshtein distance on name tokens
     if in_both_datasets(constants.NAME_TOKENS):
         compare.add(StringList(constants.NAME_TOKENS,
                                constants.NAME_TOKENS, label='name_levenshtein'))
 
-    # Feature 4: similar name tokens
+    # Feature 5: similar name tokens
         compare.add(SimilarTokens(constants.NAME_TOKENS,
                                   constants.NAME_TOKENS, label='similar_name_tokens'))
 
-    # Feature 5: cosine similarity on descriptions
+    # Feature 6: cosine similarity on descriptions
     if in_both_datasets(constants.DESCRIPTION):
         compare.add(StringList(constants.DESCRIPTION, constants.DESCRIPTION,
                                algorithm='cosine', analyzer='soweego', label='description_cosine'))
 
-    # Feature 6: occupation QIDs
+    # Feature 7: occupation QIDs
     occupations_col_name = vocabulary.LINKER_PIDS[vocabulary.OCCUPATION]
     if in_both_datasets(occupations_col_name):
         compare.add(OccupationQidSet(occupations_col_name,
@@ -210,7 +214,7 @@ def preprocess_wikidata(goal, wikidata_reader):
                 lambda cell: cell[0] if isinstance(cell, list) else cell)
 
         # 4. Tokenize & join strings lists columns
-        for column in (constants.NAME, constants.PSEUDONYM):
+        for column in constants.NAME_FIELDS:
             if chunk.get(column) is not None:
                 chunk[f'{column}_tokens'] = chunk[column].apply(
                     tokenize_values, args=(text_utils.tokenize,))
@@ -293,6 +297,11 @@ def preprocess_target(goal, target_reader):
 
 
 def _shared_preprocessing(df, will_handle_dates):
+    LOGGER.info('Normalizing fields with names ...')
+    for column in constants.NAME_FIELDS:
+        if df.get(column) is not None:
+            df[column] = df[column].map(_normalize_values)
+
     LOGGER.info('Joining descriptions ...')
     _join_descriptions(df)
 
@@ -303,6 +312,18 @@ def _shared_preprocessing(df, will_handle_dates):
         _handle_dates(df)
 
     return df
+
+
+def _normalize_values(values):
+    normalized_values = set()
+    if values is nan or not all(values):
+        return nan
+    for value in values:
+        if not value:
+            continue
+        _, normalized = text_utils.normalize(value)
+        normalized_values.add(normalized)
+    return list(normalized_values) if normalized_values else nan
 
 
 def _drop_null_columns(target):
