@@ -14,6 +14,7 @@ from typing import TypeVar
 from recordlinkage import NaiveBayesClassifier, SVMClassifier
 
 from soweego.importer import models
+from soweego.linker.neural_networks import SingleLayerPerceptron
 from soweego.wikidata import vocabulary
 
 # Miscellanea
@@ -161,7 +162,9 @@ CLASSIFIERS = {
     'naive_bayes': NaiveBayesClassifier,
     'support_vector_machines': SVMClassifier,
     'nb': NaiveBayesClassifier,  # Shorthand
-    'svm': SVMClassifier  # Shorthand
+    'svm': SVMClassifier,  # Shorthand
+    'single_layer_perceptron': SingleLayerPerceptron,
+    'slp': SingleLayerPerceptron  # Shorthand
 }
 CLASSIFICATION_RETURN_SERIES = ('classification.return_type', 'series')
 CONFIDENCE_THRESHOLD = 0.5
