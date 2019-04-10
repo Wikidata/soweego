@@ -15,6 +15,8 @@ regex = "*"
 recordlinkage = "*"
 tqdm = "*"
 lxml = "*"
+tensorflow = "*"
+keras = "*"
 
 [dev-packages]
 pylint = "*"
