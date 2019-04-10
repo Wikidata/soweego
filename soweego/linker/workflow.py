@@ -111,19 +111,6 @@ def _get_tids(qids_and_tids):
     return tids
 
 
-def train_test_build(catalog, entity, dir_io):
-    LOGGER.info("Building %s %s dataset for training and test, I/O directory: '%s'",
-                catalog, entity, dir_io)
-
-    # Wikidata
-    wd_df_reader = build_wikidata('training', catalog, entity, dir_io)
-
-    # Target
-    target_df_reader = build_target('training', catalog, entity, qids_and_tids)
-
-    return wd_df_reader, target_df_reader
-
-
 def preprocess(goal: str, wikidata_reader: JsonReader, target_reader: JsonReader) -> Tuple[
         Generator[pd.DataFrame, None, None], Generator[pd.DataFrame, None, None]]:
     handle_goal(goal)
@@ -312,9 +299,6 @@ def _shared_preprocessing(df, will_handle_dates):
         LOGGER.info('Handling dates ...')
         _handle_dates(df)
 
-    LOGGER.info('Stringifying lists with a single value ...')
-    df = _pull_out_from_single_value_list(df)
-
     return df
 
 
@@ -404,14 +388,6 @@ def handle_goal(goal):
     if goal not in ('training', 'classification'):
         raise ValueError(
             "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'" % goal)
-
-
-def _pull_out_from_single_value_list(df):
-    # TODO this produces columns with either strings or lists, probably not ideal
-    df = df.applymap(lambda cell: cell[0] if isinstance(
-        cell, list) and len(cell) == 1 else cell)
-    log_dataframe_info(LOGGER, df, 'Stringified lists with a single value')
-    return df
 
 
 def _occupations_to_set(df):

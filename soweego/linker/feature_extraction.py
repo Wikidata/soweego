@@ -9,6 +9,7 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+import itertools
 import logging
 from typing import List, Set, Tuple, Union
 
@@ -80,11 +81,6 @@ class StringList(BaseCompareFeature):
 
             scores = []
             source_values, target_values = pair
-            # Paranoid checks to ensure we work on lists
-            if isinstance(source_values, str):
-                source_values = [source_values]
-            if isinstance(target_values, str):
-                target_values = [target_values]
 
             for source in source_values:
                 for target in target_values:
@@ -202,43 +198,32 @@ class DateCompare(BaseCompareFeature):
         # we zip together the source column and the target column so that
         # they're easier to process
         concatenated = pd.Series(list(zip(source_column, target_column)))
-
-        def check_date_equality(pair: Tuple[Union[pd.Period, List[pd.Period]], pd.Period]):
+        
+        def check_date_equality(pair: Tuple[List[pd.Period], List[pd.Period]]):
             """
-            Compares a target pd.Period with the source pd.Periods which represent either
-            a birth or death date. The source date can be a list of possible dates.
+            Compares the target pd.Periods with the source pd.Periods which represent either
+            a birth or a death date.
 
             Returns the most optimistic match
             """
 
-            s_item, t_item = pair
-
-            # if t_item is NaT then we can't compare, and we skip this pair
-            if pd.isna(t_item):
+            if _pair_has_any_null(pair):
                 LOGGER.debug(
-                    "Can't compare dates, the target value is null. Pair: %s", pair)
+                    "Can't compare dates, one of the values is NaN. Pair: %s", pair)
                 return np.nan
 
-            # convert `s_item` to a list if it isn't already
-            if not isinstance(s_item, list):
-                s_item = [s_item]
+            s_items, t_items = pair
 
             # will help us to keep track of the best score
             best = 0
 
-            for s_date in s_item:
-
-                # if the current s_date is NaT then we can't compare, so we skip it
-                if pd.isna(s_date):
-                    LOGGER.debug(
-                        "Can't compare dates, the current Wikidata value is null. Current pair: %s", (s_date, t_item))
-                    continue
+            for s_date, t_date in itertools.product(s_items, t_items):
 
                 # get precision number for both dates
                 s_precision = constants.PD_PERIOD_PRECISIONS.index(
                     s_date.freq.name)
                 t_precision = constants.PD_PERIOD_PRECISIONS.index(
-                    t_item.freq.name)
+                    t_date.freq.name)
 
                 # we choose to compare on the lowest precision
                 # since it's the maximum precision on which both
@@ -252,14 +237,14 @@ class DateCompare(BaseCompareFeature):
                 # and the precision that stands for said attribute
                 for min_required_prec, d_attr in enumerate(['year', 'month', 'day', 'hour', 'minute', 'second']):
 
-                    # If both `s_date` and `t_item` have a precision which allows the
+                    # If both `s_date` and `t_date` have a precision which allows the
                     # current attribute to be compared then we do so. If the attribute
                     # matches then we add 1 to `c_r`, if not then we break the loop.
                     # We consider from lowest to highest precision. If a lowest
                     # precision attribute (ie, year) doesn't match then we say that
                     # the dates don't match at all (we don't check if higher precision
                     # attributes match)
-                    if lowest_prec >= min_required_prec and getattr(s_date, d_attr) == getattr(t_item, d_attr):
+                    if lowest_prec >= min_required_prec and getattr(s_date, d_attr) == getattr(t_date, d_attr):
                         c_r += 1
                     else:
                         break
@@ -312,8 +297,7 @@ class SimilarTokens(BaseCompareFeature):
                     "Can't compare Tokens, the pair contains null values: %s", pair)
                 return np.nan
 
-            source_labels = [pair[0]] if isinstance(pair[0], str) else pair[0]
-            target_labels = [pair[1]] if isinstance(pair[1], str) else pair[1]
+            source_labels, target_labels = pair
 
             first_set = set(source_labels)
             second_set = set()
