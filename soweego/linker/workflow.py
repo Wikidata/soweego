@@ -17,14 +17,15 @@ import os
 from multiprocessing import cpu_count
 from typing import Generator, Tuple
 
-from numpy import nan
-
 import pandas as pd
 import recordlinkage as rl
+from numpy import nan
 from pandas.io.json.json import JsonReader
+
 from soweego.commons import (constants, data_gathering, target_database,
                              text_utils, url_utils)
 from soweego.commons.logging import log_dataframe_info
+from soweego.linker import neural_networks
 from soweego.linker.feature_extraction import (DateCompare, OccupationQidSet,
                                                SimilarTokens, StringList,
                                                UrlList)
@@ -173,12 +174,14 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
     return feature_vectors
 
 
-def init_model(classifier, binarize):
+def init_model(classifier, binarize, number_of_features):
     # TODO expose other useful parameters
     if classifier is rl.NaiveBayesClassifier:
         model = classifier(binarize=binarize)
     elif classifier is rl.SVMClassifier:
         model = classifier()
+    elif classifier is neural_networks.SingleLayerPerceptron:
+        model = classifier(number_of_features)
     else:
         err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
         LOGGER.critical(err_msg)
