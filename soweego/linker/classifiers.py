@@ -11,12 +11,12 @@ __copyright__ = 'Copyleft 2019, tupini07'
 
 import logging
 
-from sklearn.svm import SVC
+from recordlinkage.adapters import SKLearnAdapter
 from recordlinkage.base import BaseClassifier
-from recordlinkage.adapters import SKLearnClassifier
+from sklearn.svm import SVC
 
 
-class SVCClassifier(SKLearnClassifier, BaseClassifier):
+class SVCClassifier(SKLearnAdapter, BaseClassifier):
     def __init__(self, *args, kernel='linear', probability=True, **kwargs):
         super(SVCClassifier, self).__init__()
 
@@ -28,4 +28,6 @@ class SVCClassifier(SKLearnClassifier, BaseClassifier):
         self.kernel = SVC(*args, **kwargs)
 
     def prob(self, x):
+        import ipdb
+        ipdb.set_trace()
         return self.kernel.predict_proba(x)
