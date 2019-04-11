@@ -75,6 +75,9 @@ def prefect_block_on_column(goal: str, catalog: str, wikidata_series: pd.Series,
                             target_entity: constants.DB_ENTITY, dir_io: str, target_column=None) -> pd.MultiIndex:
     handle_goal(goal)
 
+    if not target_column:
+        target_column = wikidata_series.name
+
     # name of the column we're blocking on should correspond with the name of
     # the pd.Series
     column = wikidata_series.name
@@ -95,8 +98,6 @@ def prefect_block_on_column(goal: str, catalog: str, wikidata_series: pd.Series,
         blocking_fn = data_gathering.perfect_url_search
 
     else:
-        if not target_column:
-            target_column = wikidata_series.name
 
         # block on an arbitrary column
         blocking_fn = partial(data_gathering.perfect_column_search,
@@ -111,7 +112,7 @@ def prefect_block_on_column(goal: str, catalog: str, wikidata_series: pd.Series,
         return pd.read_pickle(samples_path)
 
     LOGGER.info(
-        "Blocking on column '%s' perfect match to get all samples ...", wikidata_series.name)
+        "Blocking on column '%s' perfect match to get all samples ...", target_column)
 
     wikidata_series.dropna(inplace=True)
 
@@ -128,7 +129,9 @@ def prefect_block_on_column(goal: str, catalog: str, wikidata_series: pd.Series,
             processes_.append(
                 (qid,
                  pool.apply_async(
-                     blocking_fn, (target_entity, item_value))
+                     blocking_fn, kwds={
+                         'target_entity': target_entity,
+                         'to_search': item_value})
                  ))
 
         # We loop through our async processes
