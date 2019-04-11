@@ -28,7 +28,7 @@ class SingleLayerPerceptron(KerasAdapter, BaseClassifier):
         model = Sequential()
         model.add(Dense(1, input_dim=input_dimension, activation='sigmoid'))
         model.compile(
-            optimizer='adam',
+            optimizer='sgd',
             loss='binary_crossentropy',
             metrics=['accuracy']
         )
