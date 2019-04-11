@@ -35,3 +35,6 @@ class SingleLayerPerceptron(KerasAdapter, BaseClassifier):
 
         self.kernel = model
 
+    def _fit(self, features, answers, batch_size=1024, epochs=100):
+        self.kernel.fit(x=features, y=answers,
+                        batch_size=batch_size, epochs=epochs)
