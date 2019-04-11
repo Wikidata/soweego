@@ -104,7 +104,7 @@ def name_fulltext_search(target_entity: constants.DB_ENTITY, query: str) -> Iter
 
     session = DBManager.connect_to_db()
     try:
-        for r in session.query(target_entity).filter(ft_search).all():
+        for r in session.query(target_entity).filter(ft_search):
             yield r
         session.commit()
     except:
