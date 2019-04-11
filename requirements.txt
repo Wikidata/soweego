@@ -49,7 +49,7 @@ pylint==2.3.1
 PyMySQL==0.9.3
 python-dateutil==2.8.0
 pytz==2018.9
-pywikibot==3.0.dev0
+pywikibot==3.0.20190301
 PyYAML==5.1
 recordlinkage==0.13.2
 regex==2019.3.12
