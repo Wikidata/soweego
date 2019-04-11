@@ -2,10 +2,6 @@
 # -*- coding: utf-8 -*-
 
 """Set of techniques to index record pairs (read blocking)."""
-from multiprocessing import Pool
-from typing import Tuple, Iterable
-
-from tqdm import tqdm
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -15,11 +11,15 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import logging
 import os
+from functools import partial
+from multiprocessing import Pool
+from typing import Callable, Iterable, Tuple
 
 import pandas as pd
 from recordlinkage import Index
+from tqdm import tqdm
 
-from soweego.commons import constants
+from soweego.commons import constants, data_gathering
 from soweego.commons.data_gathering import tokens_fulltext_search
 from soweego.linker.workflow import handle_goal
 
@@ -71,21 +71,107 @@ def full_text_query_block(goal: str, catalog: str, wikidata_series: pd.Series, c
     return samples_index
 
 
+def prefect_block_on_column(goal: str, catalog: str, wikidata_series: pd.Series, chunk_number: int,
+                            target_entity: constants.DB_ENTITY, dir_io: str) -> pd.MultiIndex:
+    handle_goal(goal)
+
+    # name of the column we're blocking on should correspond with the name of
+    # the pd.Series
+    column = wikidata_series.name
+
+    # choose the correct `blocking_fn` based on the
+    # column we're blocking on.
+    # The blocking functions should accept 2 parameters a (target_entity, data_to_block_on)
+    if column == constants.NAME:
+        blocking_fn = data_gathering.perfect_name_search
+
+    elif column == constants.NAME_TOKENS:
+        # Since `data_gathering.tokens_fulltext_search` accepts more
+        # than one parameter we create a partial function, setting the value
+        # of all parameters except for the (target_entity, data_to_block_on) ones
+        blocking_fn = partial(data_gathering.tokens_fulltext_search,
+                              boolean_mode=False,
+                              where_clause=None,
+                              limit=5)
+
+    elif column == constants.URL:
+        blocking_fn = data_gathering.perfect_url_search
+
+    else:
+        err_msg = f"Invalid column for blocking: '{column}'."
+        LOGGER.critical(err_msg)
+        raise ValueError(err_msg)
+
+    samples_path = os.path.join(
+        dir_io, constants.SAMPLES % (catalog, target_entity.__name__, goal, chunk_number))
+
+    if os.path.exists(samples_path):
+        LOGGER.info("Will reuse existing %s %s samples index, chunk %d: '%s'",
+                    catalog, goal, chunk_number, samples_path)
+        return pd.read_pickle(samples_path)
+
+    LOGGER.info(
+        "Blocking on column '%s' perfect match to get all samples ...", wikidata_series.name)
+
+    wikidata_series.dropna(inplace=True)
+
+    qids_and_tids = []
+
+    with Pool() as pool:
+
+        # this will hold our async processes and the QID
+        # they correspond to.
+        # We're applying a blocking on each QID
+        processes_ = []
+
+        for qid, item_value in wikidata_series.items():
+            processes_.append(
+                (qid,
+                 pool.apply_async(
+                     blocking_fn, (target_entity, item_value))
+                 ))
+
+        # We loop through our async processes
+        for qid, async_res in tqdm(processes_):
+            matches = async_res.get()
+
+            # For each blocking match found for the `qid` add a tuple
+            # (qid, tid) to `qids_and_tids`
+            qids_and_tids += [(qid, entity.catalog_id) for entity in matches]
+
+    samples_index = pd.MultiIndex.from_tuples(
+        qids_and_tids, names=[constants.QID, constants.TID])
+
+    LOGGER.debug('%s %s samples index chunk %d random example:\n%s',
+                 catalog, goal, chunk_number, samples_index.to_series().sample(5))
+
+    pd.to_pickle(samples_index, samples_path)
+
+    LOGGER.info("%s %s samples index chunk %d dumped to '%s'",
+                catalog, goal, chunk_number, samples_path)
+
+    LOGGER.info('Built blocking index of all samples, chunk %d', chunk_number)
+
+    return samples_index
+
+
 def _multiprocessing_series_iterator(wikidata_series: pd.Series, target_entity: constants.DB_ENTITY) -> Iterable[
-    Tuple[str, str, constants.DB_ENTITY]]:
+        Tuple[str, str, constants.DB_ENTITY]]:
     for qids, terms in wikidata_series.items():
         yield qids, terms, target_entity
 
 
 def fulltext_search(qid_terms_target: Tuple[str, list, constants.DB_ENTITY]) -> Iterable[Tuple[str, str]]:
     qid, terms, target_entity = qid_terms_target
-    tids = list(map(lambda entity: entity.catalog_id, tokens_fulltext_search(target_entity, False, terms, None, 5)))
+    tids = list(map(lambda entity: entity.catalog_id,
+                    tokens_fulltext_search(target_entity, False, terms, None, 5)))
     return [(qid, tid) for tid in tids]
 
 
 def _extract_target_candidates(wikidata_series: pd.Series, target_entity: constants.DB_ENTITY):
     with Pool() as pool:
         for res in tqdm(
-                pool.imap_unordered(fulltext_search, _multiprocessing_series_iterator(wikidata_series, target_entity)),
+                pool.imap_unordered(fulltext_search, _multiprocessing_series_iterator(
+                    wikidata_series, target_entity)),
                 total=len(wikidata_series)):
             yield from res
