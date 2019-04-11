@@ -72,7 +72,7 @@ def full_text_query_block(goal: str, catalog: str, wikidata_series: pd.Series, c
 
 
 def prefect_block_on_column(goal: str, catalog: str, wikidata_series: pd.Series, chunk_number: int,
-                            target_entity: constants.DB_ENTITY, dir_io: str) -> pd.MultiIndex:
+                            target_entity: constants.DB_ENTITY, dir_io: str, target_column=None) -> pd.MultiIndex:
     handle_goal(goal)
 
     # name of the column we're blocking on should correspond with the name of
@@ -82,10 +82,7 @@ def prefect_block_on_column(goal: str, catalog: str, wikidata_series: pd.Series,
     # choose the correct `blocking_fn` based on the
     # column we're blocking on.
     # The blocking functions should accept 2 parameters a (target_entity, data_to_block_on)
-    if column == constants.NAME:
-        blocking_fn = data_gathering.perfect_name_search
-
-    elif column == constants.NAME_TOKENS:
+    if column == constants.NAME_TOKENS:
         # Since `data_gathering.tokens_fulltext_search` accepts more
         # than one parameter we create a partial function, setting the value
         # of all parameters except for the (target_entity, data_to_block_on) ones
@@ -98,9 +95,12 @@ def prefect_block_on_column(goal: str, catalog: str, wikidata_series: pd.Series,
         blocking_fn = data_gathering.perfect_url_search
 
     else:
-        err_msg = f"Invalid column for blocking: '{column}'."
-        LOGGER.critical(err_msg)
-        raise ValueError(err_msg)
+        if not target_column:
+            target_column = wikidata_series.name
+
+        # block on an arbitrary column
+        blocking_fn = partial(data_gathering.perfect_column_search,
+                              target_column=target_column)
 
     samples_path = os.path.join(
         dir_io, constants.SAMPLES % (catalog, target_entity.__name__, goal, chunk_number))
