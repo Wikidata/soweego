@@ -84,7 +84,7 @@ def average_k_fold(classifier, catalog, entity, binarize, dir_io, k=5):
 
     for train_index, test_index in k_fold.split(dataset, binary_target_variables):
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
-        model = workflow.init_model(classifier, binarize)
+        model = workflow.init_model(classifier, binarize, training.shape[1])
         model.fit(training, positive_samples_index & training.index)
         preds = model.predict(test)
         p, r, f, _ = _compute_performance(

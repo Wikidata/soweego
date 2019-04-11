@@ -169,7 +169,9 @@ CLASSIFIERS = {
     'naive_bayes': NaiveBayesClassifier,
     'support_vector_machines': SVMClassifier,
     'nb': NaiveBayesClassifier,  # Shorthand
-    'svm': SVMClassifier  # Shorthand
+    'svm': SVMClassifier,  # Shorthand
+    'single_layer_perceptron': None,
+    'slp': None  # Shorthand
 }
 CLASSIFICATION_RETURN_SERIES = ('classification.return_type', 'series')
 CONFIDENCE_THRESHOLD = 0.5

@@ -25,6 +25,7 @@ from pandas.io.json.json import JsonReader
 from soweego.commons import (constants, data_gathering, target_database,
                              text_utils, url_utils)
 from soweego.commons.logging import log_dataframe_info
+from soweego.linker import neural_networks
 from soweego.linker.feature_extraction import (DateCompare, ExactList,
                                                OccupationQidSet, SimilarTokens,
                                                StringList)
@@ -177,12 +178,15 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
     return feature_vectors
 
 
-def init_model(classifier, binarize):
+def init_model(classifier, binarize, number_of_features):
     # TODO expose other useful parameters
     if classifier is rl.NaiveBayesClassifier:
         model = classifier(binarize=binarize)
     elif classifier is rl.SVMClassifier:
         model = classifier()
+    # FIXME bad hack due to import issues in constants
+    elif classifier is None:
+        model = neural_networks.SingleLayerPerceptron(number_of_features)
     else:
         err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
         LOGGER.critical(err_msg)
