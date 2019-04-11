@@ -14,7 +14,7 @@ import json
 import logging
 import re
 from collections import defaultdict
-from typing import Iterable
+from typing import Iterable, List
 
 import regex
 from pandas import read_sql
@@ -114,12 +114,35 @@ def name_fulltext_search(target_entity: constants.DB_ENTITY, query: str) -> Iter
         session.close()
 
 
-def perfect_name_search(target_entity: constants.DB_ENTITY, to_search: str) -> Iterable[constants.DB_ENTITY]:
+def perfect_name_search(target_entity: constants.DB_ENTITY, to_search: List[str]) -> List[constants.DB_ENTITY]:
+
+    # if `to_search` is not a list then convert it to one
+    if not isinstance(to_search, list):
+        to_search = [to_search]
+
     session = DBManager.connect_to_db()
     try:
-        for r in session.query(target_entity).filter(
-                target_entity.name == to_search).all():
-            yield r
+
+        return session.query(target_entity).filter(or_(*[
+            target_entity.name == name for name in to_search])).all()
+
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+def perfect_url_search(target_entity: constants.DB_ENTITY, to_search: List[str]) -> List[constants.DB_ENTITY]:
+
+    # if `to_search` is not a list then convert it to one
+    if not isinstance(to_search, list):
+        to_search = [to_search]
+
+    session = DBManager.connect_to_db()
+    try:
+        return session.query(target_entity).filter(or_(*[
+            target_entity.url == url for url in to_search])).all()
 
     except:
         session.rollback()
