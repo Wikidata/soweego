@@ -184,8 +184,9 @@ def init_model(classifier, binarize, number_of_features):
         model = classifier(binarize=binarize)
     elif classifier is rl.SVMClassifier:
         model = classifier()
-    elif classifier is neural_networks.SingleLayerPerceptron:
-        model = classifier(number_of_features)
+    # FIXME bad hack due to import issues in constants
+    elif classifier is None:
+        model = neural_networks.SingleLayerPerceptron(number_of_features)
     else:
         err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
         LOGGER.critical(err_msg)
