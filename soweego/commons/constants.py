@@ -11,7 +11,7 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 from typing import TypeVar
 
-from recordlinkage import NaiveBayesClassifier, SVMClassifier
+from recordlinkage import NaiveBayesClassifier
 
 from soweego.importer import models
 from soweego.wikidata import vocabulary
@@ -165,12 +165,15 @@ WIKIDATA_API_SESSION = 'wiki_api_session.pkl'
 SHARED_FOLDER = '/app/shared/'
 
 # Supervised classification
+# TODO : standardize classifiers 
 CLASSIFIERS = {
     'naive_bayes': NaiveBayesClassifier,
-    'support_vector_machines': SVMClassifier,
+    'support_vector_machines': None,
     'nb': NaiveBayesClassifier,  # Shorthand
-    'svm': SVMClassifier  # Shorthand
+    'svm': None # Shorthand
 }
+
+
 CLASSIFICATION_RETURN_SERIES = ('classification.return_type', 'series')
 CONFIDENCE_THRESHOLD = 0.5
 FEATURE_MISSING_VALUE = 0.0

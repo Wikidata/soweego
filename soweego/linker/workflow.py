@@ -25,6 +25,7 @@ from pandas.io.json.json import JsonReader
 from soweego.commons import (constants, data_gathering, target_database,
                              text_utils, url_utils)
 from soweego.commons.logging import log_dataframe_info
+from soweego.linker import classifiers
 from soweego.linker.feature_extraction import (DateCompare, ExactList,
                                                OccupationQidSet, SimilarTokens,
                                                StringList)
@@ -181,7 +182,7 @@ def init_model(classifier, binarize):
     # TODO expose other useful parameters
     if classifier is rl.NaiveBayesClassifier:
         model = classifier(binarize=binarize)
-    elif classifier is rl.SVMClassifier:
+    elif classifier is classifiers.SVCClassifier or classifier is None:
         model = classifier()
     else:
         err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
