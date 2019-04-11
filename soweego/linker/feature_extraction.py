@@ -170,7 +170,7 @@ class ExactList(BaseCompareFeature):
                         scores.append(self.agree_value)
                     else:
                         scores.append(self.disagree_value)
-            return np.average(scores)
+            return max(scores)
 
         return fillna(concatenated.apply(exact_apply), self.missing_value)
 

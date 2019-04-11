@@ -316,7 +316,7 @@ def _shared_preprocessing(df, will_handle_dates):
 
 def _normalize_values(values):
     normalized_values = set()
-    if values is nan or not all(values):
+    if values is nan or not any(values):
         return nan
     for value in values:
         if not value:
