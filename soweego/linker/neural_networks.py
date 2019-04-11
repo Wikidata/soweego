@@ -26,8 +26,7 @@ class SingleLayerPerceptron(KerasAdapter, BaseClassifier):
         super(SingleLayerPerceptron, self).__init__()
 
         model = Sequential()
-        # FIXME pick the best first parameter of Dense
-        model.add(Dense(16, input_dim=input_dimension, activation='sigmoid'))
+        model.add(Dense(1, input_dim=input_dimension, activation='sigmoid'))
         model.compile(
             optimizer='adam',
             loss='binary_crossentropy',
@@ -35,3 +34,4 @@ class SingleLayerPerceptron(KerasAdapter, BaseClassifier):
         )
 
         self.kernel = model
+
