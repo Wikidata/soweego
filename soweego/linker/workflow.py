@@ -181,10 +181,10 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
 def init_model(classifier, binarize):
     # TODO expose other useful parameters
     if classifier == constants.NAIVE_BAYES_CLASSFIER:
-        model = classifier(binarize=binarize)
+        model = rl.NaiveBayesClassifier(binarize=binarize)
 
     elif classifier is constants.SVC_CLASSIFIER:
-        model = classifier()
+        model = classifiers.SVCClassifier()
 
     else:
         err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
