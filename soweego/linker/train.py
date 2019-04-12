@@ -105,8 +105,8 @@ def _train(classifier, feature_vectors, positive_samples_index, binarize):
 
     model = workflow.init_model(classifier, binarize)
     
-    LOGGER.info('Training a %s', classifier.__name__)
+    LOGGER.info('Training a %s', classifier)
     model.fit(feature_vectors, positive_samples_index)
-    
+
     LOGGER.info('Training done')
     return model
