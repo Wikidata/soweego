@@ -123,10 +123,13 @@ def _zero_when_different_names(prediction, wikidata, target):
 
 
 def _add_missing_feature_columns(classifier, feature_vectors):
+
     if isinstance(classifier, rl.NaiveBayesClassifier):
         expected_features = len(classifier.kernel._binarizers)
+    
     elif isinstance(classifier, classifiers.SVCClassifier):
         expected_features = classifier.kernel.coef_.shape[1]
+    
     else:
         err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
         LOGGER.critical(err_msg)

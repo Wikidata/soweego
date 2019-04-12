@@ -102,8 +102,11 @@ def _build_positive_samples_index(wd_reader1):
 
 
 def _train(classifier, feature_vectors, positive_samples_index, binarize):
+
     model = workflow.init_model(classifier, binarize)
+    
     LOGGER.info('Training a %s', classifier.__name__)
     model.fit(feature_vectors, positive_samples_index)
+    
     LOGGER.info('Training done')
     return model
