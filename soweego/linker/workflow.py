@@ -180,11 +180,14 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
 
 def init_model(classifier, binarize, number_of_features):
     # TODO expose other useful parameters
-    if classifier == constants.NAIVE_BAYES_CLASSFIER:
+    if classifier is constants.NAIVE_BAYES_CLASSIFIER:
         model = rl.NaiveBayesClassifier(binarize=binarize)
 
     elif classifier is constants.SVC_CLASSIFIER:
         model = classifiers.SVCClassifier()
+
+    elif classifier is constants.LINEAR_SVC_CLASSIFIER:
+        model = rl.SVMClassifier()
 
     elif classifier is constants.PERCEPTRON_CLASSIFIER:
         model = neural_networks.SingleLayerPerceptron(number_of_features)

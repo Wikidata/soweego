@@ -94,7 +94,7 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
 
         _add_missing_feature_columns(classifier, feature_vectors)
 
-        predictions = classifier.prob(feature_vectors)
+        predictions = classifier.predict(feature_vectors) if isinstance(classifier, rl.SVMClassifier) else classifier.prob(feature_vectors)
 
         # See https://stackoverflow.com/a/18317089/10719765
         if name_rule:
@@ -127,7 +127,7 @@ def _add_missing_feature_columns(classifier, feature_vectors):
     if isinstance(classifier, rl.NaiveBayesClassifier):
         expected_features = len(classifier.kernel._binarizers)
     
-    elif isinstance(classifier, classifiers.SVCClassifier):
+    elif isinstance(classifier, (classifiers.SVCClassifier, rl.SVMClassifier)):
         expected_features = classifier.kernel.coef_.shape[1]
     
     else:
