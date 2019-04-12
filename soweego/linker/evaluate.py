@@ -46,7 +46,7 @@ def cli(classifier, target, target_type, single, k_folds, binarize, dir_io):
         with open(os.path.join(dir_io, constants.LINKER_PERFORMANCE % (target, target_type, classifier)), 'w') as fileout:
             fileout.write(
                 f'Precision:\n\tmean = {p_mean}\n\tstandard deviation = {p_std}\nRecall:\n\tmean = {r_mean}\n\tstandard deviation = {r_std}\nF-score:\n\tmean = {fscore_mean}\n\tstandard deviation = {fscore_std}\n')
-                    
+
     else:
         predictions, (precision, recall, fscore, confusion_matrix) = single_k_fold(
             constants.CLASSIFIERS[classifier], target, target_type, binarize, dir_io, k=k_folds)
@@ -88,9 +88,9 @@ def average_k_fold(classifier, catalog, entity, binarize, dir_io, k=5):
     for train_index, test_index in k_fold.split(dataset, binary_target_variables):
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
 
-        model = workflow.init_model(classifier, binarize)
-
+        model = workflow.init_model(classifier, binarize, training.shape[1])
         model.fit(training, positive_samples_index & training.index)
+        
         preds = model.predict(test)
         
         p, r, f, _ = _compute_performance(
