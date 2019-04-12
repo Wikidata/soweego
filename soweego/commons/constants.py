@@ -165,14 +165,14 @@ SHARED_FOLDER = '/app/shared/'
 
 # Supervised classification
 SVC_CLASSIFIER = 'support_vector_machines'
-NAIVE_BAYES_CLASSFIER = 'naive_bayes'
+NAIVE_BAYES_CLASSIFIER = 'naive_bayes'
 PERCEPTRON_CLASSIFIER = 'single_layer_perceptron'
 
 CLASSIFIERS = {
-    'naive_bayes': NAIVE_BAYES_CLASSFIER,
+    'naive_bayes': NAIVE_BAYES_CLASSIFIER,
     'support_vector_machines': SVC_CLASSIFIER,
     'single_layer_perceptron': PERCEPTRON_CLASSIFIER,
-    'nb': NAIVE_BAYES_CLASSFIER,  # Shorthand
+    'nb': NAIVE_BAYES_CLASSIFIER,  # Shorthand
     'svm': SVC_CLASSIFIER,  # Shorthand
     'slp': PERCEPTRON_CLASSIFIER  # Shorthand
 }
