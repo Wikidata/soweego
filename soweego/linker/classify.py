@@ -13,7 +13,7 @@ from sklearn.externals import joblib
 
 from soweego.commons import constants, data_gathering, target_database
 from soweego.ingestor import wikidata_bot
-from soweego.linker import blocking, workflow
+from soweego.linker import blocking, classifiers, workflow
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -94,14 +94,7 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
 
         _add_missing_feature_columns(classifier, feature_vectors)
 
-        if isinstance(classifier, rl.NaiveBayesClassifier):
-            predictions = classifier.prob(feature_vectors)
-        elif isinstance(classifier, rl.SVMClassifier):
-            predictions = classifier.predict(feature_vectors)
-        else:
-            err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
-            LOGGER.critical(err_msg)
-            raise ValueError(err_msg)
+        predictions = classifier.predict(feature_vectors) if isinstance(classifier, rl.SVMClassifier) else classifier.prob(feature_vectors)
 
         # See https://stackoverflow.com/a/18317089/10719765
         if name_rule:
@@ -130,10 +123,13 @@ def _zero_when_different_names(prediction, wikidata, target):
 
 
 def _add_missing_feature_columns(classifier, feature_vectors):
+
     if isinstance(classifier, rl.NaiveBayesClassifier):
         expected_features = len(classifier.kernel._binarizers)
-    elif isinstance(classifier, rl.SVMClassifier):
+    
+    elif isinstance(classifier, (classifiers.SVCClassifier, rl.SVMClassifier)):
         expected_features = classifier.kernel.coef_.shape[1]
+    
     else:
         err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
         LOGGER.critical(err_msg)

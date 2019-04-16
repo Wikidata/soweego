@@ -42,15 +42,18 @@ def cli(classifier, target, target_type, single, k_folds, binarize, dir_io):
 
         predictions.to_series().to_csv(os.path.join(dir_io, constants.LINKER_EVALUATION_PREDICTIONS %
                                                     (target, target_type, classifier)), columns=[], header=True)
+
         with open(os.path.join(dir_io, constants.LINKER_PERFORMANCE % (target, target_type, classifier)), 'w') as fileout:
             fileout.write(
                 f'Precision:\n\tmean = {p_mean}\n\tstandard deviation = {p_std}\nRecall:\n\tmean = {r_mean}\n\tstandard deviation = {r_std}\nF-score:\n\tmean = {fscore_mean}\n\tstandard deviation = {fscore_std}\n')
+
     else:
         predictions, (precision, recall, fscore, confusion_matrix) = single_k_fold(
             constants.CLASSIFIERS[classifier], target, target_type, binarize, dir_io, k=k_folds)
 
         predictions.to_series().to_csv(os.path.join(dir_io, constants.LINKER_EVALUATION_PREDICTIONS %
                                                     (target, target_type, classifier)), columns=[], header=True)
+                                                    
         with open(os.path.join(dir_io, constants.LINKER_PERFORMANCE % (target, target_type, classifier)), 'w') as fileout:
             fileout.write(
                 f'Precision: {precision}\nRecall: {recall}\nF-score: {fscore}\nConfusion matrix:\n{confusion_matrix}\n')
@@ -84,9 +87,12 @@ def average_k_fold(classifier, catalog, entity, binarize, dir_io, k=5):
 
     for train_index, test_index in k_fold.split(dataset, binary_target_variables):
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
+
         model = workflow.init_model(classifier, binarize, training.shape[1])
         model.fit(training, positive_samples_index & training.index)
+        
         preds = model.predict(test)
+        
         p, r, f, _ = _compute_performance(
             positive_samples_index & test.index, preds, len(test))
 
@@ -94,6 +100,7 @@ def average_k_fold(classifier, catalog, entity, binarize, dir_io, k=5):
             predictions = preds
         else:
             predictions |= preds
+        
         precisions.append(p)
         recalls.append(r)
         fscores.append(f)
@@ -105,17 +112,23 @@ def single_k_fold(classifier, catalog, entity, binarize, dir_io, k=5):
     predictions, test_set = None, []
     dataset, positive_samples_index = train.build_dataset(
         'training', catalog, entity, dir_io)
+
     k_fold = StratifiedKFold(n_splits=k, shuffle=True)
+    
     # scikit's stratified k-fold no longer supports multi-label data representation.
     # It expects a binary array instead, so build it based on the positive samples index
     binary_target_variables = dataset.index.map(
         lambda x: 1 if x in positive_samples_index else 0)
 
     for train_index, test_index in k_fold.split(dataset, binary_target_variables):
+
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
         test_set.append(test)
+
         model = workflow.init_model(classifier, binarize)
+        
         model.fit(training, positive_samples_index & training.index)
+
         if predictions is None:
             predictions = model.predict(test)
         else:

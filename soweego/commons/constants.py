@@ -11,8 +11,6 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 from typing import TypeVar
 
-from recordlinkage import NaiveBayesClassifier, SVMClassifier
-
 from soweego.importer import models
 from soweego.wikidata import vocabulary
 
@@ -164,15 +162,25 @@ LINKER_PERFORMANCE = '%s_%s_%s_linker_performance.txt'
 WIKIDATA_API_SESSION = 'wiki_api_session.pkl'
 SHARED_FOLDER = '/app/shared/'
 
+
 # Supervised classification
+SVC_CLASSIFIER = 'support_vector_machines'
+LINEAR_SVC_CLASSIFIER = 'linear_support_vector_machines'
+NAIVE_BAYES_CLASSIFIER = 'naive_bayes'
+PERCEPTRON_CLASSIFIER = 'single_layer_perceptron'
+
 CLASSIFIERS = {
-    'naive_bayes': NaiveBayesClassifier,
-    'support_vector_machines': SVMClassifier,
-    'nb': NaiveBayesClassifier,  # Shorthand
-    'svm': SVMClassifier,  # Shorthand
-    'single_layer_perceptron': None,
-    'slp': None  # Shorthand
+    'naive_bayes': NAIVE_BAYES_CLASSIFIER,
+    'support_vector_machines': SVC_CLASSIFIER,
+    'linear_support_vector_machines': LINEAR_SVC_CLASSIFIER,
+    'single_layer_perceptron': PERCEPTRON_CLASSIFIER,
+    'nb': NAIVE_BAYES_CLASSIFIER,  # Shorthand
+    'svm': SVC_CLASSIFIER,  # Shorthand
+    'lsvm': LINEAR_SVC_CLASSIFIER,  # Shorthand
+    'slp': PERCEPTRON_CLASSIFIER  # Shorthand
 }
+
+
 CLASSIFICATION_RETURN_SERIES = ('classification.return_type', 'series')
 CONFIDENCE_THRESHOLD = 0.5
 FEATURE_MISSING_VALUE = 0.0
