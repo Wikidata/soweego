@@ -10,11 +10,15 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2019, Hjfocs'
 
 import logging
+import os
 
+from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
 from keras.layers import Dense
 from keras.models import Sequential
 from recordlinkage.adapters import KerasAdapter
 from recordlinkage.base import BaseClassifier
+
+from soweego.commons import constants
 
 LOGGER = logging.getLogger(__name__)
 
@@ -35,6 +39,21 @@ class SingleLayerPerceptron(KerasAdapter, BaseClassifier):
 
         self.kernel = model
 
-    def _fit(self, features, answers, batch_size=1024, epochs=100):
-        self.kernel.fit(x=features, y=answers,
-                        batch_size=batch_size, epochs=epochs)
+    def _fit(self, features, answers, batch_size=1024, epochs=1000):
+        self.kernel.fit(
+            x=features,
+            y=answers,
+            validation_split=0.33,
+            batch_size=batch_size,
+            epochs=epochs,
+            callbacks=[
+                EarlyStopping(),
+                ModelCheckpoint(
+                    os.path.join(
+                        constants.SHARED_FOLDER,
+                        constants.NEURAL_NETWORK_CHECKPOINT_MODEL % self.__class__.__name__),
+                    save_best_only=True
+                ),
+                TensorBoard(log_dir=constants.SHARED_FOLDER)
+            ]
+        )
