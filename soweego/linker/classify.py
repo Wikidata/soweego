@@ -5,7 +5,7 @@
 import functools
 import logging
 import os
-from typing import Callable, List
+from typing import Callable, List, Union
 
 import click
 import pandas as pd
@@ -15,7 +15,7 @@ from sklearn.externals import joblib
 
 from soweego.commons import constants, data_gathering, target_database
 from soweego.ingestor import wikidata_bot
-from soweego.linker import blocking, workflow
+from soweego.linker import blocking, classifiers, workflow
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -55,14 +55,14 @@ def cli(classifier, target, target_type, block_fields, upload, sandbox, threshol
     if not os.path.isfile(model_path):
         err_msg = 'No classifier model found at path: %s ' % model_path
         LOGGER.critical('File does not exist - ' + err_msg)
-        raise FileExistsError(err_msg)
+        raise FileNotFoundError(err_msg)
 
     for chunk in execute(target, target_type, model_path, block_fields, threshold, dir_io):
         if upload:
             _upload(chunk, target, sandbox)
 
         chunk.to_csv(os.path.join(dir_io, constants.LINKER_RESULT %
-                                  (target, target_type, classifier)), mode='a', header=True)
+                                  (target, target_type, classifier)), mode='a', header=False)
 
 
 def _upload(predictions, catalog, sandbox):
@@ -101,14 +101,8 @@ def execute(catalog, entity, model, block_fields, threshold, dir_io):
 
         _add_missing_feature_columns(classifier, feature_vectors)
 
-        if isinstance(classifier, rl.NaiveBayesClassifier):
-            predictions = classifier.prob(feature_vectors)
-        elif isinstance(classifier, rl.SVMClassifier):
-            predictions = classifier.predict(feature_vectors)
-        else:
-            err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
-            LOGGER.critical(err_msg)
-            raise ValueError(err_msg)
+        predictions = classifier.predict(feature_vectors) if isinstance(
+            classifier, rl.SVMClassifier) else classifier.prob(feature_vectors)
 
         predictions = _post_classification_blocking(predictions,
                                                     wd_chunk,
@@ -122,50 +116,57 @@ def execute(catalog, entity, model, block_fields, threshold, dir_io):
 def _post_classification_blocking(predictions: pd.Series, wd_chunk: pd.DataFrame, target_chunk: pd.DataFrame,
                                   block_fields: List[str]) -> pd.Series:
 
-    def partial_blocking_func(field: str) -> Callable[[float], float]:
-        # the resulting function will take only a specific prediction as input
-        # and either yield the prediction if the match is satisfied or yield 0 (no match)
-        return functools.partial(_zero_when_not_exact_match,
-                                 wikidata=wd_chunk,
-                                 field=field,
-                                 target=target_chunk)
+    partial_blocking_func = functools.partial(_zero_when_not_exact_match,
+                                              wikidata=wd_chunk,
+                                              fields=block_fields,
+                                              target=target_chunk)
 
-    for field in block_fields:
-        LOGGER.info(
-            f"Applying post-classification blocking on '{field}' field ...")
-            
-        # See https://stackoverflow.com/a/18317089/10719765
+    # only do blocking when there is actually some
+    # field to block on
+    if block_fields:
         predictions = pd.DataFrame(predictions).apply(
-            partial_blocking_func(field), axis=1)
+            partial_blocking_func, axis=1)
 
     return predictions
 
 
-def _zero_when_not_exact_match(prediction: pd.Series, field: str,
-                               wikidata: pd.DataFrame, target: pd.DataFrame) -> float:
+def _zero_when_not_exact_match(prediction: pd.Series,
+                               fields: Union[str, List[str]],
+                               wikidata: pd.DataFrame,
+                               target: pd.DataFrame) -> float:
 
-    if any(field not in data.columns for data in [wikidata, target]):
-        err_m = f"Can't block on field '{field}' since it is not present in both dataframes."
-        LOGGER.critical(err_m)
-        raise ValueError(err_m)
+    if isinstance(fields, str):
+        fields = [fields]
+
+    wd_values, target_values = set(), set()
 
     qid, tid = prediction.name
-    wd_fields = wikidata.loc[qid][field]
-    wd_fields = set(wd_fields) if isinstance(
-        wd_fields, list) else set([wd_fields])
 
-    target_fields = target.loc[tid][field]
-    target_fields = set(target_fields) if isinstance(
-        target_fields, list) else set([target_fields])
+    for column in fields:
 
-    return 0.0 if wd_fields.isdisjoint(target_fields) else prediction[0]
+        if wikidata.get(column) is not None:
+            values = wikidata.loc[qid][column]
+
+            if values is not nan:
+                wd_values.update(set(values))
+
+        if target.get(column) is not None:
+            values = target.loc[tid][column]
+
+            if values is not nan:
+                target_values.update(set(values))
+
+    return 0.0 if wd_values.isdisjoint(target_values) else prediction[0]
 
 
 def _add_missing_feature_columns(classifier, feature_vectors):
+
     if isinstance(classifier, rl.NaiveBayesClassifier):
         expected_features = len(classifier.kernel._binarizers)
-    elif isinstance(classifier, rl.SVMClassifier):
+
+    elif isinstance(classifier, (classifiers.SVCClassifier, rl.SVMClassifier)):
         expected_features = classifier.kernel.coef_.shape[1]
+
     else:
         err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
         LOGGER.critical(err_msg)
