@@ -13,7 +13,7 @@ from sklearn.externals import joblib
 
 from soweego.commons import constants, data_gathering, target_database
 from soweego.ingestor import wikidata_bot
-from soweego.linker import blocking, classifiers, workflow
+from soweego.linker import blocking, classifiers, neural_networks, workflow
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -126,12 +126,12 @@ def _add_missing_feature_columns(classifier, feature_vectors):
 
     if isinstance(classifier, rl.NaiveBayesClassifier):
         expected_features = len(classifier.kernel._binarizers)
-    
     elif isinstance(classifier, (classifiers.SVCClassifier, rl.SVMClassifier)):
         expected_features = classifier.kernel.coef_.shape[1]
-    
+    elif isinstance(classifier, neural_networks.SingleLayerPerceptron):
+        expected_features = classifier.kernel.input_shape[1]
     else:
-        err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
+        err_msg = f'Unsupported classifier: {classifier.__name__}. It should be one of {set(constants.CLASSIFIERS)}'
         LOGGER.critical(err_msg)
         raise ValueError(err_msg)
 
