@@ -4,6 +4,8 @@
 """Supervised linking."""
 import logging
 import os
+import re
+from csv import DictReader
 
 import click
 import recordlinkage as rl
@@ -94,13 +96,17 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
 
         _add_missing_feature_columns(classifier, feature_vectors)
 
-        predictions = classifier.predict(feature_vectors) if isinstance(classifier, rl.SVMClassifier) else classifier.prob(feature_vectors)
+        predictions = classifier.predict(feature_vectors) if isinstance(classifier,
+                                                                        rl.SVMClassifier) else classifier.prob(
+            feature_vectors)
 
         # See https://stackoverflow.com/a/18317089/10719765
         if name_rule:
             LOGGER.info('Applying full names rule ...')
             predictions = DataFrame(predictions).apply(
                 _zero_when_different_names, axis=1, args=(wd_chunk, target_chunk))
+
+        predictions = DataFrame(predictions).apply(_one_when_wikidata_link_correct, axis=1, args=(target_chunk,))
 
         LOGGER.info('Chunk %d classified', i)
         yield predictions[predictions >= threshold].drop_duplicates()
@@ -122,14 +128,32 @@ def _zero_when_different_names(prediction, wikidata, target):
     return 0.0 if wd_names.isdisjoint(target_names) else prediction[0]
 
 
-def _add_missing_feature_columns(classifier, feature_vectors):
+def _one_when_wikidata_link_correct(prediction, target):
+    qid, tid = prediction.name
 
+    if target.get(constants.URL) is not None:
+        urls = target.loc[tid][constants.URL]
+        if urls:
+            for u in urls:
+                if u:
+                    if 'wikidata' in u:
+                        res = re.search(r'(Q\d+)$', u)
+                        if res:
+                            LOGGER.debug(
+                                f"""Changing prediction: {qid}, {tid} --- {u} = {1.0 if qid == res.groups()[
+                                    0] else 0}, before it was {prediction[0]}""")
+                            return 1.0 if qid == res.groups()[0] else 0
+
+    return prediction[0]
+
+
+def _add_missing_feature_columns(classifier, feature_vectors):
     if isinstance(classifier, rl.NaiveBayesClassifier):
         expected_features = len(classifier.kernel._binarizers)
-    
+
     elif isinstance(classifier, (classifiers.SVCClassifier, rl.SVMClassifier)):
         expected_features = classifier.kernel.coef_.shape[1]
-    
+
     else:
         err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
         LOGGER.critical(err_msg)
