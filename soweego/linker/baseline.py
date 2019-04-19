@@ -4,6 +4,8 @@
 """TODO module docstring"""
 from datetime import datetime
 
+import ipdb
+
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
 __version__ = '1.0'
@@ -14,6 +16,7 @@ import gzip
 import json
 import logging
 from os import path
+import re
 from typing import Iterable, Tuple
 from tqdm import tqdm
 
@@ -96,6 +99,31 @@ def cli(target, target_type, strategy, check_dates, upload, sandbox, output_dir)
                 wd_io, target_entity, target_pid, check_dates)
             _write_or_upload_result(
                 strategy, target, result, output_dir, "baseline_similar_names.csv", upload, sandbox)
+
+
+@click.command()
+@click.argument('target', type=click.Choice(target_database.available_targets()))
+@click.argument('target_type', type=click.Choice(target_database.available_types()))
+@click.option('--upload/--no-upload', default=False, help='Upload check results to Wikidata. Default: no.')
+@click.option('--sandbox/--no-sandbox', default=False,
+              help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
+@click.option('-o', '--output-dir', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER,
+              help="default: '%s" % constants.SHARED_FOLDER)
+def extract_available_matches_in_target(target, target_type, upload, sandbox, output_dir):
+    target_link_entity = target_database.get_link_entity(target, target_type)
+    target_pid = target_database.get_pid(target)
+
+    def result_generator(target_link_entity, target_pid):
+        if target_link_entity:
+            for r in data_gathering.tokens_fulltext_search(target_link_entity, True, ('wikidata',),
+                                                           where_clause=target_link_entity.is_wiki == 1,
+                                                           limit=1_000_000_000):
+                qid = re.search(r"(Q\d+)$", r.url).groups()[0]
+                if qid:
+                    yield (qid, target_pid, r.catalog_id)
+
+    _write_or_upload_result('extract', target, result_generator(target_link_entity, target_pid), output_dir,
+                            'match_extractor.csv', upload, sandbox)
 
 
 def _write_or_upload_result(strategy, target, result: Iterable, output_dir: str, filename: str, upload: bool,
