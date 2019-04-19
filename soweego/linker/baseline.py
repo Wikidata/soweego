@@ -98,7 +98,7 @@ def cli(target, target_type, strategy, check_dates, upload, sandbox, output_dir)
             result = similar_name_tokens_match(
                 wd_io, target_entity, target_pid, check_dates)
             _write_or_upload_result(
-                strategy, target, result, output_dir, "baseline_similar_names.csv", upload, sandbox)
+                strategy, target, target_type, result, output_dir, "baseline_similar_names.csv", upload, sandbox)
 
 
 @click.command()
@@ -122,16 +122,19 @@ def extract_available_matches_in_target(target, target_type, upload, sandbox, ou
                 if qid:
                     yield (qid, target_pid, r.catalog_id)
 
-    _write_or_upload_result('extract', target, result_generator(target_link_entity, target_pid), output_dir,
+    _write_or_upload_result('extract', target, target_type, result_generator(target_link_entity, target_pid),
+                            output_dir,
                             'match_extractor.csv', upload, sandbox)
 
 
-def _write_or_upload_result(strategy, target, result: Iterable, output_dir: str, filename: str, upload: bool,
+def _write_or_upload_result(strategy, target, target_type, result: Iterable, output_dir: str, filename: str,
+                            upload: bool,
                             sandbox: bool):
     if upload:
         wikidata_bot.add_statements(
             result, target_database.get_qid(target), sandbox)
     else:
+        filename = f'{target}_{target_type}_{filename}'
         filepath = path.join(output_dir, filename)
         with open(filepath, 'w') as filehandle:
             for res in result:
