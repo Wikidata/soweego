@@ -57,3 +57,42 @@ class SingleLayerPerceptron(KerasAdapter, BaseClassifier):
                 TensorBoard(log_dir=constants.SHARED_FOLDER)
             ]
         )
+
+
+class MultiLayerPerceptron(KerasAdapter, BaseClassifier):
+    """A multi-layer perceptron classifier."""
+
+    def __init__(self, input_dimension):
+        super(MultiLayerPerceptron, self).__init__()
+
+        model = Sequential([
+            Dense(128, input_dim=input_dimension, activation='relu'),
+            Dense(1, activation='sigmoid')
+        ])
+
+        model.compile(
+            optimizer='adam',
+            loss='binary_crossentropy',
+            metrics=['accuracy']
+        )
+
+        self.kernel = model
+
+    def _fit(self, features, answers, batch_size=1024, epochs=1000):
+        self.kernel.fit(
+            x=features,
+            y=answers,
+            validation_split=0.33,
+            batch_size=batch_size,
+            epochs=epochs,
+            callbacks=[
+                EarlyStopping(),
+                ModelCheckpoint(
+                    os.path.join(
+                        constants.SHARED_FOLDER,
+                        constants.NEURAL_NETWORK_CHECKPOINT_MODEL % self.__class__.__name__),
+                    save_best_only=True
+                ),
+                TensorBoard(log_dir=constants.SHARED_FOLDER)
+            ]
+        )

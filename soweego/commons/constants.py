@@ -168,16 +168,19 @@ SVC_CLASSIFIER = 'support_vector_machines'
 LINEAR_SVC_CLASSIFIER = 'linear_support_vector_machines'
 NAIVE_BAYES_CLASSIFIER = 'naive_bayes'
 PERCEPTRON_CLASSIFIER = 'single_layer_perceptron'
+MULTILAYER_CLASSIFIER = 'multi_layer_perceptron'
 
 CLASSIFIERS = {
     'naive_bayes': NAIVE_BAYES_CLASSIFIER,
     'support_vector_machines': SVC_CLASSIFIER,
     'linear_support_vector_machines': LINEAR_SVC_CLASSIFIER,
     'single_layer_perceptron': PERCEPTRON_CLASSIFIER,
+    'multi_layer_perceptron': MULTILAYER_CLASSIFIER,
     'nb': NAIVE_BAYES_CLASSIFIER,  # Shorthand
     'svm': SVC_CLASSIFIER,  # Shorthand
     'lsvm': LINEAR_SVC_CLASSIFIER,  # Shorthand
-    'slp': PERCEPTRON_CLASSIFIER  # Shorthand
+    'slp': PERCEPTRON_CLASSIFIER,  # Shorthand
+    'mlp': MULTILAYER_CLASSIFIER,
 }
 
 
