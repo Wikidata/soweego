@@ -11,6 +11,7 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import logging
 import os
+import pickle
 
 import click
 from pandas import MultiIndex, concat
@@ -50,6 +51,28 @@ def execute(classifier, catalog, entity, binarize, dir_io):
 
 
 def build_dataset(goal, catalog, entity, dir_io):
+
+    feature_vectors_fpath = os.path.join(dir_io,
+                                         constants.COMPLETE_FEATURE_VECTORS % (
+                                             catalog, entity, goal
+                                         ))
+    positive_samples_index_fpath = os.path.join(dir_io,
+                                                constants.COMPLETE_POSITIVE_SAMPLES_INDEX % (
+                                                    catalog, entity, goal
+                                                ))
+
+    # check if files exists for these paths. If yes then just return them
+    # instead of recomputing
+    if all(os.path.isfile(p) for p in [feature_vectors_fpath, positive_samples_index_fpath]):
+
+        LOGGER.info('Using previously pickled version of the dataset')
+
+        feature_vectors = pickle.load(open(feature_vectors_fpath, 'rb'))
+        positive_samples_index = pickle.load(
+            open(positive_samples_index_fpath, 'rb'))
+
+        return feature_vectors, positive_samples_index
+
     wd_reader = workflow.build_wikidata(goal, catalog, entity, dir_io)
     wd_generator = workflow.preprocess_wikidata(goal, wd_reader)
 
@@ -81,8 +104,16 @@ def build_dataset(goal, catalog, entity, dir_io):
     positive_samples_index = MultiIndex.from_tuples(zip(
         positive_samples.index, positive_samples), names=[constants.QID, constants.TID])
 
+    feature_vectors = concat(feature_vectors, sort=False).fillna(
+        constants.FEATURE_MISSING_VALUE)
+
+    # dump final data so we can reuse it next time
+    pickle.dump(feature_vectors, open(feature_vectors_fpath, 'wb'))
+    pickle.dump(positive_samples_index, open(
+        positive_samples_index_fpath, 'wb'))
+
     LOGGER.info('Built positive samples index from Wikidata')
-    return concat(feature_vectors, sort=False).fillna(constants.FEATURE_MISSING_VALUE), positive_samples_index
+    return feature_vectors, positive_samples_index
 
 
 def _build_positive_samples_index(wd_reader1):
