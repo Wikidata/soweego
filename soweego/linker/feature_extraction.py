@@ -86,7 +86,7 @@ class StringList(BaseCompareFeature):
                 for target in target_values:
                     try:
                         score = 1 - jellyfish.levenshtein_distance(source, target) \
-                            / np.max([len(source), len(target)])
+                                / np.max([len(source), len(target)])
                         scores.append(score)
                     except TypeError:
                         if pd.isnull(source) or pd.isnull(target):
@@ -145,7 +145,8 @@ class ExactList(BaseCompareFeature):
     name = 'exact_list'
     description = 'Compare pairs of lists through exact match on each pair of elements.'
 
-    def __init__(self, left_on, right_on, agree_value=1.0, disagree_value=0.0, missing_value=constants.FEATURE_MISSING_VALUE, label=None):
+    def __init__(self, left_on, right_on, agree_value=1.0, disagree_value=0.0,
+                 missing_value=constants.FEATURE_MISSING_VALUE, label=None):
         super(ExactList, self).__init__(left_on, right_on, label=label)
         self.agree_value = agree_value
         self.disagree_value = disagree_value
@@ -266,7 +267,8 @@ class SimilarTokens(BaseCompareFeature):
     name = 'SimilarTokens'
     description = 'Compare pairs of lists with string values based on shared tokens.'
 
-    def __init__(self, left_on, right_on, agree_value=1.0, disagree_value=0.0, missing_value=constants.FEATURE_MISSING_VALUE, label=None):
+    def __init__(self, left_on, right_on, agree_value=1.0, disagree_value=0.0,
+                 missing_value=constants.FEATURE_MISSING_VALUE, label=None):
         super(SimilarTokens, self).__init__(left_on, right_on, label=label)
         self.agree_value = agree_value
         self.disagree_value = disagree_value
@@ -290,16 +292,19 @@ class SimilarTokens(BaseCompareFeature):
                 if label:
                     second_set.update(filter(None, label.split()))
 
-            count_intersect = len(first_set.intersection(second_set))
+            intersection = first_set.intersection(second_set)
+            count_intersect = len(intersection)
             count_total = len(first_set.union(second_set))
 
-            return count_intersect / count_total if count_total > 0 else np.nan
+            # foreach of this words applies a score penality
+            count_low_score_words = len(text_utils.BAND_NAME_LOW_SCORE_WORDS.intersection(intersection))
+
+            return (count_intersect - (count_low_score_words * 0.9)) / count_total if count_total > 0 else np.nan
 
         return fillna(concatenated.apply(intersection_percentage_size), self.missing_value)
 
 
 class OccupationQidSet(BaseCompareFeature):
-
     name = 'occupation_qid_set'
     description = 'Compare pairs of sets containing occupation QIDs.'
 
