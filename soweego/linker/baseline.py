@@ -4,7 +4,6 @@
 """TODO module docstring"""
 from datetime import datetime
 
-import ipdb
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
