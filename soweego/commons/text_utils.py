@@ -24,6 +24,9 @@ COMMON_WORDS_ENG = frozenset(str(get_data(
 NAME_STOPWORDS = frozenset(str(get_data(
     'soweego.commons.resources', 'name_stopwords.txt'), 'utf8').splitlines())
 
+BAND_NAME_LOW_SCORE_WORDS = frozenset(
+    str(get_data('soweego.commons.resources', 'band_low_score_words.txt')).splitlines())
+
 # Latin alphabet diacritics and Russian
 ASCII_TRANSLATION_TABLE = str.maketrans({
     'á': 'a', 'Á': 'A', 'à': 'a', 'À': 'A', 'ă': 'a', 'Ă': 'A', 'â': 'a',
@@ -78,8 +81,9 @@ def tokenize(text, stopwords=STOPWORDS_ENG):
     for token in filtered:
         if token and token not in stopwords:
             tokens.add(token)
-    LOGGER.debug('Tokenization pipeline: INPUT --> %s --> ASCII --> %s --> LOWERCASE --> %s --> SPLIT --> %s --> NO 0/1-GRAMS + NO STOPWORDS --> %s',
-                 text, ascii_only, ascii_lowercase, split, tokens)
+    LOGGER.debug(
+        'Tokenization pipeline: INPUT --> %s --> ASCII --> %s --> LOWERCASE --> %s --> SPLIT --> %s --> NO 0/1-GRAMS + NO STOPWORDS --> %s',
+        text, ascii_only, ascii_lowercase, split, tokens)
     if not tokens:
         LOGGER.debug("No tokens from text '%s'", text)
     return tokens
