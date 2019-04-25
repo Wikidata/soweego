@@ -296,7 +296,7 @@ class SimilarTokens(BaseCompareFeature):
             count_intersect = len(intersection)
             count_total = len(first_set.union(second_set))
 
-            # foreach of this words applies a score penality
+            # Penalize band stopwords
             count_low_score_words = len(text_utils.BAND_NAME_LOW_SCORE_WORDS.intersection(intersection))
 
             return (count_intersect - (count_low_score_words * 0.9)) / count_total if count_total > 0 else np.nan
