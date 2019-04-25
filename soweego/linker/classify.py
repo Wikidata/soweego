@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """Supervised linking."""
+import gzip
 import logging
 import os
 import pickle
@@ -95,9 +96,9 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
         LOGGER.info(
             'Using previously cached version of the classification dataset')
 
-        fvectors = pickle.load(open(complete_fv_path, 'rb'))
-        wd_chunks = pickle.load(open(complete_wd_path, 'rb'))
-        target_chunks = pickle.load(open(complete_target_path, 'rb'))
+        fvectors = pickle.load(gzip.open(complete_fv_path, 'rb'))
+        wd_chunks = pickle.load(gzip.open(complete_wd_path, 'rb'))
+        target_chunks = pickle.load(gzip.open(complete_target_path, 'rb'))
 
         for i, (feature_vector, wd_chunk, target_chunk) in enumerate(zip(fvectors,
                                                                          wd_chunks,
@@ -115,7 +116,8 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
                     _zero_when_different_names, axis=1, args=(wd_chunk, target_chunk))
 
             if target_chunk.get(constants.URL) is not None:
-                predictions = DataFrame(predictions).apply(_one_when_wikidata_link_correct, axis=1, args=(target_chunk,))
+                predictions = DataFrame(predictions).apply(
+                    _one_when_wikidata_link_correct, axis=1, args=(target_chunk,))
 
             yield predictions[predictions >= threshold].drop_duplicates()
 
@@ -170,18 +172,19 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
                 LOGGER.info('Applying full names rule ...')
                 predictions = DataFrame(predictions).apply(
                     _zero_when_different_names, axis=1, args=(wd_chunk, target_chunk))
-            
+
             if target_chunk.get(constants.URL) is not None:
-                predictions = DataFrame(predictions).apply(_one_when_wikidata_link_correct, axis=1, args=(target_chunk,))
+                predictions = DataFrame(predictions).apply(
+                    _one_when_wikidata_link_correct, axis=1, args=(target_chunk,))
 
             LOGGER.info('Chunk %d classified', i)
 
             yield predictions[predictions >= threshold].drop_duplicates()
 
         # dump all processed chunks as pickled files
-        pickle.dump(all_feature_vectors, open(complete_fv_path, 'wb'))
-        pickle.dump(all_wd_chunks, open(complete_wd_path, 'wb'))
-        pickle.dump(all_target_chunks, open(complete_target_path, 'wb'))
+        pickle.dump(all_feature_vectors, gzip.open(complete_fv_path, 'wb'))
+        pickle.dump(all_wd_chunks, gzip.open(complete_wd_path, 'wb'))
+        pickle.dump(all_target_chunks, gzip.open(complete_target_path, 'wb'))
 
 
 def _zero_when_different_names(prediction, wikidata, target):
