@@ -5,6 +5,8 @@
 import logging
 import os
 import pickle
+import re
+from csv import DictReader
 
 import click
 import numpy as np
@@ -112,6 +114,9 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
                 predictions = DataFrame(predictions).apply(
                     _zero_when_different_names, axis=1, args=(wd_chunk, target_chunk))
 
+            if target_chunk.get(constants.URL) is not None:
+                predictions = DataFrame(predictions).apply(_one_when_wikidata_link_correct, axis=1, args=(target_chunk,))
+
             yield predictions[predictions >= threshold].drop_duplicates()
 
     else:
@@ -165,6 +170,9 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
                 LOGGER.info('Applying full names rule ...')
                 predictions = DataFrame(predictions).apply(
                     _zero_when_different_names, axis=1, args=(wd_chunk, target_chunk))
+            
+            if target_chunk.get(constants.URL) is not None:
+                predictions = DataFrame(predictions).apply(_one_when_wikidata_link_correct, axis=1, args=(target_chunk,))
 
             LOGGER.info('Chunk %d classified', i)
 
@@ -192,8 +200,25 @@ def _zero_when_different_names(prediction, wikidata, target):
     return 0.0 if wd_names.isdisjoint(target_names) else prediction[0]
 
 
-def _add_missing_feature_columns(classifier, feature_vectors):
+def _one_when_wikidata_link_correct(prediction, target):
+    qid, tid = prediction.name
 
+    urls = target.loc[tid][constants.URL]
+    if urls:
+        for u in urls:
+            if u:
+                if 'wikidata' in u:
+                    res = re.search(r'(Q\d+)$', u)
+                    if res:
+                        LOGGER.debug(
+                            f"""Changing prediction: {qid}, {tid} --- {u} = {1.0 if qid == res.groups()[
+                                0] else 0}, before it was {prediction[0]}""")
+                        return 1.0 if qid == res.groups()[0] else 0
+
+    return prediction[0]
+
+
+def _add_missing_feature_columns(classifier, feature_vectors):
     if isinstance(classifier, rl.NaiveBayesClassifier):
         expected_features = len(classifier.kernel._binarizers)
 
