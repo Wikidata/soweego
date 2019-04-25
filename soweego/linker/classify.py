@@ -4,8 +4,10 @@
 """Supervised linking."""
 import logging
 import os
+import pickle
 
 import click
+import numpy as np
 import recordlinkage as rl
 from numpy import full, nan
 from pandas import DataFrame
@@ -65,45 +67,106 @@ def _upload(predictions, catalog, sandbox):
 
 
 def execute(catalog, entity, model, name_rule, threshold, dir_io):
-    wd_reader = workflow.build_wikidata(
-        'classification', catalog, entity, dir_io)
-    wd_generator = workflow.preprocess_wikidata('classification', wd_reader)
+    complete_fv_path = os.path.join(dir_io, constants.COMPLETE_FEATURE_VECTORS %
+                                    (catalog, entity, 'classification'))
+    complete_wd_path = os.path.join(dir_io, constants.COMPLETE_WIKIDATA_CHUNKS %
+                                    (catalog, entity, 'classification'))
+    complete_target_path = os.path.join(dir_io, constants.COMPLETE_TARGET_CHUNKS %
+                                        (catalog, entity, 'classification'))
 
     classifier = joblib.load(model)
     rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
-    for i, wd_chunk in enumerate(wd_generator, 1):
-        # TODO Also consider blocking on URLs
 
-        samples = blocking.full_text_query_block(
-            'classification', catalog, wd_chunk[constants.NAME_TOKENS],
-            i, target_database.get_entity(catalog, entity), dir_io)
+    # check if files exists for these paths. If yes then just
+    # preprocess them in chunks instead of recomputing
+    if all(os.path.isfile(p) for p in [complete_fv_path,
+                                       complete_wd_path,
+                                       complete_target_path]):
 
-        # Build target chunk based on samples
-        target_reader = data_gathering.gather_target_dataset(
-            'classification', entity, catalog, set(samples.get_level_values(constants.TID)))
+        LOGGER.info(
+            'Using previously cached version of the classification dataset')
 
-        # Preprocess target chunk
-        target_chunk = workflow.preprocess_target(
-            'classification', target_reader)
+        fvectors = pickle.load(open(complete_fv_path, 'rb'))
+        wd_chunks = pickle.load(open(complete_wd_path, 'rb'))
+        target_chunks = pickle.load(open(complete_target_path, 'rb'))
 
-        features_path = os.path.join(
-            dir_io, constants.FEATURES % (catalog, entity, 'classification', i))
+        for i, (feature_vector, wd_chunk, target_chunk) in enumerate(zip(fvectors,
+                                                                         wd_chunks,
+                                                                         target_chunks
+                                                                         )):
 
-        feature_vectors = workflow.extract_features(
-            samples, wd_chunk, target_chunk, features_path)
+            _add_missing_feature_columns(classifier, feature_vector)
 
-        _add_missing_feature_columns(classifier, feature_vectors)
+            predictions = classifier.predict(feature_vector) if isinstance(
+                classifier, rl.SVMClassifier) else classifier.prob(feature_vector)
 
-        predictions = classifier.predict(feature_vectors) if isinstance(classifier, rl.SVMClassifier) else classifier.prob(feature_vectors)
+            if name_rule:
+                LOGGER.info('Applying full names rule ...')
+                predictions = DataFrame(predictions).apply(
+                    _zero_when_different_names, axis=1, args=(wd_chunk, target_chunk))
 
-        # See https://stackoverflow.com/a/18317089/10719765
-        if name_rule:
-            LOGGER.info('Applying full names rule ...')
-            predictions = DataFrame(predictions).apply(
-                _zero_when_different_names, axis=1, args=(wd_chunk, target_chunk))
+            yield predictions[predictions >= threshold].drop_duplicates()
 
-        LOGGER.info('Chunk %d classified', i)
-        yield predictions[predictions >= threshold].drop_duplicates()
+    else:
+
+        LOGGER.info('Cached version of the classification dataset not found. '
+                    'Creating it from scratch.')
+
+        wd_reader = workflow.build_wikidata(
+            'classification', catalog, entity, dir_io)
+        wd_generator = workflow.preprocess_wikidata(
+            'classification', wd_reader)
+
+        all_feature_vectors = []
+        all_wd_chunks = []
+        all_target_chunks = []
+
+        for i, wd_chunk in enumerate(wd_generator, 1):
+            # TODO Also consider blocking on URLs
+
+            samples = blocking.full_text_query_block(
+                'classification', catalog, wd_chunk[constants.NAME_TOKENS],
+                i, target_database.get_entity(catalog, entity), dir_io)
+
+            # Build target chunk based on samples
+            target_reader = data_gathering.gather_target_dataset(
+                'classification', entity, catalog, set(samples.get_level_values(constants.TID)))
+
+            # Preprocess target chunk
+            target_chunk = workflow.preprocess_target(
+                'classification', target_reader)
+
+            features_path = os.path.join(
+                dir_io, constants.FEATURES % (catalog, entity, 'classification', i))
+
+            feature_vectors = workflow.extract_features(
+                samples, wd_chunk, target_chunk, features_path)
+
+            # keep features before adding missing features vectors, which may
+            # change depending on the classifier.
+            all_feature_vectors.append(feature_vectors)
+            all_wd_chunks.append(wd_chunk)
+            all_target_chunks.append(target_chunk)
+
+            _add_missing_feature_columns(classifier, feature_vectors)
+
+            predictions = classifier.predict(feature_vectors) if isinstance(
+                classifier, rl.SVMClassifier) else classifier.prob(feature_vectors)
+
+            # See https://stackoverflow.com/a/18317089/10719765
+            if name_rule:
+                LOGGER.info('Applying full names rule ...')
+                predictions = DataFrame(predictions).apply(
+                    _zero_when_different_names, axis=1, args=(wd_chunk, target_chunk))
+
+            LOGGER.info('Chunk %d classified', i)
+
+            yield predictions[predictions >= threshold].drop_duplicates()
+
+        # dump all processed chunks as pickled files
+        pickle.dump(all_feature_vectors, open(complete_fv_path, 'wb'))
+        pickle.dump(all_wd_chunks, open(complete_wd_path, 'wb'))
+        pickle.dump(all_target_chunks, open(complete_target_path, 'wb'))
 
 
 def _zero_when_different_names(prediction, wikidata, target):
@@ -126,10 +189,13 @@ def _add_missing_feature_columns(classifier, feature_vectors):
 
     if isinstance(classifier, rl.NaiveBayesClassifier):
         expected_features = len(classifier.kernel._binarizers)
+
     elif isinstance(classifier, (classifiers.SVCClassifier, rl.SVMClassifier)):
         expected_features = classifier.kernel.coef_.shape[1]
+
     elif isinstance(classifier, neural_networks.SingleLayerPerceptron):
         expected_features = classifier.kernel.input_shape[1]
+
     else:
         err_msg = f'Unsupported classifier: {classifier.__name__}. It should be one of {set(constants.CLASSIFIERS)}'
         LOGGER.critical(err_msg)
