@@ -9,6 +9,7 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+import gzip
 import logging
 import os
 import pickle
@@ -67,9 +68,9 @@ def build_dataset(goal, catalog, entity, dir_io):
 
         LOGGER.info(f'Using previously cached version of the "{goal}" dataset')
 
-        feature_vectors = pickle.load(open(feature_vectors_fpath, 'rb'))
+        feature_vectors = pickle.load(gzip.open(feature_vectors_fpath, 'rb'))
         positive_samples_index = pickle.load(
-            open(positive_samples_index_fpath, 'rb'))
+            gzip.open(positive_samples_index_fpath, 'rb'))
 
         return feature_vectors, positive_samples_index
 
@@ -108,8 +109,8 @@ def build_dataset(goal, catalog, entity, dir_io):
         constants.FEATURE_MISSING_VALUE)
 
     # dump final data so we can reuse it next time
-    pickle.dump(feature_vectors, open(feature_vectors_fpath, 'wb'))
-    pickle.dump(positive_samples_index, open(
+    pickle.dump(feature_vectors, gzip.open(feature_vectors_fpath, 'wb'))
+    pickle.dump(positive_samples_index, gzip.open(
         positive_samples_index_fpath, 'wb'))
 
     LOGGER.info('Built positive samples index from Wikidata')
