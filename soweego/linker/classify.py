@@ -46,18 +46,25 @@ def cli(classifier, target, target_type, name_rule, upload, sandbox, threshold, 
     model_path = os.path.join(dir_io, constants.LINKER_MODEL %
                               (target, target_type, classifier))
 
+    results_path = os.path.join(dir_io, constants.LINKER_RESULT %
+                                (target, target_type, classifier))
+
     # Ensure that the model exists
     if not os.path.isfile(model_path):
         err_msg = 'No classifier model found at path: %s ' % model_path
         LOGGER.critical('File does not exist - ' + err_msg)
         raise FileNotFoundError(err_msg)
 
+    # If results path exists then delete it. If not new we results
+    # will just be appended to an old results file.
+    if os.path.isfile(results_path):
+        os.remove(results_path)
+
     for chunk in execute(target, target_type, model_path, name_rule, threshold, dir_io):
         if upload:
             _upload(chunk, target, sandbox)
 
-        chunk.to_csv(os.path.join(dir_io, constants.LINKER_RESULT %
-                                  (target, target_type, classifier)), mode='a', header=False)
+        chunk.to_csv(results_path, mode='a', header=False)
 
 
 def _upload(predictions, catalog, sandbox):
