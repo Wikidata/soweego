@@ -15,6 +15,7 @@ import os
 import pickle
 
 import click
+import pandas as pd
 from pandas import MultiIndex, concat
 from sklearn.externals import joblib
 
@@ -68,7 +69,8 @@ def build_dataset(goal, catalog, entity, dir_io):
 
         LOGGER.info(f'Using previously cached version of the "{goal}" dataset')
 
-        feature_vectors = pickle.load(gzip.open(feature_vectors_fpath, 'rb'))
+        feature_vectors = pd.read_pickle(feature_vectors_fpath)
+
         positive_samples_index = pickle.load(
             gzip.open(positive_samples_index_fpath, 'rb'))
 
@@ -109,7 +111,9 @@ def build_dataset(goal, catalog, entity, dir_io):
         constants.FEATURE_MISSING_VALUE)
 
     # dump final data so we can reuse it next time
-    pickle.dump(feature_vectors, gzip.open(feature_vectors_fpath, 'wb'))
+    feature_vectors.to_pickle(feature_vectors_fpath)
+
+    # MultiIndex has no `to_pickle` method, so we pickle it in the usual way
     pickle.dump(positive_samples_index, gzip.open(
         positive_samples_index_fpath, 'wb'))
 

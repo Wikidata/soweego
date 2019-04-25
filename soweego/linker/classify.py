@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 """Supervised linking."""
-import gzip
 import logging
 import os
 import re
