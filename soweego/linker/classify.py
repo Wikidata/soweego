@@ -5,12 +5,12 @@
 import gzip
 import logging
 import os
-import pickle
 import re
 from csv import DictReader
 
 import click
 import numpy as np
+import pandas as pd
 import recordlinkage as rl
 from numpy import full, nan
 from pandas import DataFrame
@@ -69,6 +69,8 @@ def cli(classifier, target, target_type, name_rule, upload, sandbox, threshold, 
 
         chunk.to_csv(results_path, mode='a', header=False)
 
+    LOGGER.info('Classification complete')
+
 
 def _upload(predictions, catalog, sandbox):
     links = dict(predictions.to_dict().keys())
@@ -96,30 +98,25 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
         LOGGER.info(
             'Using previously cached version of the classification dataset')
 
-        fvectors = pickle.load(gzip.open(complete_fv_path, 'rb'))
-        wd_chunks = pickle.load(gzip.open(complete_wd_path, 'rb'))
-        target_chunks = pickle.load(gzip.open(complete_target_path, 'rb'))
+        fvectors = pd.read_pickle(complete_fv_path)
+        wd_chunks = pd.read_pickle(complete_wd_path)
+        target_chunks = pd.read_pickle(complete_target_path)
 
-        for i, (feature_vector, wd_chunk, target_chunk) in enumerate(zip(fvectors,
-                                                                         wd_chunks,
-                                                                         target_chunks
-                                                                         )):
+        _add_missing_feature_columns(classifier, fvectors)
 
-            _add_missing_feature_columns(classifier, feature_vector)
+        predictions = classifier.predict(fvectors) if isinstance(
+            classifier, rl.SVMClassifier) else classifier.prob(fvectors)
 
-            predictions = classifier.predict(feature_vector) if isinstance(
-                classifier, rl.SVMClassifier) else classifier.prob(feature_vector)
+        if name_rule:
+            LOGGER.info('Applying full names rule ...')
+            predictions = DataFrame(predictions).apply(
+                _zero_when_different_names, axis=1, args=(wd_chunks, target_chunks))
 
-            if name_rule:
-                LOGGER.info('Applying full names rule ...')
-                predictions = DataFrame(predictions).apply(
-                    _zero_when_different_names, axis=1, args=(wd_chunk, target_chunk))
+        if target_chunks.get(constants.URL) is not None:
+            predictions = DataFrame(predictions).apply(
+                _one_when_wikidata_link_correct, axis=1, args=(target_chunks,))
 
-            if target_chunk.get(constants.URL) is not None:
-                predictions = DataFrame(predictions).apply(
-                    _one_when_wikidata_link_correct, axis=1, args=(target_chunk,))
-
-            yield predictions[predictions >= threshold].drop_duplicates()
+        yield predictions[predictions >= threshold].drop_duplicates()
 
     else:
 
@@ -182,9 +179,10 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
             yield predictions[predictions >= threshold].drop_duplicates()
 
         # dump all processed chunks as pickled files
-        pickle.dump(all_feature_vectors, gzip.open(complete_fv_path, 'wb'))
-        pickle.dump(all_wd_chunks, gzip.open(complete_wd_path, 'wb'))
-        pickle.dump(all_target_chunks, gzip.open(complete_target_path, 'wb'))
+        pd.concat(all_feature_vectors, sort=False).to_pickle(complete_fv_path)
+        pd.concat(all_wd_chunks, sort=False).to_pickle(complete_wd_path)
+        pd.concat(all_target_chunks, sort=False).to_pickle(
+            complete_target_path)
 
 
 def _zero_when_different_names(prediction, wikidata, target):
