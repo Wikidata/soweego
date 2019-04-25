@@ -106,7 +106,8 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
             predictions = DataFrame(predictions).apply(
                 _zero_when_different_names, axis=1, args=(wd_chunk, target_chunk))
 
-        predictions = DataFrame(predictions).apply(_one_when_wikidata_link_correct, axis=1, args=(target_chunk,))
+        if target_chunk.get(constants.URL) is not None:
+            predictions = DataFrame(predictions).apply(_one_when_wikidata_link_correct, axis=1, args=(target_chunk,))
 
         LOGGER.info('Chunk %d classified', i)
         yield predictions[predictions >= threshold].drop_duplicates()
@@ -131,18 +132,17 @@ def _zero_when_different_names(prediction, wikidata, target):
 def _one_when_wikidata_link_correct(prediction, target):
     qid, tid = prediction.name
 
-    if target.get(constants.URL) is not None:
-        urls = target.loc[tid][constants.URL]
-        if urls:
-            for u in urls:
-                if u:
-                    if 'wikidata' in u:
-                        res = re.search(r'(Q\d+)$', u)
-                        if res:
-                            LOGGER.debug(
-                                f"""Changing prediction: {qid}, {tid} --- {u} = {1.0 if qid == res.groups()[
-                                    0] else 0}, before it was {prediction[0]}""")
-                            return 1.0 if qid == res.groups()[0] else 0
+    urls = target.loc[tid][constants.URL]
+    if urls:
+        for u in urls:
+            if u:
+                if 'wikidata' in u:
+                    res = re.search(r'(Q\d+)$', u)
+                    if res:
+                        LOGGER.debug(
+                            f"""Changing prediction: {qid}, {tid} --- {u} = {1.0 if qid == res.groups()[
+                                0] else 0}, before it was {prediction[0]}""")
+                        return 1.0 if qid == res.groups()[0] else 0
 
     return prediction[0]
 
