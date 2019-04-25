@@ -65,7 +65,7 @@ def build_dataset(goal, catalog, entity, dir_io):
     # instead of recomputing
     if all(os.path.isfile(p) for p in [feature_vectors_fpath, positive_samples_index_fpath]):
 
-        LOGGER.info('Using previously pickled version of the dataset')
+        LOGGER.info(f'Using previously cached version of the "{goal}" dataset')
 
         feature_vectors = pickle.load(open(feature_vectors_fpath, 'rb'))
         positive_samples_index = pickle.load(
