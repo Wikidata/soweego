@@ -156,6 +156,7 @@ WD_CLASSIFICATION_SET = 'wikidata_%s_%s_classification_set.jsonl.gz'
 SAMPLES = '%s_%s_%s_samples%02d.pkl.gz'
 FEATURES = '%s_%s_%s_features%02d.pkl.gz'
 LINKER_MODEL = '%s_%s_%s_model.pkl'
+LINKER_NESTED_CV_BEST_MODEL = '%s_%s_%s_best_model_k%02d.pkl'
 LINKER_RESULT = '%s_%s_%s_linker_result.csv.gz'
 LINKER_EVALUATION_PREDICTIONS = '%s_%s_%s_linker_evaluation_predictions.csv.gz'
 LINKER_PERFORMANCE = '%s_%s_%s_linker_performance.txt'
@@ -168,26 +169,55 @@ WIKIDATA_API_SESSION = 'wiki_api_session.pkl'
 SHARED_FOLDER = '/app/shared/'
 
 # Supervised classification
-SVC_CLASSIFIER = 'support_vector_machines'
-LINEAR_SVC_CLASSIFIER = 'linear_support_vector_machines'
-NAIVE_BAYES_CLASSIFIER = 'naive_bayes'
-PERCEPTRON_CLASSIFIER = 'single_layer_perceptron'
+NAIVE_BAYES = 'naive_bayes'
+LINEAR_SVM = 'linear_support_vector_machines'
+SVM = 'support_vector_machines'
+SINGLE_LAYER_PERCEPTRON = 'single_layer_perceptron'
 
 CLASSIFIERS = {
-    'naive_bayes': NAIVE_BAYES_CLASSIFIER,
-    'support_vector_machines': SVC_CLASSIFIER,
-    'linear_support_vector_machines': LINEAR_SVC_CLASSIFIER,
-    'single_layer_perceptron': PERCEPTRON_CLASSIFIER,
-    'nb': NAIVE_BAYES_CLASSIFIER,  # Shorthand
-    'svm': SVC_CLASSIFIER,  # Shorthand
-    'lsvm': LINEAR_SVC_CLASSIFIER,  # Shorthand
-    'slp': PERCEPTRON_CLASSIFIER  # Shorthand
+    'naive_bayes': NAIVE_BAYES,
+    'support_vector_machines': SVM,
+    'linear_support_vector_machines': LINEAR_SVM,
+    'single_layer_perceptron': SINGLE_LAYER_PERCEPTRON,
+    'nb': NAIVE_BAYES,  # Shorthand
+    'svm': SVM,  # Shorthand
+    'lsvm': LINEAR_SVM,  # Shorthand
+    'slp': SINGLE_LAYER_PERCEPTRON  # Shorthand
 }
 
+PERFORMANCE_METRICS = ['precision', 'recall', 'f1']
+
+PARAMETER_GRIDS = {
+    NAIVE_BAYES: {
+        'alpha': [0.0001, 0.001, 0.01, 0.1, 1],
+        'binarize': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+    },
+    LINEAR_SVM: {
+        # TODO Fails to converge with 10 and 100 on Discogs band
+        'C': [0.01, 0.1, 1.0, 10, 100]
+    },
+    SVM: {
+        'C': [0.01, 0.1, 1.0, 10, 100],
+        'kernel': ['linear', 'poly', 'rbf', 'sigmoid']
+    },
+    SINGLE_LAYER_PERCEPTRON: {
+        'epochs': [100, 1000, 2000, 3000],
+        'batch_size': [256, 512, 1024, 2048]
+    }
+}
 
 CLASSIFICATION_RETURN_SERIES = ('classification.return_type', 'series')
 CONFIDENCE_THRESHOLD = 0.5
 FEATURE_MISSING_VALUE = 0.0
+
+# Neural networks-specific
+ACTIVATION = 'sigmoid'
+OPTIMIZER = 'adam'
+LOSS = 'binary_crossentropy'
+METRICS = ['accuracy']
+BATCH_SIZE = 1024
+EPOCHS = 1000
+VALIDATION_SPLIT = 0.33
 
 # precisions for the `pandas.Period` class.
 # Listed from least to most precise, as defined here:
