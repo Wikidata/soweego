@@ -30,6 +30,7 @@ TWITTER = 'Q918'
 
 # Identifier properties
 DISCOGS_ARTIST_PID = 'P1953'
+DISCOGS_MASTER_PID = 'P1954'
 IMDB_PID = 'P345'
 MUSICBRAINZ_ARTIST_PID = 'P434'
 TWITTER_USERNAME_PID = 'P2002'
@@ -76,25 +77,37 @@ SPECIAL_EFFECTS = 'Q21560152'
 STUNTS = 'Q465501'
 TALENT_AGENT = 'Q1344174'
 VISUAL_EFFECTS_ARTIST = 'Q1224742'
-
+MUSICALWORK = 'Q2188189'
 
 # Target catalogs helper dictionary
 CATALOG_MAPPING = {
     'discogs': {
-        'qid': DISCOGS,
-        'pid': DISCOGS_ARTIST_PID
+        'release': {
+            'qid': DISCOGS,
+            'pid': DISCOGS_MASTER_PID
+        },
+        'default': {
+            'qid': DISCOGS,
+            'pid': DISCOGS_ARTIST_PID
+        }
     },
     'imdb': {
-        'qid': IMDB,
-        'pid': IMDB_PID
+        'default': {
+            'qid': IMDB,
+            'pid': IMDB_PID
+        }
     },
     'musicbrainz': {
-        'qid': MUSICBRAINZ,
-        'pid': MUSICBRAINZ_ARTIST_PID
+        'default': {
+            'qid': MUSICBRAINZ,
+            'pid': MUSICBRAINZ_ARTIST_PID
+        }
     },
     'twitter': {
-        'qid': TWITTER,
-        'pid': TWITTER_USERNAME_PID
+        'default': {
+            'qid': TWITTER,
+            'pid': TWITTER_USERNAME_PID
+        }
     }
 }
 
@@ -181,7 +194,6 @@ DATE_PRECISION = {
     MINUTE: 'minute',
     SECOND: 'second'
 }
-
 
 # This dictionary provides mappings between the professions
 # used by IMDb and their respective Wikidata occupations

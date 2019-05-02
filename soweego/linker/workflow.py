@@ -47,7 +47,7 @@ def build_wikidata(goal, catalog, entity, dir_io):
         raise ValueError(
             "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'" % goal)
 
-    catalog_pid = target_database.get_pid(catalog)
+    catalog_pid = target_database.get_pid(catalog, entity)
 
     if os.path.exists(wd_io_path):
         LOGGER.info(
@@ -113,7 +113,7 @@ def _get_tids(qids_and_tids):
 
 
 def preprocess(goal: str, wikidata_reader: JsonReader, target_reader: JsonReader) -> Tuple[
-        Generator[pd.DataFrame, None, None], Generator[pd.DataFrame, None, None]]:
+    Generator[pd.DataFrame, None, None], Generator[pd.DataFrame, None, None]]:
     handle_goal(goal)
     return preprocess_wikidata(goal, wikidata_reader), preprocess_target(goal, target_reader)
 
@@ -154,7 +154,7 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
         compare.add(StringList(constants.NAME_TOKENS,
                                constants.NAME_TOKENS, label='name_levenshtein'))
 
-    # Feature 5: similar name tokens
+        # Feature 5: similar name tokens
         compare.add(SimilarTokens(constants.NAME_TOKENS,
                                   constants.NAME_TOKENS, label='similar_name_tokens'))
 
@@ -275,19 +275,23 @@ def preprocess_target(goal, target_reader):
     LOGGER.info('Dropping columns with null values only ...')
     _drop_null_columns(target)
 
-    will_handle_dates = _will_handle_dates(target)
-
     # 4. Pair dates with their precision & drop precision columns
-    if will_handle_dates:
-        LOGGER.info('Pairing date columns with precision ones ...')
+    if _will_handle_birth_date(target):
+        LOGGER.info('Pairing birth date columns with precision ones ...')
         target[constants.DATE_OF_BIRTH] = list(
             zip(target[constants.DATE_OF_BIRTH], target[constants.BIRTH_PRECISION]))
+        target.drop(columns=[constants.BIRTH_PRECISION], inplace=True)
+        log_dataframe_info(
+            LOGGER, target, 'Paired birth date columns with precision ones')
+
+    if _will_handle_death_date(target):
+        LOGGER.info('Pairing death date columns with precision ones ...')
         target[constants.DATE_OF_DEATH] = list(
             zip(target[constants.DATE_OF_DEATH], target[constants.DEATH_PRECISION]))
-        target.drop(columns=[constants.BIRTH_PRECISION,
-                             constants.DEATH_PRECISION], inplace=True)
+        target.drop(columns=[constants.DEATH_PRECISION], inplace=True)
+
         log_dataframe_info(
-            LOGGER, target, 'Paired date columns with precision ones')
+            LOGGER, target, 'Paired death date columns with precision ones')
 
     # 5. Aggregate denormalized data on target ID
     # TODO Token lists may contain duplicate tokens
@@ -297,7 +301,7 @@ def preprocess_target(goal, target_reader):
     log_dataframe_info(
         LOGGER, target, f"Data indexed and aggregated on '{constants.TID}' column")
     # 6. Shared preprocessing
-    target = _shared_preprocessing(target, will_handle_dates)
+    target = _shared_preprocessing(target, _will_handle_birth_date(target) or _will_handle_death_date(target))
 
     LOGGER.info('Target preprocessing done')
     return target
@@ -357,16 +361,27 @@ def _handle_dates(df):
     log_dataframe_info(LOGGER, df, 'Parsed dates')
 
 
-def _will_handle_dates(df):
+def _will_handle_dates(df: pd.DataFrame) -> bool:
+    return _will_handle_birth_date(df) and _will_handle_death_date(df)
+
+
+def _will_handle_birth_date(df: pd.DataFrame) -> bool:
     dob_column = df.get(constants.DATE_OF_BIRTH)
-    dod_column = df.get(constants.DATE_OF_DEATH)
-
-    if dob_column is None and dod_column is None:
+    if dob_column is None:
         LOGGER.warning(
-            "Neither '%s' nor '%s' column in DataFrame, won't handle dates. Perhaps they were dropped because they contained null values only",
-            constants.DATE_OF_BIRTH, constants.DATE_OF_DEATH)
+            "'%s' column is not in DataFrame, won't handle birth dates. Perhaps it was dropped because they contained null values only",
+            constants.DATE_OF_BIRTH)
         return False
+    return True
 
+
+def _will_handle_death_date(df: pd.DataFrame) -> bool:
+    dod_column = df.get(constants.DATE_OF_DEATH)
+    if dod_column is None:
+        LOGGER.warning(
+            "'%s' column is not in DataFrame, won't handle death dates. Perhaps it was dropped because they contained null values only",
+            constants.DATE_OF_DEATH)
+        return False
     return True
 
 
@@ -439,7 +454,6 @@ def _occupations_to_set(df):
         # of space separated occupations (or an empty string
         # in case there are no occupations)
         if len(itm) == 1:
-
             # get inner occupation ids and remove empty occupations
             itm = [x for x in itm[0].split() if x]
 

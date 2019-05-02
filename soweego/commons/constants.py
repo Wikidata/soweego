@@ -43,7 +43,8 @@ HANDLED_ENTITIES = {
     'director': OCCUPATION,
     'musician': OCCUPATION,
     'producer': OCCUPATION,
-    'writer': OCCUPATION
+    'writer': OCCUPATION,
+    'release': CLASS
 }
 
 # DB entity Python types for typed function signatures
@@ -64,6 +65,12 @@ TARGET_CATALOGS = {
             'entity': models.discogs_entity.DiscogsGroupEntity,
             'link_entity': models.discogs_entity.DiscogsGroupLinkEntity,
             'nlp_entity': models.discogs_entity.DiscogsGroupNlpEntity
+        },
+        'release': {
+            'qid': vocabulary.MUSICALWORK,
+            'entity': models.discogs_entity.DiscogsMasterEntity,
+            'link_entity': None,
+            'nlp_entity': None
         }
     },
     'imdb': {
@@ -183,7 +190,6 @@ CLASSIFIERS = {
     'lsvm': LINEAR_SVC_CLASSIFIER,  # Shorthand
     'slp': PERCEPTRON_CLASSIFIER  # Shorthand
 }
-
 
 CLASSIFICATION_RETURN_SERIES = ('classification.return_type', 'series')
 CONFIDENCE_THRESHOLD = 0.5

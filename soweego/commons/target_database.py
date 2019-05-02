@@ -30,9 +30,31 @@ def get_nlp_entity(target, entity_type):
     return TARGET_CATALOGS[target][entity_type]['nlp_entity']
 
 
-def get_qid(catalog):
-    return vocabulary.CATALOG_MAPPING.get(catalog)['qid']
+def get_qid(catalog, target_type):
+    catalog_dict = vocabulary.CATALOG_MAPPING.get(catalog)
+
+    if catalog_dict is None:
+        return None
+
+    if target_type is None:
+        return catalog_dict['default']['qid']
+    else:
+        if catalog_dict.get(target_type) is not None:
+            return catalog_dict[target_type]['qid']
+        else:
+            return catalog_dict['default']['qid']
 
 
-def get_pid(catalog):
-    return vocabulary.CATALOG_MAPPING.get(catalog)['pid']
+def get_pid(catalog, target_type):
+    catalog_dict = vocabulary.CATALOG_MAPPING.get(catalog)
+
+    if catalog_dict is None:
+        return None
+
+    if target_type is None:
+        return catalog_dict['default']['pid']
+    else:
+        if catalog_dict.get(target_type) is not None:
+            return catalog_dict[target_type]['pid']
+        else:
+            return catalog_dict['default']['pid']

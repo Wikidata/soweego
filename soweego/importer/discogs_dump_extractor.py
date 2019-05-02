@@ -215,7 +215,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                 self._populate_musician(entity_array,
                                         entity, identifier, name, living_links, node)
             # Band
-            elif members:
+            elif members is not None:
                 entity = discogs_entity.DiscogsGroupEntity()
                 self._populate_band(entity_array, entity, identifier,
                                     name, living_links, node)
@@ -308,7 +308,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
 
     def _populate_name_variations(self, entity_array, artist_node, current_entity, identifier):
         name_variations_node = artist_node.find('namevariations')
-        if name_variations_node:
+        if name_variations_node is not None:
             children = list(name_variations_node)
             if children:
                 for e in self._denormalize_name_variation_entities(
