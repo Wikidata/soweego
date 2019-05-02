@@ -40,14 +40,14 @@ LOGGER = logging.getLogger(__name__)
               help="Probability score threshold, default: 0.5.")
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER,
               help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER)
-@click.option('-b', '--block-fields',
+@click.option('-pb', '--post-block-fields',
               type=click.Choice([
                   constants.NAME,
                   constants.URL,
               ]),
               multiple=True,
               help='Fields on which to perform the post-classification blocking.')
-def cli(classifier, target, target_type, block_fields, upload, sandbox, threshold, dir_io):
+def cli(classifier, target, target_type, post_block_fields, upload, sandbox, threshold, dir_io):
     """Run a probabilistic linker."""
 
     # Load model from the specified classifier+target+target_type
@@ -68,7 +68,7 @@ def cli(classifier, target, target_type, block_fields, upload, sandbox, threshol
     if os.path.isfile(results_path):
         os.remove(results_path)
 
-    for chunk in execute(target, target_type, model_path, block_fields, threshold, dir_io):
+    for chunk in execute(target, target_type, model_path, post_block_fields, threshold, dir_io):
         if upload:
             _upload(chunk, target, sandbox)
 
@@ -83,7 +83,7 @@ def _upload(predictions, catalog, sandbox):
     wikidata_bot.add_identifiers(links, catalog, sandbox)
 
 
-def execute(catalog, entity, model, block_fields, threshold, dir_io):
+def execute(catalog, entity, model, post_block_fields, threshold, dir_io):
     complete_fv_path = os.path.join(dir_io, constants.COMPLETE_FEATURE_VECTORS %
                                     (catalog, entity, 'classification'))
     complete_wd_path = os.path.join(dir_io, constants.COMPLETE_WIKIDATA_CHUNKS %
@@ -116,7 +116,7 @@ def execute(catalog, entity, model, block_fields, threshold, dir_io):
         predictions = _post_classification_blocking(predictions,
                                                     wd_chunks,
                                                     target_chunks,
-                                                    block_fields)
+                                                    post_block_fields)
 
         # if WD link is present and correct then predicion is 1
         if target_chunks.get(constants.URL) is not None:
@@ -175,7 +175,7 @@ def execute(catalog, entity, model, block_fields, threshold, dir_io):
             predictions = _post_classification_blocking(predictions,
                                                         wd_chunk,
                                                         target_chunk,
-                                                        block_fields)
+                                                        post_block_fields)
 
             # if WD link is present and correct then predicion is 1
             if target_chunk.get(constants.URL) is not None:
@@ -194,16 +194,16 @@ def execute(catalog, entity, model, block_fields, threshold, dir_io):
 
 
 def _post_classification_blocking(predictions: pd.Series, wd_chunk: pd.DataFrame, target_chunk: pd.DataFrame,
-                                  block_fields: List[str]) -> pd.Series:
+                                  post_block_fields: List[str]) -> pd.Series:
 
     partial_blocking_func = functools.partial(_zero_when_not_exact_match,
                                               wikidata=wd_chunk,
-                                              fields=block_fields,
+                                              fields=post_block_fields,
                                               target=target_chunk)
 
     # only do blocking when there is actually some
     # field to block on
-    if block_fields:
+    if post_block_fields:
         predictions = pd.DataFrame(predictions).apply(
             partial_blocking_func, axis=1)
 
