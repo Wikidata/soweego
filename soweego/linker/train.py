@@ -18,38 +18,48 @@ import click
 import pandas as pd
 from pandas import MultiIndex, concat
 from sklearn.externals import joblib
+from sklearn.model_selection import GridSearchCV
 
-from soweego.commons import constants, data_gathering, target_database
+from soweego.commons import constants, data_gathering, target_database, utils
 from soweego.linker import blocking, workflow
 
 LOGGER = logging.getLogger(__name__)
 
 
-@click.command()
+@click.command(context_settings={'ignore_unknown_options': True, 'allow_extra_args': True})
 @click.argument('classifier', type=click.Choice(constants.CLASSIFIERS))
 @click.argument('target', type=click.Choice(target_database.available_targets()))
 @click.argument('target_type', type=click.Choice(target_database.available_types()))
-@click.option('-b', '--binarize', default=0.1, help="Default: 0.1")
+@click.option('-k', '--k-folds', default=5, help='Number of folds for hyperparameters tuning. Default: 5.')
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER,
               help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER)
-def cli(classifier, target, target_type, binarize, dir_io):
+@click.pass_context
+def cli(ctx, classifier, target, target_type, k_folds, dir_io):
     """Train a probabilistic linker."""
+    kwargs = utils.handle_extra_cli_args(ctx.args)
+    if kwargs is None:
+        return 1
 
     model = execute(
-        constants.CLASSIFIERS[classifier], target, target_type, binarize, dir_io)
+        constants.CLASSIFIERS[classifier], target, target_type, k_folds, dir_io, **kwargs)
     outfile = os.path.join(
         dir_io, constants.LINKER_MODEL % (target, target_type, classifier))
     joblib.dump(model, outfile)
     LOGGER.info("%s model dumped to '%s'", classifier, outfile)
 
 
-def execute(classifier, catalog, entity, binarize, dir_io):
-    goal = 'training'
-
+def execute(classifier, catalog, entity, k, dir_io, **kwargs):
     feature_vectors, positive_samples_index = build_dataset(
-        goal, catalog, entity, dir_io)
+        'training', catalog, entity, dir_io)
 
-    return _train(classifier, feature_vectors, positive_samples_index, binarize)
+    k_fold, target = utils.prepare_stratified_k_fold(
+        k, feature_vectors, positive_samples_index)
+    model = _initialize(classifier, feature_vectors, **kwargs)
+    grid_search = GridSearchCV(
+        model.kernel, constants.PARAMETER_GRIDS[classifier], scoring='f1', n_jobs=-1, cv=k_fold)
+    grid_search.fit(feature_vectors.to_numpy(), target)
+
+    return _train(classifier, feature_vectors, positive_samples_index, **grid_search.best_params_)
 
 
 def build_dataset(goal, catalog, entity, dir_io):
@@ -67,7 +77,7 @@ def build_dataset(goal, catalog, entity, dir_io):
     # instead of recomputing
     if all(os.path.isfile(p) for p in [feature_vectors_fpath, positive_samples_index_fpath]):
 
-        LOGGER.info(f'Using previously cached version of the "{goal}" dataset')
+        LOGGER.info('Using cached version of the %s set', goal)
 
         feature_vectors = pd.read_pickle(feature_vectors_fpath)
 
@@ -137,12 +147,15 @@ def _build_positive_samples_index(wd_reader1):
     return positive_samples_index
 
 
-def _train(classifier, feature_vectors, positive_samples_index, binarize):
-
-    model = workflow.init_model(classifier, binarize, feature_vectors.shape[1])
+def _train(classifier, feature_vectors, positive_samples_index, **kwargs):
+    model = _initialize(classifier, feature_vectors, **kwargs)
 
     LOGGER.info('Training a %s', classifier)
     model.fit(feature_vectors, positive_samples_index)
 
     LOGGER.info('Training done')
     return model
+
+
+def _initialize(classifier, feature_vectors, **kwargs):
+    return workflow.init_model(classifier, feature_vectors.shape[1], **kwargs) if classifier is constants.SINGLE_LAYER_PERCEPTRON else workflow.init_model(classifier, **kwargs)
