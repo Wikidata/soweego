@@ -26,24 +26,25 @@ LOGGER = logging.getLogger(__name__)
 class SingleLayerPerceptron(KerasAdapter, BaseClassifier):
     """A single-layer perceptron classifier."""
 
-    def __init__(self, input_dimension):
+    def __init__(self, input_dim, **kwargs):
         super(SingleLayerPerceptron, self).__init__()
 
         model = Sequential()
-        model.add(Dense(1, input_dim=input_dimension, activation='sigmoid'))
+        model.add(
+            Dense(1, input_dim=input_dim, activation=constants.ACTIVATION))
         model.compile(
-            optimizer='sgd',
-            loss='binary_crossentropy',
-            metrics=['accuracy']
+            optimizer=kwargs.get('optimizer', constants.OPTIMIZER),
+            loss=constants.LOSS,
+            metrics=constants.METRICS
         )
 
         self.kernel = model
 
-    def _fit(self, features, answers, batch_size=1024, epochs=1000):
+    def _fit(self, features, answers, batch_size=constants.BATCH_SIZE, epochs=constants.EPOCHS):
         self.kernel.fit(
             x=features,
             y=answers,
-            validation_split=0.33,
+            validation_split=constants.VALIDATION_SPLIT,
             batch_size=batch_size,
             epochs=epochs,
             callbacks=[
