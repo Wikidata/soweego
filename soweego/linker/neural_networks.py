@@ -84,7 +84,7 @@ class MultiLayerPerceptron(_BaseNN):
         ])
 
         model.compile(
-            optimizer='adam',
+            optimizer='adadelta',
             loss='binary_crossentropy',
             metrics=['accuracy']
         )
