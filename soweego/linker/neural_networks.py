@@ -75,13 +75,12 @@ class MultiLayerPerceptron(_BaseNN):
         super(MultiLayerPerceptron, self).__init__()
 
         model = Sequential([
-            Dense(64, input_dim=input_dimension, activation='relu'),
-            BatchNormalization(),
-            Dense(32, activation='relu'),
+            Dense(128, input_dim=input_dimension, activation='relu'),
             BatchNormalization(),
             Dense(32, activation='relu'),
             BatchNormalization(),
             Dense(1, activation='sigmoid')
+
         ])
 
         model.compile(
