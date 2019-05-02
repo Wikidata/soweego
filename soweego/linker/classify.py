@@ -29,6 +29,15 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 LOGGER = logging.getLogger(__name__)
 
 
+POSSIBLE_FIELDS_FOR_CLASSIFICATION_BLOCKING = [
+    constants.NAME,
+    constants.NAME_TOKENS,
+    constants.URL,
+    constants.DATE_OF_BIRTH,
+    constants.DATE_OF_DEATH
+]
+
+
 @click.command()
 @click.argument('classifier', type=click.Choice(constants.CLASSIFIERS))
 @click.argument('target', type=click.Choice(target_database.available_targets()))
@@ -47,7 +56,13 @@ LOGGER = logging.getLogger(__name__)
               ]),
               multiple=True,
               help='Fields on which to perform the post-classification blocking.')
-def cli(classifier, target, target_type, post_block_fields, upload, sandbox, threshold, dir_io):
+@click.option('-tb', '--target-block',
+              type=click.Choice(POSSIBLE_FIELDS_FOR_CLASSIFICATION_BLOCKING),
+              help='Target fields on which to perform blocking when obtaining the classification set.')
+@click.option('-wb', '--wd-block',
+              type=click.Choice(POSSIBLE_FIELDS_FOR_CLASSIFICATION_BLOCKING),
+              help='Wikidata fields on which to perform blocking when obtaining the classification set.')
+def cli(classifier, target, target_type, upload, sandbox, threshold, dir_io, post_block_fields, target_block, wd_block):
     """Run a probabilistic linker."""
 
     # Load model from the specified classifier+target+target_type
