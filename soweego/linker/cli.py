@@ -7,7 +7,8 @@ CLI_COMMANDS = {
     'edit-distance': edit_distance.cli,
     'train': train.cli,
     'classify': classify.cli,
-    'evaluate': evaluate.cli
+    'evaluate': evaluate.cli,
+    'extract-matches': baseline.extract_available_matches_in_target
 }
 
 
