@@ -89,6 +89,4 @@ class MultiLayerPerceptron(_BaseNN):
             metrics=['accuracy']
         )
 
-        LOGGER.info(model.summary())
-
         self.kernel = model
