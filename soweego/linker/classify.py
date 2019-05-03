@@ -58,10 +58,14 @@ POSSIBLE_FIELDS_FOR_CLASSIFICATION_BLOCKING = [
               help='Fields on which to perform the post-classification blocking.')
 @click.option('-tb', '--target-block',
               type=click.Choice(POSSIBLE_FIELDS_FOR_CLASSIFICATION_BLOCKING),
-              help='Target fields on which to perform blocking when obtaining the classification set.')
+              help=('Target fields on which to perform blocking when obtaining the classification set. '
+                    'If this option is not provided but `--wd-block` is, then it will default to the provided value. '
+                    'If not, it will default to `name_tokens`'))
 @click.option('-wb', '--wd-block',
               type=click.Choice(POSSIBLE_FIELDS_FOR_CLASSIFICATION_BLOCKING),
-              help='Wikidata fields on which to perform blocking when obtaining the classification set.')
+              help=('Wikidata fields on which to perform blocking when obtaining the classification set. '
+                    'If this option is not provided but `--target-block` is, then it will default to the provided value. '
+                    'If not, it will default to `name_tokens`'))
 def cli(classifier, target, target_type, upload, sandbox, threshold, dir_io, post_block_fields, target_block, wd_block):
     """Run a probabilistic linker."""
 
@@ -83,7 +87,12 @@ def cli(classifier, target, target_type, upload, sandbox, threshold, dir_io, pos
     if os.path.isfile(results_path):
         os.remove(results_path)
 
-    for chunk in execute(target, target_type, model_path, post_block_fields, threshold, dir_io):
+    # set defaults for blocking only if any of them is None
+    elif [target_block, wd_block].count(None) >= 1:
+        # set value of both, to the the first value which is not None
+        wd_block = target_block = wd_block or target_block or constants.NAME_TOKENS
+
+    for chunk in execute(target, target_type, model_path, threshold, dir_io, post_block_fields, target_block, wd_block):
         if upload:
             _upload(chunk, target, sandbox)
 
@@ -98,7 +107,7 @@ def _upload(predictions, catalog, sandbox):
     wikidata_bot.add_identifiers(links, catalog, sandbox)
 
 
-def execute(catalog, entity, model, post_block_fields, threshold, dir_io):
+def execute(catalog, entity, model, threshold, dir_io, post_block_fields, target_block, wd_block):
     complete_fv_path = os.path.join(dir_io, constants.COMPLETE_FEATURE_VECTORS %
                                     (catalog, entity, 'classification'))
     complete_wd_path = os.path.join(dir_io, constants.COMPLETE_WIKIDATA_CHUNKS %
