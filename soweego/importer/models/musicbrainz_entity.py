@@ -21,6 +21,8 @@ ARTIST_LINK_TABLE = 'musicbrainz_artist_link'
 BAND_TABLE = 'musicbrainz_band'
 BAND_LINK_TABLE = 'musicbrainz_band_link'
 ARTIST_BAND_RELATIONSHIP_TABLE = "musicbrainz_artist_band_relationship"
+RELEASE_GROUP_ENTITY = "musicbrainz_relase_group"
+RELEASE_ARTIST_RELATIONSHIP = "musicbrainz_release_group_artist_relationship"
 
 
 class MusicbrainzArtistEntity(BaseEntity):
@@ -58,11 +60,30 @@ class MusicbrainzBandLinkEntity(BaseLinkEntity):
         'concrete': True}
 
 
+class MusicbrainzReleaseGroupEntity(BaseEntity):
+    __tablename__ = RELEASE_GROUP_ENTITY
+    __mapper_args__ = {
+        'polymorphic_identity': __tablename__,
+        'concrete': True}
+
+
 # NOTICE: both catalog_ids of this entity can be both in Artist and Band table
 
 
 class MusicBrainzArtistBandRelationship(BaseRelationship):
     __tablename__ = ARTIST_BAND_RELATIONSHIP_TABLE
+
+    __mapper_args__ = {
+        'polymorphic_identity': __tablename__,
+        'concrete': True}
+
+    def __repr__(self):
+        return super().__repr__()
+
+
+# NOTICE: artist could be in artist or band table
+class MusicBrainzReleaseGroupArtistRelationship(BaseRelationship):
+    __tablename__ = RELEASE_ARTIST_RELATIONSHIP
 
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
