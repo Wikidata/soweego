@@ -133,6 +133,40 @@ def perfect_name_search(target_entity: constants.DB_ENTITY, to_search: List[str]
         session.close()
 
 
+def perfect_url_search(target_entity: constants.DB_ENTITY, link_entity: constants.DB_ENTITY,
+                       target_column: str,  to_search: List[str]) -> List[constants.DB_ENTITY]:
+
+    # if `to_search` is not a list then convert it to one
+    if not isinstance(to_search, list):
+        to_search = [to_search]
+
+    session = DBManager.connect_to_db()
+
+    try:
+
+        link_query = session.query(link_entity).filter(
+            or_(*[link_entity.url == url for url in to_search]))
+
+        i = 0
+        person_candidates = []
+        for lmatch in link_query:
+            i += 1
+            person_candidates += (session.query(target_entity)
+                                  .filter(target_entity.catalog_id == lmatch.catalog_id).all())
+
+        if i > 0 or len(person_candidates) > 0:
+            LOGGER.info("Link query had %s, and there are %s person candidates from URL", i, len(
+                person_candidates))
+
+        return person_candidates
+
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
 def perfect_column_search(target_entity: constants.DB_ENTITY, target_column: str, to_search: List[str]) -> List[constants.DB_ENTITY]:
 
     alchemy_col = getattr(target_entity, target_column)

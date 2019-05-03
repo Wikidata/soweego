@@ -19,7 +19,7 @@ import pandas as pd
 from recordlinkage import Index
 from tqdm import tqdm
 
-from soweego.commons import constants, data_gathering
+from soweego.commons import constants, data_gathering, target_database
 from soweego.commons.data_gathering import tokens_fulltext_search
 from soweego.linker.workflow import handle_goal
 
@@ -71,16 +71,22 @@ def full_text_query_block(goal: str, catalog: str, wikidata_series: pd.Series, c
     return samples_index
 
 
-def prefect_block_on_column(goal: str, catalog: str, wikidata_series: pd.Series, chunk_number: int,
-                            target_entity: constants.DB_ENTITY, dir_io: str, target_column=None) -> pd.MultiIndex:
+def prefect_block_on_column(goal: str, catalog: str, entity: str, wikidata_series: pd.Series,
+                            chunk_number: int, dir_io: str, target_column=None) -> pd.MultiIndex:
     handle_goal(goal)
 
+    # by default we suppose that the name of the column we're taking as source
+    # (from wikidata) has the same name as the column we're taking as target
     if not target_column:
         target_column = wikidata_series.name
 
     # name of the column we're blocking on should correspond with the name of
     # the pd.Series
     column = wikidata_series.name
+
+    # By default we suppose that the target entity is the base entity for catalog
+    # and entity name
+    target_entity = target_database.get_entity(catalog, entity)
 
     # choose the correct `blocking_fn` based on the
     # column we're blocking on.
@@ -93,6 +99,12 @@ def prefect_block_on_column(goal: str, catalog: str, wikidata_series: pd.Series,
                               boolean_mode=False,
                               where_clause=None,
                               limit=5)
+
+    elif column == constants.URL:
+        blocking_fn = partial(data_gathering.perfect_url_search,
+                              target_column=target_column,
+                              link_entity=target_database.get_link_entity(
+                                  catalog, entity))
 
     else:
 

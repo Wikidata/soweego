@@ -166,9 +166,9 @@ def execute(catalog, entity, model, threshold, dir_io, post_block_fields, target
         for i, wd_chunk in enumerate(wd_generator, 1):
             # TODO Also consider blocking on URLs
 
-            samples = blocking.full_text_query_block(
-                'classification', catalog, wd_chunk[constants.NAME_TOKENS],
-                i, target_database.get_entity(catalog, entity), dir_io)
+            samples = blocking.prefect_block_on_column(
+                'classification', catalog, entity, wd_chunk[wd_block],
+                i, dir_io, target_column=target_block)
 
             # Build target chunk based on samples
             target_reader = data_gathering.gather_target_dataset(
