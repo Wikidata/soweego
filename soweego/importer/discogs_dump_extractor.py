@@ -210,7 +210,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             # Musician
             groups = node.find('groups')
             members = node.find('members')
-            if groups:
+            if groups is not None:
                 entity = discogs_entity.DiscogsMusicianEntity()
                 self._populate_musician(entity_array,
                                         entity, identifier, name, living_links, node)
@@ -387,7 +387,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
     def _extract_living_links(self, artist_node, identifier, resolve: bool):
         LOGGER.debug('Extracting living links from artist %s', identifier)
         urls = artist_node.find('urls')
-        if urls:
+        if urls is not None:
             for url_element in urls.iterfind('url'):
                 url = url_element.text
                 if not url:
