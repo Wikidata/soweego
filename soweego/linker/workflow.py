@@ -231,7 +231,7 @@ def preprocess_wikidata(goal, wikidata_reader):
             tokenize_values, args=(url_utils.tokenize,))
 
         # 6. Shared preprocessing
-        chunk = _shared_preprocessing(chunk, _will_handle_dates(chunk))
+        chunk = _shared_preprocessing(chunk, _will_handle_birth_date(chunk), _will_handle_death_date(chunk))
 
         LOGGER.info('Chunk %d done', i)
         yield chunk
@@ -301,13 +301,13 @@ def preprocess_target(goal, target_reader):
     log_dataframe_info(
         LOGGER, target, f"Data indexed and aggregated on '{constants.TID}' column")
     # 6. Shared preprocessing
-    target = _shared_preprocessing(target, _will_handle_birth_date(target) or _will_handle_death_date(target))
+    target = _shared_preprocessing(target, _will_handle_birth_date(target), _will_handle_death_date(target))
 
     LOGGER.info('Target preprocessing done')
     return target
 
 
-def _shared_preprocessing(df, will_handle_dates):
+def _shared_preprocessing(df, will_handle_birth_date, will_handle_death_date):
     LOGGER.info('Normalizing fields with names ...')
     for column in constants.NAME_FIELDS:
         if df.get(column) is not None:
@@ -318,9 +318,13 @@ def _shared_preprocessing(df, will_handle_dates):
 
     _occupations_to_set(df)
 
-    if will_handle_dates:
-        LOGGER.info('Handling dates ...')
-        _handle_dates(df)
+    if will_handle_birth_date:
+        LOGGER.info('Handling birth dates ...')
+        _handle_dates(df, constants.DATE_OF_BIRTH)
+
+    if will_handle_death_date:
+        LOGGER.info('Handling death dates ...')
+        _handle_dates(df, constants.DATE_OF_DEATH)
 
     return df
 
@@ -343,20 +347,18 @@ def _drop_null_columns(target):
         LOGGER, target, 'Dropped columns with null values only')
 
 
-def _handle_dates(df):
+def _handle_dates(df, column):
     # Datasets are hitting pandas timestamp limitations, see
     # http://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timestamp-limitations
     # Parse into Period instead, see
     # http://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-oob
-    for column in (constants.DATE_OF_BIRTH, constants.DATE_OF_DEATH):
-        if df.get(column) is None:
-            LOGGER.warning(
-                "No '%s' column in DataFrame, won't handle its dates. Perhaps it was dropped because it contained null values only",
-                column)
-            continue
+    if df.get(column) is None:
+        LOGGER.warning(
+            "No '%s' column in DataFrame, won't handle its dates. Perhaps it was dropped because it contained null values only",
+            column)
 
-        df[column] = df[column].map(
-            _parse_dates_list, na_action='ignore')
+    df[column] = df[column].map(
+        _parse_dates_list, na_action='ignore')
 
     log_dataframe_info(LOGGER, df, 'Parsed dates')
 

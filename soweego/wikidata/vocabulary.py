@@ -127,6 +127,7 @@ SEX_OR_GENDER = 'P21'
 PLACE_OF_BIRTH = 'P19'
 PLACE_OF_DEATH = 'P20'
 DATE_OF_BIRTH = 'P569'
+PUBLICATION_DATE = 'P577'
 DATE_OF_DEATH = 'P570'
 METADATA_PIDS = set([SEX_OR_GENDER, PLACE_OF_BIRTH,
                      PLACE_OF_DEATH, DATE_OF_BIRTH, DATE_OF_DEATH])
@@ -147,7 +148,8 @@ LINKER_PIDS = {
     FAMILY_NAME: 'family_name',
     GIVEN_NAME: 'given_name',
     PSEUDONYM: 'pseudonym',
-    OCCUPATION: 'occupations'
+    OCCUPATION: 'occupations',
+    PUBLICATION_DATE: 'born'
 }
 
 # Music domain properties for linking
