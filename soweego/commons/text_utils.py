@@ -27,6 +27,9 @@ NAME_STOPWORDS = frozenset(str(get_data(
 BAND_NAME_LOW_SCORE_WORDS = frozenset(
     str(get_data('soweego.commons.resources', 'band_low_score_words.txt')).splitlines())
 
+STOPWORDS_URL_TOKENS = frozenset(
+    str(get_data('soweego.commons.resources', 'urls_stop_words.txt'), 'utf8').splitlines())
+
 # Latin alphabet diacritics and Russian
 ASCII_TRANSLATION_TABLE = str.maketrans({
     'á': 'a', 'Á': 'A', 'à': 'a', 'À': 'A', 'ă': 'a', 'Ă': 'A', 'â': 'a',
