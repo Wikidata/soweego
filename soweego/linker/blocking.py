@@ -94,9 +94,6 @@ def prefect_block_on_column(goal: str, catalog: str, wikidata_series: pd.Series,
                               where_clause=None,
                               limit=5)
 
-    elif column == constants.URL:
-        blocking_fn = data_gathering.perfect_url_search
-
     else:
 
         # block on an arbitrary column

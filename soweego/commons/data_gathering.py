@@ -133,24 +133,6 @@ def perfect_name_search(target_entity: constants.DB_ENTITY, to_search: List[str]
         session.close()
 
 
-def perfect_url_search(target_entity: constants.DB_ENTITY, to_search: List[str]) -> List[constants.DB_ENTITY]:
-
-    # if `to_search` is not a list then convert it to one
-    if not isinstance(to_search, list):
-        to_search = [to_search]
-
-    session = DBManager.connect_to_db()
-    try:
-        return session.query(target_entity).filter(or_(*[
-            target_entity.url == url for url in to_search])).all()
-
-    except:
-        session.rollback()
-        raise
-    finally:
-        session.close()
-
-
 def perfect_column_search(target_entity: constants.DB_ENTITY, target_column: str, to_search: List[str]) -> List[constants.DB_ENTITY]:
 
     alchemy_col = getattr(target_entity, target_column)
