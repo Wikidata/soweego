@@ -109,7 +109,7 @@ def cli(ctx, classifier, target, target_type, nested, single, k_folds, metric, d
     LOGGER.info('Evaluation done. Precision: mean = %s; std = %s; Recall: mean = %s; std = %s; F-score: mean = %s; std = %s',
                 p_mean, p_std, r_mean, r_std, fscore_mean, fscore_std)
 
-    predictions.to_series().to_csv(predictions_fileout)
+    predictions.to_series().to_csv(predictions_fileout, header=False)
     with open(performance_fileout, 'w') as fout:
         fout.write(
             f'Precision:\n\tmean = {p_mean}\n\tstandard deviation = {p_std}\nRecall:\n\tmean = {r_mean}\n\tstandard deviation = {r_std}\nF-score:\n\tmean = {fscore_mean}\n\tstandard deviation = {fscore_std}\n')
