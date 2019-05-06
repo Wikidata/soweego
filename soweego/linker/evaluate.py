@@ -41,7 +41,9 @@ LOGGER = logging.getLogger(__name__)
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER, help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER)
 @click.pass_context
 def cli(ctx, classifier, target, target_type, nested, single, k_folds, metric, dir_io):
-    """Evaluate the performance of a probabilistic linker."""
+    """Evaluate the performance of a probabilistic linker.
+    By default, it runs 5-fold cross-validation and returns averaged performance scores.
+    """
     kwargs = utils.handle_extra_cli_args(ctx.args)
     if kwargs is None:
         return 1
@@ -135,7 +137,7 @@ def _compute_performance(test_index, predictions, test_vectors_size):
 def nested_k_fold_with_grid_search(classifier, param_grid, catalog, entity, k, scoring, dir_io, **kwargs):
     if classifier is constants.SINGLE_LAYER_PERCEPTRON:
         # TODO make Keras work with GridSearchCV
-        raise NotImplementedError()
+        raise NotImplementedError(f'Grid search for {classifier} is not supported')
 
     result = defaultdict(list)
 
