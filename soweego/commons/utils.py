@@ -55,15 +55,3 @@ def prepare_stratified_k_fold(k, dataset, positive_samples_index):
     binary_target_variables = dataset.index.map(
         lambda x: 1 if x in positive_samples_index else 0)
     return k_fold, binary_target_variables
-
-
-def build_single_layer_perceptron(input_dim):
-    model = Sequential()
-    model.add(
-        Dense(1, input_dim=input_dim, activation=constants.ACTIVATION))
-    model.compile(
-        optimizer=constants.OPTIMIZER,
-        loss=constants.LOSS,
-        metrics=constants.METRICS
-    )
-    return model
