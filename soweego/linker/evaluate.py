@@ -37,7 +37,7 @@ LOGGER = logging.getLogger(__name__)
 @click.option('-k', '--k-folds', default=5, help="Number of folds, default: 5.")
 @click.option('-m', '--metric', type=click.Choice(constants.PERFORMANCE_METRICS),
               default='f1',
-              help="Performance metric for nested cross-validation. Implies '--nested'. Default: F1.")
+              help="Performance metric for nested cross-validation. Implies '--nested'. Default: f1.")
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER, help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER)
 @click.pass_context
 def cli(ctx, classifier, target, target_type, nested, single, k_folds, metric, dir_io):
@@ -171,15 +171,10 @@ def average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
     k_fold, binary_target_variables = utils.prepare_stratified_k_fold(
         k, dataset, positive_samples_index)
 
-    if classifier is constants.SINGLE_LAYER_PERCEPTRON:
-        model = workflow.init_model(classifier, dataset.shape[1], **kwargs)
-    else:
-        model = workflow.init_model(classifier, **kwargs)
-
     for train_index, test_index in k_fold.split(dataset, binary_target_variables):
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
 
-        model = workflow.init_model(classifier, **kwargs)
+        model = _initialize(classifier, dataset, kwargs)
         model.fit(training, positive_samples_index & training.index)
 
         preds = model.predict(test)
@@ -199,6 +194,16 @@ def average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
     return predictions, mean(precisions), std(precisions), mean(recalls), std(recalls), mean(fscores), std(fscores)
 
 
+def _initialize(classifier, dataset, kwargs):
+    if classifier is constants.SINGLE_LAYER_PERCEPTRON:
+        model = workflow.init_model(classifier, dataset.shape[1], **kwargs)
+    else:
+        model = workflow.init_model(classifier, **kwargs)
+
+    LOGGER.info('Model initialized: %s', model)
+    return model
+
+
 def single_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
     predictions, test_set = None, []
     dataset, positive_samples_index = train.build_dataset(
@@ -206,10 +211,7 @@ def single_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
     k_fold, binary_target_variables = utils.prepare_stratified_k_fold(
         k, dataset, positive_samples_index)
 
-    if classifier is constants.SINGLE_LAYER_PERCEPTRON:
-        model = workflow.init_model(classifier, dataset.shape[1], **kwargs)
-    else:
-        model = workflow.init_model(classifier, **kwargs)
+    model = _initialize(classifier, dataset, kwargs)
 
     for train_index, test_index in k_fold.split(dataset, binary_target_variables):
 
