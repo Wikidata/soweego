@@ -30,36 +30,51 @@ LOGGER = logging.getLogger(__name__)
 @click.argument('classifier', type=click.Choice(constants.CLASSIFIERS))
 @click.argument('target', type=click.Choice(target_database.available_targets()))
 @click.argument('target_type', type=click.Choice(target_database.available_types()))
-@click.option('-k', '--k-folds', default=5, help='Number of folds for hyperparameters tuning. Default: 5.')
+@click.option('--tune', is_flag=True, help='Run grid search for hyperparameters tuning. Default: no.')
+@click.option('-k', '--k-folds', default=5, help="Number of folds for hyperparameters tuning. Implies '--tune' Default: 5.")
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER,
               help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER)
 @click.pass_context
-def cli(ctx, classifier, target, target_type, k_folds, dir_io):
+def cli(ctx, classifier, target, target_type, tune, k_folds, dir_io):
     """Train a probabilistic linker."""
     kwargs = utils.handle_extra_cli_args(ctx.args)
     if kwargs is None:
         return 1
 
-    model = execute(
-        constants.CLASSIFIERS[classifier], target, target_type, k_folds, dir_io, **kwargs)
+    model = execute(constants.CLASSIFIERS[classifier],
+                    target, target_type, tune, k_folds, dir_io, **kwargs)
     outfile = os.path.join(
         dir_io, constants.LINKER_MODEL % (target, target_type, classifier))
     joblib.dump(model, outfile)
     LOGGER.info("%s model dumped to '%s'", classifier, outfile)
 
 
-def execute(classifier, catalog, entity, k, dir_io, **kwargs):
+def execute(classifier, catalog, entity, tune, k, dir_io, **kwargs):
+    if tune and classifier is constants.SINGLE_LAYER_PERCEPTRON:
+        # TODO make Keras work with GridSearchCV
+        raise NotImplementedError(
+            f'Grid search for {classifier} is not supported')
+
     feature_vectors, positive_samples_index = build_dataset(
         'training', catalog, entity, dir_io)
 
+    if tune:
+        best_params = _grid_search(
+            k, feature_vectors, positive_samples_index, classifier, **kwargs)
+        # TODO find a way to avoid retraining: pass _grid_search.best_estimator_ to recordlinkage classifiers. See 'refit' param in https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV
+        return _train(classifier, feature_vectors, positive_samples_index, **best_params)
+
+    return _train(classifier, feature_vectors, positive_samples_index, **kwargs)
+
+
+def _grid_search(k, feature_vectors, positive_samples_index, classifier, **kwargs):
     k_fold, target = utils.prepare_stratified_k_fold(
         k, feature_vectors, positive_samples_index)
     model = _initialize(classifier, feature_vectors, **kwargs)
     grid_search = GridSearchCV(
         model.kernel, constants.PARAMETER_GRIDS[classifier], scoring='f1', n_jobs=-1, cv=k_fold)
     grid_search.fit(feature_vectors.to_numpy(), target)
-
-    return _train(classifier, feature_vectors, positive_samples_index, **grid_search.best_params_)
+    return grid_search.best_params_
 
 
 def build_dataset(goal, catalog, entity, dir_io):
