@@ -41,7 +41,7 @@ class SingleLayerPerceptron(KerasAdapter, BaseClassifier):
         self.kernel = model
 
     def _fit(self, features, answers, batch_size=constants.BATCH_SIZE, epochs=constants.EPOCHS):
-        self.kernel.fit(
+        history = self.kernel.fit(
             x=features,
             y=answers,
             validation_split=constants.VALIDATION_SPLIT,
@@ -58,3 +58,7 @@ class SingleLayerPerceptron(KerasAdapter, BaseClassifier):
                 TensorBoard(log_dir=constants.SHARED_FOLDER)
             ]
         )
+        LOGGER.info('Fit parameters: %s', history.params)
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}(optimizer={self.kernel.optimizer.__class__.__name__}, loss={self.kernel.loss}, metrics={self.kernel.metrics}, config={self.kernel.get_config()})'

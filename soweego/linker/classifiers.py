@@ -42,3 +42,6 @@ class SVCClassifier(SKLearnAdapter, BaseClassifier):
         probabilities = self.kernel.predict_proba(x)[:, 1]
 
         return pd.DataFrame(probabilities, index=x.index)
+
+    def __repr__(self):
+        return f'{self.kernel}'
