@@ -193,11 +193,12 @@ PARAMETER_GRIDS = {
         'binarize': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
     },
     LINEAR_SVM: {
-        # TODO Fails to converge with 10 and 100 on Discogs band
+        # liblinear fails to converge when values are 10 and 100 in some datasets
         'C': [0.01, 0.1, 1.0, 10, 100]
     },
     SVM: {
-        'C': [0.01, 0.1, 1.0, 10, 100],
+        # The execution takes too long when C=100 and kernel=linear
+        'C': [0.01, 0.1, 1.0, 10],
         'kernel': ['linear', 'poly', 'rbf', 'sigmoid']
     },
     SINGLE_LAYER_PERCEPTRON: {
