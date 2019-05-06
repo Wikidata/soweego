@@ -11,7 +11,7 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import itertools
 import logging
-from typing import List, Set, Tuple, Union
+from typing import List, Set, Tuple
 
 import jellyfish
 import numpy as np
@@ -93,8 +93,7 @@ class StringList(BaseCompareFeature):
                             scores.append(self.missing_value)
                         else:
                             raise
-            avg = np.average(scores)
-            return avg
+            return max(scores)
 
         return paired.apply(_levenshtein_apply)
 
