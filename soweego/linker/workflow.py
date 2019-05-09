@@ -191,6 +191,10 @@ def init_model(classifier, binarize, number_of_features):
 
     elif classifier is constants.PERCEPTRON_CLASSIFIER:
         model = neural_networks.SingleLayerPerceptron(number_of_features)
+    
+    elif classifier is constants.MULTILAYER_CLASSIFIER:
+        model = neural_networks.MultiLayerPerceptron(number_of_features)
+
     else:
         err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
         LOGGER.critical(err_msg)
