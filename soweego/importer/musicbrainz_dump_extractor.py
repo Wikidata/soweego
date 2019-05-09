@@ -32,7 +32,8 @@ from soweego.importer.models.musicbrainz_entity import (MusicBrainzArtistBandRel
                                                         MusicbrainzArtistLinkEntity,
                                                         MusicbrainzBandEntity,
                                                         MusicbrainzBandLinkEntity, MusicbrainzReleaseGroupEntity,
-                                                        MusicBrainzReleaseGroupArtistRelationship)
+                                                        MusicBrainzReleaseGroupArtistRelationship,
+                                                        MusicbrainzReleaseGroupLinkEntity)
 from soweego.wikidata.sparql_queries import external_id_pids_and_urls_query
 
 LOGGER = logging.getLogger(__name__)
@@ -95,6 +96,22 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         LOGGER.debug("Added %s/%s relationships records",
                      *relationships_count)
 
+        tables = [MusicbrainzReleaseGroupLinkEntity]
+        db_manager.drop(tables)
+        db_manager.create(tables)
+        LOGGER.info("Dropped and created tables %s", tables)
+        LOGGER.info("Importing release groups links")
+
+        link_count = self._add_entities_from_generator(
+            db_manager,
+            self._release_group_link_generator,
+            dump_path,
+            resolve
+        )
+
+        LOGGER.debug("Added %s/%s release group link records",
+                     *link_count)
+
         tables = [MusicbrainzArtistEntity,
                   MusicbrainzBandEntity]
         db_manager.drop(tables)
@@ -121,7 +138,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         link_count = self._add_entities_from_generator(
             db_manager,
-            self._link_generator,
+            self._artist_link_generator,
             dump_path,
             resolve
         )
@@ -219,65 +236,60 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         return n_total_entities, n_added_entities
 
-    def _link_generator(self, dump_path: str, resolve: bool):
-        l_artist_url_path = os.path.join(dump_path, 'mbdump', 'l_artist_url')
+    def _get_urls_for_entity_id(self, dump_path: str, l_path: str, resolve: bool) -> dict:
+        """given a l_{something}_url relationship file, return a dict of somethingid-[urls]"""
+        LOGGER.info(f"Loading {l_path} relationships")
 
-        # Loads all the relationships between URL ID and ARTIST ID
-        urlid_artistid_relationship = {}
+        urlid_entityid_relationship = {}
 
-        LOGGER.info('Loading artist relationships')
-
-        with open(l_artist_url_path, "r") as tsvfile:
+        with open(l_path, "r") as tsvfile:
             url_relationships = DictReader(tsvfile,
                                            delimiter='\t',
                                            fieldnames=[i for i in range(0, 6)])
 
-            for relationship in tqdm(url_relationships,
-                                     total=self._count_num_lines_in_file(tsvfile)):
+            for relationship in tqdm(url_relationships, total=self._count_num_lines_in_file(tsvfile)):
                 # url id matched with its user id
-                if relationship[3] in urlid_artistid_relationship:
-                    LOGGER.warning(
-                        'Url with ID %s has multiple artists, only one will be stored',
-                        relationship[3])
+                if relationship[3] in urlid_entityid_relationship:
+                    LOGGER.warning('Url with ID %s has multiple entities, only one will be stored', relationship[3])
                 else:
-                    urlid_artistid_relationship[relationship[3]
-                    ] = relationship[2]
+                    urlid_entityid_relationship[relationship[3]] = relationship[2]
 
-        url_artistid = {}
         url_path = os.path.join(dump_path, 'mbdump', 'url')
+        url_entityid = {}
 
-        LOGGER.info('Checking URLs realted to artists')
+        LOGGER.info('Checking URLs related to entity')
 
         # Translates URL IDs to the relative URL
         with open(url_path, "r") as tsvfile:
 
-            urls = DictReader(tsvfile,
-                              delimiter='\t',
-                              fieldnames=[i for i in range(0, 5)])
+            urls = DictReader(tsvfile, delimiter='\t', fieldnames=[i for i in range(0, 5)])
 
-            for url_record in tqdm(urls,
-                                   total=self._count_num_lines_in_file(tsvfile)):
+            for url_record in tqdm(urls, total=self._count_num_lines_in_file(tsvfile)):
 
                 urlid = url_record[0]
-                if urlid in urlid_artistid_relationship:
+                if urlid in urlid_entityid_relationship:
                     for candidate_url in url_utils.clean(url_record[2]):
                         if not url_utils.validate(candidate_url):
                             continue
                         if resolve and not url_utils.resolve(candidate_url):
                             continue
-                        url_artistid[candidate_url] = urlid_artistid_relationship[urlid]
-                        del urlid_artistid_relationship[urlid]
+                        url_entityid[candidate_url] = urlid_entityid_relationship[urlid]
+                        del urlid_entityid_relationship[urlid]
 
-        urlid_artistid_relationship = None
-
-        artistid_url = defaultdict(list)
+        entityid_url = defaultdict(list)
         # Inverts dictionary
-        for url, artistid in url_artistid.items():
-            artistid_url[artistid].append(url)
+        for url, entityid in url_entityid.items():
+            entityid_url[entityid].append(url)
+
+        return entityid_url
+
+    def _artist_link_generator(self, dump_path: str, resolve: bool):
+        l_artist_url_path = os.path.join(dump_path, 'mbdump', 'l_artist_url')
+
+        # Loads all the relationships between URL and ARTIST ID
+        artistid_url = self._get_urls_for_entity_id(dump_path, l_artist_url_path, resolve)
 
         LOGGER.info('Adding link entities to DB')
-
-        url_artistid = None
         # Translates ARTIST ID to the relative ARTIST
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
         with open(artist_path, 'r') as artistfile:
@@ -302,6 +314,24 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                             self._fill_link_entity(
                                 current_entity, artist['gid'], link)
                             yield current_entity
+
+    def _release_group_link_generator(self, dump_path: str, resolve: bool):
+        l_release_group_url_path = os.path.join(dump_path, 'mbdump', 'l_release_group_url')
+
+        release_group_id_urls = self._get_urls_for_entity_id(dump_path, l_release_group_url_path,
+                                                             resolve)
+
+        release_group_path = os.path.join(dump_path, 'mbdump', 'release_group')
+        with open(release_group_path) as rfile:
+            n_rows = self._count_num_lines_in_file(rfile)
+            releases = DictReader(rfile, delimiter='\t', fieldnames=['id', 'gid', 'label'])
+
+            for release in tqdm(releases, total=n_rows):
+                if release['id'] in release_group_id_urls:
+                    for link in release_group_id_urls[release['id']]:
+                        entity = MusicbrainzReleaseGroupLinkEntity()
+                        self._fill_link_entity(entity, release['gid'], link)
+                        yield entity
 
     def _isni_link_generator(self, dump_path: str, resolve: bool):
         isni_file_path = os.path.join(dump_path, 'mbdump', 'artist_isni')

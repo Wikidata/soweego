@@ -22,6 +22,7 @@ BAND_TABLE = 'musicbrainz_band'
 BAND_LINK_TABLE = 'musicbrainz_band_link'
 ARTIST_BAND_RELATIONSHIP_TABLE = "musicbrainz_artist_band_relationship"
 RELEASE_GROUP_ENTITY = "musicbrainz_relase_group"
+RELEASE_GROUP_LINK_ENTITY = "musicbrainz_relase_group_link"
 RELEASE_ARTIST_RELATIONSHIP = "musicbrainz_release_group_artist_relationship"
 
 
@@ -55,6 +56,13 @@ class MusicbrainzArtistLinkEntity(BaseLinkEntity):
 
 class MusicbrainzBandLinkEntity(BaseLinkEntity):
     __tablename__ = BAND_LINK_TABLE
+    __mapper_args__ = {
+        'polymorphic_identity': __tablename__,
+        'concrete': True}
+
+
+class MusicbrainzReleaseGroupLinkEntity(BaseLinkEntity):
+    __tablename__ = RELEASE_GROUP_LINK_ENTITY
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
         'concrete': True}
