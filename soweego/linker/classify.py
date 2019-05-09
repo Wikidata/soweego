@@ -33,6 +33,7 @@ POSSIBLE_FIELDS_FOR_CLASSIFICATION_BLOCKING = [
     constants.NAME,
     constants.NAME_TOKENS,
     constants.URL,
+    constants.URL_TOKENS,
     constants.DATE_OF_BIRTH,
     constants.DATE_OF_DEATH
 ]

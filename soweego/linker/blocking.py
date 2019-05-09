@@ -106,6 +106,14 @@ def prefect_block_on_column(goal: str, catalog: str, entity: str, wikidata_serie
                               link_entity=target_database.get_link_entity(
                                   catalog, entity))
 
+    elif column == constants.URL_TOKENS:
+        blocking_fn = partial(data_gathering.perfect_url_token_search,
+                              boolean_mode=False,
+                              target_column=target_column,
+                              link_entity=target_database.get_link_entity(
+                                  catalog, entity),
+                              )
+
     else:
 
         # block on an arbitrary column
@@ -126,6 +134,11 @@ def prefect_block_on_column(goal: str, catalog: str, entity: str, wikidata_serie
     wikidata_series.dropna(inplace=True)
 
     qids_and_tids = []
+
+    for qid, item_value in wikidata_series.items():
+        blocking_fn(**{
+            'target_entity': target_entity,
+            'to_search': item_value})
 
     with Pool() as pool:
 

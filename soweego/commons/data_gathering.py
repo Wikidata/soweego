@@ -18,7 +18,7 @@ from typing import Iterable, List
 
 import regex
 from pandas import read_sql
-from soweego.commons import constants, target_database, url_utils
+from soweego.commons import constants, target_database, url_utils, text_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer import models
 from soweego.linker import workflow
@@ -134,7 +134,46 @@ def perfect_name_search(target_entity: constants.DB_ENTITY, to_search: List[str]
 
 
 def perfect_url_search(target_entity: constants.DB_ENTITY, link_entity: constants.DB_ENTITY,
-                       target_column: str,  to_search: List[str]) -> List[constants.DB_ENTITY]:
+                       to_search: List[str], target_column='url', limit=10) -> List[constants.DB_ENTITY]:
+
+    if not isinstance(to_search, list):
+        to_search = [to_search]
+
+    session = DBManager.connect_to_db()
+
+    column = getattr(link_entity, target_column)
+
+    try:
+        link_query = session.query(link_entity).filter(
+            or_(*[column == url for url in to_search])).limit(limit)
+            
+        # TODO Remove counter
+        i = 0
+        person_candidates = []
+        for lmatch in link_query:
+            i += 1
+            person_candidates += (session.query(target_entity)
+                                  .filter(target_entity.catalog_id == lmatch.catalog_id)
+                                  .limit(limit)
+                                  .all())
+
+        if i > 0 or len(person_candidates) > 0:
+            #TODO: Remove
+            LOGGER.info("Link query had %s, and there are %s person candidates from URL", i, len(
+                person_candidates))
+
+        return person_candidates
+
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+def perfect_url_token_search(target_entity: constants.DB_ENTITY, link_entity: constants.DB_ENTITY,
+                             boolean_mode: bool, to_search: List[str], target_column='url_tokens',
+                             limit=10) -> List[constants.DB_ENTITY]:
 
     # if `to_search` is not a list then convert it to one
     if not isinstance(to_search, list):
@@ -142,11 +181,25 @@ def perfect_url_search(target_entity: constants.DB_ENTITY, link_entity: constant
 
     session = DBManager.connect_to_db()
 
+    column = getattr(link_entity, target_column)
+
+    # only take into account tokens which are not considered stopwords
+    tokens = [t for t in to_search
+              if (t and
+                  t not in text_utils.STOPWORDS_URL_TOKENS)]
+
+    # join viable tokens based on the `boolean_mode` argument
+
+    terms = ' '.join(f'+{t}' if boolean_mode else t
+                     for t in tokens)
+
+    ft_search = column.match(terms)
+
     try:
-
         link_query = session.query(link_entity).filter(
-            or_(*[link_entity.url == url for url in to_search]))
+            ft_search).limit(limit)
 
+        # TODO Remove counter
         i = 0
         person_candidates = []
         for lmatch in link_query:
@@ -155,6 +208,7 @@ def perfect_url_search(target_entity: constants.DB_ENTITY, link_entity: constant
                                   .filter(target_entity.catalog_id == lmatch.catalog_id).all())
 
         if i > 0 or len(person_candidates) > 0:
+            #TODO: Remove
             LOGGER.info("Link query had %s, and there are %s person candidates from URL", i, len(
                 person_candidates))
 
