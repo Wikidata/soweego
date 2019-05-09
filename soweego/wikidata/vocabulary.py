@@ -33,6 +33,7 @@ DISCOGS_ARTIST_PID = 'P1953'
 DISCOGS_MASTER_PID = 'P1954'
 IMDB_PID = 'P345'
 MUSICBRAINZ_ARTIST_PID = 'P434'
+MUSICBRAINZ_RELEASE_GROUP_PID = 'P436'
 TWITTER_USERNAME_PID = 'P2002'
 FACEBOOK_PID = 'P2013'
 
@@ -98,6 +99,10 @@ CATALOG_MAPPING = {
         }
     },
     'musicbrainz': {
+        'release': {
+            'qid': MUSICBRAINZ,
+            'pid': MUSICBRAINZ_RELEASE_GROUP_PID
+        },
         'default': {
             'qid': MUSICBRAINZ,
             'pid': MUSICBRAINZ_ARTIST_PID

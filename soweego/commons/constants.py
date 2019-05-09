@@ -117,6 +117,12 @@ TARGET_CATALOGS = {
             'entity': models.musicbrainz_entity.MusicbrainzBandEntity,
             'link_entity': models.musicbrainz_entity.MusicbrainzBandLinkEntity,
             'nlp_entity': None
+        },
+        'release': {
+            'qid': vocabulary.MUSICALWORK,
+            'entity': models.musicbrainz_entity.MusicbrainzReleaseGroupEntity,
+            'link_entity': None,
+            'nlp_entity': None
         }
     }
 }
