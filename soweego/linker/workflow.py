@@ -170,10 +170,13 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
     # Feature 8: occupation QIDs
     occupations_col_name = vocabulary.LINKER_PIDS[vocabulary.OCCUPATION]
     if in_both_datasets(occupations_col_name):
+        from multiprocessing import Process, Manager
+        manager = Manager()
         compare.add(OccupationQidSet(occupations_col_name,
                                      occupations_col_name,
+                                     qdict=manager.dict(),
                                      label='occupation_qids'))
-
+        
     feature_vectors = compare.compute(candidate_pairs, wikidata, target)
     pd.to_pickle(feature_vectors, path_io)
 

@@ -321,10 +321,12 @@ class OccupationQidSet(BaseCompareFeature):
                  left_on,
                  right_on,
                  missing_value=0.0,
+                 qdict=None,
                  label=None):
         super(OccupationQidSet, self).__init__(left_on, right_on, label=label)
 
         self.missing_value = missing_value
+        self._expand_occupations_cache = qdict
 
     def _expand_occupations(self, occupation_qids: Set[str]) -> Set[str]:
         """
