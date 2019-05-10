@@ -52,7 +52,8 @@ def cli(ctx, classifier, target, target_type, tune, k_folds, dir_io):
 
 
 def execute(classifier, catalog, entity, tune, k, dir_io, **kwargs):
-    if tune and classifier is constants.SINGLE_LAYER_PERCEPTRON:
+    if tune and classifier in (constants.SINGLE_LAYER_PERCEPTRON, 
+                      constants.MULTILAYER_CLASSIFIER):
         # TODO make Keras work with GridSearchCV
         raise NotImplementedError(
             f'Grid search for {classifier} is not supported')
