@@ -18,13 +18,14 @@ from typing import Iterable
 
 import regex
 from pandas import read_sql
+from sqlalchemy import or_
+from sqlalchemy.orm.query import Query
+
 from soweego.commons import constants, target_database, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer import models
 from soweego.linker import workflow
 from soweego.wikidata import api_requests, sparql_queries, vocabulary
-from sqlalchemy import or_
-from sqlalchemy.orm.query import Query
 
 LOGGER = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ def gather_target_metadata(entity_type, catalog):
 
     LOGGER.info(
         'Gathering %s birth/death dates/places and gender metadata ...', catalog)
-    entity = catalog_entity['entity']
+    entity = catalog_entity[constants.MAIN_ENTITY]
     # Base metadata
     query_fields = _build_metadata_query_fields(entity, entity_type, catalog)
 
@@ -145,7 +146,7 @@ def perfect_name_search_bucket(target_entity: constants.DB_ENTITY, to_search: se
 def gather_target_dataset(goal, entity_type, catalog, identifiers):
     workflow.handle_goal(goal)
 
-    base, link, nlp = target_database.get_entity(catalog, entity_type), target_database.get_link_entity(
+    base, link, nlp = target_database.get_main_entity(catalog, entity_type), target_database.get_link_entity(
         catalog, entity_type), target_database.get_nlp_entity(catalog, entity_type)
 
     LOGGER.info(
@@ -308,7 +309,7 @@ def gather_target_links(entity_type, catalog):
     catalog_entity = _get_catalog_entity(entity_type, catalog_constants)
 
     LOGGER.info('Gathering %s %s links ...', catalog, entity_type)
-    link_entity = catalog_entity['link_entity']
+    link_entity = catalog_entity[constants.LINK_ENTITY]
 
     session = DBManager.connect_to_db()
     result = None
