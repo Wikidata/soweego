@@ -47,19 +47,13 @@ def build_wikidata(goal, catalog, entity, dir_io):
         raise ValueError(
             "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'" % goal)
 
-    catalog_pid = target_database.get_pid(catalog)
+    catalog_pid = target_database.get_person_pid(catalog)
 
     if os.path.exists(wd_io_path):
         LOGGER.info(
             "Will reuse existing Wikidata %s set: '%s'", goal, wd_io_path)
         if goal == 'training':
-            with gzip.open(wd_io_path, 'rt') as wd_io:
-                for line in wd_io:
-                    item = json.loads(line.rstrip())
-                    qids_and_tids[item[constants.QID]] = {
-                        constants.TID: item[constants.TID]}
-            LOGGER.debug(
-                "Reconstructed dictionary with QIDS and target IDs from '%s'", wd_io_path)
+            _reconstruct_qids_and_tids(wd_io_path, qids_and_tids)
 
     else:
         LOGGER.info(
@@ -83,6 +77,16 @@ def build_wikidata(goal, catalog, entity, dir_io):
     return wd_df_reader
 
 
+def _reconstruct_qids_and_tids(wd_io_path, qids_and_tids):
+    with gzip.open(wd_io_path, 'rt') as wd_io:
+        for line in wd_io:
+            item = json.loads(line.rstrip())
+            qids_and_tids[item[constants.QID]] = {
+                constants.TID: item[constants.TID]}
+    LOGGER.debug(
+        "Reconstructed dictionary with QIDS and target IDs from '%s'", wd_io_path)
+
+
 def build_target(goal, catalog, entity, qids_and_tids):
     handle_goal(goal)
 
@@ -94,7 +98,7 @@ def build_target(goal, catalog, entity, qids_and_tids):
                 "Invalid 'qids_and_tids' parameter: it should be None when 'goal' is 'classification'")
         qids_and_tids = {}
         data_gathering.gather_target_ids(
-            entity, catalog, target_database.get_pid(catalog), qids_and_tids)
+            entity, catalog, target_database.get_person_pid(catalog), qids_and_tids)
 
     target_df_reader = data_gathering.gather_target_dataset(
         goal, entity, catalog, _get_tids(qids_and_tids))
@@ -191,7 +195,7 @@ def init_model(classifier, binarize, number_of_features):
 
     elif classifier is constants.PERCEPTRON_CLASSIFIER:
         model = neural_networks.SingleLayerPerceptron(number_of_features)
-    
+
     elif classifier is constants.MULTILAYER_CLASSIFIER:
         model = neural_networks.MultiLayerPerceptron(number_of_features)
 
