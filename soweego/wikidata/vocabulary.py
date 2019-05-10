@@ -9,6 +9,8 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+from soweego.commons import constants
+
 # Sandbox items in production site
 SANDBOX_1 = 'Q4115189'
 SANDBOX_2 = 'Q13406268'
@@ -23,15 +25,17 @@ STATED_IN = 'P248'
 RETRIEVED = 'P813'
 
 # Target catalog items
-DISCOGS = 'Q504063'
-IMDB = 'Q37312'
-MUSICBRAINZ = 'Q14005'
-TWITTER = 'Q918'
+DISCOGS_QID = 'Q504063'
+IMDB_QID = 'Q37312'
+MUSICBRAINZ_QID = 'Q14005'
+TWITTER_QID = 'Q918'
 
 # Identifier properties
 DISCOGS_ARTIST_PID = 'P1953'
+DISCOGS_MASTER_PID = 'P1954'
 IMDB_PID = 'P345'
 MUSICBRAINZ_ARTIST_PID = 'P434'
+MUSICBRAINZ_RELEASE_GROUP_PID = 'P436'
 TWITTER_USERNAME_PID = 'P2002'
 FACEBOOK_PID = 'P2013'
 
@@ -80,21 +84,24 @@ VISUAL_EFFECTS_ARTIST = 'Q1224742'
 
 # Target catalogs helper dictionary
 CATALOG_MAPPING = {
-    'discogs': {
-        'qid': DISCOGS,
-        'pid': DISCOGS_ARTIST_PID
+    constants.DISCOGS: {
+        constants.QID: DISCOGS_QID,
+        constants.PERSON_PID: DISCOGS_ARTIST_PID,
+        constants.WORK_PID: DISCOGS_MASTER_PID
     },
-    'imdb': {
-        'qid': IMDB,
-        'pid': IMDB_PID
+    constants.IMDB: {
+        constants.QID: IMDB_QID,
+        constants.PERSON_PID: IMDB_PID,
+        constants.WORK_PID: IMDB_PID
     },
-    'musicbrainz': {
-        'qid': MUSICBRAINZ,
-        'pid': MUSICBRAINZ_ARTIST_PID
+    constants.MUSICBRAINZ: {
+        constants.QID: MUSICBRAINZ_QID,
+        constants.PERSON_PID: MUSICBRAINZ_ARTIST_PID,
+        constants.WORK_PID: MUSICBRAINZ_RELEASE_GROUP_PID
     },
     'twitter': {
-        'qid': TWITTER,
-        'pid': TWITTER_USERNAME_PID
+        constants.QID: TWITTER_QID,
+        constants.PERSON_PID: TWITTER_USERNAME_PID
     }
 }
 
@@ -146,6 +153,7 @@ PERFORMER = 'P175'  # Album -> musician/band
 CAST_MEMBER = 'P161'  # Movie -> actor
 DIRECTOR = 'P57'  # Movie -> director
 PRODUCER = 'P162'  # Movie -> producer
+SCREENWRITER = 'P58'  # Movie -> writer
 
 # Date precision
 # See https://www.wikidata.org/wiki/Special:ListDatatypes
@@ -221,5 +229,24 @@ IMDB_PROFESSIONS_MAPPINGS = {
     'talent_agent': TALENT_AGENT,
     'transportation_department': DRIVER,
     'visual_effects': VISUAL_EFFECTS_ARTIST,
-    'writer': SCREENWRITER,
+    'writer': SCREENWRITER
+}
+
+# Used to populate statements on works
+WORKS_BY_PEOPLE_MAPPING = {
+    constants.DISCOGS: {
+        constants.BAND: PERFORMER,
+        constants.MUSICIAN: PERFORMER
+    },
+    constants.IMDB: {
+        constants.ACTOR: CAST_MEMBER,
+        constants.DIRECTOR: DIRECTOR,
+        constants.MUSICIAN: PERFORMER,
+        constants.PRODUCER: PRODUCER,
+        constants.WRITER: SCREENWRITER
+    },
+    constants.MUSICBRAINZ: {
+        constants.BAND: PERFORMER,
+        constants.MUSICIAN: PERFORMER
+    }
 }
