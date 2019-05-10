@@ -41,7 +41,7 @@ def cli(ctx, classifier, target, target_type, tune, k_folds, dir_io):
     """Train a probabilistic linker."""
     kwargs = utils.handle_extra_cli_args(ctx.args)
     if kwargs is None:
-        return 1
+        sys.exit(1)
 
     model = execute(constants.CLASSIFIERS[classifier],
                     target, target_type, tune, k_folds, dir_io, **kwargs)
