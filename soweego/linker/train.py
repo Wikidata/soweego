@@ -87,7 +87,7 @@ def build_dataset(goal, catalog, entity, dir_io):
 
         # Samples index from Wikidata
         all_samples = blocking.full_text_query_block(
-            goal, catalog, wd_chunk[constants.NAME_TOKENS], i, target_database.get_entity(catalog, entity), dir_io)
+            goal, catalog, wd_chunk[constants.NAME_TOKENS], i, target_database.get_main_entity(catalog, entity), dir_io)
 
         # Build target chunk based on samples
         target_reader = data_gathering.gather_target_dataset(
