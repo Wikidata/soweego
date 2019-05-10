@@ -13,7 +13,7 @@ import json
 import logging
 import os
 from collections import defaultdict
-
+import sys
 import click
 import recordlinkage as rl
 from numpy import mean, std
@@ -46,7 +46,7 @@ def cli(ctx, classifier, target, target_type, nested, single, k_folds, metric, d
     """
     kwargs = utils.handle_extra_cli_args(ctx.args)
     if kwargs is None:
-        return 1
+        sys.exit(1)
 
     performance_fileout = os.path.join(dir_io, constants.LINKER_PERFORMANCE %
                                        (target, target_type, classifier))
@@ -81,7 +81,7 @@ def cli(ctx, classifier, target, target_type, nested, single, k_folds, metric, d
             json.dump(result, fout, indent=2)
         LOGGER.info("%s performance dumped to '%s'",
                     metric, performance_fileout)
-        return 0
+        sys.exit(0)
 
     if single:
         LOGGER.info('Starting single evaluation over %d folds ...', k_folds)
@@ -98,7 +98,7 @@ def cli(ctx, classifier, target, target_type, nested, single, k_folds, metric, d
 
         LOGGER.info("Predictions dumped to '%s', Performance dumped to '%s'",
                     predictions_fileout, performance_fileout)
-        return 0
+        sys.exit(0)
 
     # Default: average evaluation over k-fold
     LOGGER.info('Starting average evaluation over %d folds ...', k_folds)
