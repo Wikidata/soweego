@@ -30,11 +30,11 @@ _threading_manager = Manager()
 
 
 # when expanding the QID in `OccupationQidSet._expand_occupations` it
-# is useful to have a concurrent dict where we can cache each result, so that when this
-# feature extractor is used executed in parallel, all instances will have
-# access to the same cache, drastically decreasing the number of sparql
+# is useful to have a concurrent safe dict where we can cache each result, so that when this
+# feature extractor is executed in parallel, all instances will have
+# access to the same cache, drastically decreasing the number of SPARQL
 # requests that we need to make. This cache is also preserved across executions
-# of the feature extractor.
+# of this feature extractor.
 _global_occupations_qid_cache = _threading_manager.dict()
 
 

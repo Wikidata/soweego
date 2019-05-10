@@ -401,7 +401,7 @@ def make_request(query, response_format=DEFAULT_RESPONSE_FORMAT):
         wait_time = 0.3
 
         LOGGER.warning('Exceeded request API request limit. '
-                       'Will retry in %s seconds', wait_time)
+                       'Will retry after %s seconds', wait_time)
 
         # block the current thread for `wait_time`
         time.sleep(wait_time)
