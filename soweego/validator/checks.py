@@ -15,7 +15,7 @@ from collections import defaultdict
 
 import click
 
-from soweego.commons import constants, data_gathering, target_database, constants
+from soweego.commons import constants, data_gathering, target_database
 from soweego.commons.db_manager import DBManager
 from soweego.ingestor import wikidata_bot
 
@@ -26,7 +26,7 @@ LOGGER = logging.getLogger(__name__)
 @click.argument('entity', type=click.Choice(constants.HANDLED_ENTITIES.keys()))
 @click.argument('catalog', type=click.Choice(constants.TARGET_CATALOGS.keys()))
 @click.option('--wikidata-dump/--no-wikidata-dump', default=False, help='Dump links gathered from Wikidata. Default: no.')
-@click.option('--upload/--no-upload', default=True, help='Upload check results to Wikidata. Default: yes.')
+@click.option('--upload/--no-upload', default=False, help='Upload check results to Wikidata. Default: no.')
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
 @click.option('-c', '--cache', type=click.File(), default=None, help="Load Wikidata links previously dumped via '-w'. Default: no.")
 @click.option('-d', '--deprecated', type=click.File('w'), default=constants.SHARED_FOLDER + 'entities_deprecated_ids.json',
@@ -63,7 +63,7 @@ def check_existence(entity, catalog, wikidata_cache=None):
     if wikidata_cache is None:
         wikidata = {}
 
-        pid = target_database.get_pid(catalog)
+        pid = target_database.get_person_pid(catalog)
         data_gathering.gather_target_ids(entity, catalog, pid, wikidata)
     else:
         wikidata = wikidata_cache
@@ -71,7 +71,7 @@ def check_existence(entity, catalog, wikidata_cache=None):
     session = DBManager.connect_to_db()
     invalid = defaultdict(set)
     count = 0
-    entity = target_database.get_entity(catalog, entity)
+    entity = target_database.get_main_entity(catalog, entity)
 
     for qid in wikidata:
         identifiers = wikidata[qid][constants.TID]
@@ -145,7 +145,7 @@ def check_links_cli(entity, catalog, wikidata_dump, upload, sandbox, cache, depr
 
 
 def check_links(entity, catalog, wikidata_cache=None):
-    pid = target_database.get_pid(catalog)
+    pid = target_database.get_person_pid(catalog)
 
     # Target links
     target = data_gathering.gather_target_links(entity, catalog)
@@ -247,7 +247,7 @@ def check_metadata(entity, catalog, wikidata_cache=None):
 
         # Wikidata metadata
         data_gathering.gather_target_ids(
-            entity, catalog, target_database.get_pid(catalog), wikidata)
+            entity, catalog, target_database.get_person_pid(catalog), wikidata)
         data_gathering.gather_wikidata_metadata(wikidata)
     else:
         wikidata = wikidata_cache
