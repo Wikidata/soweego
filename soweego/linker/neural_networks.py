@@ -29,7 +29,6 @@ class _BaseNN(KerasAdapter, BaseClassifier):
     NN implementations.
     """
 
-    def _fit(self, features, answers, batch_size=1024, epochs=1000, validation_split=0.33):
     def _fit(self, features, answers,
              batch_size=constants.BATCH_SIZE,
              epochs=constants.EPOCHS,

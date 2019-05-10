@@ -184,7 +184,7 @@ CLASSIFIERS = {
     'nb': NAIVE_BAYES,  # Shorthand
     'svm': SVM,  # Shorthand
     'lsvm': LINEAR_SVM,  # Shorthand
-    'slp': SINGLE_LAYER_PERCEPTRON  # Shorthand
+    'slp': SINGLE_LAYER_PERCEPTRON , # Shorthand
     'mlp': MULTILAYER_CLASSIFIER  # Shorthand
 }
 
