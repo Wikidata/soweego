@@ -20,6 +20,7 @@ from datetime import date
 import click
 import pywikibot
 
+from soweego.commons import target_database
 from soweego.wikidata import vocabulary
 
 LOGGER = logging.getLogger(__name__)
@@ -59,16 +60,16 @@ def add_identifiers_cli(catalog_name, matches, sandbox):
 def add_statements_cli(catalog_name, statements, sandbox):
     """Bot add statements to existing Wikidata items.
     """
-    stated_in = vocabulary.CATALOG_MAPPING.get(catalog_name)['qid']
+    stated_in = target_database.get_qid(catalog_name)
     if sandbox:
         LOGGER.info('Running on the Wikidata sandbox item')
     for statement in statements:
         subject, predicate, value = statement.rstrip().split('\t')
         if sandbox:
-            _add_or_reference(vocabulary.SANDBOX_1,
+            add_or_reference(vocabulary.SANDBOX_1,
                               predicate, value, stated_in)
         else:
-            _add_or_reference(subject, predicate, value, stated_in)
+            add_or_reference(subject, predicate, value, stated_in)
 
 
 @click.command()
@@ -107,18 +108,18 @@ def add_identifiers(matches: dict, catalog_name: str, sandbox: bool) -> None:
     :param sandbox: whether to perform edits on the Wikidata sandbox item Q4115189
     :type sandbox: bool
     """
-    catalog_terms = vocabulary.CATALOG_MAPPING.get(catalog_name)
+    pid = target_database.get_person_pid(catalog_name)
+    catalog_qid = target_database.get_qid(catalog_name)
     for qid, catalog_id in matches.items():
         LOGGER.info('Processing %s match: %s -> %s',
                     catalog_name, qid, catalog_id)
         if sandbox:
             LOGGER.info(
                 'Using Wikidata sandbox item %s as subject, instead of %s', vocabulary.SANDBOX_1, qid)
-            _add_or_reference(vocabulary.SANDBOX_1,
-                              catalog_terms['pid'], catalog_id, catalog_terms['qid'])
+            add_or_reference(vocabulary.SANDBOX_1, pid,
+                              catalog_id, catalog_qid)
         else:
-            _add_or_reference(
-                qid, catalog_terms['pid'], catalog_id, catalog_terms['qid'])
+            add_or_reference(qid, pid, catalog_id, catalog_qid)
 
 
 def add_statements(statements: list, stated_in_catalog: str, sandbox: bool) -> None:
@@ -138,10 +139,10 @@ def add_statements(statements: list, stated_in_catalog: str, sandbox: bool) -> N
     for subject, predicate, value in statements:
         LOGGER.info('Processing (%s, %s, %s) statement')
         if sandbox:
-            _add_or_reference(vocabulary.SANDBOX_1,
+            add_or_reference(vocabulary.SANDBOX_1,
                               predicate, value, stated_in_catalog)
         else:
-            _add_or_reference(subject, predicate, value, stated_in_catalog)
+            add_or_reference(subject, predicate, value, stated_in_catalog)
 
 
 def delete_or_deprecate_identifiers(action: str, invalid: dict, catalog_name: str, sandbox: bool) -> None:
@@ -174,7 +175,7 @@ def delete_or_deprecate_identifiers(action: str, invalid: dict, catalog_name: st
                 _delete_or_deprecate(action, qid, catalog_id, catalog_name)
 
 
-def _add_or_reference(subject: str, predicate: str, value: str, stated_in: str) -> None:
+def add_or_reference(subject: str, predicate: str, value: str, stated_in: str) -> None:
     item = pywikibot.ItemPage(REPO, subject)
 
     # get redirect target recursively in case a redirect points
