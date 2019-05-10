@@ -386,6 +386,16 @@ def make_request(query, response_format=DEFAULT_RESPONSE_FORMAT):
             return 'empty'
         LOGGER.debug('Got %d results', len(response_body) - 1)
         return DictReader(response_body, delimiter='\t')
+    
+    if response.status_code == 429:
+        # according to https://www.mediawiki.org/wiki/Wikidata_Query_Service/User_Manual#Query_limits
+        # if the status code is 429 then we've made too many requests and a
+        # `Retry-After` header is sent, specifying how much time we should
+        # wait until we retry the request
+        wait_time = response.headers['Retry-After']
+        print(wait_time)
+        raise Exception
+        
     LOGGER.warning(
         'The GET to the Wikidata SPARQL endpoint went wrong. Reason: %d %s - Query: %s',
         response.status_code, response.reason, query)
