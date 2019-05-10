@@ -17,10 +17,10 @@ from sklearn.svm import SVC
 
 
 class SVCClassifier(SKLearnAdapter, BaseClassifier):
-    def __init__(self, *args, probability=True, **kwargs):
+    def __init__(self, *args, **kwargs):
         super(SVCClassifier, self).__init__()
 
-        kwargs['probability'] = probability
+        kwargs['probability'] = kwargs.get('probability', True)
 
         self.kernel = SVC(*args, **kwargs)
 
