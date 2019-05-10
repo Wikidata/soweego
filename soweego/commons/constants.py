@@ -184,7 +184,8 @@ REAL_NAME = 'real_name'
 NAME_FIELDS = (NAME, ALIAS, BIRTH_NAME, FAMILY_NAME,
                GIVEN_NAME, PSEUDONYM, REAL_NAME)
 
-# File names
+# File names & folders
+SHARED_FOLDER = '/app/shared/'
 WD_TRAINING_SET = 'wikidata_%s_%s_training_set.jsonl.gz'
 WD_CLASSIFICATION_SET = 'wikidata_%s_%s_classification_set.jsonl.gz'
 SAMPLES = '%s_%s_%s_samples%02d.pkl.gz'
@@ -200,7 +201,7 @@ COMPLETE_WIKIDATA_CHUNKS = '%s_%s_%s_complete_wikidata_chunks.pkl.gz'
 COMPLETE_TARGET_CHUNKS = '%s_%s_%s_complete_target_chunks.pkl.gz'
 COMPLETE_POSITIVE_SAMPLES_INDEX = '%s_%s_%s_complete_positive_samples_index.pkl.gz'
 WIKIDATA_API_SESSION = 'wiki_api_session.pkl'
-SHARED_FOLDER = '/app/shared/'
+WORKS_BY_PEOPLE_STATEMENTS = '%s_%s_works_by_people_statements.csv'
 
 # Supervised classification
 NAIVE_BAYES = 'naive_bayes'
@@ -218,7 +219,7 @@ CLASSIFIERS = {
     'nb': NAIVE_BAYES,  # Shorthand
     'svm': SVM,  # Shorthand
     'lsvm': LINEAR_SVM,  # Shorthand
-    'slp': SINGLE_LAYER_PERCEPTRON  # Shorthand
+    'slp': SINGLE_LAYER_PERCEPTRON,  # Shorthand
     'mlp': MULTILAYER_CLASSIFIER  # Shorthand
 }
 
