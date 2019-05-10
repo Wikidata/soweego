@@ -121,7 +121,7 @@ TARGET_CATALOGS = {
         'release': {
             'qid': vocabulary.MUSICALWORK,
             'entity': models.musicbrainz_entity.MusicbrainzReleaseGroupEntity,
-            'link_entity': None,
+            'link_entity': models.musicbrainz_entity.MusicbrainzReleaseGroupLinkEntity,
             'nlp_entity': None
         }
     }

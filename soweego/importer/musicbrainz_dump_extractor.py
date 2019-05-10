@@ -76,7 +76,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             dump_path
         )
 
-        LOGGER.debug("Added %s/%s artist records", *release_groups_count)
+        LOGGER.debug("Added %s/%s release group records", *release_groups_count)
 
         def release_artist_relationships_uniqueness_filter():
             yield from [MusicBrainzReleaseGroupArtistRelationship(item[0], item[1]) for item in
@@ -521,6 +521,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                                relation, translation0, translation1)
 
     def _release_group_generator(self, dump_path):
+        release_group_datesprec = self._retrieve_release_group_dates(dump_path)
         release_group_path = os.path.join(dump_path, 'mbdump', 'release_group')
 
         with open(release_group_path, 'r') as releasefile:
@@ -530,6 +531,11 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             for row in tqdm(release_reader, total=self._count_num_lines_in_file(releasefile)):
                 entity = MusicbrainzReleaseGroupEntity()
                 self._fill_entity(entity, row, None)
+                if row['id'] in release_group_datesprec:
+                    dateprec = release_group_datesprec[row['id']]
+                    if dateprec[1] != 0:
+                        entity.born_precision = dateprec[1]
+                        entity.born = dateprec[0]
                 yield entity
 
     def _release_group_artist_relationship_generator(self, dump_path):
@@ -676,3 +682,47 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         file_.seek(0)
 
         return n_rows
+
+    def _retrieve_release_group_dates(self, dump_path):
+        release_dateprec = defaultdict(lambda: (date.today(), 0))
+
+        release_country_path = os.path.join(dump_path, 'mbdump', 'release_country')
+
+        with open(release_country_path) as rfile:
+            releases = DictReader(rfile, delimiter='\t',
+                                  fieldnames=['release_id', 'country_id', 'year', 'month', 'day'])
+
+            for release in releases:
+                date_prec = self._get_date_and_precision(release['year'], release['month'], release['day'])
+
+                if date_prec[0] is None:
+                    continue
+
+                if date_prec[0] < release_dateprec[release['release_id']][0]:
+                    release_dateprec[release['release_id']] = date_prec
+
+        release_country_path = os.path.join(dump_path, 'mbdump', 'release_unknown_country')
+
+        with open(release_country_path) as rfile:
+            releases = DictReader(rfile, delimiter='\t', fieldnames=['release_id', 'year', 'month', 'day'])
+
+            for release in releases:
+                date_prec = self._get_date_and_precision(release['year'], release['month'], release['day'])
+
+                if date_prec[0] is None:
+                    continue
+
+                if date_prec[0] < release_dateprec[release['release_id']][0]:
+                    release_dateprec[release['release_id']] = date_prec
+
+        release_group_dateprec = defaultdict(lambda: (date.today(), 0))
+        release_path = os.path.join(dump_path, 'mbdump', 'release')
+        with open(release_path) as rfile:
+            releases = DictReader(rfile, delimiter='\t',
+                                  fieldnames=['release_id', 'gid', 'name', 'credits', 'release_group_id'])
+
+            for release in releases:
+                if release_dateprec[release['release_id']][0] < release_group_dateprec[release['release_group_id']][0]:
+                    release_group_dateprec[release['release_group_id']] = release_dateprec[release['release_id']]
+
+        return release_group_dateprec
