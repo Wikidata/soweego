@@ -14,6 +14,7 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import json
 import logging
 import os
+import time
 from csv import DictReader
 from functools import lru_cache
 from re import search
@@ -374,6 +375,7 @@ def make_request(query, response_format=DEFAULT_RESPONSE_FORMAT):
     response = get(WIKIDATA_SPARQL_ENDPOINT, params={
         'query': query}, headers={'Accept': response_format})
     log_request_data(response, LOGGER)
+
     if response.ok:
         LOGGER.debug(
             'Successful GET to the Wikidata SPARQL endpoint. Status code: %d', response.status_code)
@@ -386,16 +388,23 @@ def make_request(query, response_format=DEFAULT_RESPONSE_FORMAT):
             return 'empty'
         LOGGER.debug('Got %d results', len(response_body) - 1)
         return DictReader(response_body, delimiter='\t')
-    
+
     if response.status_code == 429:
         # according to https://www.mediawiki.org/wiki/Wikidata_Query_Service/User_Manual#Query_limits
         # if the status code is 429 then we've made too many requests and a
         # `Retry-After` header is sent, specifying how much time we should
         # wait until we retry the request
-        wait_time = response.headers['Retry-After']
-        print(wait_time)
-        raise Exception
-        
+        wait_time = int(response.headers['Retry-After'])
+
+        LOGGER.warning('Exceeded request API request limit. '
+                       'Will retry in %s seconds', wait_time)
+
+        # block everything
+        time.sleep(wait_time)
+
+        # retry the request and return result
+        return make_request(query, response_format)
+
     LOGGER.warning(
         'The GET to the Wikidata SPARQL endpoint went wrong. Reason: %d %s - Query: %s',
         response.status_code, response.reason, query)
