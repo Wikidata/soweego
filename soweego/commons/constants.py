@@ -134,6 +134,10 @@ REQUIRE_OCCUPATIONS = [
     'imdb'
 ]
 
+REQUIRE_GENRE = [
+    'release'
+]
+
 # Wikidata field & target column names
 INTERNAL_ID = 'internal_id'
 CATALOG_ID = 'catalog_id'
@@ -151,6 +155,7 @@ NAME = 'name'
 NAME_TOKENS = 'name_tokens'
 BIRTH_PRECISION = 'born_precision'
 DEATH_PRECISION = 'died_precision'
+GENRE = 'genres'
 # Consistent with BaseLinkEntity
 URL = 'url'
 URL_TOKENS = 'url_tokens'

@@ -86,21 +86,21 @@ def _lookup_label(item_value):
 def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_and_tids,
                     no_labels_count, no_aliases_count, no_descriptions_count,
                     no_sitelinks_count, no_links_count, no_ext_ids_count, no_claims_count,
-                    needs_occupations) -> List[Dict]:
+                    needs_occupations, needs_genre) -> List[Dict]:
     """
     This function will be consumed by the `get_data_for_linker`
     function in this module. It allows the buckets coming from
     wikidata to be processed in parallel.
     """
     response_body = _make_request(bucket, request_params)
-    
+
     # If there is no response then
     # we treat it as if there were no entities in
     # the bucket, and return an empty list
     if not response_body:
-        return [] 
+        return []
 
-    # Each bucket is composed of different entities.
+        # Each bucket is composed of different entities.
     # In this list we'll keep track of the results
     # when processing each of them
     bucket_results = []
@@ -173,7 +173,7 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
 
         # Expected claims
         to_write.update(_return_claims_for_linker(
-            qid, claims, no_claims_count, needs_occupations))
+            qid, claims, no_claims_count, needs_occupations, needs_genre))
 
         # add result to `bucket_results`
         bucket_results.append(to_write)
@@ -181,7 +181,9 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
     return bucket_results
 
 
-def get_data_for_linker(catalog: str, qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> None:
+def get_data_for_linker(catalog: str, entity_type: str, qids: set, url_pids: set, ext_id_pids_to_urls: dict,
+                        fileout: TextIO,
+                        qids_and_tids: dict) -> None:
     no_labels_count = 0
     no_aliases_count = 0
     no_descriptions_count = 0
@@ -196,6 +198,7 @@ def get_data_for_linker(catalog: str, qids: set, url_pids: set, ext_id_pids_to_u
     # check if for this specific catalog
     # we need to get the occupations
     needs_occupations = catalog in constants.REQUIRE_OCCUPATIONS
+    needs_genre = entity_type in constants.REQUIRE_GENRE
 
     # create a partial function. Here all parameters, except
     # for the actual `bucket` are given to `_process_bucket`.
@@ -215,16 +218,15 @@ def get_data_for_linker(catalog: str, qids: set, url_pids: set, ext_id_pids_to_u
                             no_links_count=no_links_count,
                             no_ext_ids_count=no_ext_ids_count,
                             no_claims_count=no_claims_count,
-                            needs_occupations=needs_occupations)
+                            needs_occupations=needs_occupations,
+                            needs_genre=needs_genre)
 
     # create a pool of threads and map the list of buckets using `pool_function`
     with Pool() as pool:
-
         # `processed_bucket` will be a list of dicts, where each dict
         # is a processed entity from the bucket
         for processed_bucket in pool.imap_unordered(pool_function,
                                                     tqdm(qid_buckets, total=len(qid_buckets))):
-
             # join results into a string so that we can write them to
             # the dump file
             to_write = ''.join(json.dumps(result, ensure_ascii=False) + '\n' for
@@ -233,8 +235,10 @@ def get_data_for_linker(catalog: str, qids: set, url_pids: set, ext_id_pids_to_u
             fileout.write(to_write)
             fileout.flush()
 
-    LOGGER.info('QIDs: got %d with no labels, %d with no aliases, %d with no descriptions, %d with no sitelinks, %d with no third-party links, %d with no external ID links, %d with no expected claims',
-                no_labels_count, no_aliases_count, no_descriptions_count, no_sitelinks_count, no_links_count, no_ext_ids_count, no_claims_count)
+    LOGGER.info(
+        'QIDs: got %d with no labels, %d with no aliases, %d with no descriptions, %d with no sitelinks, %d with no third-party links, %d with no external ID links, %d with no expected claims',
+        no_labels_count, no_aliases_count, no_descriptions_count, no_sitelinks_count, no_links_count, no_ext_ids_count,
+        no_claims_count)
 
 
 def get_metadata(qids: set) -> Generator[tuple, None, None]:
@@ -358,12 +362,15 @@ def _return_third_party_urls(qid, claims, url_pids, no_count):
     return to_return
 
 
-def _return_claims_for_linker(qid, claims, no_count, need_occupations):
+def _return_claims_for_linker(qid, claims, no_count, need_occupations, need_genre):
     to_return = defaultdict(set)
     expected_pids = set(vocabulary.LINKER_PIDS.keys())
 
     if not need_occupations:
         expected_pids.remove(vocabulary.OCCUPATION)
+
+    if not need_genre:
+        expected_pids.remove(vocabulary.GENRE)
 
     available = expected_pids.intersection(claims.keys())
     if available:

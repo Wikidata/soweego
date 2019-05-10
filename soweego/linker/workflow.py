@@ -74,8 +74,7 @@ def build_wikidata(goal, catalog, entity, dir_io):
 
         url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
         with gzip.open(wd_io_path, 'wt') as wd_io:
-            api_requests.get_data_for_linker(catalog,
-                                             qids, url_pids, ext_id_pids_to_urls, wd_io, qids_and_tids)
+            api_requests.get_data_for_linker(catalog, entity, qids, url_pids, ext_id_pids_to_urls, wd_io, qids_and_tids)
 
     wd_df_reader = pd.read_json(wd_io_path, lines=True, chunksize=1000)
 
@@ -170,6 +169,9 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
                                      occupations_col_name,
                                      label='occupation_qids'))
 
+    if in_both_datasets(constants.GENRE):
+        compare.add(SimilarTokens(constants.GENRE, constants.GENRE, 'genre_similar_tokens'))
+
     feature_vectors = compare.compute(candidate_pairs, wikidata, target)
     pd.to_pickle(feature_vectors, path_io)
 
@@ -191,7 +193,7 @@ def init_model(classifier, binarize, number_of_features):
 
     elif classifier is constants.PERCEPTRON_CLASSIFIER:
         model = neural_networks.SingleLayerPerceptron(number_of_features)
-    
+
     elif classifier is constants.MULTILAYER_CLASSIFIER:
         model = neural_networks.MultiLayerPerceptron(number_of_features)
 
@@ -228,6 +230,11 @@ def preprocess_wikidata(goal, wikidata_reader):
             if chunk.get(column) is not None:
                 chunk[f'{column}_tokens'] = chunk[column].apply(
                     tokenize_values, args=(text_utils.tokenize,))
+
+        # 4b. Tokenize genres if available
+        if chunk.get(constants.GENRE) is not None:
+            chunk[constants.GENRE] = chunk[constants.GENRE].apply(
+                tokenize_values, args=(text_utils.tokenize,))
 
         # 5. Tokenize & join URLs lists
         chunk[constants.URL_TOKENS] = chunk[constants.URL].apply(
