@@ -2,6 +2,13 @@
 # -*- coding: utf-8 -*-
 
 """Supervised linking."""
+
+__author__ = 'Marco Fossati'
+__email__ = 'fossati@spaziodati.eu'
+__version__ = '1.0'
+__license__ = 'GPL-3.0'
+__copyright__ = 'Copyleft 2018, Hjfocs'
+
 import logging
 import os
 import re
@@ -18,12 +25,6 @@ from sklearn.externals import joblib
 from soweego.commons import constants, data_gathering, target_database
 from soweego.ingestor import wikidata_bot
 from soweego.linker import blocking, classifiers, neural_networks, workflow
-
-__author__ = 'Marco Fossati'
-__email__ = 'fossati@spaziodati.eu'
-__version__ = '1.0'
-__license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2018, Hjfocs'
 
 LOGGER = logging.getLogger(__name__)
 
@@ -136,7 +137,7 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
 
             samples = blocking.full_text_query_block(
                 'classification', catalog, wd_chunk[constants.NAME_TOKENS],
-                i, target_database.get_entity(catalog, entity), dir_io)
+                i, target_database.get_main_entity(catalog, entity), dir_io)
 
             # Build target chunk based on samples
             target_reader = data_gathering.gather_target_dataset(

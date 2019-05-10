@@ -35,14 +35,14 @@ def cli(target, target_type, strategy, upload, sandbox, threshold, output_dir):
     wd_io_path = path.join(output_dir, WD_IO_FILENAME % target)
     if not path.exists(wd_io_path):
         qids = data_gathering.gather_qids(
-            target_type, target, target_database.get_pid(target))
+            target_type, target, target_database.get_person_pid(target))
         url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
         with gzip.open(wd_io_path, 'wt') as wd_io:
             get_data_for_linker(target, qids, url_pids, ext_id_pids_to_urls, wd_io)
             LOGGER.info("Wikidata stream stored in %s" % wd_io_path)
 
-    target_entity = target_database.get_entity(target, target_type)
-    target_pid = target_database.get_pid(target)
+    target_entity = target_database.get_main_entity(target, target_type)
+    target_pid = target_database.get_person_pid(target)
     with gzip.open(wd_io_path, "rt") as wd_io:
         result = edit_distance_match(
             wd_io, target_entity, target_pid, strategy, threshold)

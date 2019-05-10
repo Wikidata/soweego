@@ -62,15 +62,15 @@ def cli(target, target_type, strategy, check_dates, upload, sandbox, output_dir)
     wd_io_path = path.join(output_dir, WD_IO_FILENAME % target)
     if not path.exists(wd_io_path):
         qids = data_gathering.gather_qids(
-            target_type, target, target_database.get_pid(target))
+            target_type, target, target_database.get_person_pid(target))
         url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
         with gzip.open(wd_io_path, 'wt') as wd_io:
             get_data_for_linker(target, qids, url_pids, ext_id_pids_to_urls, wd_io, None)
             LOGGER.info("Wikidata stream stored in %s" % wd_io_path)
 
-    target_entity = target_database.get_entity(target, target_type)
+    target_entity = target_database.get_main_entity(target, target_type)
     target_link_entity = target_database.get_link_entity(target, target_type)
-    target_pid = target_database.get_pid(target)
+    target_pid = target_database.get_person_pid(target)
 
     result = None
 
@@ -110,7 +110,7 @@ def cli(target, target_type, strategy, check_dates, upload, sandbox, output_dir)
               help="default: '%s" % constants.SHARED_FOLDER)
 def extract_available_matches_in_target(target, target_type, upload, sandbox, output_dir):
     target_link_entity = target_database.get_link_entity(target, target_type)
-    target_pid = target_database.get_pid(target)
+    target_pid = target_database.get_person_pid(target)
 
     def result_generator(target_link_entity, target_pid):
         if target_link_entity:
