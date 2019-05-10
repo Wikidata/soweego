@@ -13,6 +13,10 @@ import logging
 
 from sklearn.model_selection import StratifiedKFold
 
+from soweego.commons.constants import (MULTILAYER_CLASSIFIER,
+                                       SINGLE_LAYER_PERCEPTRON)
+from soweego.linker.workflow import init_model
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -50,3 +54,13 @@ def prepare_stratified_k_fold(k, dataset, positive_samples_index):
     binary_target_variables = dataset.index.map(
         lambda x: 1 if x in positive_samples_index else 0)
     return k_fold, binary_target_variables
+
+
+def initialize_classifier(classifier, dataset, **kwargs):
+    if classifier in (SINGLE_LAYER_PERCEPTRON, MULTILAYER_CLASSIFIER):
+        model = init_model(classifier, dataset.shape[1], **kwargs)
+    else:
+        model = init_model(classifier, **kwargs)
+
+    LOGGER.info('Model initialized: %s', model)
+    return model

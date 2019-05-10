@@ -13,10 +13,9 @@ import gzip
 import logging
 import os
 import pickle
-
-import click
 import sys
 
+import click
 import pandas as pd
 from pandas import MultiIndex, concat
 from sklearn.externals import joblib
@@ -52,8 +51,8 @@ def cli(ctx, classifier, target, target_type, tune, k_folds, dir_io):
 
 
 def execute(classifier, catalog, entity, tune, k, dir_io, **kwargs):
-    if tune and classifier in (constants.SINGLE_LAYER_PERCEPTRON, 
-                      constants.MULTILAYER_CLASSIFIER):
+    if tune and classifier in (constants.SINGLE_LAYER_PERCEPTRON,
+                               constants.MULTILAYER_CLASSIFIER):
         # TODO make Keras work with GridSearchCV
         raise NotImplementedError(
             f'Grid search for {classifier} is not supported')
@@ -73,7 +72,7 @@ def execute(classifier, catalog, entity, tune, k, dir_io, **kwargs):
 def _grid_search(k, feature_vectors, positive_samples_index, classifier, **kwargs):
     k_fold, target = utils.prepare_stratified_k_fold(
         k, feature_vectors, positive_samples_index)
-    model = _initialize(classifier, feature_vectors, **kwargs)
+    model = utils.initialize_classifier(classifier, feature_vectors, **kwargs)
     grid_search = GridSearchCV(
         model.kernel, constants.PARAMETER_GRIDS[classifier], scoring='f1', n_jobs=-1, cv=k_fold)
     grid_search.fit(feature_vectors.to_numpy(), target)
@@ -166,14 +165,10 @@ def _build_positive_samples_index(wd_reader1):
 
 
 def _train(classifier, feature_vectors, positive_samples_index, **kwargs):
-    model = _initialize(classifier, feature_vectors, **kwargs)
+    model = utils.initialize_classifier(classifier, feature_vectors, **kwargs)
 
     LOGGER.info('Training a %s', classifier)
     model.fit(feature_vectors, positive_samples_index)
 
     LOGGER.info('Training done')
     return model
-
-
-def _initialize(classifier, feature_vectors, **kwargs):
-    return workflow.init_model(classifier, feature_vectors.shape[1], **kwargs) if classifier in (constants.SINGLE_LAYER_PERCEPTRON, constants.MULTILAYER_CLASSIFIER) else workflow.init_model(classifier, **kwargs)

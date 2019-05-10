@@ -12,8 +12,9 @@ __copyright__ = 'Copyleft 2019, Hjfocs'
 import json
 import logging
 import os
-from collections import defaultdict
 import sys
+from collections import defaultdict
+
 import click
 import recordlinkage as rl
 from numpy import mean, std
@@ -135,10 +136,11 @@ def _compute_performance(test_index, predictions, test_vectors_size):
 
 
 def nested_k_fold_with_grid_search(classifier, param_grid, catalog, entity, k, scoring, dir_io, **kwargs):
-    if classifier in (constants.SINGLE_LAYER_PERCEPTRON, 
+    if classifier in (constants.SINGLE_LAYER_PERCEPTRON,
                       constants.MULTILAYER_CLASSIFIER):
         # TODO make Keras work with GridSearchCV
-        raise NotImplementedError(f'Grid search for {classifier} is not supported')
+        raise NotImplementedError(
+            f'Grid search for {classifier} is not supported')
 
     result = defaultdict(list)
 
@@ -177,7 +179,7 @@ def average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
     for train_index, test_index in k_fold.split(dataset, binary_target_variables):
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
 
-        model = _initialize(classifier, dataset, kwargs)
+        model = utils.initialize_classifier(classifier, dataset, **kwargs)
         model.fit(training, positive_samples_index & training.index)
 
         preds = model.predict(test)
@@ -197,25 +199,12 @@ def average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
     return predictions, mean(precisions), std(precisions), mean(recalls), std(recalls), mean(fscores), std(fscores)
 
 
-def _initialize(classifier, dataset, kwargs):
-    if classifier in (constants.SINGLE_LAYER_PERCEPTRON, 
-                      constants.MULTILAYER_CLASSIFIER):
-        model = workflow.init_model(classifier, dataset.shape[1], **kwargs)
-    else:
-        model = workflow.init_model(classifier, **kwargs)
-
-    LOGGER.info('Model initialized: %s', model)
-    return model
-
-
 def single_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
     predictions, test_set = None, []
     dataset, positive_samples_index = train.build_dataset(
         'training', catalog, entity, dir_io)
     k_fold, binary_target_variables = utils.prepare_stratified_k_fold(
         k, dataset, positive_samples_index)
-
-    
 
     for train_index, test_index in k_fold.split(dataset, binary_target_variables):
 
