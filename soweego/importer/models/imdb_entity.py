@@ -9,14 +9,10 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, tupini07'
 
-from sqlalchemy import (Boolean, Column, ForeignKey, Index, Integer, String,
-                        Table, UniqueConstraint)
+from sqlalchemy import (Boolean, Column, Integer, String)
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import relationship
 
 from soweego.importer.models.base_entity import BaseEntity, BaseRelationship
-from soweego.importer.models.base_link_entity import BaseLinkEntity
 from soweego.wikidata import vocabulary
 
 BASE = declarative_base()
@@ -29,6 +25,7 @@ MUSICIAN_TABLE = 'imdb_musician'
 PERSON_MOVIE_RELATIONSHIP_TABLE = 'imdb_person_movie_relationship'
 PRODUCER_TABLE = 'imdb_producer'
 WRITER_TABLE = 'imdb_writer'
+
 
 # actor, director, producer e writer
 
@@ -90,7 +87,7 @@ class ImdbActorEntity(ImdbPersonEntity):
 
 class ImdbDirectorEntity(ImdbPersonEntity):
     table_occupation = vocabulary.DIRECTOR
-    
+
     __tablename__ = DIRECTOR_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
@@ -99,7 +96,7 @@ class ImdbDirectorEntity(ImdbPersonEntity):
 
 class ImdbMusicianEntity(ImdbPersonEntity):
     table_occupation = vocabulary.MUSICIAN
-    
+
     __tablename__ = MUSICIAN_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
@@ -108,7 +105,7 @@ class ImdbMusicianEntity(ImdbPersonEntity):
 
 class ImdbProducerEntity(ImdbPersonEntity):
     table_occupation = vocabulary.FILM_PRODUCER
-    
+
     __tablename__ = PRODUCER_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
@@ -117,7 +114,7 @@ class ImdbProducerEntity(ImdbPersonEntity):
 
 class ImdbWriterEntity(ImdbPersonEntity):
     table_occupation = vocabulary.SCREENWRITER
-    
+
     __tablename__ = WRITER_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
