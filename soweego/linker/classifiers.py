@@ -9,7 +9,6 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2019, tupini07'
 
-import logging
 
 import pandas as pd
 from recordlinkage.adapters import SKLearnAdapter
@@ -18,14 +17,11 @@ from sklearn.svm import SVC
 
 
 class SVCClassifier(SKLearnAdapter, BaseClassifier):
-    def __init__(self, *args, kernel='linear', probability=True, **kwargs):
+    def __init__(self, *args, **kwargs):
         super(SVCClassifier, self).__init__()
 
-        # Add 'kernel' argument to `kwargs`
-        kwargs.update({'kernel': kernel,
-                       'probability': probability})
+        kwargs['probability'] = kwargs.get('probability', True)
 
-        # set the kernel
         self.kernel = SVC(*args, **kwargs)
 
     def prob(self, x):
@@ -42,7 +38,10 @@ class SVCClassifier(SKLearnAdapter, BaseClassifier):
         assert self.kernel.classes_[1] == 1, ('Invalid classes, the SVC predict probability '
                                               'expects that the second class in the trained '
                                               f'model is 1. It currently is: {self.kernel.classes_[1]}')
-        
+
         probabilities = self.kernel.predict_proba(x)[:, 1]
-        
+
         return pd.DataFrame(probabilities, index=x.index)
+
+    def __repr__(self):
+        return f'{self.kernel}'

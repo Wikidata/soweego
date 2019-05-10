@@ -173,8 +173,10 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
         compare.add(OccupationQidSet(occupations_col_name,
                                      occupations_col_name,
                                      label='occupation_qids'))
+
+    feature_vectors = compare.compute(
+        candidate_pairs, wikidata, target).drop_duplicates()
         
-    feature_vectors = compare.compute(candidate_pairs, wikidata, target)
     pd.to_pickle(feature_vectors, path_io)
 
     LOGGER.info("Features dumped to '%s'", path_io)
@@ -182,19 +184,18 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
     return feature_vectors
 
 
-def init_model(classifier, binarize, number_of_features):
-    # TODO expose other useful parameters
-    if classifier is constants.NAIVE_BAYES_CLASSIFIER:
-        model = rl.NaiveBayesClassifier(binarize=binarize)
+def init_model(classifier, *args, **kwargs):
+    if classifier is constants.NAIVE_BAYES:
+        model = rl.NaiveBayesClassifier(**kwargs)
 
-    elif classifier is constants.SVC_CLASSIFIER:
-        model = classifiers.SVCClassifier()
+    elif classifier is constants.LINEAR_SVM:
+        model = rl.SVMClassifier(**kwargs)
 
-    elif classifier is constants.LINEAR_SVC_CLASSIFIER:
-        model = rl.SVMClassifier()
+    elif classifier is constants.SVM:
+        model = classifiers.SVCClassifier(**kwargs)
 
-    elif classifier is constants.PERCEPTRON_CLASSIFIER:
-        model = neural_networks.SingleLayerPerceptron(number_of_features)
+    elif classifier is constants.SINGLE_LAYER_PERCEPTRON:
+        model = neural_networks.SingleLayerPerceptron(*args, **kwargs)
 
     elif classifier is constants.MULTILAYER_CLASSIFIER:
         model = neural_networks.MultiLayerPerceptron(number_of_features)
