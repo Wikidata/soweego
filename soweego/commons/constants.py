@@ -173,16 +173,19 @@ NAIVE_BAYES = 'naive_bayes'
 LINEAR_SVM = 'linear_support_vector_machines'
 SVM = 'support_vector_machines'
 SINGLE_LAYER_PERCEPTRON = 'single_layer_perceptron'
+MULTILAYER_CLASSIFIER = 'multi_layer_perceptron'
 
 CLASSIFIERS = {
     'naive_bayes': NAIVE_BAYES,
     'support_vector_machines': SVM,
     'linear_support_vector_machines': LINEAR_SVM,
     'single_layer_perceptron': SINGLE_LAYER_PERCEPTRON,
+    'multi_layer_perceptron': MULTILAYER_CLASSIFIER,
     'nb': NAIVE_BAYES,  # Shorthand
     'svm': SVM,  # Shorthand
     'lsvm': LINEAR_SVM,  # Shorthand
     'slp': SINGLE_LAYER_PERCEPTRON  # Shorthand
+    'mlp': MULTILAYER_CLASSIFIER  # Shorthand
 }
 
 PERFORMANCE_METRICS = ['precision', 'recall', 'f1']
