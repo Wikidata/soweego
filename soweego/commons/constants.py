@@ -14,7 +14,24 @@ from typing import TypeVar
 from soweego.importer import models
 from soweego.wikidata import vocabulary
 
-# Miscellanea
+# Supported catalogs
+DISCOGS = 'discogs'
+IMDB = 'imdb'
+MUSICBRAINZ = 'musicbrainz'
+
+# Supported entities
+ACTOR = 'actor'
+BAND = 'band'
+DIRECTOR = 'director'
+MUSICIAN = 'musician'
+PRODUCER = 'producer'
+WRITER = 'writer'
+
+# Miscellaneous keys
+QID = 'qid'
+PERSON_PID = 'person_pid'
+WORK_PID = 'work_pid'
+
 LAST_MODIFIED = 'last-modified'
 
 PROD_DB = 'PROD_DB'
@@ -36,80 +53,98 @@ OCCUPATION = 'occupation'
 SUPPORTED_QUERY_TYPES = (CLASS, OCCUPATION)
 SUPPORTED_QUERY_SELECTORS = (IDENTIFIER, LINKS, DATASET, METADATA)
 
-# Entity types and corresponding Wikidata query
+# Entities and corresponding Wikidata query
 HANDLED_ENTITIES = {
-    'band': CLASS,
-    'actor': OCCUPATION,
-    'director': OCCUPATION,
-    'musician': OCCUPATION,
-    'producer': OCCUPATION,
-    'writer': OCCUPATION
+    ACTOR: OCCUPATION,
+    BAND: CLASS,
+    DIRECTOR: OCCUPATION,
+    MUSICIAN: OCCUPATION,
+    PRODUCER: OCCUPATION,
+    WRITER: OCCUPATION
 }
 
+# Target catalogs imported into the internal DB
 # DB entity Python types for typed function signatures
 DB_ENTITY = TypeVar('DB_ENTITY', models.base_entity.BaseEntity,
                     models.base_link_entity.BaseLinkEntity, models.base_nlp_entity.BaseNlpEntity)
 
 # DB entities and their Wikidata class QID
+MAIN_ENTITY = 'main_entity'
+LINK_ENTITY = 'link_entity'
+NLP_ENTITY = 'nlp_entity'
+RELATIONSHIP_ENTITY = 'relationship_entity'
 TARGET_CATALOGS = {
-    'discogs': {
-        'musician': {
-            'qid': vocabulary.MUSICIAN,
-            'entity': models.discogs_entity.DiscogsMusicianEntity,
-            'link_entity': models.discogs_entity.DiscogsMusicianLinkEntity,
-            'nlp_entity': models.discogs_entity.DiscogsMusicianNlpEntity
+    DISCOGS: {
+        MUSICIAN: {
+            QID: vocabulary.MUSICIAN,
+            MAIN_ENTITY: models.discogs_entity.DiscogsMusicianEntity,
+            LINK_ENTITY: models.discogs_entity.DiscogsMusicianLinkEntity,
+            NLP_ENTITY: models.discogs_entity.DiscogsMusicianNlpEntity,
+            # TODO implement
+            RELATIONSHIP_ENTITY: None
         },
-        'band': {
-            'qid': vocabulary.BAND,
-            'entity': models.discogs_entity.DiscogsGroupEntity,
-            'link_entity': models.discogs_entity.DiscogsGroupLinkEntity,
-            'nlp_entity': models.discogs_entity.DiscogsGroupNlpEntity
+        BAND: {
+            QID: vocabulary.BAND,
+            MAIN_ENTITY: models.discogs_entity.DiscogsGroupEntity,
+            LINK_ENTITY: models.discogs_entity.DiscogsGroupLinkEntity,
+            NLP_ENTITY: models.discogs_entity.DiscogsGroupNlpEntity,
+            # TODO implement
+            RELATIONSHIP_ENTITY: None
         }
     },
-    'imdb': {
-        'actor': {
-            'qid': vocabulary.ACTOR,
-            'entity': models.imdb_entity.ImdbActorEntity,
-            'link_entity': None,
-            'nlp_entity': None
+    IMDB: {
+        ACTOR: {
+            QID: vocabulary.ACTOR,
+            MAIN_ENTITY: models.imdb_entity.ImdbActorEntity,
+            LINK_ENTITY: None,
+            NLP_ENTITY: None,
+            RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship
         },
-        'director': {
-            'qid': vocabulary.FILM_DIRECTOR,
-            'entity': models.imdb_entity.ImdbDirectorEntity,
-            'link_entity': None,
-            'nlp_entity': None
+        DIRECTOR: {
+            QID: vocabulary.FILM_DIRECTOR,
+            MAIN_ENTITY: models.imdb_entity.ImdbDirectorEntity,
+            LINK_ENTITY: None,
+            NLP_ENTITY: None,
+            RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship
         },
-        'musician': {
-            'qid': vocabulary.MUSICIAN,
-            'entity': models.imdb_entity.ImdbMusicianEntity,
-            'link_entity': None,
-            'nlp_entity': None
+        MUSICIAN: {
+            QID: vocabulary.MUSICIAN,
+            MAIN_ENTITY: models.imdb_entity.ImdbMusicianEntity,
+            LINK_ENTITY: None,
+            NLP_ENTITY: None,
+            RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship
         },
-        'producer': {
-            'qid': vocabulary.FILM_PRODUCER,
-            'entity': models.imdb_entity.ImdbProducerEntity,
-            'link_entity': None,
-            'nlp_entity': None
+        PRODUCER: {
+            QID: vocabulary.FILM_PRODUCER,
+            MAIN_ENTITY: models.imdb_entity.ImdbProducerEntity,
+            LINK_ENTITY: None,
+            NLP_ENTITY: None,
+            RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship
         },
-        'writer': {
-            'qid': vocabulary.SCREENWRITER,
-            'entity': models.imdb_entity.ImdbWriterEntity,
-            'link_entity': None,
-            'nlp_entity': None
+        WRITER: {
+            QID: vocabulary.SCREENWRITER,
+            MAIN_ENTITY: models.imdb_entity.ImdbWriterEntity,
+            LINK_ENTITY: None,
+            NLP_ENTITY: None,
+            RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship
         }
     },
-    'musicbrainz': {
-        'musician': {
-            'qid': vocabulary.MUSICIAN,
-            'entity': models.musicbrainz_entity.MusicbrainzArtistEntity,
-            'link_entity': models.musicbrainz_entity.MusicbrainzArtistLinkEntity,
-            'nlp_entity': None
+    MUSICBRAINZ: {
+        MUSICIAN: {
+            QID: vocabulary.MUSICIAN,
+            MAIN_ENTITY: models.musicbrainz_entity.MusicbrainzArtistEntity,
+            LINK_ENTITY: models.musicbrainz_entity.MusicbrainzArtistLinkEntity,
+            NLP_ENTITY: None,
+            # TODO implement
+            RELATIONSHIP_ENTITY: None
         },
-        'band': {
-            'qid': vocabulary.BAND,
-            'entity': models.musicbrainz_entity.MusicbrainzBandEntity,
-            'link_entity': models.musicbrainz_entity.MusicbrainzBandLinkEntity,
-            'nlp_entity': None
+        BAND: {
+            QID: vocabulary.BAND,
+            MAIN_ENTITY: models.musicbrainz_entity.MusicbrainzBandEntity,
+            LINK_ENTITY: models.musicbrainz_entity.MusicbrainzBandLinkEntity,
+            NLP_ENTITY: None,
+            # TODO implement
+            RELATIONSHIP_ENTITY: None
         }
     }
 }
@@ -118,13 +153,12 @@ TARGET_CATALOGS = {
 # also the QIDs of a person's occupations will be included
 # as part of the dump
 REQUIRE_OCCUPATIONS = [
-    'imdb'
+    IMDB
 ]
 
 # Wikidata field & target column names
 INTERNAL_ID = 'internal_id'
 CATALOG_ID = 'catalog_id'
-QID = 'qid'
 TID = 'tid'
 ALIAS = 'alias'
 BIRTH_NAME = vocabulary.LINKER_PIDS[vocabulary.BIRTH_NAME]
