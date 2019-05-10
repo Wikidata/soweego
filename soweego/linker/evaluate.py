@@ -135,7 +135,8 @@ def _compute_performance(test_index, predictions, test_vectors_size):
 
 
 def nested_k_fold_with_grid_search(classifier, param_grid, catalog, entity, k, scoring, dir_io, **kwargs):
-    if classifier is constants.SINGLE_LAYER_PERCEPTRON:
+    if classifier in (constants.SINGLE_LAYER_PERCEPTRON, 
+                      constants.MULTILAYER_CLASSIFIER):
         # TODO make Keras work with GridSearchCV
         raise NotImplementedError(f'Grid search for {classifier} is not supported')
 
@@ -197,7 +198,8 @@ def average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
 
 
 def _initialize(classifier, dataset, kwargs):
-    if classifier is constants.SINGLE_LAYER_PERCEPTRON:
+    if classifier in (constants.SINGLE_LAYER_PERCEPTRON, 
+                      constants.MULTILAYER_CLASSIFIER):
         model = workflow.init_model(classifier, dataset.shape[1], **kwargs)
     else:
         model = workflow.init_model(classifier, **kwargs)
