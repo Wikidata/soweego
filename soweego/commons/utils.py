@@ -11,12 +11,7 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import logging
 
-from keras.layers import Dense
-from keras.models import Sequential
 from sklearn.model_selection import StratifiedKFold
-
-from soweego.commons import constants
-from soweego.linker import neural_networks
 
 LOGGER = logging.getLogger(__name__)
 
