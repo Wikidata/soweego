@@ -176,4 +176,4 @@ def _train(classifier, feature_vectors, positive_samples_index, **kwargs):
 
 
 def _initialize(classifier, feature_vectors, **kwargs):
-    return workflow.init_model(classifier, feature_vectors.shape[1], **kwargs) if classifier is constants.SINGLE_LAYER_PERCEPTRON else workflow.init_model(classifier, **kwargs)
+    return workflow.init_model(classifier, feature_vectors.shape[1], **kwargs) if classifier in (constants.SINGLE_LAYER_PERCEPTRON, constants.MULTILAYER_CLASSIFIER) else workflow.init_model(classifier, **kwargs)
