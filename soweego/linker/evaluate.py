@@ -215,7 +215,7 @@ def single_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
     k_fold, binary_target_variables = utils.prepare_stratified_k_fold(
         k, dataset, positive_samples_index)
 
-    model = _initialize(classifier, dataset, kwargs)
+    
 
     for train_index, test_index in k_fold.split(dataset, binary_target_variables):
 
