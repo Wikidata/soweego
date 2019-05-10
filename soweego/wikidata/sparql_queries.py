@@ -390,16 +390,20 @@ def make_request(query, response_format=DEFAULT_RESPONSE_FORMAT):
         return DictReader(response_body, delimiter='\t')
 
     if response.status_code == 429:
-        # according to https://www.mediawiki.org/wiki/Wikidata_Query_Service/User_Manual#Query_limits
-        # if the status code is 429 then we've made too many requests and a
-        # `Retry-After` header is sent, specifying how much time we should
-        # wait until we retry the request
-        wait_time = int(response.headers['Retry-After'])
+        # according to the maintainer: https://stackoverflow.com/a/42590757/2234619
+        # and here: https://github.com/wikimedia/puppet/blob/837d10e240932b8042b81acf31a8808f603b08bb/modules/wdqs/templates/nginx.erb#L85
+        # the only limit on the SPARQL API is that there can't be more than 5 concurrent requests per IP
+
+        # so if the status code is 429 then we've made too many requests we just wait a bit
+        # and retry
+
+        # arbitrary wait time (seconds)
+        wait_time = 0.3
 
         LOGGER.warning('Exceeded request API request limit. '
                        'Will retry in %s seconds', wait_time)
 
-        # block everything
+        # block the current thread for `wait_time`
         time.sleep(wait_time)
 
         # retry the request and return result
