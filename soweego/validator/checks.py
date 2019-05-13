@@ -15,7 +15,7 @@ from collections import defaultdict
 
 import click
 
-from soweego.commons import constants, data_gathering, target_database
+from soweego.commons import constants, data_gathering, keys, target_database
 from soweego.commons.db_manager import DBManager
 from soweego.ingestor import wikidata_bot
 
@@ -23,8 +23,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
-@click.argument('entity', type=click.Choice(constants.HANDLED_ENTITIES.keys()))
-@click.argument('catalog', type=click.Choice(constants.TARGET_CATALOGS.keys()))
+@click.argument('entity', type=click.Choice(constants.SUPPORTED_ENTITIES))
+@click.argument('catalog', type=click.Choice(constants.TARGET_CATALOGS))
 @click.option('--wikidata-dump/--no-wikidata-dump', default=False, help='Dump links gathered from Wikidata. Default: no.')
 @click.option('--upload/--no-upload', default=False, help='Upload check results to Wikidata. Default: no.')
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
@@ -74,7 +74,7 @@ def check_existence(entity, catalog, wikidata_cache=None):
     entity = target_database.get_main_entity(catalog, entity)
 
     for qid in wikidata:
-        identifiers = wikidata[qid][constants.TID]
+        identifiers = wikidata[qid][keys.TID]
         for target_id in identifiers:
             results = session.query(entity).filter(
                 entity.catalog_id == target_id).all()
@@ -90,8 +90,8 @@ def check_existence(entity, catalog, wikidata_cache=None):
 
 
 @click.command()
-@click.argument('entity', type=click.Choice(constants.HANDLED_ENTITIES.keys()))
-@click.argument('catalog', type=click.Choice(constants.TARGET_CATALOGS.keys()))
+@click.argument('entity', type=click.Choice(constants.SUPPORTED_ENTITIES))
+@click.argument('catalog', type=click.Choice(constants.TARGET_CATALOGS))
 @click.option('--wikidata-dump/--no-wikidata-dump', default=False, help='Dump links gathered from Wikidata. Default: no.')
 @click.option('--upload/--no-upload', default=True, help='Upload check results to Wikidata. Default: yes.')
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
@@ -181,8 +181,8 @@ def check_links(entity, catalog, wikidata_cache=None):
 
 
 @click.command()
-@click.argument('entity', type=click.Choice(constants.HANDLED_ENTITIES.keys()))
-@click.argument('catalog', type=click.Choice(constants.TARGET_CATALOGS.keys()))
+@click.argument('entity', type=click.Choice(constants.SUPPORTED_ENTITIES))
+@click.argument('catalog', type=click.Choice(constants.TARGET_CATALOGS))
 @click.option('--wikidata-dump/--no-wikidata-dump', default=False, help='Dump metadata gathered from Wikidata. Default: no.')
 @click.option('--upload/--no-upload', default=True, help='Upload check results to Wikidata. Default: yes.')
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
@@ -291,7 +291,7 @@ def _assess(criterion, source, target_generator, to_deprecate, to_add):
             LOGGER.warning(
                 'Skipping check: no %s available in QID %s', criterion, qid)
             continue
-        identifiers = data[constants.TID]
+        identifiers = data[keys.TID]
         # 1 or tiny loop size = # of identifiers per Wikidata item (should always be 1)
         for target_id in identifiers:
             if target_id in target.keys():
@@ -336,7 +336,7 @@ def _upload_links(catalog, to_deprecate, urls_to_add, ext_ids_to_add, sandbox):
 
 
 def _upload(catalog, to_deprecate, to_add, sandbox):
-    catalog_qid = target_database.get_qid(catalog)
+    catalog_qid = target_database.get_person_qid(catalog)
     LOGGER.info('Starting deprecation of %s IDs ...', catalog)
     wikidata_bot.delete_or_deprecate_identifiers(
         'deprecate', to_deprecate, catalog, sandbox)
