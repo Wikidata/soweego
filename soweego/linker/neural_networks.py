@@ -13,7 +13,7 @@ import logging
 import os
 
 from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
-from keras.layers import Dense, Dropout, BatchNormalization
+from keras.layers import BatchNormalization, Dense, Dropout
 from keras.models import Sequential
 from recordlinkage.adapters import KerasAdapter
 from recordlinkage.base import BaseClassifier
@@ -29,12 +29,11 @@ class _BaseNN(KerasAdapter, BaseClassifier):
     NN implementations.
     """
 
-    def _fit(self, features, answers, batch_size=1024, epochs=1000, validation_split=0.33):
     def _fit(self, features, answers,
              batch_size=constants.BATCH_SIZE,
              epochs=constants.EPOCHS,
              validation_split=constants.VALIDATION_SPLIT
-            ):
+             ):
         history = self.kernel.fit(
             x=features,
             y=answers,
