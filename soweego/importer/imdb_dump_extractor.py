@@ -389,7 +389,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         qids = []
 
         for prof in professions:
-            qid = vocab.IMDB_PROFESSIONS_MAPPINGS.get(prof, None)
+            qid = vocab.IMDB_PROFESSIONS_MAPPING.get(prof, None)
             if qid:
                 qids.append(qid)
 
