@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Set of Wikidata vocabulary terms."""
+"""Wikidata vocabulary terms."""
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -9,21 +9,7 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
-
-# Keys
-DISCOGS = 'discogs'
-IMDB = 'imdb'
-MUSICBRAINZ = 'musicbrainz'
-TWITTER = 'twitter'
-QID = 'qid'
-PERSON_PID = 'person_pid'
-WORK_PID = 'work_pid'
-ACTOR = 'actor'
-BAND = 'band'
-DIRECTOR = 'director'
-PRODUCER = 'producer'
-MUSICIAN = 'musician'
-WRITER = 'writer'
+from soweego.commons import keys
 
 # Sandbox items in production site
 SANDBOX_1 = 'Q4115189'
@@ -96,24 +82,24 @@ VISUAL_EFFECTS_ARTIST_QID = 'Q1224742'
 
 # Target catalogs helper dictionary
 CATALOG_MAPPING = {
-    DISCOGS: {
-        QID: DISCOGS_QID,
-        PERSON_PID: DISCOGS_ARTIST_PID,
-        WORK_PID: DISCOGS_MASTER_PID
+    keys.DISCOGS: {
+        keys.CATALOG_QID: DISCOGS_QID,
+        keys.PERSON_PID: DISCOGS_ARTIST_PID,
+        keys.WORK_PID: DISCOGS_MASTER_PID
     },
-    IMDB: {
-        QID: IMDB_QID,
-        PERSON_PID: IMDB_PID,
-        WORK_PID: IMDB_PID
+    keys.IMDB: {
+        keys.CATALOG_QID: IMDB_QID,
+        keys.PERSON_PID: IMDB_PID,
+        keys.WORK_PID: IMDB_PID
     },
-    MUSICBRAINZ: {
-        QID: MUSICBRAINZ_QID,
-        PERSON_PID: MUSICBRAINZ_ARTIST_PID,
-        WORK_PID: MUSICBRAINZ_RELEASE_GROUP_PID
+    keys.MUSICBRAINZ: {
+        keys.CATALOG_QID: MUSICBRAINZ_QID,
+        keys.PERSON_PID: MUSICBRAINZ_ARTIST_PID,
+        keys.WORK_PID: MUSICBRAINZ_RELEASE_GROUP_PID
     },
-    'twitter': {
-        QID: TWITTER_QID,
-        PERSON_PID: TWITTER_USERNAME_PID
+    keys.TWITTER: {
+        keys.CATALOG_QID: TWITTER_QID,
+        keys.PERSON_PID: TWITTER_USERNAME_PID
     }
 }
 
@@ -144,16 +130,16 @@ GIVEN_NAME = 'P735'
 PSEUDONYM = 'P742'
 
 LINKER_PIDS = {
-    SEX_OR_GENDER: 'sex_or_gender',
-    PLACE_OF_BIRTH: 'place_of_birth',
-    PLACE_OF_DEATH: 'place_of_death',
-    DATE_OF_BIRTH: 'born',  # Consistent with BaseEntity.born
-    DATE_OF_DEATH: 'died',  # Consistent with BaseEntity.died
-    BIRTH_NAME: 'birth_name',
-    FAMILY_NAME: 'family_name',
-    GIVEN_NAME: 'given_name',
-    PSEUDONYM: 'pseudonym',
-    OCCUPATION: 'occupations'
+    SEX_OR_GENDER: keys.SEX_OR_GENDER,
+    PLACE_OF_BIRTH: keys.PLACE_OF_BIRTH,
+    PLACE_OF_DEATH: keys.PLACE_OF_DEATH,
+    DATE_OF_BIRTH: keys.DATE_OF_BIRTH,
+    DATE_OF_DEATH: keys.DATE_OF_DEATH,
+    BIRTH_NAME: keys.BIRTH_NAME,
+    FAMILY_NAME: keys.FAMILY_NAME,
+    GIVEN_NAME: keys.GIVEN_NAME,
+    PSEUDONYM: keys.PSEUDONYM,
+    OCCUPATION: keys.OCCUPATION
 }
 
 # Music domain properties for linking
@@ -205,7 +191,7 @@ DATE_PRECISION = {
 
 # This dictionary provides mappings between the professions
 # used by IMDb and their respective Wikidata occupations
-IMDB_PROFESSIONS_MAPPINGS = {
+IMDB_PROFESSIONS_MAPPING = {
     'actor': ACTOR_QID,
     'actress': ACTOR_QID,
     'animation_department': ANIMATOR_QID,
@@ -246,19 +232,19 @@ IMDB_PROFESSIONS_MAPPINGS = {
 
 # Used to populate statements on works
 WORKS_BY_PEOPLE_MAPPING = {
-    DISCOGS: {
-        BAND: PERFORMER,
-        MUSICIAN: PERFORMER
+    keys.DISCOGS: {
+        keys.BAND: PERFORMER,
+        keys.MUSICIAN: PERFORMER
     },
-    IMDB: {
-        ACTOR: CAST_MEMBER,
-        DIRECTOR: DIRECTOR,
-        MUSICIAN: PERFORMER,
-        PRODUCER: PRODUCER,
-        WRITER: SCREENWRITER_QID
+    keys.IMDB: {
+        keys.ACTOR: CAST_MEMBER,
+        keys.DIRECTOR: DIRECTOR,
+        keys.MUSICIAN: PERFORMER,
+        keys.PRODUCER: PRODUCER,
+        keys.WRITER: SCREENWRITER_QID
     },
-    MUSICBRAINZ: {
-        BAND: PERFORMER,
-        MUSICIAN: PERFORMER
+    keys.MUSICBRAINZ: {
+        keys.BAND: PERFORMER,
+        keys.MUSICIAN: PERFORMER
     }
 }

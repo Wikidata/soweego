@@ -22,8 +22,8 @@ WD_IO_FILENAME = 'wikidata_%s_dataset.jsonl.gz'
 
 
 @click.command()
-@click.argument('target', type=click.Choice(target_database.available_targets()))
-@click.argument('target_type', type=click.Choice(target_database.available_types()))
+@click.argument('target', type=click.Choice(target_database.supported_targets()))
+@click.argument('target_type', type=click.Choice(target_database.supported_entities()))
 @click.option('-s', '--strategy', type=click.Choice(EDIT_DISTANCES.keys()), default='jw')
 @click.option('--upload/--no-upload', default=False, help='Upload check results to Wikidata. Default: no.')
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
@@ -48,7 +48,7 @@ def cli(target, target_type, strategy, upload, sandbox, threshold, output_dir):
             wd_io, target_entity, target_pid, strategy, threshold)
         if upload:
             wikidata_bot.add_statements(
-                result, target_database.get_qid(target), sandbox)
+                result, target_database.get_person_qid(target), sandbox)
         else:
             filepath = path.join(output_dir, 'edit_distance_%s.csv' % strategy)
             with open(filepath, 'w') as filehandle:

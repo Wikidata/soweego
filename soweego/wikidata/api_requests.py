@@ -25,7 +25,7 @@ import requests
 from requests.exceptions import ChunkedEncodingError
 from tqdm import tqdm
 
-from soweego.commons import constants
+from soweego.commons import constants, keys
 from soweego.commons.logging import log_request_data
 from soweego.wikidata import vocabulary
 
@@ -93,12 +93,12 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
     wikidata to be processed in parallel.
     """
     response_body = _make_request(bucket, request_params)
-    
+
     # If there is no response then
     # we treat it as if there were no entities in
     # the bucket, and return an empty list
     if not response_body:
-        return [] 
+        return []
 
     # Each bucket is composed of different entities.
     # In this list we'll keep track of the results
@@ -112,7 +112,7 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
         if qids_and_tids:
             tids = qids_and_tids.get(qid)
             if tids:
-                to_write[constants.TID] = list(tids[constants.TID])
+                to_write[keys.TID] = list(tids[keys.TID])
 
         entity = response_body['entities'][qid]
         claims = entity.get('claims')
@@ -127,26 +127,26 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
             LOGGER.info('Skipping QID with no labels: %s', qid)
             no_labels_count += 1
             continue
-        to_write[constants.QID] = qid
-        to_write[constants.NAME] = _return_monolingual_strings(
+        to_write[keys.QID] = qid
+        to_write[keys.NAME] = _return_monolingual_strings(
             qid, labels)
 
         # Aliases
         aliases = entity.get('aliases')
         if aliases:
             # Merge them into labels
-            to_write[constants.NAME].update(
+            to_write[keys.NAME].update(
                 _return_aliases(qid, aliases))
         else:
             LOGGER.debug('%s has no aliases', qid)
             no_aliases_count += 1
         # Convert set to list for JSON serialization
-        to_write[constants.NAME] = list(to_write[constants.NAME])
+        to_write[keys.NAME] = list(to_write[keys.NAME])
 
         # Descriptions
         descriptions = entity.get('descriptions')
         if descriptions:
-            to_write[constants.DESCRIPTION] = list(
+            to_write[keys.DESCRIPTION] = list(
                 _return_monolingual_strings(qid, descriptions))
         else:
             LOGGER.debug('%s has no descriptions', qid)
@@ -155,21 +155,21 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
         # Sitelinks
         sitelinks = entity.get('sitelinks')
         if sitelinks:
-            to_write[constants.URL] = _return_sitelinks(sitelinks)
+            to_write[keys.URL] = _return_sitelinks(sitelinks)
         else:
             LOGGER.debug('%s has no sitelinks', qid)
-            to_write[constants.URL] = set()
+            to_write[keys.URL] = set()
             no_sitelinks_count += 1
 
         # Third-party URLs
-        to_write[constants.URL].update(
+        to_write[keys.URL].update(
             _return_third_party_urls(qid, claims, url_pids, no_links_count))
 
         # External ID URLs
-        to_write[constants.URL].update(_return_ext_id_urls(
+        to_write[keys.URL].update(_return_ext_id_urls(
             qid, claims, ext_id_pids_to_urls, no_ext_ids_count))
         # Convert set to list for JSON serialization
-        to_write[constants.URL] = list(to_write[constants.URL])
+        to_write[keys.URL] = list(to_write[keys.URL])
 
         # Expected claims
         to_write.update(_return_claims_for_linker(
@@ -445,7 +445,7 @@ def _yield_aliases(qid, aliases):
                 LOGGER.warning(
                     'Skipping malformed alias with no value for %s: %s', qid, data)
                 continue
-            yield qid, language_code, alias, constants.ALIAS
+            yield qid, language_code, alias, keys.ALIAS
 
 
 def _yield_sitelinks(entity, qid, no_sitelinks_count):
@@ -557,7 +557,7 @@ def _load_cached_bot_session(dump_path: str) -> requests.Session:
     """
 
     with open(dump_path, 'rb') as file:
-        LOGGER.info('Previously authenticated session exists')
+        LOGGER.debug('Previously authenticated session exists')
         session = pickle.load(file)
 
         # check if session is still valid

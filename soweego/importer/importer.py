@@ -12,28 +12,29 @@ __copyright__ = 'Copyleft 2018, lenzi.edoardo'
 import datetime
 import logging
 import os
+from multiprocessing import Pool
 
 import click
-from soweego.commons import target_database, url_utils, constants
-from soweego.commons import constants as const
+from tqdm import tqdm
+
+from soweego.commons import constants
 from soweego.commons import http_client as client
+from soweego.commons import keys, target_database, url_utils
+from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.discogs_dump_extractor import DiscogsDumpExtractor
 from soweego.importer.imdb_dump_extractor import ImdbDumpExtractor
 from soweego.importer.musicbrainz_dump_extractor import \
     MusicBrainzDumpExtractor
-from soweego.commons.db_manager import DBManager
-from multiprocessing import Pool
-from tqdm import tqdm
 
 LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
-@click.argument('catalog', type=click.Choice(target_database.available_targets()))
+@click.argument('catalog', type=click.Choice(target_database.supported_targets()))
 @click.option('--resolve/--no-resolve', default=True,
               help='Resolves all the links to check if they are valid. Default: yes.')
-@click.option('--output', '-o', default=const.SHARED_FOLDER, type=click.Path())
+@click.option('--output', '-o', default=constants.SHARED_FOLDER, type=click.Path())
 def import_cli(catalog: str, resolve: bool, output: str) -> None:
     """Download, extract and import an available catalog."""
     importer = Importer()
@@ -43,7 +44,7 @@ def import_cli(catalog: str, resolve: bool, output: str) -> None:
         extractor = DiscogsDumpExtractor()
     elif catalog == 'musicbrainz':
         extractor = MusicBrainzDumpExtractor()
-    elif catalog == "imdb":
+    elif catalog == 'imdb':
         extractor = ImdbDumpExtractor()
 
     importer.refresh_dump(output, extractor, resolve)
@@ -54,14 +55,15 @@ def _resolve_url(res):
 
 
 @click.command()
-@click.argument('catalog', type=click.Choice(target_database.available_targets()))
+@click.argument('catalog', type=click.Choice(target_database.supported_targets()))
 def validate_links_cli(catalog: str):
-    for entity_type in target_database.available_types_for_target(catalog):
+    for entity_type in target_database.supported_entities_for_target(catalog):
 
         LOGGER.info("Validating %s %s links..." % (catalog, entity_type))
         entity = target_database.get_link_entity(catalog, entity_type)
         if not entity:
-            LOGGER.info("%s %s does not have a links table. Skipping..." % (catalog, entity_type))
+            LOGGER.info("%s %s does not have a links table. Skipping..." %
+                        (catalog, entity_type))
             continue
 
         session = DBManager.connect_to_db()
@@ -86,7 +88,8 @@ def validate_links_cli(catalog: str):
                         session_delete.close()
 
         session.close()
-        LOGGER.info("Removed %s/%s from %s %s" % (removed, total, catalog, entity_type))
+        LOGGER.info("Removed %s/%s from %s %s" %
+                    (removed, total, catalog, entity_type))
 
 
 class Importer:
@@ -101,7 +104,7 @@ class Importer:
             LOGGER.info("Retrieving last modified of %s" % download_url)
 
             last_modified = client.http_call(download_url,
-                                             'HEAD').headers[const.LAST_MODIFIED]
+                                             'HEAD').headers[keys.LAST_MODIFIED]
 
             try:
                 last_modified = datetime.datetime.strptime(

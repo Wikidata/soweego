@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""TODO module docstring"""
-from datetime import datetime
-
+"""Deterministic linking."""
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -14,19 +12,19 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import gzip
 import json
 import logging
-from os import path
 import re
+from datetime import datetime
+from os import path
 from typing import Iterable, Tuple
-from tqdm import tqdm
 
 import click
 from sqlalchemy.exc import ProgrammingError
+from tqdm import tqdm
 
-from soweego.commons import (data_gathering, target_database, text_utils,
-                             url_utils)
+from soweego.commons import (constants, data_gathering, keys, target_database,
+                             text_utils, url_utils)
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.ingestor import wikidata_bot
-from soweego.commons import constants
 from soweego.wikidata.api_requests import get_data_for_linker
 
 LOGGER = logging.getLogger(__name__)
@@ -34,8 +32,8 @@ WD_IO_FILENAME = 'wikidata_%s_dataset.jsonl.gz'
 
 
 @click.command()
-@click.argument('target', type=click.Choice(target_database.available_targets()))
-@click.argument('target_type', type=click.Choice(target_database.available_types()))
+@click.argument('target', type=click.Choice(target_database.supported_targets()))
+@click.argument('target_type', type=click.Choice(target_database.supported_entities()))
 @click.option('-s', '--strategy', type=click.Choice(['perfect', 'links', 'names', 'all']), default='perfect')
 @click.option('--check-dates/--no-check-dates', default=True,
               help='When available, checks if the dates match too. Default: yes.')
@@ -65,7 +63,8 @@ def cli(target, target_type, strategy, check_dates, upload, sandbox, output_dir)
             target_type, target, target_database.get_person_pid(target))
         url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
         with gzip.open(wd_io_path, 'wt') as wd_io:
-            get_data_for_linker(target, qids, url_pids, ext_id_pids_to_urls, wd_io, None)
+            get_data_for_linker(target, qids, url_pids,
+                                ext_id_pids_to_urls, wd_io, None)
             LOGGER.info("Wikidata stream stored in %s" % wd_io_path)
 
     target_entity = target_database.get_main_entity(target, target_type)
@@ -101,8 +100,8 @@ def cli(target, target_type, strategy, check_dates, upload, sandbox, output_dir)
 
 
 @click.command()
-@click.argument('target', type=click.Choice(target_database.available_targets()))
-@click.argument('target_type', type=click.Choice(target_database.available_types()))
+@click.argument('target', type=click.Choice(target_database.supported_targets()))
+@click.argument('target_type', type=click.Choice(target_database.supported_entities()))
 @click.option('--upload/--no-upload', default=False, help='Upload check results to Wikidata. Default: no.')
 @click.option('--sandbox/--no-sandbox', default=False,
               help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
@@ -131,7 +130,7 @@ def _write_or_upload_result(strategy, target, target_type, result: Iterable, out
                             sandbox: bool):
     if upload:
         wikidata_bot.add_statements(
-            result, target_database.get_qid(target), sandbox)
+            result, target_database.get_person_qid(target), sandbox)
     else:
         filename = f'{target}_{target_type}_{filename}'
         filepath = path.join(output_dir, filename)
@@ -144,7 +143,7 @@ def _write_or_upload_result(strategy, target, target_type, result: Iterable, out
 
 
 def perfect_name_match(source_dataset, target_entity: BaseEntity, target_pid: str, compare_dates: bool) -> Iterable[
-    Tuple[str, str, str]]:
+        Tuple[str, str, str]]:
     """Given a dictionary ``{string: identifier}``, a Base Entity and a PID,
     match perfect strings and return a dataset ``[(source_id, PID, target_id), ...]``.
 
@@ -158,7 +157,7 @@ def perfect_name_match(source_dataset, target_entity: BaseEntity, target_pid: st
     missing = total
     for row_entity in tqdm(source_dataset, total=total):
         entity = json.loads(row_entity)
-        bucket_names.update(entity[constants.NAME])
+        bucket_names.update(entity[keys.NAME])
         bucket.append(entity)
         # After building a bucket of bucket_size wikidata entries,
         # tries to search them and does a n^2 comparison to try to match
@@ -167,10 +166,10 @@ def perfect_name_match(source_dataset, target_entity: BaseEntity, target_pid: st
             for res in data_gathering.perfect_name_search_bucket(target_entity, bucket_names):
                 for en in bucket:
                     # wikidata entities have a list of names
-                    for name in en[constants.NAME]:
+                    for name in en[keys.NAME]:
                         if name.lower() == res.name.lower():
                             if not compare_dates or birth_death_date_match(res, en):
-                                yield (en[constants.QID], target_pid, res.catalog_id)
+                                yield (en[keys.QID], target_pid, res.catalog_id)
             bucket.clear()
             bucket_names.clear()
 
@@ -185,8 +184,8 @@ def similar_name_tokens_match(source, target, target_pid: str, compare_dates: bo
 
     for row_entity in tqdm(source, total=_count_num_lines_in_file(source)):
         entity = json.loads(row_entity)
-        qid = entity[constants.QID]
-        for label in entity[constants.NAME]:
+        qid = entity[keys.QID]
+        for label in entity[keys.NAME]:
             if not label:
                 continue
 
@@ -221,8 +220,8 @@ def similar_link_tokens_match(source, target, target_pid: str) -> Iterable[Tuple
 
     for row_entity in tqdm(source, total=_count_num_lines_in_file(source)):
         entity = json.loads(row_entity)
-        qid = entity[constants.QID]
-        for url in entity[constants.URL]:
+        qid = entity[keys.QID]
+        for url in entity[keys.URL]:
             if not url:
                 continue
 
