@@ -9,7 +9,21 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
-from soweego.commons import constants
+
+# Keys
+DISCOGS = 'discogs'
+IMDB = 'imdb'
+MUSICBRAINZ = 'musicbrainz'
+TWITTER = 'twitter'
+QID = 'qid'
+PERSON_PID = 'person_pid'
+WORK_PID = 'work_pid'
+ACTOR = 'actor'
+BAND = 'band'
+DIRECTOR = 'director'
+PRODUCER = 'producer'
+MUSICIAN = 'musician'
+WRITER = 'writer'
 
 # Sandbox items in production site
 SANDBOX_1 = 'Q4115189'
@@ -44,64 +58,62 @@ DESCRIBED_AT_URL = 'P973'
 OFFICIAL_WEBSITE = 'P856'
 
 # Entity classes handled by soweego
-ACTOR = 'Q33999'
-ANIMATOR = 'Q266569'
-ART_DIRECTOR = 'Q706364'
-ARTIST = 'Q483501'
-ASSISTANT_DIRECTOR = 'Q1757008'
-BAND = 'Q215380'
-CAMERA_OPERATOR = 'Q1208175'
-CASTING_DIRECTOR = 'Q1049296'
-CASTING_DIRECTOR = 'Q1049296'
-CINEMATOGRAPHER = 'Q222344'
-COMPOSER = 'Q36834'
-COSTUME_DESIGNER = 'Q1323191'
-COSTUME_MAKER = 'Q59341113'
-DRIVER = 'Q352388'
-ELECTRICIAN = 'Q165029'
-EXECUTIVE = 'Q978044'
-FILM_DIRECTOR = 'Q2526255'
-FILM_EDITOR = 'Q7042855'
-FILM_PRODUCER = 'Q3282637'
-HUMAN = 'Q5'
-LOCATION_MANAGER = 'Q1093536'
-MAKE_UP_ARTIST = 'Q935666'
-MANAGER = 'Q2462658'
-MUSICIAN = 'Q639669'
-PRODUCTION_ASSISTANT = 'Q2867219'
-PRODUCTION_DESIGNER = 'Q2962070'
-PRODUCTION_MANAGER = 'Q21292974'
-PUBLICIST = 'Q4178004'
-SCREENWRITER = 'Q28389'
-SCRIPT_SUPERVISOR = 'Q1263187'
-SET_DECORATOR = 'Q6409989'
-SOUND_DEPARTMENT = 'Q128124'
-SPECIAL_EFFECTS = 'Q21560152'
-STUNTS = 'Q465501'
-TALENT_AGENT = 'Q1344174'
-VISUAL_EFFECTS_ARTIST = 'Q1224742'
-
+ACTOR_QID = 'Q33999'
+ANIMATOR_QID = 'Q266569'
+ART_DIRECTOR_QID = 'Q706364'
+ARTIST_QID = 'Q483501'
+ASSISTANT_DIRECTOR_QID = 'Q1757008'
+BAND_QID = 'Q215380'
+CAMERA_OPERATOR_QID = 'Q1208175'
+CASTING_DIRECTOR_QID = 'Q1049296'
+CINEMATOGRAPHER_QID = 'Q222344'
+COMPOSER_QID = 'Q36834'
+COSTUME_DESIGNER_QID = 'Q1323191'
+COSTUME_MAKER_QID = 'Q59341113'
+DRIVER_QID = 'Q352388'
+ELECTRICIAN_QID = 'Q165029'
+EXECUTIVE_QID = 'Q978044'
+FILM_DIRECTOR_QID = 'Q2526255'
+FILM_EDITOR_QID = 'Q7042855'
+FILM_PRODUCER_QID = 'Q3282637'
+HUMAN_QID = 'Q5'
+LOCATION_MANAGER_QID = 'Q1093536'
+MAKE_UP_ARTIST_QID = 'Q935666'
+MANAGER_QID = 'Q2462658'
+MUSICIAN_QID = 'Q639669'
+PRODUCTION_ASSISTANT_QID = 'Q2867219'
+PRODUCTION_DESIGNER_QID = 'Q2962070'
+PRODUCTION_MANAGER_QID = 'Q21292974'
+PUBLICIST_QID = 'Q4178004'
+SCREENWRITER_QID = 'Q28389'
+SCRIPT_SUPERVISOR_QID = 'Q1263187'
+SET_DECORATOR_QID = 'Q6409989'
+SOUND_DEPARTMENT_QID = 'Q128124'
+SPECIAL_EFFECTS_QID = 'Q21560152'
+STUNTS_QID = 'Q465501'
+TALENT_AGENT_QID = 'Q1344174'
+VISUAL_EFFECTS_ARTIST_QID = 'Q1224742'
 
 # Target catalogs helper dictionary
 CATALOG_MAPPING = {
-    constants.DISCOGS: {
-        constants.QID: DISCOGS_QID,
-        constants.PERSON_PID: DISCOGS_ARTIST_PID,
-        constants.WORK_PID: DISCOGS_MASTER_PID
+    DISCOGS: {
+        QID: DISCOGS_QID,
+        PERSON_PID: DISCOGS_ARTIST_PID,
+        WORK_PID: DISCOGS_MASTER_PID
     },
-    constants.IMDB: {
-        constants.QID: IMDB_QID,
-        constants.PERSON_PID: IMDB_PID,
-        constants.WORK_PID: IMDB_PID
+    IMDB: {
+        QID: IMDB_QID,
+        PERSON_PID: IMDB_PID,
+        WORK_PID: IMDB_PID
     },
-    constants.MUSICBRAINZ: {
-        constants.QID: MUSICBRAINZ_QID,
-        constants.PERSON_PID: MUSICBRAINZ_ARTIST_PID,
-        constants.WORK_PID: MUSICBRAINZ_RELEASE_GROUP_PID
+    MUSICBRAINZ: {
+        QID: MUSICBRAINZ_QID,
+        PERSON_PID: MUSICBRAINZ_ARTIST_PID,
+        WORK_PID: MUSICBRAINZ_RELEASE_GROUP_PID
     },
     'twitter': {
-        constants.QID: TWITTER_QID,
-        constants.PERSON_PID: TWITTER_USERNAME_PID
+        QID: TWITTER_QID,
+        PERSON_PID: TWITTER_USERNAME_PID
     }
 }
 
@@ -153,7 +165,7 @@ PERFORMER = 'P175'  # Album -> musician/band
 CAST_MEMBER = 'P161'  # Movie -> actor
 DIRECTOR = 'P57'  # Movie -> director
 PRODUCER = 'P162'  # Movie -> producer
-SCREENWRITER = 'P58'  # Movie -> writer
+SCREENWRITER_QID = 'P58'  # Movie -> writer
 
 # Date precision
 # See https://www.wikidata.org/wiki/Special:ListDatatypes
@@ -194,59 +206,59 @@ DATE_PRECISION = {
 # This dictionary provides mappings between the professions
 # used by IMDb and their respective Wikidata occupations
 IMDB_PROFESSIONS_MAPPINGS = {
-    'actor': ACTOR,
-    'actress': ACTOR,
-    'animation_department': ANIMATOR,
-    'art_department': ARTIST,
-    'art_director': ART_DIRECTOR,
-    'assistant_director': ASSISTANT_DIRECTOR,
-    'camera_department': CAMERA_OPERATOR,
-    'casting_department': CASTING_DIRECTOR,
-    'casting_director': CASTING_DIRECTOR,
-    'cinematographer': CINEMATOGRAPHER,
-    'composer': COMPOSER,
-    'costume_department': COSTUME_MAKER,
-    'costume_designer': COSTUME_DESIGNER,
-    'director': FILM_DIRECTOR,
-    'editor': FILM_EDITOR,
-    'electrical_department': ELECTRICIAN,
-    'executive': EXECUTIVE,
-    'location_management': LOCATION_MANAGER,
-    'make_up_department': MAKE_UP_ARTIST,
-    'manager': MANAGER,
-    'music_department': MUSICIAN,
-    'producer': FILM_PRODUCER,
-    'production_department': PRODUCTION_ASSISTANT,
-    'production_designer': PRODUCTION_DESIGNER,
-    'production_manager': PRODUCTION_MANAGER,
-    'publicist': PUBLICIST,
-    'script_department': SCRIPT_SUPERVISOR,
-    'set_decorator': SET_DECORATOR,
-    'sound_department': SOUND_DEPARTMENT,
-    'soundtrack': MUSICIAN,
-    'special_effects': SPECIAL_EFFECTS,
-    'stunts': STUNTS,
-    'talent_agent': TALENT_AGENT,
-    'transportation_department': DRIVER,
-    'visual_effects': VISUAL_EFFECTS_ARTIST,
-    'writer': SCREENWRITER
+    'actor': ACTOR_QID,
+    'actress': ACTOR_QID,
+    'animation_department': ANIMATOR_QID,
+    'art_department': ARTIST_QID,
+    'art_director': ART_DIRECTOR_QID,
+    'assistant_director': ASSISTANT_DIRECTOR_QID,
+    'camera_department': CAMERA_OPERATOR_QID,
+    'casting_department': CASTING_DIRECTOR_QID,
+    'casting_director': CASTING_DIRECTOR_QID,
+    'cinematographer': CINEMATOGRAPHER_QID,
+    'composer': COMPOSER_QID,
+    'costume_department': COSTUME_MAKER_QID,
+    'costume_designer': COSTUME_DESIGNER_QID,
+    'director': FILM_DIRECTOR_QID,
+    'editor': FILM_EDITOR_QID,
+    'electrical_department': ELECTRICIAN_QID,
+    'executive': EXECUTIVE_QID,
+    'location_management': LOCATION_MANAGER_QID,
+    'make_up_department': MAKE_UP_ARTIST_QID,
+    'manager': MANAGER_QID,
+    'music_department': MUSICIAN_QID,
+    'producer': FILM_PRODUCER_QID,
+    'production_department': PRODUCTION_ASSISTANT_QID,
+    'production_designer': PRODUCTION_DESIGNER_QID,
+    'production_manager': PRODUCTION_MANAGER_QID,
+    'publicist': PUBLICIST_QID,
+    'script_department': SCRIPT_SUPERVISOR_QID,
+    'set_decorator': SET_DECORATOR_QID,
+    'sound_department': SOUND_DEPARTMENT_QID,
+    'soundtrack': MUSICIAN_QID,
+    'special_effects': SPECIAL_EFFECTS_QID,
+    'stunts': STUNTS_QID,
+    'talent_agent': TALENT_AGENT_QID,
+    'transportation_department': DRIVER_QID,
+    'visual_effects': VISUAL_EFFECTS_ARTIST_QID,
+    'writer': SCREENWRITER_QID
 }
 
 # Used to populate statements on works
 WORKS_BY_PEOPLE_MAPPING = {
-    constants.DISCOGS: {
-        constants.BAND: PERFORMER,
-        constants.MUSICIAN: PERFORMER
+    DISCOGS: {
+        BAND: PERFORMER,
+        MUSICIAN: PERFORMER
     },
-    constants.IMDB: {
-        constants.ACTOR: CAST_MEMBER,
-        constants.DIRECTOR: DIRECTOR,
-        constants.MUSICIAN: PERFORMER,
-        constants.PRODUCER: PRODUCER,
-        constants.WRITER: SCREENWRITER
+    IMDB: {
+        ACTOR: CAST_MEMBER,
+        DIRECTOR: DIRECTOR,
+        MUSICIAN: PERFORMER,
+        PRODUCER: PRODUCER,
+        WRITER: SCREENWRITER_QID
     },
-    constants.MUSICBRAINZ: {
-        constants.BAND: PERFORMER,
-        constants.MUSICIAN: PERFORMER
+    MUSICBRAINZ: {
+        BAND: PERFORMER,
+        MUSICIAN: PERFORMER
     }
 }

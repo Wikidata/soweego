@@ -76,7 +76,7 @@ RELATIONSHIP_ENTITY = 'relationship_entity'
 TARGET_CATALOGS = {
     DISCOGS: {
         MUSICIAN: {
-            QID: vocabulary.MUSICIAN,
+            QID: vocabulary.MUSICIAN_QID,
             MAIN_ENTITY: models.discogs_entity.DiscogsMusicianEntity,
             LINK_ENTITY: models.discogs_entity.DiscogsMusicianLinkEntity,
             NLP_ENTITY: models.discogs_entity.DiscogsMusicianNlpEntity,
@@ -84,7 +84,7 @@ TARGET_CATALOGS = {
             RELATIONSHIP_ENTITY: None
         },
         BAND: {
-            QID: vocabulary.BAND,
+            QID: vocabulary.BAND_QID,
             MAIN_ENTITY: models.discogs_entity.DiscogsGroupEntity,
             LINK_ENTITY: models.discogs_entity.DiscogsGroupLinkEntity,
             NLP_ENTITY: models.discogs_entity.DiscogsGroupNlpEntity,
@@ -94,35 +94,35 @@ TARGET_CATALOGS = {
     },
     IMDB: {
         ACTOR: {
-            QID: vocabulary.ACTOR,
+            QID: vocabulary.ACTOR_QID,
             MAIN_ENTITY: models.imdb_entity.ImdbActorEntity,
             LINK_ENTITY: None,
             NLP_ENTITY: None,
             RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship
         },
         DIRECTOR: {
-            QID: vocabulary.FILM_DIRECTOR,
+            QID: vocabulary.FILM_DIRECTOR_QID,
             MAIN_ENTITY: models.imdb_entity.ImdbDirectorEntity,
             LINK_ENTITY: None,
             NLP_ENTITY: None,
             RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship
         },
         MUSICIAN: {
-            QID: vocabulary.MUSICIAN,
+            QID: vocabulary.MUSICIAN_QID,
             MAIN_ENTITY: models.imdb_entity.ImdbMusicianEntity,
             LINK_ENTITY: None,
             NLP_ENTITY: None,
             RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship
         },
         PRODUCER: {
-            QID: vocabulary.FILM_PRODUCER,
+            QID: vocabulary.FILM_PRODUCER_QID,
             MAIN_ENTITY: models.imdb_entity.ImdbProducerEntity,
             LINK_ENTITY: None,
             NLP_ENTITY: None,
             RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship
         },
         WRITER: {
-            QID: vocabulary.SCREENWRITER,
+            QID: vocabulary.SCREENWRITER_QID,
             MAIN_ENTITY: models.imdb_entity.ImdbWriterEntity,
             LINK_ENTITY: None,
             NLP_ENTITY: None,
@@ -131,7 +131,7 @@ TARGET_CATALOGS = {
     },
     MUSICBRAINZ: {
         MUSICIAN: {
-            QID: vocabulary.MUSICIAN,
+            QID: vocabulary.MUSICIAN_QID,
             MAIN_ENTITY: models.musicbrainz_entity.MusicbrainzArtistEntity,
             LINK_ENTITY: models.musicbrainz_entity.MusicbrainzArtistLinkEntity,
             NLP_ENTITY: None,
@@ -139,7 +139,7 @@ TARGET_CATALOGS = {
             RELATIONSHIP_ENTITY: None
         },
         BAND: {
-            QID: vocabulary.BAND,
+            QID: vocabulary.BAND_QID,
             MAIN_ENTITY: models.musicbrainz_entity.MusicbrainzBandEntity,
             LINK_ENTITY: models.musicbrainz_entity.MusicbrainzBandLinkEntity,
             NLP_ENTITY: None,
