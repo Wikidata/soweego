@@ -60,14 +60,14 @@ def add_identifiers_cli(catalog_name, matches, sandbox):
 def add_statements_cli(catalog_name, statements, sandbox):
     """Bot add statements to existing Wikidata items.
     """
-    stated_in = target_database.get_person_qid(catalog_name)
+    stated_in = target_database.get_catalog_qid(catalog_name)
     if sandbox:
         LOGGER.info('Running on the Wikidata sandbox item')
     for statement in statements:
         subject, predicate, value = statement.rstrip().split('\t')
         if sandbox:
             add_or_reference(vocabulary.SANDBOX_1,
-                              predicate, value, stated_in)
+                             predicate, value, stated_in)
         else:
             add_or_reference(subject, predicate, value, stated_in)
 
@@ -117,7 +117,7 @@ def add_identifiers(matches: dict, catalog_name: str, sandbox: bool) -> None:
             LOGGER.info(
                 'Using Wikidata sandbox item %s as subject, instead of %s', vocabulary.SANDBOX_1, qid)
             add_or_reference(vocabulary.SANDBOX_1, pid,
-                              catalog_id, catalog_qid)
+                             catalog_id, catalog_qid)
         else:
             add_or_reference(qid, pid, catalog_id, catalog_qid)
 
@@ -140,7 +140,7 @@ def add_statements(statements: list, stated_in_catalog: str, sandbox: bool) -> N
         LOGGER.info('Processing (%s, %s, %s) statement')
         if sandbox:
             add_or_reference(vocabulary.SANDBOX_1,
-                              predicate, value, stated_in_catalog)
+                             predicate, value, stated_in_catalog)
         else:
             add_or_reference(subject, predicate, value, stated_in_catalog)
 

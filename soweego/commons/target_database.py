@@ -46,6 +46,10 @@ def get_relationship_entity(target, entity_type):
     return constants.TARGET_CATALOGS[target][entity_type][keys.RELATIONSHIP_ENTITY]
 
 
+def get_catalog_qid(catalog):
+    return vocabulary.CATALOG_MAPPING.get(catalog)[keys.CATALOG_QID]
+
+
 def get_person_qid(catalog):
     return vocabulary.CATALOG_MAPPING.get(catalog)[keys.PERSON_QID]
 
