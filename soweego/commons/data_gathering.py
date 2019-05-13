@@ -21,7 +21,7 @@ from pandas import read_sql
 from sqlalchemy import or_
 from sqlalchemy.orm.query import Query
 
-from soweego.commons import constants, target_database, url_utils
+from soweego.commons import constants, keys, target_database, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer import models
 from soweego.linker import workflow
@@ -30,22 +30,19 @@ from soweego.wikidata import api_requests, sparql_queries, vocabulary
 LOGGER = logging.getLogger(__name__)
 
 
-def gather_target_metadata(entity_type, catalog):
-    catalog_constants = _get_catalog_constants(catalog)
-    catalog_entity = _get_catalog_entity(entity_type, catalog_constants)
-
+def gather_target_metadata(entity, catalog):
     LOGGER.info(
         'Gathering %s birth/death dates/places and gender metadata ...', catalog)
-    entity = catalog_entity[constants.MAIN_ENTITY]
+    entity = target_database.get_main_entity(catalog, entity)
     # Base metadata
-    query_fields = _build_metadata_query_fields(entity, entity_type, catalog)
+    query_fields = _build_metadata_query_fields(entity, entity, catalog)
 
     session = DBManager.connect_to_db()
     query = session.query(
         *query_fields).filter(or_(entity.born.isnot(None), entity.died.isnot(None)))
     result = None
     try:
-        raw_result = _run_query(query, catalog, entity_type)
+        raw_result = _run_query(query, catalog, entity)
         if raw_result is None:
             return None
         result = _parse_target_metadata_query_result(raw_result)
@@ -206,7 +203,7 @@ def _dump_target_dataset_query_result(result, relevant_fields, fileout, chunk_si
 
         # the first item of the list is always `base`
         base = res[0]
-        parsed = {constants.TID: base.catalog_id}
+        parsed = {keys.TID: base.catalog_id}
 
         for field in relevant_fields:
 
@@ -304,12 +301,9 @@ def _parse_target_metadata_query_result(result_set):
             LOGGER.debug('%s: no death place available', identifier)
 
 
-def gather_target_links(entity_type, catalog):
-    catalog_constants = _get_catalog_constants(catalog)
-    catalog_entity = _get_catalog_entity(entity_type, catalog_constants)
-
-    LOGGER.info('Gathering %s %s links ...', catalog, entity_type)
-    link_entity = catalog_entity[constants.LINK_ENTITY]
+def gather_target_links(entity, catalog):
+    LOGGER.info('Gathering %s %s links ...', catalog, entity)
+    link_entity = target_database.get_link_entity(catalog, entity)
 
     session = DBManager.connect_to_db()
     result = None
@@ -318,9 +312,9 @@ def gather_target_links(entity_type, catalog):
         count = query.count()
         if count == 0:
             LOGGER.warning(
-                "No links available for %s %s. Stopping validation here", catalog, entity_type)
+                "No links available for %s %s. Stopping validation here", catalog, entity)
             return None
-        LOGGER.info('Got %d links from %s %s', count, catalog, entity_type)
+        LOGGER.info('Got %d links from %s %s', count, catalog, entity)
         result = query.all()
         session.commit()
     except:
@@ -411,22 +405,21 @@ def gather_relevant_pids():
 
 
 def gather_target_ids(entity, catalog, catalog_pid, aggregated):
-    catalog_constants = _get_catalog_constants(catalog)
     LOGGER.info('Gathering Wikidata items with %s identifiers ...', catalog)
-    query_type = constants.IDENTIFIER, constants.HANDLED_ENTITIES.get(entity)
-    for qid, target_id in sparql_queries.run_query(query_type, catalog_constants[entity]['qid'], catalog_pid, 0):
+    # TODO handle works
+    query_type = keys.IDENTIFIER, constants.SUPPORTED_ENTITIES.get(entity)
+    for qid, target_id in sparql_queries.run_query(query_type, target_database.get_person_qid(catalog), catalog_pid, 0):
         if not aggregated.get(qid):
-            aggregated[qid] = {constants.TID: set()}
-        aggregated[qid][constants.TID].add(target_id)
+            aggregated[qid] = {keys.TID: set()}
+        aggregated[qid][keys.TID].add(target_id)
     LOGGER.info('Got %d %s identifiers', len(aggregated), catalog)
 
 
 def gather_qids(entity, catalog, catalog_pid):
-    catalog_constants = _get_catalog_constants(catalog)
     LOGGER.info('Gathering Wikidata items with no %s identifiers ...', catalog)
-    query_type = constants.DATASET, constants.HANDLED_ENTITIES.get(entity)
+    query_type = keys.DATASET, constants.SUPPORTED_ENTITIES.get(entity)
     qids = set(sparql_queries.run_query(
-        query_type, catalog_constants[entity]['qid'], catalog_pid, 0))
+        query_type, target_database.get_person_qid(catalog), catalog_pid, 0))
     LOGGER.info('Got %d Wikidata items', len(qids))
     return qids
 
