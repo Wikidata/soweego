@@ -336,7 +336,7 @@ def _upload_links(catalog, to_deprecate, urls_to_add, ext_ids_to_add, sandbox):
 
 
 def _upload(catalog, to_deprecate, to_add, sandbox):
-    catalog_qid = target_database.get_person_qid(catalog)
+    catalog_qid = target_database.get_class_qid(catalog)
     LOGGER.info('Starting deprecation of %s IDs ...', catalog)
     wikidata_bot.delete_or_deprecate_identifiers(
         'deprecate', to_deprecate, catalog, sandbox)
