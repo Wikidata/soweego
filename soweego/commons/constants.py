@@ -26,7 +26,9 @@ SUPPORTED_ENTITIES = {
     keys.DIRECTOR: keys.OCCUPATION,
     keys.MUSICIAN: keys.OCCUPATION,
     keys.PRODUCER: keys.OCCUPATION,
-    keys.WRITER: keys.OCCUPATION
+    keys.WRITER: keys.OCCUPATION,
+    keys.MUSICAL_WORK: keys.CLASS,
+    keys.AUDIOVISUAL_WORK: keys.CLASS
 }
 
 # Target catalogs imported into the internal DB
@@ -35,10 +37,11 @@ DB_ENTITY = TypeVar('DB_ENTITY', models.base_entity.BaseEntity,
                     models.base_link_entity.BaseLinkEntity, models.base_nlp_entity.BaseNlpEntity)
 
 # DB entities and their Wikidata class QID
+# TODO merge discogs & musicbrainz 'release' entities with issue-80 branch
 TARGET_CATALOGS = {
     keys.DISCOGS: {
         keys.MUSICIAN: {
-            keys.PERSON_QID: vocabulary.MUSICIAN_QID,
+            keys.CLASS_QID: vocabulary.MUSICIAN_QID,
             keys.MAIN_ENTITY: models.discogs_entity.DiscogsMusicianEntity,
             keys.LINK_ENTITY: models.discogs_entity.DiscogsMusicianLinkEntity,
             keys.NLP_ENTITY: models.discogs_entity.DiscogsMusicianNlpEntity,
@@ -46,7 +49,7 @@ TARGET_CATALOGS = {
             keys.RELATIONSHIP_ENTITY: None
         },
         keys.BAND: {
-            keys.PERSON_QID: vocabulary.BAND_QID,
+            keys.CLASS_QID: vocabulary.BAND_QID,
             keys.MAIN_ENTITY: models.discogs_entity.DiscogsGroupEntity,
             keys.LINK_ENTITY: models.discogs_entity.DiscogsGroupLinkEntity,
             keys.NLP_ENTITY: models.discogs_entity.DiscogsGroupNlpEntity,
@@ -56,44 +59,57 @@ TARGET_CATALOGS = {
     },
     keys.IMDB: {
         keys.ACTOR: {
-            keys.PERSON_QID: vocabulary.ACTOR_QID,
+            keys.CLASS_QID: vocabulary.ACTOR_QID,
             keys.MAIN_ENTITY: models.imdb_entity.ImdbActorEntity,
             keys.LINK_ENTITY: None,
             keys.NLP_ENTITY: None,
-            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship
+            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship,
+            keys.WORK_TYPE: keys.AUDIOVISUAL_WORK
         },
         keys.DIRECTOR: {
-            keys.PERSON_QID: vocabulary.FILM_DIRECTOR_QID,
+            keys.CLASS_QID: vocabulary.FILM_DIRECTOR_QID,
             keys.MAIN_ENTITY: models.imdb_entity.ImdbDirectorEntity,
             keys.LINK_ENTITY: None,
             keys.NLP_ENTITY: None,
-            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship
+            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship,
+            keys.WORK_TYPE: keys.AUDIOVISUAL_WORK
         },
         keys.MUSICIAN: {
-            keys.PERSON_QID: vocabulary.MUSICIAN_QID,
+            keys.CLASS_QID: vocabulary.MUSICIAN_QID,
             keys.MAIN_ENTITY: models.imdb_entity.ImdbMusicianEntity,
             keys.LINK_ENTITY: None,
             keys.NLP_ENTITY: None,
-            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship
+            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship,
+            keys.WORK_TYPE: keys.AUDIOVISUAL_WORK
         },
         keys.PRODUCER: {
-            keys.PERSON_QID: vocabulary.FILM_PRODUCER_QID,
+            keys.CLASS_QID: vocabulary.FILM_PRODUCER_QID,
             keys.MAIN_ENTITY: models.imdb_entity.ImdbProducerEntity,
             keys.LINK_ENTITY: None,
             keys.NLP_ENTITY: None,
-            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship
+            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship,
+            keys.WORK_TYPE: keys.AUDIOVISUAL_WORK
         },
         keys.WRITER: {
-            keys.PERSON_QID: vocabulary.SCREENWRITER_QID,
+            keys.CLASS_QID: vocabulary.SCREENWRITER_QID,
             keys.MAIN_ENTITY: models.imdb_entity.ImdbWriterEntity,
             keys.LINK_ENTITY: None,
             keys.NLP_ENTITY: None,
-            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship
+            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship,
+            keys.WORK_TYPE: keys.AUDIOVISUAL_WORK
+        },
+        keys.AUDIOVISUAL_WORK: {
+            keys.CLASS_QID: vocabulary.AUDIOVISUAL_WORK_QID,
+            keys.MAIN_ENTITY: models.imdb_entity.ImdbMovieEntity,
+            keys.LINK_ENTITY: None,
+            keys.NLP_ENTITY: None,
+            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship,
+            keys.WORK_TYPE: None
         }
     },
     keys.MUSICBRAINZ: {
         keys.MUSICIAN: {
-            keys.PERSON_QID: vocabulary.MUSICIAN_QID,
+            keys.CLASS_QID: vocabulary.MUSICIAN_QID,
             keys.MAIN_ENTITY: models.musicbrainz_entity.MusicbrainzArtistEntity,
             keys.LINK_ENTITY: models.musicbrainz_entity.MusicbrainzArtistLinkEntity,
             keys.NLP_ENTITY: None,
@@ -101,7 +117,7 @@ TARGET_CATALOGS = {
             keys.RELATIONSHIP_ENTITY: None
         },
         keys.BAND: {
-            keys.PERSON_QID: vocabulary.BAND_QID,
+            keys.CLASS_QID: vocabulary.BAND_QID,
             keys.MAIN_ENTITY: models.musicbrainz_entity.MusicbrainzBandEntity,
             keys.LINK_ENTITY: models.musicbrainz_entity.MusicbrainzBandLinkEntity,
             keys.NLP_ENTITY: None,
