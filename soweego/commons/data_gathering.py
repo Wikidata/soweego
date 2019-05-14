@@ -405,10 +405,10 @@ def gather_relevant_pids():
 
 
 def gather_target_ids(entity, catalog, catalog_pid, aggregated):
-    LOGGER.info('Gathering Wikidata items with %s identifiers ...', catalog)
-    # TODO handle works
+    LOGGER.info(
+        'Gathering Wikidata %s items with %s identifiers ...', entity, catalog)
     query_type = keys.IDENTIFIER, constants.SUPPORTED_ENTITIES.get(entity)
-    for qid, target_id in sparql_queries.run_query(query_type, target_database.get_person_qid(catalog), catalog_pid, 0):
+    for qid, target_id in sparql_queries.run_query(query_type, target_database.get_class_qid(catalog, entity), catalog_pid, 0):
         if not aggregated.get(qid):
             aggregated[qid] = {keys.TID: set()}
         aggregated[qid][keys.TID].add(target_id)
@@ -416,10 +416,11 @@ def gather_target_ids(entity, catalog, catalog_pid, aggregated):
 
 
 def gather_qids(entity, catalog, catalog_pid):
-    LOGGER.info('Gathering Wikidata items with no %s identifiers ...', catalog)
+    LOGGER.info(
+        'Gathering Wikidata %s items with no %s identifiers ...', entity, catalog)
     query_type = keys.DATASET, constants.SUPPORTED_ENTITIES.get(entity)
     qids = set(sparql_queries.run_query(
-        query_type, target_database.get_person_qid(catalog), catalog_pid, 0))
+        query_type, target_database.get_class_qid(catalog, entity), catalog_pid, 0))
     LOGGER.info('Got %d Wikidata items', len(qids))
     return qids
 

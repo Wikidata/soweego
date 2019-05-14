@@ -109,7 +109,7 @@ def add_identifiers(matches: dict, catalog_name: str, sandbox: bool) -> None:
     :type sandbox: bool
     """
     pid = target_database.get_person_pid(catalog_name)
-    catalog_qid = target_database.get_person_qid(catalog_name)
+    catalog_qid = target_database.get_class_qid(catalog_name)
     for qid, catalog_id in matches.items():
         LOGGER.info('Processing %s match: %s -> %s',
                     catalog_name, qid, catalog_id)

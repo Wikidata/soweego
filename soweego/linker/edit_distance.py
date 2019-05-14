@@ -48,7 +48,7 @@ def cli(target, target_type, strategy, upload, sandbox, threshold, output_dir):
             wd_io, target_entity, target_pid, strategy, threshold)
         if upload:
             wikidata_bot.add_statements(
-                result, target_database.get_person_qid(target), sandbox)
+                result, target_database.get_class_qid(target), sandbox)
         else:
             filepath = path.join(output_dir, 'edit_distance_%s.csv' % strategy)
             with open(filepath, 'w') as filehandle:

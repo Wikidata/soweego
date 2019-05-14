@@ -130,7 +130,7 @@ def _write_or_upload_result(strategy, target, target_type, result: Iterable, out
                             sandbox: bool):
     if upload:
         wikidata_bot.add_statements(
-            result, target_database.get_person_qid(target), sandbox)
+            result, target_database.get_class_qid(target), sandbox)
     else:
         filename = f'{target}_{target_type}_{filename}'
         filepath = path.join(output_dir, filename)
