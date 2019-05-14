@@ -16,18 +16,23 @@ MUSICBRAINZ = 'musicbrainz'
 TWITTER = 'twitter'
 
 # Supported entities
+# People
 ACTOR = 'actor'
 BAND = 'band'
 DIRECTOR = 'director'
 PRODUCER = 'producer'
 MUSICIAN = 'musician'
 WRITER = 'writer'
+# Works
+WORK_TYPE = 'work_type'
+AUDIOVISUAL_WORK = 'audiovisual_work'
+MUSICAL_WORK = 'musical_work'
+
 
 # Keys of helper dictionaries
 CATALOG_QID = 'catalog_qid'
-PERSON_QID = 'person_qid'
+CLASS_QID = 'class_qid'
 PERSON_PID = 'person_pid'
-WORK_QID = 'work_qid'
 WORK_PID = 'work_pid'
 MAIN_ENTITY = 'main_entity'
 LINK_ENTITY = 'link_entity'
