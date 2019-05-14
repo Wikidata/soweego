@@ -15,7 +15,7 @@ import os
 import click
 from sqlalchemy import and_
 
-from soweego.commons import constants, data_gathering, target_database
+from soweego.commons import constants, data_gathering, keys, target_database
 from soweego.commons.db_manager import DBManager
 from soweego.ingestor import wikidata_bot
 from soweego.wikidata import vocabulary
@@ -24,32 +24,35 @@ LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
-@click.argument('catalog', type=click.Choice(target_database.available_targets()))
-@click.argument('entity', type=click.Choice(target_database.available_types()))
+@click.argument('catalog', type=click.Choice(target_database.supported_targets()))
+@click.argument('entity', type=click.Choice(target_database.supported_entities()))
 @click.option('--upload/--no-upload', default=False, help='Upload links to Wikidata. Default: no.')
 @click.option('--sandbox/--no-sandbox', default=False,
               help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER,
               help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER)
 def works_people_cli(catalog, entity, upload, sandbox, dir_io):
+    """Populate statements about works by people."""
     statements = generate_statements(catalog, entity, dir_io)
     with open(os.path.join(dir_io, constants.WORKS_BY_PEOPLE_STATEMENTS), 'w') as fout:
         for subj, pred, obj in statements:
             fout.write(f'{subj},{pred},{obj}\n')
             if upload and sandbox:
                 wikidata_bot.add_or_reference(
-                    vocabulary.SANDBOX_1, pred, obj, target_database.get_qid(catalog))
+                    vocabulary.SANDBOX_1, pred, obj, target_database.get_catalog_qid(catalog))
             elif upload:
                 wikidata_bot.add_or_reference(
-                    subj, pred, obj, target_database.get_qid(catalog))
+                    subj, pred, obj, target_database.get_catalog_qid(catalog))
 
 
 def generate_statements(catalog, entity, dir_io, page=1000):
+    import ipdb
+    ipdb.set_trace()
     works, people = {}, {}
     claim_pid = vocabulary.WORKS_BY_PEOPLE_MAPPING[catalog][entity]
     # Gather works IDs
-    data_gathering.gather_target_ids(
-        entity, catalog, target_database.get_work_pid(catalog), works)
+    data_gathering.gather_target_ids(target_database.get_work_type(
+        catalog, entity), catalog, target_database.get_work_pid(catalog), works)
     # Gather people IDs
     data_gathering.gather_target_ids(
         entity, catalog, target_database.get_person_pid(catalog), people)
@@ -79,7 +82,7 @@ def generate_statements(catalog, entity, dir_io, page=1000):
 def _invert_and_simplify(dictionary):
     inverted = {}
     for qid, obj in dictionary.items():
-        tids = obj[constants.TID]
+        tids = obj[keys.TID]
         for tid in tids:
             qid_already_there = inverted.get(tid)
             if qid_already_there:
