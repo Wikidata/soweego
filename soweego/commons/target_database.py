@@ -30,32 +30,28 @@ def supported_entities_for_target(target):
     return constants.TARGET_CATALOGS[target].keys()
 
 
-def get_main_entity(target, entity_type):
-    return constants.TARGET_CATALOGS[target][entity_type][keys.MAIN_ENTITY]
+def get_main_entity(target, entity):
+    return constants.TARGET_CATALOGS[target][entity][keys.MAIN_ENTITY]
 
 
-def get_link_entity(target, entity_type):
-    return constants.TARGET_CATALOGS[target][entity_type][keys.LINK_ENTITY]
+def get_link_entity(target, entity):
+    return constants.TARGET_CATALOGS[target][entity][keys.LINK_ENTITY]
 
 
-def get_nlp_entity(target, entity_type):
-    return constants.TARGET_CATALOGS[target][entity_type][keys.NLP_ENTITY]
+def get_nlp_entity(target, entity):
+    return constants.TARGET_CATALOGS[target][entity][keys.NLP_ENTITY]
 
 
-def get_relationship_entity(target, entity_type):
-    return constants.TARGET_CATALOGS[target][entity_type][keys.RELATIONSHIP_ENTITY]
+def get_relationship_entity(target, entity):
+    return constants.TARGET_CATALOGS[target][entity][keys.RELATIONSHIP_ENTITY]
 
 
-def get_catalog_qid(catalog):
-    return vocabulary.CATALOG_MAPPING.get(catalog)[keys.CATALOG_QID]
+def get_work_type(target, entity):
+    return constants.TARGET_CATALOGS[target][entity][keys.WORK_TYPE]
 
 
-def get_person_qid(catalog):
-    return vocabulary.CATALOG_MAPPING.get(catalog)[keys.PERSON_QID]
-
-
-def get_work_qid(catalog):
-    return vocabulary.CATALOG_MAPPING.get(catalog)[keys.WORK_QID]
+def get_class_qid(target, entity):
+    return constants.TARGET_CATALOGS[target][entity][keys.CLASS_QID]
 
 
 def get_person_pid(catalog):
@@ -64,3 +60,7 @@ def get_person_pid(catalog):
 
 def get_work_pid(catalog):
     return vocabulary.CATALOG_MAPPING.get(catalog)[keys.WORK_PID]
+
+
+def get_catalog_qid(target):
+    return vocabulary.CATALOG_MAPPING.get(target)[keys.CATALOG_QID]
