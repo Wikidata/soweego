@@ -89,7 +89,7 @@ class ImdbActorEntity(ImdbPersonEntity):
 
 
 class ImdbDirectorEntity(ImdbPersonEntity):
-    table_occupation = vocabulary.DIRECTOR
+    table_occupation = vocabulary.FILM_DIRECTOR
     
     __tablename__ = DIRECTOR_TABLE
     __mapper_args__ = {
