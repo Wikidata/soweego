@@ -14,6 +14,7 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import json
 import logging
 import os
+import time
 from csv import DictReader
 from functools import lru_cache
 from re import search
@@ -374,6 +375,7 @@ def make_request(query, response_format=DEFAULT_RESPONSE_FORMAT):
     response = get(WIKIDATA_SPARQL_ENDPOINT, params={
         'query': query}, headers={'Accept': response_format})
     log_request_data(response, LOGGER)
+
     if response.ok:
         LOGGER.debug(
             'Successful GET to the Wikidata SPARQL endpoint. Status code: %d', response.status_code)
@@ -386,6 +388,27 @@ def make_request(query, response_format=DEFAULT_RESPONSE_FORMAT):
             return 'empty'
         LOGGER.debug('Got %d results', len(response_body) - 1)
         return DictReader(response_body, delimiter='\t')
+
+    if response.status_code == 429:
+        # according to the maintainer: https://stackoverflow.com/a/42590757/2234619
+        # and here: https://github.com/wikimedia/puppet/blob/837d10e240932b8042b81acf31a8808f603b08bb/modules/wdqs/templates/nginx.erb#L85
+        # the only limit on the SPARQL API is that there can't be more than 5 concurrent requests per IP
+
+        # so if the status code is 429 then we've made too many requests we just wait a bit
+        # and retry
+
+        # arbitrary wait time (seconds)
+        wait_time = 0.3
+
+        LOGGER.warning('Exceeded request API request limit. '
+                       'Will retry after %s seconds', wait_time)
+
+        # block the current thread for `wait_time`
+        time.sleep(wait_time)
+
+        # retry the request and return result
+        return make_request(query, response_format)
+
     LOGGER.warning(
         'The GET to the Wikidata SPARQL endpoint went wrong. Reason: %d %s - Query: %s',
         response.status_code, response.reason, query)

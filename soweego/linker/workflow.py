@@ -17,11 +17,11 @@ import os
 from multiprocessing import cpu_count
 from typing import Generator, Tuple
 
+from numpy import nan
+
 import pandas as pd
 import recordlinkage as rl
-from numpy import nan
 from pandas.io.json.json import JsonReader
-
 from soweego.commons import (constants, data_gathering, target_database,
                              text_utils, url_utils)
 from soweego.commons.logging import log_dataframe_info
@@ -74,7 +74,8 @@ def build_wikidata(goal, catalog, entity, dir_io):
 
         url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
         with gzip.open(wd_io_path, 'wt') as wd_io:
-            api_requests.get_data_for_linker(catalog, entity, qids, url_pids, ext_id_pids_to_urls, wd_io, qids_and_tids)
+            api_requests.get_data_for_linker(
+                catalog, entity, qids, url_pids, ext_id_pids_to_urls, wd_io, qids_and_tids)
 
     wd_df_reader = pd.read_json(wd_io_path, lines=True, chunksize=1000)
 
@@ -153,16 +154,20 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
         compare.add(StringList(constants.NAME_TOKENS,
                                constants.NAME_TOKENS, label='name_levenshtein'))
 
-        # Feature 5: similar name tokens
+    # Feature 5: string kernel similarity on name tokens
+        compare.add(StringList(constants.NAME_TOKENS, constants.NAME_TOKENS,
+                               algorithm='cosine', analyzer='char_wb', label='name_string_kernel_cosine'))
+
+    # Feature 6: similar name tokens
         compare.add(SimilarTokens(constants.NAME_TOKENS,
                                   constants.NAME_TOKENS, label='similar_name_tokens'))
 
-    # Feature 6: cosine similarity on descriptions
+    # Feature 7: cosine similarity on descriptions
     if in_both_datasets(constants.DESCRIPTION):
         compare.add(StringList(constants.DESCRIPTION, constants.DESCRIPTION,
                                algorithm='cosine', analyzer='soweego', label='description_cosine'))
 
-    # Feature 7: occupation QIDs
+    # Feature 8: occupation QIDs
     occupations_col_name = vocabulary.LINKER_PIDS[vocabulary.OCCUPATION]
     if in_both_datasets(occupations_col_name):
         compare.add(OccupationQidSet(occupations_col_name,
@@ -170,9 +175,10 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
                                      label='occupation_qids'))
 
     if in_both_datasets(constants.GENRE):
-        compare.add(SimilarTokens(constants.GENRE, constants.GENRE, 'genre_similar_tokens'))
+        compare.add(SimilarTokens(constants.GENRE,
+                    constants.GENRE, 'genre_similar_tokens'))
 
-    feature_vectors = compare.compute(candidate_pairs, wikidata, target)
+    feature_vectors = compare.compute(candidate_pairs, wikidata, target)..drop_duplicates()
     pd.to_pickle(feature_vectors, path_io)
 
     LOGGER.info("Features dumped to '%s'", path_io)
@@ -180,19 +186,18 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
     return feature_vectors
 
 
-def init_model(classifier, binarize, number_of_features):
-    # TODO expose other useful parameters
-    if classifier is constants.NAIVE_BAYES_CLASSIFIER:
-        model = rl.NaiveBayesClassifier(binarize=binarize)
+def init_model(classifier, *args, **kwargs):
+    if classifier is constants.NAIVE_BAYES:
+        model = rl.NaiveBayesClassifier(**kwargs)
 
-    elif classifier is constants.SVC_CLASSIFIER:
-        model = classifiers.SVCClassifier()
+    elif classifier is constants.LINEAR_SVM:
+        model = rl.SVMClassifier(**kwargs)
 
-    elif classifier is constants.LINEAR_SVC_CLASSIFIER:
-        model = rl.SVMClassifier()
+    elif classifier is constants.SVM:
+        model = classifiers.SVCClassifier(**kwargs)
 
-    elif classifier is constants.PERCEPTRON_CLASSIFIER:
-        model = neural_networks.SingleLayerPerceptron(number_of_features)
+    elif classifier is constants.SINGLE_LAYER_PERCEPTRON:
+        model = neural_networks.SingleLayerPerceptron(*args, **kwargs)
 
     elif classifier is constants.MULTILAYER_CLASSIFIER:
         model = neural_networks.MultiLayerPerceptron(number_of_features)
@@ -225,23 +230,29 @@ def preprocess_wikidata(goal, wikidata_reader):
             chunk[constants.TID] = chunk[constants.TID].map(
                 lambda cell: cell[0] if isinstance(cell, list) else cell)
 
-        # 4. Tokenize & join strings lists columns
+        # 4. Tokenize names
         for column in constants.NAME_FIELDS:
             if chunk.get(column) is not None:
                 chunk[f'{column}_tokens'] = chunk[column].apply(
                     tokenize_values, args=(text_utils.tokenize,))
 
+
+<< << << < HEAD
         # 4b. Tokenize genres if available
         if chunk.get(constants.GENRE) is not None:
             chunk[constants.GENRE] = chunk[constants.GENRE].apply(
                 tokenize_values, args=(text_utils.tokenize,))
 
         # 5. Tokenize & join URLs lists
+== == == =
+        # 5. Tokenize URLs
+>>>>>> > master
         chunk[constants.URL_TOKENS] = chunk[constants.URL].apply(
             tokenize_values, args=(url_utils.tokenize,))
 
         # 6. Shared preprocessing
-        chunk = _shared_preprocessing(chunk, _will_handle_birth_date(chunk), _will_handle_death_date(chunk))
+        chunk = _shared_preprocessing(chunk, _will_handle_birth_date(
+            chunk), _will_handle_death_date(chunk))
 
         LOGGER.info('Chunk %d done', i)
         yield chunk
@@ -322,9 +333,6 @@ def _shared_preprocessing(df, will_handle_birth_date, will_handle_death_date):
     for column in constants.NAME_FIELDS:
         if df.get(column) is not None:
             df[column] = df[column].map(_normalize_values)
-
-    LOGGER.info('Joining descriptions ...')
-    _join_descriptions(df)
 
     _occupations_to_set(df)
 
@@ -473,19 +481,6 @@ def _occupations_to_set(df):
 
     LOGGER.info('Converting list of occupations into set ...')
     df[col_name] = df[col_name].apply(to_set)
-
-
-def _join_descriptions(df):
-    # TODO It certainly doesn't make sense to compare descriptions in different languages
-    column = df.get(constants.DESCRIPTION)
-    if column is None:
-        LOGGER.warning(
-            "No '%s' column in DataFrame, won't join values. Perhaps it was dropped because it contained null values only",
-            constants.DESCRIPTION)
-        return
-
-    df[constants.DESCRIPTION] = df[constants.DESCRIPTION].str.join(' ')
-    log_dataframe_info(LOGGER, df, 'Joined descriptions')
 
 
 def tokenize_values(values, tokenize_func):
