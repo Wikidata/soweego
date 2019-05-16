@@ -129,7 +129,7 @@ def prefect_block_on_column(goal: str, catalog: str, entity: str, wikidata_serie
         return pd.read_pickle(samples_path)
 
     LOGGER.info(
-        "Blocking on column '%s' perfect match to get all samples ...", target_column)
+        "Blocking on column '%s' to get all samples ...", target_column)
 
     wikidata_series.dropna(inplace=True)
 
