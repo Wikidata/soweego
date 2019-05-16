@@ -289,7 +289,7 @@ def _add_missing_feature_columns(classifier, feature_vectors):
     elif isinstance(classifier, (classifiers.SVCClassifier, rl.SVMClassifier)):
         expected_features = classifier.kernel.coef_.shape[1]
 
-    elif isinstance(classifier, neural_networks.SingleLayerPerceptron):
+    elif isinstance(classifier, (neural_networks.SingleLayerPerceptron, neural_networks.MultiLayerPerceptron)):
         expected_features = classifier.kernel.input_shape[1]
 
     else:
