@@ -135,11 +135,6 @@ def prefect_block_on_column(goal: str, catalog: str, entity: str, wikidata_serie
 
     qids_and_tids = []
 
-    for qid, item_value in wikidata_series.items():
-        blocking_fn(**{
-            'target_entity': target_entity,
-            'to_search': item_value})
-
     with Pool() as pool:
 
         # this will hold our async processes and the QID
