@@ -154,11 +154,11 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
         compare.add(StringList(constants.NAME_TOKENS,
                                constants.NAME_TOKENS, label='name_levenshtein'))
 
-    # Feature 5: string kernel similarity on name tokens
+        # Feature 5: string kernel similarity on name tokens
         compare.add(StringList(constants.NAME_TOKENS, constants.NAME_TOKENS,
                                algorithm='cosine', analyzer='char_wb', label='name_string_kernel_cosine'))
 
-    # Feature 6: similar name tokens
+        # Feature 6: similar name tokens
         compare.add(SimilarTokens(constants.NAME_TOKENS,
                                   constants.NAME_TOKENS, label='similar_name_tokens'))
 
@@ -176,9 +176,9 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
 
     if in_both_datasets(constants.GENRE):
         compare.add(SimilarTokens(constants.GENRE,
-                    constants.GENRE, 'genre_similar_tokens'))
+                                  constants.GENRE, 'genre_similar_tokens'))
 
-    feature_vectors = compare.compute(candidate_pairs, wikidata, target)..drop_duplicates()
+    feature_vectors = compare.compute(candidate_pairs, wikidata, target).drop_duplicates()
     pd.to_pickle(feature_vectors, path_io)
 
     LOGGER.info("Features dumped to '%s'", path_io)
@@ -200,7 +200,7 @@ def init_model(classifier, *args, **kwargs):
         model = neural_networks.SingleLayerPerceptron(*args, **kwargs)
 
     elif classifier is constants.MULTILAYER_CLASSIFIER:
-        model = neural_networks.MultiLayerPerceptron(number_of_features)
+        model = neural_networks.MultiLayerPerceptron(*args, **kwargs)
 
     else:
         err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
@@ -236,17 +236,12 @@ def preprocess_wikidata(goal, wikidata_reader):
                 chunk[f'{column}_tokens'] = chunk[column].apply(
                     tokenize_values, args=(text_utils.tokenize,))
 
-
-<< << << < HEAD
         # 4b. Tokenize genres if available
         if chunk.get(constants.GENRE) is not None:
             chunk[constants.GENRE] = chunk[constants.GENRE].apply(
                 tokenize_values, args=(text_utils.tokenize,))
 
         # 5. Tokenize & join URLs lists
-== == == =
-        # 5. Tokenize URLs
->>>>>> > master
         chunk[constants.URL_TOKENS] = chunk[constants.URL].apply(
             tokenize_values, args=(url_utils.tokenize,))
 
@@ -256,8 +251,6 @@ def preprocess_wikidata(goal, wikidata_reader):
 
         LOGGER.info('Chunk %d done', i)
         yield chunk
-
-    LOGGER.info('Wikidata preprocessing done')
 
 
 def preprocess_target(goal, target_reader):
