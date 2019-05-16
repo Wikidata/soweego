@@ -144,23 +144,17 @@ def perfect_url_search(target_entity: constants.DB_ENTITY, link_entity: constant
     column = getattr(link_entity, target_column)
 
     try:
+        # we use a more permissive limit for the amount of links
+        # we retrieve
         link_query = session.query(link_entity).filter(
-            or_(*[column == url for url in to_search])).limit(limit)
-            
-        # TODO Remove counter
-        i = 0
+            or_(*[column == url for url in to_search])).limit(limit * 2)
+
         person_candidates = []
         for lmatch in link_query:
-            i += 1
             person_candidates += (session.query(target_entity)
                                   .filter(target_entity.catalog_id == lmatch.catalog_id)
                                   .limit(limit)
                                   .all())
-
-        if i > 0 or len(person_candidates) > 0:
-            #TODO: Remove
-            LOGGER.info("Link query had %s, and there are %s person candidates from URL", i, len(
-                person_candidates))
 
         return person_candidates
 
@@ -196,21 +190,16 @@ def perfect_url_token_search(target_entity: constants.DB_ENTITY, link_entity: co
     ft_search = column.match(terms)
 
     try:
+        # we use a more permissive limit for the amount of links
+        # we retrieve
         link_query = session.query(link_entity).filter(
-            ft_search).limit(limit)
+            ft_search).limit(limit * 2)
 
-        # TODO Remove counter
-        i = 0
         person_candidates = []
+
         for lmatch in link_query:
-            i += 1
             person_candidates += (session.query(target_entity)
                                   .filter(target_entity.catalog_id == lmatch.catalog_id).all())
-
-        if i > 0 or len(person_candidates) > 0:
-            #TODO: Remove
-            LOGGER.info("Link query had %s, and there are %s person candidates from URL", i, len(
-                person_candidates))
 
         return person_candidates
 
@@ -221,7 +210,8 @@ def perfect_url_token_search(target_entity: constants.DB_ENTITY, link_entity: co
         session.close()
 
 
-def perfect_column_search(target_entity: constants.DB_ENTITY, target_column: str, to_search: List[str]) -> List[constants.DB_ENTITY]:
+def perfect_column_search(target_entity: constants.DB_ENTITY, target_column: str,
+                          to_search: List[str], limit: int = 10) -> List[constants.DB_ENTITY]:
 
     alchemy_col = getattr(target_entity, target_column)
 
@@ -232,7 +222,7 @@ def perfect_column_search(target_entity: constants.DB_ENTITY, target_column: str
     session = DBManager.connect_to_db()
     try:
         return session.query(target_entity).filter(or_(*[
-            alchemy_col == el for el in to_search])).all()
+            alchemy_col == el for el in to_search])).limit(limit).all()
 
     except:
         session.rollback()
