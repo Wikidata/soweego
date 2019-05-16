@@ -155,9 +155,12 @@ def prefect_block_on_column(goal: str, catalog: str, entity: str, wikidata_serie
         for qid, async_res in tqdm(processes_):
             matches = async_res.get()
 
-            # For each blocking match found for the `qid` add a tuple
-            # (qid, tid) to `qids_and_tids`
-            qids_and_tids += [(qid, entity.catalog_id) for entity in matches]
+            # if any result was found
+            if matches:
+                # For each blocking match found for the `qid` add a tuple
+                # (qid, tid) to `qids_and_tids`
+                qids_and_tids += [(qid, entity.catalog_id)
+                                  for entity in matches]
 
     samples_index = pd.MultiIndex.from_tuples(
         qids_and_tids, names=[constants.QID, constants.TID])
