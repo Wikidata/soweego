@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """IMDB dump extractor"""
+import copy
 
 __author__ = 'Andrea Tupini'
 __email__ = 'tupini07@gmail.com'
@@ -117,17 +118,33 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             movie_entity = imdb_entity.ImdbMovieEntity()
             movie_entity.catalog_id = movie_info.get('tconst')
             movie_entity.title_type = movie_info.get('titleType')
-            movie_entity.primary_title = movie_info.get('primaryTitle')
-            movie_entity.original_title = movie_info.get('originalTitle')
+            movie_entity.name = movie_info.get('primaryTitle')
+            movie_entity.name_tokens = ' '.join(text_utils.tokenize(movie_info.get('primaryTitle')))
             movie_entity.is_adult = True if movie_info.get(
                 'isAdult') == '1' else False
-            movie_entity.start_year = movie_info.get('startYear')
-            movie_entity.end_year = movie_info.get('endYear')
+            try:
+                movie_entity.born = datetime.date(year=int(movie_info.get('startYear')), month=1, day=1)
+                movie_entity.born_precision = 9
+            except:
+                pass
+            try:
+                movie_entity.end_year = datetime.date(year=int(movie_info.get('endYear')), month=1, day=1)
+                movie_entity.died_precision = 9
+            except:
+                pass
             movie_entity.runtime_minutes = movie_info.get('runtimeMinutes')
 
             if movie_info.get('genres'):  # if movie has a genre specified
-                movie_entity.genres = movie_info.get(
-                    'genres').replace(',', ' ')
+                movie_entity.genres = ' '.join(text_utils.tokenize(movie_info.get(
+                    'genres')))
+
+            # Creates entity for alias
+            alias = movie_info.get('originalTitle')
+            if alias is not None and movie_entity.name != alias:
+                alias_entity = copy.deepcopy(movie_entity)
+                alias_entity.name = alias
+                alias_entity.name_tokens = ' '.join(text_utils.tokenize(alias))
+                entity_array.append(alias_entity)
 
             entity_array.append(movie_entity)
 

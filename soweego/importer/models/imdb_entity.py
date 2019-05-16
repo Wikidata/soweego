@@ -30,21 +30,13 @@ WRITER_TABLE = 'imdb_writer'
 # actor, director, producer e writer
 
 
-class ImdbMovieEntity(BASE):
+class ImdbMovieEntity(BaseEntity):
     __tablename__ = MOVIE_TABLE
     internal_id = Column(Integer, unique=True,
                          primary_key=True, autoincrement=True)
 
-    # Catalog identifier, indexed
-    catalog_id = Column(String(50), nullable=False, index=True)
     title_type = Column(String(100))
-    primary_title = Column(String(255))
-    original_title = Column(String(255))
     is_adult = Column(Boolean)
-
-    start_year = Column(Integer, nullable=True)
-    end_year = Column(Integer, nullable=True)
-
     runtime_minutes = Column(Integer)
     genres = Column(String(255), nullable=True)
 

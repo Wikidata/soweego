@@ -197,7 +197,8 @@ def get_data_for_linker(catalog: str, entity_type: str, qids: set, url_pids: set
 
     # check if for this specific catalog
     # we need to get the occupations
-    needs_occupations = catalog in constants.REQUIRE_OCCUPATIONS
+    if catalog in constants.REQUIRE_OCCUPATIONS.keys():
+        needs_occupations = entity_type in constants.REQUIRE_OCCUPATIONS[catalog]
     needs_genre = entity_type in constants.REQUIRE_GENRE
 
     # create a partial function. Here all parameters, except

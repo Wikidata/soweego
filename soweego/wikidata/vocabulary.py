@@ -79,6 +79,7 @@ STUNTS = 'Q465501'
 TALENT_AGENT = 'Q1344174'
 VISUAL_EFFECTS_ARTIST = 'Q1224742'
 MUSICALWORK = 'Q2188189'
+AUDIOVISUAL_WORK = 'Q2431196' #to include also tv series
 
 # Target catalogs helper dictionary
 CATALOG_MAPPING = {

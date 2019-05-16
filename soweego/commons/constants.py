@@ -44,7 +44,8 @@ HANDLED_ENTITIES = {
     'musician': OCCUPATION,
     'producer': OCCUPATION,
     'writer': OCCUPATION,
-    'release': CLASS
+    'release': CLASS,
+    'movie': CLASS
 }
 
 # DB entity Python types for typed function signatures
@@ -103,6 +104,12 @@ TARGET_CATALOGS = {
             'entity': models.imdb_entity.ImdbWriterEntity,
             'link_entity': None,
             'nlp_entity': None
+        },
+        'movie': {
+            'qid': vocabulary.AUDIOVISUAL_WORK,
+            'entity': models.imdb_entity.ImdbMovieEntity,
+            'link_entity': None,
+            'nlp_entity': None
         }
     },
     'musicbrainz': {
@@ -130,12 +137,12 @@ TARGET_CATALOGS = {
 # When building the wikidata dump for catalogs in this array
 # also the QIDs of a person's occupations will be included
 # as part of the dump
-REQUIRE_OCCUPATIONS = [
-    'imdb'
-]
+REQUIRE_OCCUPATIONS = {
+    'imdb': ['actor', 'director', 'musician', 'producer', 'write']
+}
 
 REQUIRE_GENRE = [
-    'release'
+    'release', 'movie'
 ]
 
 # Wikidata field & target column names
