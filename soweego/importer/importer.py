@@ -27,7 +27,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
-@click.argument('catalog', type=click.Choice(target_database.available_targets()))
+@click.argument('catalog', type=click.Choice(target_database.supported_targets()))
 @click.option('--url-check', is_flag=True,
               help='Check for rotten URLs while importing. Default: no. WARNING: this will dramatically increase the import time.')
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER,
@@ -44,10 +44,10 @@ def _resolve_url(res):
 
 
 @click.command()
-@click.argument('catalog', type=click.Choice(target_database.available_targets()))
+@click.argument('catalog', type=click.Choice(target_database.supported_targets()))
 def check_links_cli(catalog: str):
     """Check for rotten URLs of an imported catalog."""
-    for entity_type in target_database.available_types_for_target(catalog):
+    for entity_type in target_database.supported_entities_for_target(catalog):
 
         LOGGER.info("Validating %s %s links...", catalog, entity_type)
         entity = target_database.get_link_entity(catalog, entity_type)
@@ -94,7 +94,7 @@ class Importer:
             LOGGER.info("Retrieving last modified of %s", download_url)
 
             last_modified = client.http_call(download_url,
-                                             'HEAD').headers[constants.LAST_MODIFIED]
+                                             'HEAD').headers[keys.LAST_MODIFIED]
 
             try:
                 last_modified = datetime.datetime.strptime(
