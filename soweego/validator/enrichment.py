@@ -11,11 +11,14 @@ __copyright__ = 'Copyleft 2019, Hjfocs'
 
 import logging
 import os
+from itertools import product
 
 import click
 from sqlalchemy import and_
+from tqdm import tqdm
 
-from soweego.commons import constants, data_gathering, keys, target_database
+from soweego.commons import (constants, data_gathering, keys, target_database,
+                             utils)
 from soweego.commons.db_manager import DBManager
 from soweego.ingestor import wikidata_bot
 from soweego.wikidata import vocabulary
@@ -28,26 +31,36 @@ LOGGER = logging.getLogger(__name__)
 @click.argument('entity', type=click.Choice(target_database.supported_entities()))
 @click.option('--upload/--no-upload', default=False, help='Upload links to Wikidata. Default: no.')
 @click.option('--sandbox/--no-sandbox', default=False,
-              help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
+              help="Upload to the Wikidata sandbox item Q4115189. Use with '--upload'. Default: no.")
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER,
               help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER)
 def works_people_cli(catalog, entity, upload, sandbox, dir_io):
     """Populate statements about works by people."""
-    statements = generate_statements(catalog, entity, dir_io)
-    with open(os.path.join(dir_io, constants.WORKS_BY_PEOPLE_STATEMENTS), 'w') as fout:
-        for subj, pred, obj in statements:
-            fout.write(f'{subj},{pred},{obj}\n')
-            if upload and sandbox:
-                wikidata_bot.add_or_reference(
-                    vocabulary.SANDBOX_1, pred, obj, target_database.get_catalog_qid(catalog))
-            elif upload:
-                wikidata_bot.add_or_reference(
-                    subj, pred, obj, target_database.get_catalog_qid(catalog))
+    if upload:
+        to_upload = set()
+    statements = generate_statements(catalog, entity)
+
+    # Boolean to run IMDb-specific checks
+    is_imdb = catalog == keys.IMDB
+    catalog_qid = target_database.get_catalog_qid(catalog)
+    person_pid = target_database.get_person_pid(catalog)
+
+    with open(os.path.join(dir_io, constants.WORKS_BY_PEOPLE_STATEMENTS % (catalog, entity)), 'w', 1) as fout:
+        for subj, pred, obj, tid in statements:
+            fout.write(f'{subj},{pred},{obj},{tid}\n')
+            if sandbox:
+                wikidata_bot.add_or_reference_works(
+                    vocabulary.SANDBOX_3, pred, obj, catalog_qid, person_pid, tid, is_imdb=is_imdb)
+            if upload:
+                # Fill a list from the statements generator
+                # to prevent lost connections to the SQL DB
+                to_upload.add((subj, pred, obj, tid))
+
+    if upload:
+        wikidata_bot.add_works_statements(to_upload, catalog, sandbox)
 
 
-def generate_statements(catalog, entity, dir_io, page=1000):
-    import ipdb
-    ipdb.set_trace()
+def generate_statements(catalog, entity, bucket_size=5000):
     works, people = {}, {}
     claim_pid = vocabulary.WORKS_BY_PEOPLE_MAPPING[catalog][entity]
     # Gather works IDs
@@ -60,23 +73,36 @@ def generate_statements(catalog, entity, dir_io, page=1000):
     works_inverted, people_inverted = _invert_and_simplify(
         works), _invert_and_simplify(people)
     del works, people
+    # Make buckets: more queries, but more efficient ones
+    works_buckets = utils.make_buckets(
+        list(works_inverted.keys()), bucket_size=bucket_size)
+    people_buckets = utils.make_buckets(
+        list(people_inverted.keys()), bucket_size=bucket_size)
+    total_queries = len(works_buckets) * len(people_buckets)
+
+    LOGGER.info(
+        'Firing %d queries to the internal database, this will take a while ...', total_queries)
+
     db_entity = target_database.get_relationship_entity(catalog, entity)
     session = DBManager().connect_to_db()
     try:
-        works_to_people = session.query(db_entity).filter(
-            and_(
-                db_entity.from_catalog_id.in_(works_inverted.keys()),
-                db_entity.to_catalog_id.in_(people_inverted.keys())
+        for works, people in tqdm(product(works_buckets, people_buckets), total=total_queries):
+            works_to_people = session.query(db_entity).filter(
+                and_(
+                    db_entity.from_catalog_id.in_(works),
+                    db_entity.to_catalog_id.in_(people)
+                )
             )
-        ).yield_per(page).enable_eagerloads(False)
-        result = ((works_inverted[res.from_catalog_id], claim_pid,
-                   people_inverted[res.to_catalog_id]) for res in works_to_people)
+
+            for result in works_to_people:
+                yield works_inverted[result.from_catalog_id], claim_pid, people_inverted[result.to_catalog_id], result.to_catalog_id
     except:
         session.rollback()
         raise
     finally:
         session.close()
-    return result
+
+    LOGGER.info('Queries done, statements generated')
 
 
 def _invert_and_simplify(dictionary):
@@ -87,7 +113,7 @@ def _invert_and_simplify(dictionary):
             qid_already_there = inverted.get(tid)
             if qid_already_there:
                 LOGGER.warning(
-                    "Skipping QID '%s': there is already QID '%s' for target ID '%s'", qid, qid_already_there, tid)
+                    'Target ID %s has multiple QIDs. Skipping %s, keeping %s', tid, qid, qid_already_there)
                 continue
             inverted[tid] = qid
     return inverted
