@@ -108,28 +108,17 @@ def build_dataset(goal, catalog, entity, dir_io):
 
     positive_samples = feature_vectors = None
 
-    positive_samples_w_path = os.path.join(dir_io,
-                                           '%s_%s_%s_positive_samples_working.csv.gz' % (
-                                               catalog, entity, goal
-                                           ))
-    feature_vectors_w_path = os.path.join(dir_io,
-                                          '%s_%s_%s_feature_vectors_working.csv.gz' % (
-                                              catalog, entity, goal
-                                          ))
-
-    for working_file in [positive_samples_w_path, feature_vectors_w_path]:
-        if os.path.exists(working_file):
-            os.remove(working_file)
-
     # flag that indicates we need to add a header the first time we write
     # to working file
-    need_working_header = True
     for i, wd_chunk in enumerate(wd_generator, 1):
         # Positive samples from Wikidata
         if positive_samples is None:
             positive_samples = wd_chunk[constants.TID]
         else:
-            positive_samples = concat([positive_samples, wd_chunk[constants.TID]])
+            positive_samples = concat([
+                positive_samples,
+                wd_chunk[constants.TID]
+            ])
 
         # Samples index from Wikidata
         all_samples = blocking.full_text_query_block(
@@ -145,15 +134,15 @@ def build_dataset(goal, catalog, entity, dir_io):
 
         features_path = os.path.join(
             dir_io, constants.FEATURES % (catalog, entity, goal, i))
-        
-        nvcs = workflow.extract_features(
+
+        chunk_fv = workflow.extract_features(
             all_samples, wd_chunk, target_chunk, features_path)
-        
+
         if feature_vectors is None:
-            feature_vectors = nvcs
+            feature_vectors = chunk_fv
         else:
-            feature_vectors = concat([feature_vectors, nvcs], sort=False)
-        
+            feature_vectors = concat([feature_vectors, chunk_fv], sort=False)
+
     # positive_samples = concat(positive_samples)
     positive_samples_index = MultiIndex.from_tuples(zip(
         positive_samples.index, positive_samples), names=[constants.QID, constants.TID])
