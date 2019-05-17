@@ -27,9 +27,6 @@ from soweego.wikidata import vocabulary
 
 LOGGER = logging.getLogger(__name__)
 
-ITEM_REGEX = r'Q\d+'
-PID_REGEX = r'P\d+'
-
 WIKIDATA_SPARQL_ENDPOINT = 'https://query.wikidata.org/sparql'
 DEFAULT_RESPONSE_FORMAT = 'text/tab-separated-values'
 JSON_RESPONSE_FORMAT = 'application/json'
@@ -198,7 +195,7 @@ def external_id_pids_and_urls_query():
             LOGGER.warning(
                 'Skipping malformed query result: no Wikidata property in %s', pid_uri_dict)
             continue
-        pid = search(PID_REGEX, pid_uri)
+        pid = search(constants.PID_REGEX, pid_uri)
         if not pid:
             LOGGER.warning(
                 'Skipping malformed query result: invalid Wikidata property URI %s in %s', pid_uri, result)
@@ -212,7 +209,7 @@ def _get_valid_pid(result):
         LOGGER.warning(
             'Skipping malformed query result: no Wikidata property in %s', result)
         return None
-    pid = search(PID_REGEX, pid_uri)
+    pid = search(constants.PID_REGEX, pid_uri)
     if not pid:
         LOGGER.warning(
             'Skipping malformed query result: invalid Wikidata property URI %s in %s', pid_uri, result)
@@ -259,7 +256,7 @@ def _get_valid_qid(result):
         LOGGER.warning(
             'Skipping malformed query result: no Wikidata item in %s', result)
         return None
-    qid = search(ITEM_REGEX, item_uri)
+    qid = search(constants.QID_REGEX, item_uri)
     if not qid:
         LOGGER.warning(
             'Skipping malformed query result: invalid Wikidata item URI %s in %s', item_uri, result)

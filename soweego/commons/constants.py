@@ -15,11 +15,15 @@ from soweego.commons import keys
 from soweego.importer import models
 from soweego.wikidata import vocabulary
 
+# Wikidata items & properties regexes
+QID_REGEX = r'Q\d+'
+PID_REGEX = r'P\d+'
+
+# Entities and corresponding Wikidata query
 SUPPORTED_QUERY_TYPES = (keys.CLASS, keys.OCCUPATION)
 SUPPORTED_QUERY_SELECTORS = (
     keys.IDENTIFIER, keys.LINKS, keys.DATASET, keys.METADATA)
 
-# Entities and corresponding Wikidata query
 SUPPORTED_ENTITIES = {
     keys.ACTOR: keys.OCCUPATION,
     keys.BAND: keys.CLASS,
@@ -63,7 +67,7 @@ TARGET_CATALOGS = {
             keys.MAIN_ENTITY: models.imdb_entity.ImdbActorEntity,
             keys.LINK_ENTITY: None,
             keys.NLP_ENTITY: None,
-            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship,
+            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbMoviePersonRelationship,
             keys.WORK_TYPE: keys.AUDIOVISUAL_WORK
         },
         keys.DIRECTOR: {
@@ -71,7 +75,7 @@ TARGET_CATALOGS = {
             keys.MAIN_ENTITY: models.imdb_entity.ImdbDirectorEntity,
             keys.LINK_ENTITY: None,
             keys.NLP_ENTITY: None,
-            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship,
+            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbMoviePersonRelationship,
             keys.WORK_TYPE: keys.AUDIOVISUAL_WORK
         },
         keys.MUSICIAN: {
@@ -79,7 +83,7 @@ TARGET_CATALOGS = {
             keys.MAIN_ENTITY: models.imdb_entity.ImdbMusicianEntity,
             keys.LINK_ENTITY: None,
             keys.NLP_ENTITY: None,
-            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship,
+            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbMoviePersonRelationship,
             keys.WORK_TYPE: keys.AUDIOVISUAL_WORK
         },
         keys.PRODUCER: {
@@ -87,7 +91,7 @@ TARGET_CATALOGS = {
             keys.MAIN_ENTITY: models.imdb_entity.ImdbProducerEntity,
             keys.LINK_ENTITY: None,
             keys.NLP_ENTITY: None,
-            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship,
+            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbMoviePersonRelationship,
             keys.WORK_TYPE: keys.AUDIOVISUAL_WORK
         },
         keys.WRITER: {
@@ -95,7 +99,7 @@ TARGET_CATALOGS = {
             keys.MAIN_ENTITY: models.imdb_entity.ImdbWriterEntity,
             keys.LINK_ENTITY: None,
             keys.NLP_ENTITY: None,
-            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship,
+            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbMoviePersonRelationship,
             keys.WORK_TYPE: keys.AUDIOVISUAL_WORK
         },
         keys.AUDIOVISUAL_WORK: {
@@ -103,7 +107,7 @@ TARGET_CATALOGS = {
             keys.MAIN_ENTITY: models.imdb_entity.ImdbMovieEntity,
             keys.LINK_ENTITY: None,
             keys.NLP_ENTITY: None,
-            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbPersonMovieRelationship,
+            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbMoviePersonRelationship,
             keys.WORK_TYPE: None
         }
     },
@@ -155,7 +159,7 @@ COMPLETE_WIKIDATA_CHUNKS = '%s_%s_%s_complete_wikidata_chunks.pkl.gz'
 COMPLETE_TARGET_CHUNKS = '%s_%s_%s_complete_target_chunks.pkl.gz'
 COMPLETE_POSITIVE_SAMPLES_INDEX = '%s_%s_%s_complete_positive_samples_index.pkl.gz'
 WIKIDATA_API_SESSION = 'wiki_api_session.pkl'
-WORKS_BY_PEOPLE_STATEMENTS = '%s_%s_works_by_people_statements.csv'
+WORKS_BY_PEOPLE_STATEMENTS = '%s_works_by_%s_statements.csv'
 
 CLASSIFIERS = {
     'naive_bayes': keys.NAIVE_BAYES,
