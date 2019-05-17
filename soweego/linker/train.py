@@ -108,9 +108,26 @@ def build_dataset(goal, catalog, entity, dir_io):
 
     positive_samples, feature_vectors = [], []
 
+    positive_samples_w_path = os.path.join(dir_io,
+                                           '%s_%s_%s_positive_samples_working.csv.gz' % (
+                                               catalog, entity, goal
+                                           ))
+    feature_vectors_w_path = os.path.join(dir_io,
+                                          '%s_%s_%s_feature_vectors_working.csv.gz' % (
+                                              catalog, entity, goal
+                                          ))
+
+    for working_file in [positive_samples_w_path, feature_vectors_w_path]:
+        if os.path.exists(working_file):
+            os.remove(working_file)
+
+    # flag that indicates we need to add a header the first time we write
+    # to working file
+    need_working_header = True
     for i, wd_chunk in enumerate(wd_generator, 1):
         # Positive samples from Wikidata
-        positive_samples.append(wd_chunk[constants.TID])
+        wd_chunk[constants.TID].to_csv(
+            positive_samples_w_path, mode='a', header=need_working_header)
 
         # Samples index from Wikidata
         all_samples = blocking.full_text_query_block(
@@ -127,14 +144,17 @@ def build_dataset(goal, catalog, entity, dir_io):
         features_path = os.path.join(
             dir_io, constants.FEATURES % (catalog, entity, goal, i))
 
-        feature_vectors.append(workflow.extract_features(
-            all_samples, wd_chunk, target_chunk, features_path))
+        workflow.extract_features(
+            all_samples, wd_chunk, target_chunk, features_path
+        ).to_csv(feature_vectors_w_path, mode='a', header=need_working_header)
 
-    positive_samples = concat(positive_samples)
+        need_working_header = False
+
+    positive_samples = pd.read_csv(positive_samples_w_path)
     positive_samples_index = MultiIndex.from_tuples(zip(
         positive_samples.index, positive_samples), names=[constants.QID, constants.TID])
 
-    feature_vectors = concat(feature_vectors, sort=False).fillna(
+    feature_vectors = pd.read_csv(feature_vectors_w_path).fillna(
         constants.FEATURE_MISSING_VALUE)
 
     # dump final data so we can reuse it next time
