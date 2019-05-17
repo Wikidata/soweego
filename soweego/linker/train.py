@@ -33,7 +33,7 @@ LOGGER = logging.getLogger(__name__)
 @click.argument('target', type=click.Choice(target_database.supported_targets()))
 @click.argument('target_type', type=click.Choice(target_database.supported_entities()))
 @click.option('--tune', is_flag=True, help='Run grid search for hyperparameters tuning. Default: no.')
-@click.option('-k', '--k-folds', default=5, help="Number of folds for hyperparameters tuning. Implies '--tune' Default: 5.")
+@click.option('-k', '--k-folds', default=5, help="Number of folds for hyperparameters tuning. Use with '--tune' Default: 5.")
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER,
               help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER)
 @click.pass_context

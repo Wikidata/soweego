@@ -38,7 +38,7 @@ LOGGER = logging.getLogger(__name__)
 @click.option('-k', '--k-folds', default=5, help="Number of folds, default: 5.")
 @click.option('-m', '--metric', type=click.Choice(constants.PERFORMANCE_METRICS),
               default='f1',
-              help="Performance metric for nested cross-validation. Implies '--nested'. Default: f1.")
+              help="Performance metric for nested cross-validation. Use with '--nested'. Default: f1.")
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER, help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER)
 @click.pass_context
 def cli(ctx, classifier, target, target_type, nested, single, k_folds, metric, dir_io):
