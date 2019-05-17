@@ -40,19 +40,11 @@ def works_people_cli(catalog, entity, upload, sandbox, dir_io):
         to_upload = set()
     statements = generate_statements(catalog, entity)
 
-    # Boolean to run IMDb-specific checks
-    is_imdb = catalog == keys.IMDB
-    catalog_qid = target_database.get_catalog_qid(catalog)
-    person_pid = target_database.get_person_pid(catalog)
-
     with open(os.path.join(dir_io, constants.WORKS_BY_PEOPLE_STATEMENTS % (catalog, entity)), 'w', 1) as fout:
         for subj, pred, obj, tid in statements:
             fout.write(f'{subj},{pred},{obj},{tid}\n')
-            if sandbox:
-                wikidata_bot.add_or_reference_works(
-                    vocabulary.SANDBOX_3, pred, obj, catalog_qid, person_pid, tid, is_imdb=is_imdb)
             if upload:
-                # Fill a list from the statements generator
+                # Fill a set from the statements generator
                 # to prevent lost connections to the SQL DB
                 to_upload.add((subj, pred, obj, tid))
 
@@ -112,7 +104,7 @@ def _invert_and_simplify(dictionary):
         for tid in tids:
             qid_already_there = inverted.get(tid)
             if qid_already_there:
-                LOGGER.warning(
+                LOGGER.debug(
                     'Target ID %s has multiple QIDs. Skipping %s, keeping %s', tid, qid, qid_already_there)
                 continue
             inverted[tid] = qid
