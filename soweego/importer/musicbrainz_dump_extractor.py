@@ -12,28 +12,29 @@ __copyright__ = 'Copyleft 2018, MaxFrax96'
 import logging
 import os
 import re
+import shutil
 import tarfile
 from collections import defaultdict
 from csv import DictReader
 from datetime import date, datetime
 from typing import Iterable, Tuple
 
+from soweego.commons.utils import  count_num_lines_in_file
+
 import requests
-import shutil
+from sqlalchemy.exc import IntegrityError
+from tqdm import tqdm
 
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models.base_entity import BaseEntity
-from soweego.importer.models.musicbrainz_entity import (ARTIST_TABLE,
-                                                        MusicBrainzArtistBandRelationship,
+from soweego.importer.models.musicbrainz_entity import (MusicBrainzArtistBandRelationship,
                                                         MusicbrainzArtistEntity,
                                                         MusicbrainzArtistLinkEntity,
                                                         MusicbrainzBandEntity,
                                                         MusicbrainzBandLinkEntity)
 from soweego.wikidata.sparql_queries import external_id_pids_and_urls_query
-from sqlalchemy.exc import IntegrityError
-from tqdm import tqdm
 
 LOGGER = logging.getLogger(__name__)
 
@@ -200,7 +201,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                                            fieldnames=[i for i in range(0, 6)])
 
             for relationship in tqdm(url_relationships,
-                                     total=self._count_num_lines_in_file(tsvfile)):
+                                     total=count_num_lines_in_file(tsvfile)):
                 # url id matched with its user id
                 if relationship[3] in urlid_artistid_relationship:
                     LOGGER.warning(
@@ -223,7 +224,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                               fieldnames=[i for i in range(0, 5)])
 
             for url_record in tqdm(urls,
-                                   total=self._count_num_lines_in_file(tsvfile)):
+                                   total=count_num_lines_in_file(tsvfile)):
 
                 urlid = url_record[0]
                 if urlid in urlid_artistid_relationship:
@@ -249,7 +250,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
         with open(artist_path, 'r') as artistfile:
 
-            n_rows = self._count_num_lines_in_file(artistfile)
+            n_rows = count_num_lines_in_file(artistfile)
             artist_link_reader = DictReader(artistfile, delimiter='\t',
                                             fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month',
                                                         'b_day',
@@ -303,7 +304,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
         with open(artist_path, 'r') as artistfile:
 
-            n_rows = self._count_num_lines_in_file(artistfile)
+            n_rows = count_num_lines_in_file(artistfile)
 
             artist_isni_reader = DictReader(artistfile, delimiter='\t',
                                             fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month',
@@ -354,7 +355,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         with open(artist_path, 'r') as artistfile:
 
-            n_rows = self._count_num_lines_in_file(artistfile)
+            n_rows = count_num_lines_in_file(artistfile)
 
             artist_reader = DictReader(artistfile, delimiter='\t',
                                        fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
@@ -541,12 +542,3 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
     def _artist_gender(self, gender_code):
         genders = {'1': 'male', '2': 'female'}
         return genders.get(gender_code, None)
-
-    def _count_num_lines_in_file(self, file_) -> int:
-
-        # count number of rows and go back to
-        # the beginning of file
-        n_rows = sum(1 for line in file_)
-        file_.seek(0)
-
-        return n_rows
