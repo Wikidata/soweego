@@ -30,7 +30,6 @@ DUMP_URL_MOVIE_INFO = 'https://datasets.imdbws.com/title.basics.tsv.gz'
 
 
 class ImdbDumpExtractor(BaseDumpExtractor):
-
     # Counters
     n_actors = 0
     n_directors = 0
@@ -260,7 +259,6 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 # adding everything to session and commiting once the for loop
                 # is done
                 if len(entity_array) >= self._sqlalchemy_commit_every:
-
                     LOGGER.info('Adding batch of entities to the database, this might take a couple of minutes. '
                                 'Progress will resume soon.')
 
@@ -273,7 +271,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                     entity_array.clear()  # clear entity array
 
                     LOGGER.debug('It took %s to add %s entities to the database',
-                                 datetime.datetime.now()-insert_start_time,
+                                 datetime.datetime.now() - insert_start_time,
                                  len(entity_array))
 
             # commit remaining entities
@@ -332,7 +330,6 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         # The array of primary professions gets translated to a list
         # of the QIDs that represent said professions in Wikidata
         if person_info.get('primaryProfession'):
-
             # get QIDs of occupations for person
             translated_occupations = self._translate_professions(
                 person_info.get('primaryProfession').split(',')
@@ -366,7 +363,6 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             'knownForTitles').split(',')
 
         for title in know_for_titles:
-
             entity_array.append(imdb_entity.ImdbPersonMovieRelationship(
                 from_catalog_id=person_info.get('nconst'),
                 to_catalog_id=title

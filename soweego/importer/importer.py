@@ -46,7 +46,11 @@ def _resolve_url(res):
 @click.command()
 @click.argument('catalog', type=click.Choice(target_database.available_targets()))
 def check_links_cli(catalog: str):
-    """Check for rotten URLs of an imported catalog."""
+    """
+    Check for rotten URLs of an imported catalog.
+
+    :param catalog: one of the keys of constants.TARGET_CATALOGS
+    """
     for entity_type in target_database.available_types_for_target(catalog):
 
         LOGGER.info("Validating %s %s links...", catalog, entity_type)
@@ -84,12 +88,16 @@ def check_links_cli(catalog: str):
 
 class Importer:
 
-    def refresh_dump(self, output_folder: str, downloader: BaseDumpExtractor, resolve: bool):
-        """Downloads the dump, if necessary,
-        and calls the handler over the dump file"""
+    def refresh_dump(self, output_folder: str, extractor: BaseDumpExtractor, resolve: bool):
+        """
+        Downloads the dump, if necessary, and calls the handler over the dump file
+        :param output_folder: folder in which the downloaded dumps will be stored
+        :param extractor: BaseDumpExtractor implementation to process the dump
+        :param resolve: try to resolve each url in the dump to check if it works?
+        """
         filepaths = []
 
-        for download_url in downloader.get_dump_download_urls():
+        for download_url in extractor.get_dump_download_urls():
 
             LOGGER.info("Retrieving last modified of %s", download_url)
 
@@ -117,7 +125,7 @@ class Importer:
                 self._update_dump(download_url, file_full_path)
             filepaths.append(file_full_path)
 
-        downloader.extract_and_populate(filepaths, resolve)
+        extractor.extract_and_populate(filepaths, resolve)
 
     def _update_dump(self, dump_url: str, file_output_path: str):
         """Download the dump"""

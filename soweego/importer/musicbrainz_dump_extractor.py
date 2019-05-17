@@ -111,13 +111,13 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         LOGGER.info("Dropped and created tables %s", tables)
         LOGGER.info("Importing relationships artist-band")
 
-        def relationships_uniqueness_filter():
+        def _relationships_uniqueness_filter():
             yield from [MusicBrainzArtistBandRelationship(item[0], item[1]) for item in
                         set(self._artist_band_relationship_generator(dump_path))]
 
         relationships_count = self._add_entities_from_generator(
             db_manager,
-            relationships_uniqueness_filter
+            _relationships_uniqueness_filter
         )
 
         LOGGER.debug("Added %s/%s relationships records",
