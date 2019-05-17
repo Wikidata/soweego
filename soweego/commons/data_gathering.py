@@ -57,7 +57,7 @@ def gather_target_metadata(entity_type, catalog):
     return result
 
 
-def tokens_fulltext_search(target_entity: constants.DB_ENTITY, boolean_mode: bool, tokens: Iterable[str],
+def tokens_fulltext_search(target_entity: constants.DB_ENTITY, boolean_mode: bool, to_search: Iterable[str],
                            where_clause=None, limit: int = 10) -> Iterable[constants.DB_ENTITY]:
     if issubclass(target_entity, models.base_entity.BaseEntity):
         column = target_entity.name_tokens
@@ -69,9 +69,9 @@ def tokens_fulltext_search(target_entity: constants.DB_ENTITY, boolean_mode: boo
         LOGGER.critical('Bad target entity class: %s', target_entity)
         raise ValueError('Bad target entity class: %s' % target_entity)
 
-    tokens = filter(None, tokens)
-    terms = ' '.join(map('+{0}'.format, tokens)
-                     ) if boolean_mode else ' '.join(tokens)
+    to_search = filter(None, to_search)
+    terms = ' '.join(map('+{0}'.format, to_search)
+                     ) if boolean_mode else ' '.join(to_search)
     ft_search = column.match(terms)
 
     session = DBManager.connect_to_db()
@@ -89,12 +89,12 @@ def tokens_fulltext_search(target_entity: constants.DB_ENTITY, boolean_mode: boo
                 "No result from full-text index query to %s. Terms: '%s'", target_entity.__name__, terms)
             session.commit()
         else:
-            for row in query:
-                yield row
-            session.commit()
+            return query.all()
+
     except:
         session.rollback()
         raise
+
     finally:
         session.close()
 

@@ -113,8 +113,11 @@ def build_dataset(goal, catalog, entity, dir_io):
         positive_samples.append(wd_chunk[constants.TID])
 
         # Samples index from Wikidata
-        all_samples = blocking.full_text_query_block(
-            goal, catalog, wd_chunk[constants.NAME_TOKENS], i, target_database.get_entity(catalog, entity), dir_io)
+        all_samples = blocking.prefect_block_on_column(
+            goal, catalog, entity,
+            # for train we always block on name tokens
+            wd_chunk[constants.NAME_TOKENS],
+            i, dir_io, target_column=constants.NAME_TOKENS)
 
         # Build target chunk based on samples
         target_reader = data_gathering.gather_target_dataset(
