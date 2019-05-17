@@ -5,10 +5,8 @@
 import logging
 import os
 import re
-from csv import DictReader
 
 import click
-import numpy as np
 import pandas as pd
 import recordlinkage as rl
 from numpy import full, nan

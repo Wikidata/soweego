@@ -19,14 +19,13 @@ from csv import DictReader
 from datetime import date, datetime
 from typing import Iterable, Tuple
 
-from soweego.commons.utils import  count_num_lines_in_file
-
 import requests
 from sqlalchemy.exc import IntegrityError
 from tqdm import tqdm
 
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
+from soweego.commons.utils import count_num_lines_in_file
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.musicbrainz_entity import (MusicBrainzArtistBandRelationship,

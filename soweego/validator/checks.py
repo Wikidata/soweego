@@ -15,7 +15,7 @@ from collections import defaultdict
 
 import click
 
-from soweego.commons import constants, data_gathering, target_database, constants
+from soweego.commons import data_gathering, target_database, constants
 from soweego.commons.db_manager import DBManager
 from soweego.ingestor import wikidata_bot
 

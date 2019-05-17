@@ -2,9 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """Dump extractor abstract class"""
-import time
-
 import logging
+import time
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'

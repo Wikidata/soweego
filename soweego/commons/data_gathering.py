@@ -18,13 +18,14 @@ from typing import Iterable
 
 import regex
 from pandas import read_sql
+from sqlalchemy import or_
+from sqlalchemy.orm.query import Query
+
 from soweego.commons import constants, target_database, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer import models
 from soweego.linker import workflow
 from soweego.wikidata import api_requests, sparql_queries, vocabulary
-from sqlalchemy import or_
-from sqlalchemy.orm.query import Query
 
 LOGGER = logging.getLogger(__name__)
 

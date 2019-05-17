@@ -17,10 +17,10 @@ import xml.etree.ElementTree as et
 from datetime import date, datetime
 from typing import Iterable, Tuple
 
+from lxml import etree
 from requests import get
 from tqdm import tqdm
 
-from lxml import etree
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor

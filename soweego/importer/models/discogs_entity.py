@@ -9,11 +9,12 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+from sqlalchemy import Column, String
+from sqlalchemy.ext.declarative import declarative_base
+
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.base_link_entity import BaseLinkEntity
 from soweego.importer.models.base_nlp_entity import BaseNlpEntity
-from sqlalchemy import Column, String
-from sqlalchemy.ext.declarative import declarative_base
 
 BASE = declarative_base()
 BASE_ENTITY = 'discogs_base_entity'
