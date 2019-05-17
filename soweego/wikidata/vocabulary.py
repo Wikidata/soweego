@@ -146,6 +146,9 @@ LINKER_PIDS = {
     OCCUPATION: keys.OCCUPATION
 }
 
+# Generic property for work -> person
+PARTICIPANT = 'P710'
+
 # Music domain properties for linking
 MEMBER_OF = 'P463'  # Musician -> bands
 HAS_PART = 'P527'  # Band -> musicians
@@ -155,7 +158,9 @@ PERFORMER = 'P175'  # Album -> musician/band
 CAST_MEMBER = 'P161'  # Movie -> actor
 DIRECTOR = 'P57'  # Movie -> director
 PRODUCER = 'P162'  # Movie -> producer
-SCREENWRITER_QID = 'P58'  # Movie -> writer
+SCREENWRITER = 'P58'  # Movie -> writer
+FILM_CREW_MEMBER = 'P3092'  # Movie -> other occupation
+MOVIE_PIDS = (CAST_MEMBER, DIRECTOR, PRODUCER, SCREENWRITER, FILM_CREW_MEMBER)
 
 # Date precision
 # See https://www.wikidata.org/wiki/Special:ListDatatypes
@@ -241,11 +246,11 @@ WORKS_BY_PEOPLE_MAPPING = {
         keys.MUSICIAN: PERFORMER
     },
     keys.IMDB: {
-        keys.ACTOR: CAST_MEMBER,
-        keys.DIRECTOR: DIRECTOR,
-        keys.MUSICIAN: PERFORMER,
-        keys.PRODUCER: PRODUCER,
-        keys.WRITER: SCREENWRITER_QID
+        keys.ACTOR: PARTICIPANT,
+        keys.DIRECTOR: PARTICIPANT,
+        keys.MUSICIAN: PARTICIPANT,
+        keys.PRODUCER: PARTICIPANT,
+        keys.WRITER: PARTICIPANT
     },
     keys.MUSICBRAINZ: {
         keys.BAND: PERFORMER,
