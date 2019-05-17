@@ -2,8 +2,23 @@
 # -*- coding: utf-8 -*-
 
 """TODO module docstring"""
+import gzip
+import json
+import logging
+import re
 from datetime import datetime
+from os import path
+from typing import Iterable, Tuple
 
+import click
+from sqlalchemy.exc import ProgrammingError
+from tqdm import tqdm
+
+from soweego.commons import (constants, data_gathering, target_database,
+                             text_utils, url_utils)
+from soweego.importer.models.base_entity import BaseEntity
+from soweego.ingestor import wikidata_bot
+from soweego.wikidata.api_requests import get_data_for_linker
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -11,23 +26,8 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
-import gzip
-import json
-import logging
-from os import path
-import re
-from typing import Iterable, Tuple
-from tqdm import tqdm
 
-import click
-from sqlalchemy.exc import ProgrammingError
 
-from soweego.commons import (data_gathering, target_database, text_utils,
-                             url_utils)
-from soweego.importer.models.base_entity import BaseEntity
-from soweego.ingestor import wikidata_bot
-from soweego.commons import constants
-from soweego.wikidata.api_requests import get_data_for_linker
 
 LOGGER = logging.getLogger(__name__)
 WD_IO_FILENAME = 'wikidata_%s_dataset.jsonl.gz'
@@ -109,6 +109,7 @@ def cli(target, target_type, strategy, check_dates, upload, sandbox, output_dir)
 @click.option('-o', '--output-dir', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER,
               help="default: '%s" % constants.SHARED_FOLDER)
 def extract_available_matches_in_target(target, target_type, upload, sandbox, output_dir):
+    """"""
     target_link_entity = target_database.get_link_entity(target, target_type)
     target_pid = target_database.get_pid(target)
 

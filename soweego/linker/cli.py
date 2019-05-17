@@ -7,7 +7,7 @@ CLI_COMMANDS = {
     'train': train.cli,
     'classify': classify.cli,
     'evaluate': evaluate.cli,
-    'extract-matches': baseline.extract_available_matches_in_target
+    'extract_': baseline.extract_available_matches_in_target
 }
 
 

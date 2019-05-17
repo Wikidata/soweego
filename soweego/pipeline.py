@@ -2,10 +2,11 @@ import logging
 from typing import Callable
 
 import click
+
 from soweego.commons import target_database
 from soweego.commons.db_manager import DBManager
-from soweego.importer.importer import import_cli, validate_links_cli
-from soweego.linker import baseline, evaluate, train, classify
+from soweego.importer.importer import check_links_cli, import_cli
+from soweego.linker import baseline, classify, evaluate, train
 from soweego.validator.checks import (check_existence_cli, check_links_cli,
                                       check_metadata_cli)
 
@@ -48,9 +49,9 @@ def cli(target: str, validator: bool, importer: bool, linker: bool, upload: bool
 
 def _importer(target: str):
     LOGGER.info("Running importer for target: %s without resolving the URLs" % target)
-    _invoke_no_exit(import_cli, [target, '--no-resolve'])
+    _invoke_no_exit(import_cli, [target])
     LOGGER.info("Validating URL resolving them for target %s" % target)
-    _invoke_no_exit(validate_links_cli, [target])
+    _invoke_no_exit(check_links_cli, [target])
 
 
 def _linker(target: str, upload: bool):

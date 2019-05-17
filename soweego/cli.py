@@ -12,11 +12,11 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import logging
 
 import click
+
 from soweego import (commons, importer, ingestor, linker, pipeline, validator,
                      wikidata)
-                     
+
 CLI_COMMANDS = {
-    'commons': commons.cli.cli,
     'importer': importer.cli.cli,
     'ingestor': ingestor.cli.cli,
     'linker': linker.cli.cli,

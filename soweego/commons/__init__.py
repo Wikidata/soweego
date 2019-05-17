@@ -1,1 +1,1 @@
-from soweego.commons import cli, logging
+from soweego.commons import logging
