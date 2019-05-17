@@ -26,7 +26,7 @@ BASE_PERSON_TABLE = 'imdb_base_person'
 DIRECTOR_TABLE = 'imdb_director'
 MOVIE_TABLE = 'imdb_movie'
 MUSICIAN_TABLE = 'imdb_musician'
-PERSON_MOVIE_RELATIONSHIP_TABLE = 'imdb_person_movie_relationship'
+MOVIE_PERSON_RELATIONSHIP_TABLE = 'imdb_movie_person_relationship'
 PRODUCER_TABLE = 'imdb_producer'
 WRITER_TABLE = 'imdb_writer'
 
@@ -124,8 +124,8 @@ class ImdbWriterEntity(ImdbPersonEntity):
         'concrete': True}
 
 
-class ImdbPersonMovieRelationship(BaseRelationship):
-    __tablename__ = PERSON_MOVIE_RELATIONSHIP_TABLE
+class ImdbMoviePersonRelationship(BaseRelationship):
+    __tablename__ = MOVIE_PERSON_RELATIONSHIP_TABLE
 
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
