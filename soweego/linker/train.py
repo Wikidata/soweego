@@ -150,11 +150,12 @@ def build_dataset(goal, catalog, entity, dir_io):
 
         need_working_header = False
 
-    positive_samples = pd.read_csv(positive_samples_w_path)
+    positive_samples = pd.read_csv(
+        positive_samples_w_path, index_col='qid')['tid']
     positive_samples_index = MultiIndex.from_tuples(zip(
         positive_samples.index, positive_samples), names=[constants.QID, constants.TID])
 
-    feature_vectors = pd.read_csv(feature_vectors_w_path).fillna(
+    feature_vectors = pd.read_csv(feature_vectors_w_path, index_col=['qid', 'tid']).fillna(
         constants.FEATURE_MISSING_VALUE)
 
     # dump final data so we can reuse it next time
