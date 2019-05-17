@@ -7,7 +7,9 @@ from typing import Iterable, Tuple
 
 import click
 import jellyfish
-from soweego.commons import data_gathering, target_database, text_utils, constants
+
+from soweego.commons import (constants, data_gathering, target_database,
+                             text_utils)
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.ingestor import wikidata_bot
 from soweego.wikidata.api_requests import get_data_for_linker
@@ -38,8 +40,8 @@ def cli(target, target_type, strategy, upload, sandbox, threshold, output_dir):
             target_type, target, target_database.get_person_pid(target))
         url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
         with gzip.open(wd_io_path, 'wt') as wd_io:
-            get_data_for_linker(target, qids, url_pids, ext_id_pids_to_urls, wd_io)
-            LOGGER.info("Wikidata stream stored in %s" % wd_io_path)
+            get_data_for_linker(target, qids, url_pids, ext_id_pids_to_urls, wd_io, None)
+            LOGGER.info("Wikidata stream stored in %s", wd_io_path)
 
     target_entity = target_database.get_main_entity(target, target_type)
     target_pid = target_database.get_person_pid(target)
@@ -47,8 +49,8 @@ def cli(target, target_type, strategy, upload, sandbox, threshold, output_dir):
         result = edit_distance_match(
             wd_io, target_entity, target_pid, strategy, threshold)
         if upload:
-            wikidata_bot.add_statements(
-                result, target_database.get_class_qid(target), sandbox)
+            wikidata_bot.add_people_statements(
+                result, target_database.get_catalog_qid(target), sandbox)
         else:
             filepath = path.join(output_dir, 'edit_distance_%s.csv' % strategy)
             with open(filepath, 'w') as filehandle:
