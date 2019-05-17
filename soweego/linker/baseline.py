@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""TODO module docstring"""
+"""Performs some naive linking techniques"""
 import gzip
 import json
 import logging
@@ -16,6 +16,7 @@ from tqdm import tqdm
 
 from soweego.commons import (constants, data_gathering, target_database,
                              text_utils, url_utils)
+from soweego.commons.utils import count_num_lines_in_file
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.ingestor import wikidata_bot
 from soweego.wikidata.api_requests import get_data_for_linker
@@ -25,9 +26,6 @@ __email__ = 'fossati@spaziodati.eu'
 __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
-
-
-
 
 LOGGER = logging.getLogger(__name__)
 WD_IO_FILENAME = 'wikidata_%s_dataset.jsonl.gz'
@@ -155,7 +153,7 @@ def perfect_name_match(source_dataset, target_entity: BaseEntity, target_pid: st
     bucket_size = 100
     bucket_names = set()
     bucket = []
-    total = _count_num_lines_in_file(source_dataset)
+    total = count_num_lines_in_file(source_dataset)
     missing = total
     for row_entity in tqdm(source_dataset, total=total):
         entity = json.loads(row_entity)
@@ -184,7 +182,7 @@ def similar_name_tokens_match(source, target, target_pid: str, compare_dates: bo
     """
     to_exclude = set()
 
-    for row_entity in tqdm(source, total=_count_num_lines_in_file(source)):
+    for row_entity in tqdm(source, total=count_num_lines_in_file(source)):
         entity = json.loads(row_entity)
         qid = entity[constants.QID]
         for label in entity[constants.NAME]:
@@ -220,7 +218,7 @@ def similar_link_tokens_match(source, target, target_pid: str) -> Iterable[Tuple
     """
     to_exclude = set()
 
-    for row_entity in tqdm(source, total=_count_num_lines_in_file(source)):
+    for row_entity in tqdm(source, total=count_num_lines_in_file(source)):
         entity = json.loads(row_entity)
         qid = entity[constants.QID]
         for url in entity[constants.URL]:
@@ -284,12 +282,3 @@ def birth_death_date_match(target_entity: BaseEntity, wikidata_entity: dict) -> 
             return True
 
     return False
-
-
-def _count_num_lines_in_file(file_) -> int:
-    # count number of rows and go back to
-    # the beginning of file
-    n_rows = len(file_.readlines())
-    file_.seek(0)
-
-    return n_rows
