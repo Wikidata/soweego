@@ -108,6 +108,22 @@ def build_dataset(goal, catalog, entity, dir_io):
 
     positive_samples = feature_vectors = None
 
+    positive_samples_w_path = os.path.join(dir_io,
+                                           '%s_%s_%s_positive_samples_working.csv.gz' % (
+                                               catalog, entity, goal
+                                           ))
+    feature_vectors_w_path = os.path.join(dir_io,
+                                          '%s_%s_%s_feature_vectors_working.csv.gz' % (
+                                              catalog, entity, goal
+                                          ))
+
+    for working_file in [positive_samples_w_path, feature_vectors_w_path]:
+        if os.path.exists(working_file):
+            os.remove(working_file)
+
+    # flag that indicates we need to add a header the first time we write
+    # to working file
+    need_working_header = True
     for i, wd_chunk in enumerate(wd_generator, 1):
         # Positive samples from Wikidata
         if positive_samples is None:
