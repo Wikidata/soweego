@@ -1,10 +1,9 @@
 import click
 
-from soweego.linker import baseline, classify, edit_distance, evaluate, train
+from soweego.linker import baseline, classify, evaluate, train
 
 CLI_COMMANDS = {
     'baseline': baseline.cli,
-    'edit-distance': edit_distance.cli,
     'train': train.cli,
     'classify': classify.cli,
     'evaluate': evaluate.cli,
