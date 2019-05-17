@@ -3,28 +3,23 @@
 
 """Generic service for dump updating/importing"""
 
-__author__ = 'Edoardo Lenzi'
-__email__ = 'edoardolenzi9@gmail.com'
+__author__ = 'Massimo Frasson'
+__email__ = 'maxfrax@gmail.com'
 __version__ = '1.0'
 __license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2018, lenzi.edoardo'
+__copyright__ = 'Copyleft 2018, Massimo Frasson'
 
 import datetime
 import logging
 import os
+from multiprocessing import Pool
 
 import click
-from soweego.commons import target_database, url_utils, constants
-from soweego.commons import constants as const
-from soweego.commons import http_client as client
-from soweego.importer.base_dump_extractor import BaseDumpExtractor
-from soweego.importer.discogs_dump_extractor import DiscogsDumpExtractor
-from soweego.importer.imdb_dump_extractor import ImdbDumpExtractor
-from soweego.importer.musicbrainz_dump_extractor import \
-    MusicBrainzDumpExtractor
-from soweego.commons.db_manager import DBManager
-from multiprocessing import Pool
 from tqdm import tqdm
+from soweego.importer.base_dump_extractor import BaseDumpExtractor
+from soweego.commons import http_client as client, constants
+from soweego.commons import target_database, url_utils
+from soweego.commons.db_manager import DBManager
 
 LOGGER = logging.getLogger(__name__)
 
@@ -33,20 +28,12 @@ LOGGER = logging.getLogger(__name__)
 @click.argument('catalog', type=click.Choice(target_database.available_targets()))
 @click.option('--resolve/--no-resolve', default=True,
               help='Resolves all the links to check if they are valid. Default: yes.')
-@click.option('--output', '-o', default=const.SHARED_FOLDER, type=click.Path())
+@click.option('--output', '-o', default=constants.SHARED_FOLDER, type=click.Path())
 def import_cli(catalog: str, resolve: bool, output: str) -> None:
     """Download, extract and import an available catalog."""
-    importer = Importer()
-    extractor = BaseDumpExtractor()
 
-    if catalog == 'discogs':
-        extractor = DiscogsDumpExtractor()
-    elif catalog == 'musicbrainz':
-        extractor = MusicBrainzDumpExtractor()
-    elif catalog == "imdb":
-        extractor = ImdbDumpExtractor()
-
-    importer.refresh_dump(output, extractor, resolve)
+    extractor = constants.DUMP_EXTRACTOR[catalog]
+    Importer().refresh_dump(output, extractor, resolve)
 
 
 def _resolve_url(res):
@@ -126,6 +113,6 @@ class Importer:
 
         downloader.extract_and_populate(filepaths, resolve)
 
-    def _update_dump(self, dump_url: str, file_output_path: str) -> None:
+    def _update_dump(self, dump_url: str, file_output_path: str):
         """Download the dump"""
         client.download_file(dump_url, file_output_path)

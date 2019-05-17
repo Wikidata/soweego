@@ -11,7 +11,7 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 from typing import TypeVar
 
-from soweego.importer import models
+from soweego.importer import models, discogs_dump_extractor, musicbrainz_dump_extractor, imdb_dump_extractor
 from soweego.wikidata import vocabulary
 
 # Miscellanea
@@ -51,6 +51,13 @@ HANDLED_ENTITIES = {
 # DB entity Python types for typed function signatures
 DB_ENTITY = TypeVar('DB_ENTITY', models.base_entity.BaseEntity,
                     models.base_link_entity.BaseLinkEntity, models.base_nlp_entity.BaseNlpEntity)
+
+# Dump extractors
+DUMP_EXTRACTOR = {
+    'discogs': discogs_dump_extractor.DiscogsDumpExtractor,
+    'musicbrainz': musicbrainz_dump_extractor.MusicBrainzDumpExtractor,
+    'imdb': imdb_dump_extractor.ImdbDumpExtractor
+}
 
 # DB entities and their Wikidata class QID
 TARGET_CATALOGS = {
@@ -209,7 +216,7 @@ CLASSIFIERS = {
     'nb': NAIVE_BAYES,  # Shorthand
     'svm': SVM,  # Shorthand
     'lsvm': LINEAR_SVM,  # Shorthand
-    'slp': SINGLE_LAYER_PERCEPTRON , # Shorthand
+    'slp': SINGLE_LAYER_PERCEPTRON,  # Shorthand
     'mlp': MULTILAYER_CLASSIFIER  # Shorthand
 }
 

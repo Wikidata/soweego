@@ -9,6 +9,11 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, tupini07'
 
+
+from sqlalchemy import (Boolean, Column, Integer, String,
+                        Text)
+from sqlalchemy.ext.declarative import declarative_base
+
 from soweego.importer.models.base_entity import BaseEntity, BaseRelationship
 from soweego.wikidata import vocabulary
 from sqlalchemy import Boolean, Column, Integer, String
@@ -35,6 +40,8 @@ class ImdbMovieEntity(BaseEntity):
                          primary_key=True, autoincrement=True)
 
     title_type = Column(String(100))
+    primary_title = Column(Text)
+    original_title = Column(Text)
     is_adult = Column(Boolean)
     runtime_minutes = Column(Integer)
     genres = Column(String(255), nullable=True)
@@ -78,7 +85,7 @@ class ImdbActorEntity(ImdbPersonEntity):
 
 class ImdbDirectorEntity(ImdbPersonEntity):
     table_occupation = vocabulary.FILM_DIRECTOR
-    
+
     __tablename__ = DIRECTOR_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
