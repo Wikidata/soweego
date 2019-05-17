@@ -12,7 +12,8 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 from typing import TypeVar
 
 from soweego.commons import keys
-from soweego.importer import models
+from soweego.importer import (discogs_dump_extractor, imdb_dump_extractor,
+                              models, musicbrainz_dump_extractor)
 from soweego.wikidata import vocabulary
 
 # Wikidata items & properties regexes
@@ -39,6 +40,13 @@ SUPPORTED_ENTITIES = {
 # DB entity Python types for typed function signatures
 DB_ENTITY = TypeVar('DB_ENTITY', models.base_entity.BaseEntity,
                     models.base_link_entity.BaseLinkEntity, models.base_nlp_entity.BaseNlpEntity)
+
+# Dump extractors
+DUMP_EXTRACTOR = {
+    'discogs': discogs_dump_extractor.DiscogsDumpExtractor,
+    'musicbrainz': musicbrainz_dump_extractor.MusicBrainzDumpExtractor,
+    'imdb': imdb_dump_extractor.ImdbDumpExtractor
+}
 
 # DB entities and their Wikidata class QID
 # TODO merge discogs & musicbrainz 'release' entities with issue-80 branch

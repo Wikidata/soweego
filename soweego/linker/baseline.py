@@ -108,6 +108,7 @@ def cli(target, target_type, strategy, check_dates, upload, sandbox, output_dir)
 @click.option('-o', '--output-dir', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER,
               help="default: '%s" % constants.SHARED_FOLDER)
 def extract_available_matches_in_target(target, target_type, upload, sandbox, output_dir):
+    """"""
     target_link_entity = target_database.get_link_entity(target, target_type)
     target_pid = target_database.get_person_pid(target)
 

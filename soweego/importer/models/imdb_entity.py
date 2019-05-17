@@ -9,14 +9,10 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, tupini07'
 
-from sqlalchemy import (Boolean, Column, ForeignKey, Index, Integer, String,
-                        Table, UniqueConstraint)
+from sqlalchemy import Boolean, Column, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import relationship
 
 from soweego.importer.models.base_entity import BaseEntity, BaseRelationship
-from soweego.importer.models.base_link_entity import BaseLinkEntity
 from soweego.wikidata import vocabulary
 
 BASE = declarative_base()
@@ -30,6 +26,7 @@ MOVIE_PERSON_RELATIONSHIP_TABLE = 'imdb_movie_person_relationship'
 PRODUCER_TABLE = 'imdb_producer'
 WRITER_TABLE = 'imdb_writer'
 
+
 # actor, director, producer e writer
 
 
@@ -41,8 +38,8 @@ class ImdbMovieEntity(BASE):
     # Catalog identifier, indexed
     catalog_id = Column(String(50), nullable=False, index=True)
     title_type = Column(String(100))
-    primary_title = Column(String(255))
-    original_title = Column(String(255))
+    primary_title = Column(Text)
+    original_title = Column(Text)
     is_adult = Column(Boolean)
 
     start_year = Column(Integer, nullable=True)

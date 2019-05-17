@@ -3,11 +3,11 @@
 
 """Generic service for dump updating/importing"""
 
-__author__ = 'Edoardo Lenzi'
-__email__ = 'edoardolenzi9@gmail.com'
+__author__ = 'Massimo Frasson'
+__email__ = 'maxfrax@gmail.com'
 __version__ = '1.0'
 __license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2018, lenzi.edoardo'
+__copyright__ = 'Copyleft 2018, Massimo Frasson'
 
 import datetime
 import logging
@@ -22,32 +22,21 @@ from soweego.commons import http_client as client
 from soweego.commons import keys, target_database, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
-from soweego.importer.discogs_dump_extractor import DiscogsDumpExtractor
-from soweego.importer.imdb_dump_extractor import ImdbDumpExtractor
-from soweego.importer.musicbrainz_dump_extractor import \
-    MusicBrainzDumpExtractor
 
 LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
-@click.argument('catalog', type=click.Choice(target_database.supported_targets()))
-@click.option('--resolve/--no-resolve', default=True,
-              help='Resolves all the links to check if they are valid. Default: yes.')
-@click.option('--output', '-o', default=constants.SHARED_FOLDER, type=click.Path())
-def import_cli(catalog: str, resolve: bool, output: str) -> None:
+@click.argument('catalog', type=click.Choice(target_database.available_targets()))
+@click.option('--url-check', is_flag=True,
+              help='Check for rotten URLs while importing. Default: no. WARNING: this will dramatically increase the import time.')
+@click.option('-d', '--dir-io', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER,
+              help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER)
+def import_cli(catalog: str, url_check: bool, dir_io: str) -> None:
     """Download, extract and import an available catalog."""
-    importer = Importer()
-    extractor = BaseDumpExtractor()
 
-    if catalog == 'discogs':
-        extractor = DiscogsDumpExtractor()
-    elif catalog == 'musicbrainz':
-        extractor = MusicBrainzDumpExtractor()
-    elif catalog == 'imdb':
-        extractor = ImdbDumpExtractor()
-
-    importer.refresh_dump(output, extractor, resolve)
+    extractor = constants.DUMP_EXTRACTOR[catalog]
+    Importer().refresh_dump(dir_io, extractor, url_check)
 
 
 def _resolve_url(res):
@@ -55,15 +44,16 @@ def _resolve_url(res):
 
 
 @click.command()
-@click.argument('catalog', type=click.Choice(target_database.supported_targets()))
-def validate_links_cli(catalog: str):
-    for entity_type in target_database.supported_entities_for_target(catalog):
+@click.argument('catalog', type=click.Choice(target_database.available_targets()))
+def check_links_cli(catalog: str):
+    """Check for rotten URLs of an imported catalog."""
+    for entity_type in target_database.available_types_for_target(catalog):
 
-        LOGGER.info("Validating %s %s links..." % (catalog, entity_type))
+        LOGGER.info("Validating %s %s links...", catalog, entity_type)
         entity = target_database.get_link_entity(catalog, entity_type)
         if not entity:
-            LOGGER.info("%s %s does not have a links table. Skipping..." %
-                        (catalog, entity_type))
+            LOGGER.info("%s %s does not have a links table. Skipping...",
+                        catalog, entity_type)
             continue
 
         session = DBManager.connect_to_db()
@@ -88,8 +78,8 @@ def validate_links_cli(catalog: str):
                         session_delete.close()
 
         session.close()
-        LOGGER.info("Removed %s/%s from %s %s" %
-                    (removed, total, catalog, entity_type))
+        LOGGER.info("Removed %s/%s from %s %s",
+                    removed, total, catalog, entity_type)
 
 
 class Importer:
@@ -101,10 +91,10 @@ class Importer:
 
         for download_url in downloader.get_dump_download_urls():
 
-            LOGGER.info("Retrieving last modified of %s" % download_url)
+            LOGGER.info("Retrieving last modified of %s", download_url)
 
             last_modified = client.http_call(download_url,
-                                             'HEAD').headers[keys.LAST_MODIFIED]
+                                             'HEAD').headers[constants.LAST_MODIFIED]
 
             try:
                 last_modified = datetime.datetime.strptime(
@@ -123,12 +113,12 @@ class Importer:
             # Check if the current dump is up-to-date
             if not os.path.isfile(file_full_path):
                 LOGGER.info(
-                    "%s not previously downloaded, downloading now..." % download_url)
+                    "%s not previously downloaded, downloading now...", download_url)
                 self._update_dump(download_url, file_full_path)
             filepaths.append(file_full_path)
 
         downloader.extract_and_populate(filepaths, resolve)
 
-    def _update_dump(self, dump_url: str, file_output_path: str) -> None:
+    def _update_dump(self, dump_url: str, file_output_path: str):
         """Download the dump"""
         client.download_file(dump_url, file_output_path)

@@ -180,6 +180,7 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
 
     feature_vectors = compare.compute(
         candidate_pairs, wikidata, target).drop_duplicates()
+        
     pd.to_pickle(feature_vectors, path_io)
 
     LOGGER.info("Features dumped to '%s'", path_io)

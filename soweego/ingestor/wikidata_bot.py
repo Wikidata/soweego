@@ -48,9 +48,11 @@ RETRIEVED_REFERENCE.setTarget(TIMESTAMP)
 @click.command()
 @click.argument('catalog_name', type=click.Choice(['discogs', 'imdb', 'musicbrainz', 'twitter']))
 @click.argument('matches', type=click.File())
-@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits in the Wikidata sandbox item Q4115189')
+@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits in the Wikidata sandbox item Q4115189.')
 def add_identifiers_cli(catalog_name, matches, sandbox):
-    """Bot add identifiers to existing Wikidata items.
+    """Add identifiers to existing Wikidata items.
+
+    MATCHES must be a { QID: catalog_identifier } JSON file.
     """
     if sandbox:
         LOGGER.info('Running on the Wikidata sandbox item')
@@ -60,9 +62,11 @@ def add_identifiers_cli(catalog_name, matches, sandbox):
 @click.command()
 @click.argument('catalog_name', type=click.Choice(['discogs', 'imdb', 'musicbrainz', 'twitter']))
 @click.argument('statements', type=click.File())
-@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits in the Wikidata sandbox item Q4115189')
+@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits in the Wikidata sandbox item Q4115189.')
 def add_statements_cli(catalog_name, statements, sandbox):
-    """Bot add statements to existing Wikidata items.
+    """Add statements to existing Wikidata items.
+
+    STATEMENTS must be a subject, predicate, value TSV file.
     """
     stated_in = target_database.get_catalog_qid(catalog_name)
     if sandbox:
@@ -79,9 +83,11 @@ def add_statements_cli(catalog_name, statements, sandbox):
 @click.command()
 @click.argument('catalog_name', type=click.Choice(['discogs', 'imdb', 'musicbrainz', 'twitter']))
 @click.argument('invalid_identifiers', type=click.File())
-@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits in a random Wikidata sandbox item')
+@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits in a random Wikidata sandbox item.')
 def delete_identifiers_cli(catalog_name, invalid_identifiers, sandbox):
-    """Bot delete invalid identifiers from existing Wikidata items.
+    """Delete invalid identifiers from existing Wikidata items.
+
+    INVALID_IDENTIFIERS must be a { QID: catalog_identifier } JSON file.
     """
     if sandbox:
         LOGGER.info('Running on the Wikidata sandbox item')
@@ -94,7 +100,9 @@ def delete_identifiers_cli(catalog_name, invalid_identifiers, sandbox):
 @click.argument('invalid_identifiers', type=click.File())
 @click.option('-s', '--sandbox', is_flag=True, help='Perform all edits on the Wikidata sandbox item Q4115189')
 def deprecate_identifiers_cli(catalog_name, invalid_identifiers, sandbox):
-    """Bot deprecate invalid identifiers from existing Wikidata items.
+    """Deprecate invalid identifiers from existing Wikidata items.
+
+    INVALID_IDENTIFIERS must be a { QID: catalog_identifier } JSON file.
     """
     if sandbox:
         LOGGER.info('Running on the Wikidata sandbox item')

@@ -85,7 +85,6 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
 
         # Extract dump file if it has not yet been extracted
         if not os.path.exists(extracted_path):
-
             LOGGER.info('Extracting dump file')
 
             with gzip.open(dump_file_path, 'rb') as f_in:
@@ -150,20 +149,9 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                 entity = discogs_entity.DiscogsGroupEntity()
                 self._populate_band(entity_array, entity, identifier,
                                     name, living_links, node)
-            # Can't infer the entity type, so populate both
-            else:
-                LOGGER.debug(
-                    'Unknown artist type. Will add it to both musicians and bands: %s', identifier)
-                entity = discogs_entity.DiscogsMusicianEntity()
-                self._populate_musician(entity_array,
-                                        entity, identifier, name, living_links, node)
-                entity = discogs_entity.DiscogsGroupEntity()
-                self._populate_band(entity_array, entity, identifier,
-                                    name, living_links, node)
 
             # commit in batches of `self._sqlalchemy_commit_every`
             if len(entity_array) >= self._sqlalchemy_commit_every:
-
                 LOGGER.info('Adding batch of entities to the database, this might take a couple of minutes. '
                             'Progress will resume soon.')
 
@@ -176,7 +164,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                 entity_array.clear()  # clear entity array
 
                 LOGGER.debug('It took %s to add %s entities to the database',
-                             datetime.now()-insert_start_time,
+                             datetime.now() - insert_start_time,
                              self._sqlalchemy_commit_every)
 
         # finally commit remaining entities in session

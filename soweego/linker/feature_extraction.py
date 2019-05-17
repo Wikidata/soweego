@@ -11,6 +11,7 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import itertools
 import logging
+from multiprocessing import Manager, Process
 from typing import List, Set, Tuple
 
 import jellyfish
@@ -23,7 +24,18 @@ from sklearn.feature_extraction.text import CountVectorizer
 from soweego.commons import constants, text_utils
 from soweego.wikidata import sparql_queries
 
+
 LOGGER = logging.getLogger(__name__)
+_threading_manager = Manager()
+
+
+# when expanding the QID in `OccupationQidSet._expand_occupations` it
+# is useful to have a concurrent safe dict where we can cache each result, so that when this
+# feature extractor is executed in parallel, all instances will have
+# access to the same cache, drastically decreasing the number of SPARQL
+# requests that we need to make. This cache is also preserved across executions
+# of this feature extractor.
+_global_occupations_qid_cache = _threading_manager.dict()
 
 
 # Adapted from https://github.com/J535D165/recordlinkage/blob/master/recordlinkage/compare.py
@@ -312,11 +324,6 @@ class OccupationQidSet(BaseCompareFeature):
     name = 'occupation_qid_set'
     description = 'Compare pairs of sets containing occupation QIDs.'
 
-    # when expanding the occupations in `_expand_occupations` it
-    # is useful to have a dict were we can cache each result, so that
-    # we don't have to do a sparql query every time.
-    _expand_occupations_cache = {}
-
     def __init__(self,
                  left_on,
                  right_on,
@@ -324,7 +331,14 @@ class OccupationQidSet(BaseCompareFeature):
                  label=None):
         super(OccupationQidSet, self).__init__(left_on, right_on, label=label)
 
+        # declare that we want to use the global qid cache
+        global _global_occupations_qid_cache
+
         self.missing_value = missing_value
+
+        # set instance `_expand_occupations_cache` to reference the global
+        # cache.
+        self._expand_occupations_cache = _global_occupations_qid_cache
 
     def _expand_occupations(self, occupation_qids: Set[str]) -> Set[str]:
         """
