@@ -26,9 +26,6 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
-
-
-
 LOGGER = logging.getLogger(__name__)
 WD_IO_FILENAME = 'wikidata_%s_dataset.jsonl.gz'
 
@@ -81,7 +78,7 @@ def cli(target, target_type, strategy, check_dates, upload, sandbox, output_dir)
             result = perfect_name_match(
                 wd_io, target_entity, target_pid, check_dates)
             _write_or_upload_result(
-                strategy, target, result, output_dir, "baseline_perfect_name.csv", upload, sandbox)
+                strategy, target, target_type, result, output_dir, "baseline_perfect_name.csv", upload, sandbox)
 
         if strategy == 'links' or strategy == 'all':
             wd_io.seek(0)  # go to beginning of file
@@ -89,7 +86,7 @@ def cli(target, target_type, strategy, check_dates, upload, sandbox, output_dir)
             result = similar_link_tokens_match(
                 wd_io, target_link_entity, target_pid)
             _write_or_upload_result(
-                strategy, target, result, output_dir, "baseline_similar_links.csv", upload, sandbox)
+                strategy, target, target_type, result, output_dir, "baseline_similar_links.csv", upload, sandbox)
 
         if strategy == 'names' or strategy == 'all':
             wd_io.seek(0)
