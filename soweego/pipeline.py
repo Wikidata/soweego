@@ -60,10 +60,10 @@ def _linker(target: str, upload: bool):
     for target_type in target_database.available_types_for_target(target):
         if not target_type:
             continue
+        _invoke_no_exit(evaluate.cli, ['slp', target, target_type])
+        _invoke_no_exit(train.cli, ['slp', target, target_type])
+        _invoke_no_exit(classify.cli, ['slp', target, target_type, upload_option])
         _invoke_no_exit(baseline.cli, [target, target_type, '-s', 'all', upload_option])
-        _invoke_no_exit(evaluate.cli, ['nb', target, target_type])
-        _invoke_no_exit(train.cli, ['nb', target, target_type])
-        _invoke_no_exit(classify.cli, ['nb', target, target_type, upload_option])
 
 
 def _validator(target: str, upload: bool):
