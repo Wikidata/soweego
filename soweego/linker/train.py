@@ -106,7 +106,7 @@ def build_dataset(goal, catalog, entity, dir_io):
     wd_reader = workflow.build_wikidata(goal, catalog, entity, dir_io)
     wd_generator = workflow.preprocess_wikidata(goal, wd_reader)
 
-    positive_samples = feature_vectors = None
+    positive_samples, feature_vectors = None, None
 
     # flag that indicates we need to add a header the first time we write
     # to working file

@@ -127,7 +127,7 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
         wd_generator = workflow.preprocess_wikidata(
             'classification', wd_reader)
 
-        all_feature_vectors = all_wd_chunks = all_target_chunks = None
+        all_feature_vectors, all_wd_chunks, all_target_chunks = None, None, None
 
         for i, wd_chunk in enumerate(wd_generator, 1):
             # TODO Also consider blocking on URLs
