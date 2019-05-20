@@ -49,7 +49,6 @@ DUMP_EXTRACTOR = {
 }
 
 # DB entities and their Wikidata class QID
-# TODO merge discogs & musicbrainz 'release' entities with issue-80 branch
 TARGET_CATALOGS = {
     keys.DISCOGS: {
         keys.MUSICIAN: {
@@ -57,16 +56,21 @@ TARGET_CATALOGS = {
             keys.MAIN_ENTITY: models.discogs_entity.DiscogsMusicianEntity,
             keys.LINK_ENTITY: models.discogs_entity.DiscogsMusicianLinkEntity,
             keys.NLP_ENTITY: models.discogs_entity.DiscogsMusicianNlpEntity,
-            # TODO implement
-            keys.RELATIONSHIP_ENTITY: None
+            keys.RELATIONSHIP_ENTITY: models.discogs_entity.DiscogsMasterArtistRelationship
         },
         keys.BAND: {
             keys.CLASS_QID: vocabulary.BAND_QID,
             keys.MAIN_ENTITY: models.discogs_entity.DiscogsGroupEntity,
             keys.LINK_ENTITY: models.discogs_entity.DiscogsGroupLinkEntity,
             keys.NLP_ENTITY: models.discogs_entity.DiscogsGroupNlpEntity,
-            # TODO implement
-            keys.RELATIONSHIP_ENTITY: None
+            keys.RELATIONSHIP_ENTITY: models.discogs_entity.DiscogsMasterArtistRelationship
+        },
+        keys.MUSICAL_WORK: {
+            keys.CLASS_QID: vocabulary.MUSICAL_WORK_QID,
+            keys.MAIN_ENTITY: models.discogs_entity.DiscogsMasterEntity,
+            keys.LINK_ENTITY: None,
+            keys.NLP_ENTITY: None,
+            keys.RELATIONSHIP_ENTITY: models.musicbrainz_entity.MusicBrainzReleaseGroupArtistRelationship
         }
     },
     keys.IMDB: {
@@ -125,16 +129,21 @@ TARGET_CATALOGS = {
             keys.MAIN_ENTITY: models.musicbrainz_entity.MusicbrainzArtistEntity,
             keys.LINK_ENTITY: models.musicbrainz_entity.MusicbrainzArtistLinkEntity,
             keys.NLP_ENTITY: None,
-            # TODO implement
-            keys.RELATIONSHIP_ENTITY: None
+            keys.RELATIONSHIP_ENTITY: models.musicbrainz_entity.MusicBrainzReleaseGroupArtistRelationship
         },
         keys.BAND: {
             keys.CLASS_QID: vocabulary.BAND_QID,
             keys.MAIN_ENTITY: models.musicbrainz_entity.MusicbrainzBandEntity,
             keys.LINK_ENTITY: models.musicbrainz_entity.MusicbrainzBandLinkEntity,
             keys.NLP_ENTITY: None,
-            # TODO implement
-            keys.RELATIONSHIP_ENTITY: None
+            keys.RELATIONSHIP_ENTITY: models.musicbrainz_entity.MusicBrainzReleaseGroupArtistRelationship
+        },
+        keys.MUSICAL_WORK: {
+            keys.CLASS_QID: vocabulary.MUSICAL_WORK_QID,
+            keys.MAIN_ENTITY: models.musicbrainz_entity.MusicbrainzReleaseGroupEntity,
+            keys.LINK_ENTITY: models.musicbrainz_entity.MusicbrainzReleaseGroupLinkEntity,
+            keys.NLP_ENTITY: None,
+            keys.RELATIONSHIP_ENTITY: models.musicbrainz_entity.MusicBrainzReleaseGroupArtistRelationship
         }
     }
 }
@@ -142,8 +151,12 @@ TARGET_CATALOGS = {
 # When building the wikidata dump for catalogs in this array
 # also the QIDs of a person's occupations will be included
 # as part of the dump
-REQUIRE_OCCUPATIONS = [
-    keys.IMDB
+REQUIRE_OCCUPATIONS = {
+    keys.IMDB: [keys.ACTOR, keys.DIRECTOR,
+                keys.MUSICIAN, keys.PRODUCER, keys.WRITER]
+}
+REQUIRE_GENRE = [
+    keys.MUSICAL_WORK, keys.AUDIOVISUAL_WORK
 ]
 
 # Cluster of fields with names

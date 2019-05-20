@@ -68,8 +68,8 @@ def build_wikidata(goal, catalog, entity, dir_io):
 
         url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
         with gzip.open(wd_io_path, 'wt') as wd_io:
-            api_requests.get_data_for_linker(catalog,
-                                             qids, url_pids, ext_id_pids_to_urls, wd_io, qids_and_tids)
+            api_requests.get_data_for_linker(
+                catalog, entity, qids, url_pids, ext_id_pids_to_urls, wd_io, qids_and_tids)
 
     wd_df_reader = pd.read_json(wd_io_path, lines=True, chunksize=1000)
 
@@ -178,9 +178,13 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
                                      occupations_col_name,
                                      label='occupation_qids'))
 
+    if in_both_datasets(keys.GENRE):
+        # Feature 9: genre similar tokens
+        compare.add(SimilarTokens(keys.GENRE,
+                                  keys.GENRE, 'genre_similar_tokens'))
+
     feature_vectors = compare.compute(
         candidate_pairs, wikidata, target).drop_duplicates()
-        
     pd.to_pickle(feature_vectors, path_io)
 
     LOGGER.info("Features dumped to '%s'", path_io)
@@ -238,17 +242,21 @@ def preprocess_wikidata(goal, wikidata_reader):
                 chunk[f'{column}_tokens'] = chunk[column].apply(
                     tokenize_values, args=(text_utils.tokenize,))
 
+        # 4b. Tokenize genres if available
+        if chunk.get(keys.GENRE) is not None:
+            chunk[keys.GENRE] = chunk[keys.GENRE].apply(
+                tokenize_values, args=(text_utils.tokenize,))
+
         # 5. Tokenize URLs
         chunk[keys.URL_TOKENS] = chunk[keys.URL].apply(
             tokenize_values, args=(url_utils.tokenize,))
 
         # 6. Shared preprocessing
-        chunk = _shared_preprocessing(chunk, _will_handle_dates(chunk))
+        chunk = _shared_preprocessing(chunk, _will_handle_birth_date(
+            chunk), _will_handle_death_date(chunk))
 
         LOGGER.info('Chunk %d done', i)
         yield chunk
-
-    LOGGER.info('Wikidata preprocessing done')
 
 
 def preprocess_target(goal, target_reader):
@@ -287,19 +295,23 @@ def preprocess_target(goal, target_reader):
     LOGGER.info('Dropping columns with null values only ...')
     _drop_null_columns(target)
 
-    will_handle_dates = _will_handle_dates(target)
-
     # 4. Pair dates with their precision & drop precision columns
-    if will_handle_dates:
-        LOGGER.info('Pairing date columns with precision ones ...')
+    if _will_handle_birth_date(target):
+        LOGGER.info('Pairing birth date columns with precision ones ...')
         target[keys.DATE_OF_BIRTH] = list(
             zip(target[keys.DATE_OF_BIRTH], target[keys.BIRTH_PRECISION]))
+        target.drop(columns=[keys.BIRTH_PRECISION], inplace=True)
+        log_dataframe_info(
+            LOGGER, target, 'Paired birth date columns with precision ones')
+
+    if _will_handle_death_date(target):
+        LOGGER.info('Pairing death date columns with precision ones ...')
         target[keys.DATE_OF_DEATH] = list(
             zip(target[keys.DATE_OF_DEATH], target[keys.DEATH_PRECISION]))
-        target.drop(columns=[keys.BIRTH_PRECISION,
-                             keys.DEATH_PRECISION], inplace=True)
+        target.drop(columns=[keys.DEATH_PRECISION], inplace=True)
+
         log_dataframe_info(
-            LOGGER, target, 'Paired date columns with precision ones')
+            LOGGER, target, 'Paired death date columns with precision ones')
 
     # 5. Aggregate denormalized data on target ID
     # TODO Token lists may contain duplicate tokens
@@ -309,13 +321,14 @@ def preprocess_target(goal, target_reader):
     log_dataframe_info(
         LOGGER, target, f"Data indexed and aggregated on '{keys.TID}' column")
     # 6. Shared preprocessing
-    target = _shared_preprocessing(target, will_handle_dates)
+    target = _shared_preprocessing(target, _will_handle_birth_date(
+        target), _will_handle_death_date(target))
 
     LOGGER.info('Target preprocessing done')
     return target
 
 
-def _shared_preprocessing(df, will_handle_dates):
+def _shared_preprocessing(df, will_handle_birth_date, will_handle_death_date):
     LOGGER.info('Normalizing fields with names ...')
     for column in constants.NAME_FIELDS:
         if df.get(column) is not None:
@@ -323,9 +336,13 @@ def _shared_preprocessing(df, will_handle_dates):
 
     _occupations_to_set(df)
 
-    if will_handle_dates:
-        LOGGER.info('Handling dates ...')
-        _handle_dates(df)
+    if will_handle_birth_date:
+        LOGGER.info('Handling birth dates ...')
+        _handle_dates(df, keys.DATE_OF_BIRTH)
+
+    if will_handle_death_date:
+        LOGGER.info('Handling death dates ...')
+        _handle_dates(df, keys.DATE_OF_DEATH)
 
     return df
 
@@ -348,34 +365,43 @@ def _drop_null_columns(target):
         LOGGER, target, 'Dropped columns with null values only')
 
 
-def _handle_dates(df):
+def _handle_dates(df, column):
     # Datasets are hitting pandas timestamp limitations, see
     # http://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timestamp-limitations
     # Parse into Period instead, see
     # http://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-oob
-    for column in (keys.DATE_OF_BIRTH, keys.DATE_OF_DEATH):
-        if df.get(column) is None:
-            LOGGER.warning(
-                "No '%s' column in DataFrame, won't handle its dates. Perhaps it was dropped because it contained null values only",
-                column)
-            continue
+    if df.get(column) is None:
+        LOGGER.warning(
+            "No '%s' column in DataFrame, won't handle its dates. Perhaps it was dropped because it contained null values only",
+            column)
 
-        df[column] = df[column].map(
-            _parse_dates_list, na_action='ignore')
+    df[column] = df[column].map(
+        _parse_dates_list, na_action='ignore')
 
     log_dataframe_info(LOGGER, df, 'Parsed dates')
 
 
-def _will_handle_dates(df):
+def _will_handle_dates(df: pd.DataFrame) -> bool:
+    return _will_handle_birth_date(df) and _will_handle_death_date(df)
+
+
+def _will_handle_birth_date(df: pd.DataFrame) -> bool:
     dob_column = df.get(keys.DATE_OF_BIRTH)
-    dod_column = df.get(keys.DATE_OF_DEATH)
-
-    if dob_column is None and dod_column is None:
+    if dob_column is None:
         LOGGER.warning(
-            "Neither '%s' nor '%s' column in DataFrame, won't handle dates. Perhaps they were dropped because they contained null values only",
-            keys.DATE_OF_BIRTH, keys.DATE_OF_DEATH)
+            "'%s' column is not in DataFrame, won't handle birth dates. Perhaps it was dropped because they contained null values only",
+            keys.DATE_OF_BIRTH)
         return False
+    return True
 
+
+def _will_handle_death_date(df: pd.DataFrame) -> bool:
+    dod_column = df.get(keys.DATE_OF_DEATH)
+    if dod_column is None:
+        LOGGER.warning(
+            "'%s' column is not in DataFrame, won't handle death dates. Perhaps it was dropped because they contained null values only",
+            keys.DATE_OF_DEATH)
+        return False
     return True
 
 
@@ -448,7 +474,6 @@ def _occupations_to_set(df):
         # of space separated occupations (or an empty string
         # in case there are no occupations)
         if len(itm) == 1:
-
             # get inner occupation ids and remove empty occupations
             itm = [x for x in itm[0].split() if x]
 
