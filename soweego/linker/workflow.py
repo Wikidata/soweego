@@ -175,6 +175,7 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
                                      label='occupation_qids'))
 
     if in_both_datasets(constants.GENRE):
+        # Feature 9: genre similar tokens
         compare.add(SimilarTokens(constants.GENRE,
                                   constants.GENRE, 'genre_similar_tokens'))
 
