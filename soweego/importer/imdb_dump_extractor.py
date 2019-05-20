@@ -279,7 +279,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 # adding everything to session and commiting once the for loop
                 # is done
                 if len(entity_array) >= self._sqlalchemy_commit_every:
-                    LOGGER.info('Adding batch of entities to the database, this might take a couple of minutes. '
+                    LOGGER.info('Adding batch of entities to the database, this will take a while. '
                                 'Progress will resume soon.')
 
                     insert_start_time = datetime.datetime.now()

@@ -131,7 +131,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             entity_array.append(entity)
             # commit in batches of `self._sqlalchemy_commit_every`
             if len(entity_array) >= self._sqlalchemy_commit_every:
-                LOGGER.info('Adding batch of entities to the database, this might take a couple of minutes. '
+                LOGGER.info('Adding batch of entities to the database, this will take a while. '
                             'Progress will resume soon.')
 
                 insert_start_time = datetime.now()
@@ -222,7 +222,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
 
             # commit in batches of `self._sqlalchemy_commit_every`
             if len(entity_array) >= self._sqlalchemy_commit_every:
-                LOGGER.info('Adding batch of entities to the database, this might take a couple of minutes. '
+                LOGGER.info('Adding batch of entities to the database, this will take a while. '
                             'Progress will resume soon.')
 
                 insert_start_time = datetime.now()
