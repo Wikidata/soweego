@@ -106,11 +106,19 @@ def build_dataset(goal, catalog, entity, dir_io):
     wd_reader = workflow.build_wikidata(goal, catalog, entity, dir_io)
     wd_generator = workflow.preprocess_wikidata(goal, wd_reader)
 
-    positive_samples, feature_vectors = [], []
+    positive_samples, feature_vectors = None, None
 
+    # flag that indicates we need to add a header the first time we write
+    # to working file
     for i, wd_chunk in enumerate(wd_generator, 1):
         # Positive samples from Wikidata
-        positive_samples.append(wd_chunk[constants.TID])
+        if positive_samples is None:
+            positive_samples = wd_chunk[constants.TID]
+        else:
+            positive_samples = concat([
+                positive_samples,
+                wd_chunk[constants.TID]
+            ])
 
         # Samples index from Wikidata
         all_samples = blocking.full_text_query_block(
@@ -127,14 +135,19 @@ def build_dataset(goal, catalog, entity, dir_io):
         features_path = os.path.join(
             dir_io, constants.FEATURES % (catalog, entity, goal, i))
 
-        feature_vectors.append(workflow.extract_features(
-            all_samples, wd_chunk, target_chunk, features_path))
+        chunk_fv = workflow.extract_features(
+            all_samples, wd_chunk, target_chunk, features_path)
 
-    positive_samples = concat(positive_samples)
+        if feature_vectors is None:
+            feature_vectors = chunk_fv
+        else:
+            feature_vectors = concat([feature_vectors, chunk_fv], sort=False)
+
+    # positive_samples = concat(positive_samples)
     positive_samples_index = MultiIndex.from_tuples(zip(
         positive_samples.index, positive_samples), names=[constants.QID, constants.TID])
 
-    feature_vectors = concat(feature_vectors, sort=False).fillna(
+    feature_vectors = feature_vectors.fillna(
         constants.FEATURE_MISSING_VALUE)
 
     # dump final data so we can reuse it next time
