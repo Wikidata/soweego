@@ -9,7 +9,7 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, MaxFrax96'
 
-from sqlalchemy import (Column, String)
+from sqlalchemy import Column, String
 from sqlalchemy.ext.declarative import declarative_base
 
 from soweego.importer.models.base_entity import BaseEntity, BaseRelationship
@@ -21,8 +21,8 @@ ARTIST_LINK_TABLE = 'musicbrainz_artist_link'
 BAND_TABLE = 'musicbrainz_band'
 BAND_LINK_TABLE = 'musicbrainz_band_link'
 ARTIST_BAND_RELATIONSHIP_TABLE = "musicbrainz_artist_band_relationship"
-RELEASE_GROUP_ENTITY = "musicbrainz_relase_group"
-RELEASE_GROUP_LINK_ENTITY = "musicbrainz_relase_group_link"
+RELEASE_GROUP_ENTITY = "musicbrainz_release_group"
+RELEASE_GROUP_LINK_ENTITY = "musicbrainz_release_group_link"
 RELEASE_ARTIST_RELATIONSHIP = "musicbrainz_release_group_artist_relationship"
 
 
