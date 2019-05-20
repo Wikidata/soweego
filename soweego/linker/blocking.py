@@ -2,10 +2,18 @@
 # -*- coding: utf-8 -*-
 
 """Set of techniques to index record pairs (read blocking)."""
+import logging
+import os
 from multiprocessing import Pool
-from typing import Tuple, Iterable
+from typing import Iterable, Tuple
 
+import pandas as pd
+from recordlinkage import Index
 from tqdm import tqdm
+
+from soweego.commons import constants, keys
+from soweego.commons.data_gathering import tokens_fulltext_search
+from soweego.linker.workflow import handle_goal
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -13,21 +21,12 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
-import logging
-import os
-
-import pandas as pd
-from recordlinkage import Index
-
-from soweego.commons import constants
-from soweego.commons.data_gathering import tokens_fulltext_search
-from soweego.linker.workflow import handle_goal
 
 LOGGER = logging.getLogger(__name__)
 
 
 def train_test_block(wikidata_df: pd.DataFrame, target_df: pd.DataFrame) -> pd.MultiIndex:
-    blocking_column = constants.TID
+    blocking_column = keys.TID
 
     LOGGER.info(
         "Blocking on column '%s' to get positive samples ...", blocking_column)
@@ -59,7 +58,7 @@ def full_text_query_block(goal: str, catalog: str, wikidata_series: pd.Series, c
     qids_and_tids = _extract_target_candidates(wikidata_series, target_entity)
 
     samples_index = pd.MultiIndex.from_tuples(
-        qids_and_tids, names=[constants.QID, constants.TID])
+        qids_and_tids, names=[keys.QID, keys.TID])
     LOGGER.debug('%s %s samples index chunk %d random example:\n%s',
                  catalog, goal, chunk_number, samples_index.to_series().sample(5))
 
@@ -72,20 +71,22 @@ def full_text_query_block(goal: str, catalog: str, wikidata_series: pd.Series, c
 
 
 def _multiprocessing_series_iterator(wikidata_series: pd.Series, target_entity: constants.DB_ENTITY) -> Iterable[
-    Tuple[str, str, constants.DB_ENTITY]]:
+        Tuple[str, str, constants.DB_ENTITY]]:
     for qids, terms in wikidata_series.items():
         yield qids, terms, target_entity
 
 
 def fulltext_search(qid_terms_target: Tuple[str, list, constants.DB_ENTITY]) -> Iterable[Tuple[str, str]]:
     qid, terms, target_entity = qid_terms_target
-    tids = list(map(lambda entity: entity.catalog_id, tokens_fulltext_search(target_entity, False, terms, None, 5)))
+    tids = list(map(lambda entity: entity.catalog_id,
+                    tokens_fulltext_search(target_entity, False, terms, None, 5)))
     return [(qid, tid) for tid in tids]
 
 
 def _extract_target_candidates(wikidata_series: pd.Series, target_entity: constants.DB_ENTITY):
     with Pool() as pool:
         for res in tqdm(
-                pool.imap_unordered(fulltext_search, _multiprocessing_series_iterator(wikidata_series, target_entity)),
+                pool.imap_unordered(fulltext_search, _multiprocessing_series_iterator(
+                    wikidata_series, target_entity)),
                 total=len(wikidata_series)):
             yield from res

@@ -19,7 +19,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import configure_mappers, session, sessionmaker
 from sqlalchemy.pool import NullPool
 
-from soweego.commons import constants
+from soweego.commons import constants, keys
 from soweego.commons import localizations as loc
 
 BASE = declarative_base()
@@ -36,11 +36,11 @@ class DBManager():
 
     def __init__(self):
         credentials = DBManager.get_credentials()
-        db_engine = credentials[constants.DB_ENGINE]
-        db_name = credentials[constants.PROD_DB]
-        user = credentials[constants.USER]
-        password = credentials[constants.PASSWORD]
-        host = credentials[constants.HOST]
+        db_engine = credentials[keys.DB_ENGINE]
+        db_name = credentials[keys.PROD_DB]
+        user = credentials[keys.USER]
+        password = credentials[keys.PASSWORD]
+        host = credentials[keys.HOST]
         try:
             # Disable connection pooling, as per Wikimedia policy
             # https://wikitech.wikimedia.org/wiki/Help:Toolforge/Database#Connection_handling_policy

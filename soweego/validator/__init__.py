@@ -1,1 +1,1 @@
-from soweego.validator import checks, cli
+from soweego.validator import checks, cli, enrichment

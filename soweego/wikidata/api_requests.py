@@ -25,7 +25,7 @@ import requests
 from requests.exceptions import ChunkedEncodingError
 from tqdm import tqdm
 
-from soweego.commons import constants
+from soweego.commons import constants, keys
 from soweego.commons.logging import log_request_data
 from soweego.wikidata import vocabulary
 
@@ -86,21 +86,21 @@ def _lookup_label(item_value):
 def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_and_tids,
                     no_labels_count, no_aliases_count, no_descriptions_count,
                     no_sitelinks_count, no_links_count, no_ext_ids_count, no_claims_count,
-                    needs_occupations) -> List[Dict]:
+                    needs_occupations, needs_genre) -> List[Dict]:
     """
     This function will be consumed by the `get_data_for_linker`
     function in this module. It allows the buckets coming from
     wikidata to be processed in parallel.
     """
     response_body = _make_request(bucket, request_params)
-    
+
     # If there is no response then
     # we treat it as if there were no entities in
     # the bucket, and return an empty list
     if not response_body:
-        return [] 
+        return []
 
-    # Each bucket is composed of different entities.
+        # Each bucket is composed of different entities.
     # In this list we'll keep track of the results
     # when processing each of them
     bucket_results = []
@@ -112,7 +112,7 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
         if qids_and_tids:
             tids = qids_and_tids.get(qid)
             if tids:
-                to_write[constants.TID] = list(tids[constants.TID])
+                to_write[keys.TID] = list(tids[keys.TID])
 
         entity = response_body['entities'][qid]
         claims = entity.get('claims')
@@ -127,26 +127,26 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
             LOGGER.info('Skipping QID with no labels: %s', qid)
             no_labels_count += 1
             continue
-        to_write[constants.QID] = qid
-        to_write[constants.NAME] = _return_monolingual_strings(
+        to_write[keys.QID] = qid
+        to_write[keys.NAME] = _return_monolingual_strings(
             qid, labels)
 
         # Aliases
         aliases = entity.get('aliases')
         if aliases:
             # Merge them into labels
-            to_write[constants.NAME].update(
+            to_write[keys.NAME].update(
                 _return_aliases(qid, aliases))
         else:
             LOGGER.debug('%s has no aliases', qid)
             no_aliases_count += 1
         # Convert set to list for JSON serialization
-        to_write[constants.NAME] = list(to_write[constants.NAME])
+        to_write[keys.NAME] = list(to_write[keys.NAME])
 
         # Descriptions
         descriptions = entity.get('descriptions')
         if descriptions:
-            to_write[constants.DESCRIPTION] = list(
+            to_write[keys.DESCRIPTION] = list(
                 _return_monolingual_strings(qid, descriptions))
         else:
             LOGGER.debug('%s has no descriptions', qid)
@@ -155,25 +155,25 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
         # Sitelinks
         sitelinks = entity.get('sitelinks')
         if sitelinks:
-            to_write[constants.URL] = _return_sitelinks(sitelinks)
+            to_write[keys.URL] = _return_sitelinks(sitelinks)
         else:
             LOGGER.debug('%s has no sitelinks', qid)
-            to_write[constants.URL] = set()
+            to_write[keys.URL] = set()
             no_sitelinks_count += 1
 
         # Third-party URLs
-        to_write[constants.URL].update(
+        to_write[keys.URL].update(
             _return_third_party_urls(qid, claims, url_pids, no_links_count))
 
         # External ID URLs
-        to_write[constants.URL].update(_return_ext_id_urls(
+        to_write[keys.URL].update(_return_ext_id_urls(
             qid, claims, ext_id_pids_to_urls, no_ext_ids_count))
         # Convert set to list for JSON serialization
-        to_write[constants.URL] = list(to_write[constants.URL])
+        to_write[keys.URL] = list(to_write[keys.URL])
 
         # Expected claims
         to_write.update(_return_claims_for_linker(
-            qid, claims, no_claims_count, needs_occupations))
+            qid, claims, no_claims_count, needs_occupations, needs_genre))
 
         # add result to `bucket_results`
         bucket_results.append(to_write)
@@ -181,7 +181,9 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
     return bucket_results
 
 
-def get_data_for_linker(catalog: str, qids: set, url_pids: set, ext_id_pids_to_urls: dict, fileout: TextIO, qids_and_tids: dict) -> None:
+def get_data_for_linker(catalog: str, entity_type: str, qids: set, url_pids: set, ext_id_pids_to_urls: dict,
+                        fileout: TextIO,
+                        qids_and_tids: dict) -> None:
     no_labels_count = 0
     no_aliases_count = 0
     no_descriptions_count = 0
@@ -195,7 +197,9 @@ def get_data_for_linker(catalog: str, qids: set, url_pids: set, ext_id_pids_to_u
 
     # check if for this specific catalog
     # we need to get the occupations
-    needs_occupations = catalog in constants.REQUIRE_OCCUPATIONS
+    if catalog in constants.REQUIRE_OCCUPATIONS.keys():
+        needs_occupations = entity_type in constants.REQUIRE_OCCUPATIONS[catalog]
+    needs_genre = entity_type in constants.REQUIRE_GENRE
 
     # create a partial function. Here all parameters, except
     # for the actual `bucket` are given to `_process_bucket`.
@@ -215,16 +219,15 @@ def get_data_for_linker(catalog: str, qids: set, url_pids: set, ext_id_pids_to_u
                             no_links_count=no_links_count,
                             no_ext_ids_count=no_ext_ids_count,
                             no_claims_count=no_claims_count,
-                            needs_occupations=needs_occupations)
+                            needs_occupations=needs_occupations,
+                            needs_genre=needs_genre)
 
     # create a pool of threads and map the list of buckets using `pool_function`
     with Pool() as pool:
-
         # `processed_bucket` will be a list of dicts, where each dict
         # is a processed entity from the bucket
         for processed_bucket in pool.imap_unordered(pool_function,
                                                     tqdm(qid_buckets, total=len(qid_buckets))):
-
             # join results into a string so that we can write them to
             # the dump file
             to_write = ''.join(json.dumps(result, ensure_ascii=False) + '\n' for
@@ -233,8 +236,10 @@ def get_data_for_linker(catalog: str, qids: set, url_pids: set, ext_id_pids_to_u
             fileout.write(to_write)
             fileout.flush()
 
-    LOGGER.info('QIDs: got %d with no labels, %d with no aliases, %d with no descriptions, %d with no sitelinks, %d with no third-party links, %d with no external ID links, %d with no expected claims',
-                no_labels_count, no_aliases_count, no_descriptions_count, no_sitelinks_count, no_links_count, no_ext_ids_count, no_claims_count)
+    LOGGER.info(
+        'QIDs: got %d with no labels, %d with no aliases, %d with no descriptions, %d with no sitelinks, %d with no third-party links, %d with no external ID links, %d with no expected claims',
+        no_labels_count, no_aliases_count, no_descriptions_count, no_sitelinks_count, no_links_count, no_ext_ids_count,
+        no_claims_count)
 
 
 def get_metadata(qids: set) -> Generator[tuple, None, None]:
@@ -358,12 +363,15 @@ def _return_third_party_urls(qid, claims, url_pids, no_count):
     return to_return
 
 
-def _return_claims_for_linker(qid, claims, no_count, need_occupations):
+def _return_claims_for_linker(qid, claims, no_count, need_occupations, need_genre):
     to_return = defaultdict(set)
     expected_pids = set(vocabulary.LINKER_PIDS.keys())
 
     if not need_occupations:
         expected_pids.remove(vocabulary.OCCUPATION)
+
+    if not need_genre:
+        expected_pids.remove(vocabulary.GENRE)
 
     available = expected_pids.intersection(claims.keys())
     if available:
@@ -445,7 +453,7 @@ def _yield_aliases(qid, aliases):
                 LOGGER.warning(
                     'Skipping malformed alias with no value for %s: %s', qid, data)
                 continue
-            yield qid, language_code, alias, constants.ALIAS
+            yield qid, language_code, alias, keys.ALIAS
 
 
 def _yield_sitelinks(entity, qid, no_sitelinks_count):
@@ -557,7 +565,7 @@ def _load_cached_bot_session(dump_path: str) -> requests.Session:
     """
 
     with open(dump_path, 'rb') as file:
-        LOGGER.info('Previously authenticated session exists')
+        LOGGER.debug('Previously authenticated session exists')
         session = pickle.load(file)
 
         # check if session is still valid

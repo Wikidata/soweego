@@ -11,105 +11,139 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 from typing import TypeVar
 
-from soweego.importer import models
+from soweego.commons import keys
+from soweego.importer import (discogs_dump_extractor, imdb_dump_extractor,
+                              models, musicbrainz_dump_extractor)
 from soweego.wikidata import vocabulary
 
-# Miscellanea
-LAST_MODIFIED = 'last-modified'
+# Wikidata items & properties regexes
+QID_REGEX = r'Q\d+'
+PID_REGEX = r'P\d+'
 
-PROD_DB = 'PROD_DB'
-TEST_DB = 'TEST_DB'
+# Entities and corresponding Wikidata query
+SUPPORTED_QUERY_TYPES = (keys.CLASS, keys.OCCUPATION)
+SUPPORTED_QUERY_SELECTORS = (
+    keys.IDENTIFIER, keys.LINKS, keys.DATASET, keys.METADATA)
 
-DB_ENGINE = 'DB_ENGINE'
-USER = 'USER'
-PASSWORD = 'PASSWORD'
-HOST = 'HOST'
-
-IDENTIFIER = 'identifier'
-LINKS = 'links'
-DATASET = 'dataset'
-METADATA = 'metadata'
-
-# SPARQL queries
-CLASS = 'class'
-OCCUPATION = 'occupation'
-SUPPORTED_QUERY_TYPES = (CLASS, OCCUPATION)
-SUPPORTED_QUERY_SELECTORS = (IDENTIFIER, LINKS, DATASET, METADATA)
-
-# Entity types and corresponding Wikidata query
-HANDLED_ENTITIES = {
-    'band': CLASS,
-    'actor': OCCUPATION,
-    'director': OCCUPATION,
-    'musician': OCCUPATION,
-    'producer': OCCUPATION,
-    'writer': OCCUPATION
+SUPPORTED_ENTITIES = {
+    keys.ACTOR: keys.OCCUPATION,
+    keys.BAND: keys.CLASS,
+    keys.DIRECTOR: keys.OCCUPATION,
+    keys.MUSICIAN: keys.OCCUPATION,
+    keys.PRODUCER: keys.OCCUPATION,
+    keys.WRITER: keys.OCCUPATION,
+    keys.MUSICAL_WORK: keys.CLASS,
+    keys.AUDIOVISUAL_WORK: keys.CLASS
 }
 
+# Target catalogs imported into the internal DB
 # DB entity Python types for typed function signatures
 DB_ENTITY = TypeVar('DB_ENTITY', models.base_entity.BaseEntity,
                     models.base_link_entity.BaseLinkEntity, models.base_nlp_entity.BaseNlpEntity)
 
+# Dump extractors
+DUMP_EXTRACTOR = {
+    'discogs': discogs_dump_extractor.DiscogsDumpExtractor,
+    'musicbrainz': musicbrainz_dump_extractor.MusicBrainzDumpExtractor,
+    'imdb': imdb_dump_extractor.ImdbDumpExtractor
+}
+
 # DB entities and their Wikidata class QID
 TARGET_CATALOGS = {
-    'discogs': {
-        'musician': {
-            'qid': vocabulary.MUSICIAN,
-            'entity': models.discogs_entity.DiscogsMusicianEntity,
-            'link_entity': models.discogs_entity.DiscogsMusicianLinkEntity,
-            'nlp_entity': models.discogs_entity.DiscogsMusicianNlpEntity
+    keys.DISCOGS: {
+        keys.MUSICIAN: {
+            keys.CLASS_QID: vocabulary.MUSICIAN_QID,
+            keys.MAIN_ENTITY: models.discogs_entity.DiscogsMusicianEntity,
+            keys.LINK_ENTITY: models.discogs_entity.DiscogsMusicianLinkEntity,
+            keys.NLP_ENTITY: models.discogs_entity.DiscogsMusicianNlpEntity,
+            keys.RELATIONSHIP_ENTITY: models.discogs_entity.DiscogsMasterArtistRelationship
         },
-        'band': {
-            'qid': vocabulary.BAND,
-            'entity': models.discogs_entity.DiscogsGroupEntity,
-            'link_entity': models.discogs_entity.DiscogsGroupLinkEntity,
-            'nlp_entity': models.discogs_entity.DiscogsGroupNlpEntity
+        keys.BAND: {
+            keys.CLASS_QID: vocabulary.BAND_QID,
+            keys.MAIN_ENTITY: models.discogs_entity.DiscogsGroupEntity,
+            keys.LINK_ENTITY: models.discogs_entity.DiscogsGroupLinkEntity,
+            keys.NLP_ENTITY: models.discogs_entity.DiscogsGroupNlpEntity,
+            keys.RELATIONSHIP_ENTITY: models.discogs_entity.DiscogsMasterArtistRelationship
+        },
+        keys.MUSICAL_WORK: {
+            keys.CLASS_QID: vocabulary.MUSICAL_WORK_QID,
+            keys.MAIN_ENTITY: models.discogs_entity.DiscogsMasterEntity,
+            keys.LINK_ENTITY: None,
+            keys.NLP_ENTITY: None,
+            keys.RELATIONSHIP_ENTITY: models.musicbrainz_entity.MusicBrainzReleaseGroupArtistRelationship
         }
     },
-    'imdb': {
-        'actor': {
-            'qid': vocabulary.ACTOR,
-            'entity': models.imdb_entity.ImdbActorEntity,
-            'link_entity': None,
-            'nlp_entity': None
+    keys.IMDB: {
+        keys.ACTOR: {
+            keys.CLASS_QID: vocabulary.ACTOR_QID,
+            keys.MAIN_ENTITY: models.imdb_entity.ImdbActorEntity,
+            keys.LINK_ENTITY: None,
+            keys.NLP_ENTITY: None,
+            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbMoviePersonRelationship,
+            keys.WORK_TYPE: keys.AUDIOVISUAL_WORK
         },
-        'director': {
-            'qid': vocabulary.FILM_DIRECTOR,
-            'entity': models.imdb_entity.ImdbDirectorEntity,
-            'link_entity': None,
-            'nlp_entity': None
+        keys.DIRECTOR: {
+            keys.CLASS_QID: vocabulary.FILM_DIRECTOR_QID,
+            keys.MAIN_ENTITY: models.imdb_entity.ImdbDirectorEntity,
+            keys.LINK_ENTITY: None,
+            keys.NLP_ENTITY: None,
+            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbMoviePersonRelationship,
+            keys.WORK_TYPE: keys.AUDIOVISUAL_WORK
         },
-        'musician': {
-            'qid': vocabulary.MUSICIAN,
-            'entity': models.imdb_entity.ImdbMusicianEntity,
-            'link_entity': None,
-            'nlp_entity': None
+        keys.MUSICIAN: {
+            keys.CLASS_QID: vocabulary.MUSICIAN_QID,
+            keys.MAIN_ENTITY: models.imdb_entity.ImdbMusicianEntity,
+            keys.LINK_ENTITY: None,
+            keys.NLP_ENTITY: None,
+            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbMoviePersonRelationship,
+            keys.WORK_TYPE: keys.AUDIOVISUAL_WORK
         },
-        'producer': {
-            'qid': vocabulary.FILM_PRODUCER,
-            'entity': models.imdb_entity.ImdbProducerEntity,
-            'link_entity': None,
-            'nlp_entity': None
+        keys.PRODUCER: {
+            keys.CLASS_QID: vocabulary.FILM_PRODUCER_QID,
+            keys.MAIN_ENTITY: models.imdb_entity.ImdbProducerEntity,
+            keys.LINK_ENTITY: None,
+            keys.NLP_ENTITY: None,
+            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbMoviePersonRelationship,
+            keys.WORK_TYPE: keys.AUDIOVISUAL_WORK
         },
-        'writer': {
-            'qid': vocabulary.SCREENWRITER,
-            'entity': models.imdb_entity.ImdbWriterEntity,
-            'link_entity': None,
-            'nlp_entity': None
+        keys.WRITER: {
+            keys.CLASS_QID: vocabulary.SCREENWRITER_QID,
+            keys.MAIN_ENTITY: models.imdb_entity.ImdbWriterEntity,
+            keys.LINK_ENTITY: None,
+            keys.NLP_ENTITY: None,
+            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbMoviePersonRelationship,
+            keys.WORK_TYPE: keys.AUDIOVISUAL_WORK
+        },
+        keys.AUDIOVISUAL_WORK: {
+            keys.CLASS_QID: vocabulary.AUDIOVISUAL_WORK_QID,
+            keys.MAIN_ENTITY: models.imdb_entity.ImdbMovieEntity,
+            keys.LINK_ENTITY: None,
+            keys.NLP_ENTITY: None,
+            keys.RELATIONSHIP_ENTITY: models.imdb_entity.ImdbMoviePersonRelationship,
+            keys.WORK_TYPE: None
         }
     },
-    'musicbrainz': {
-        'musician': {
-            'qid': vocabulary.MUSICIAN,
-            'entity': models.musicbrainz_entity.MusicbrainzArtistEntity,
-            'link_entity': models.musicbrainz_entity.MusicbrainzArtistLinkEntity,
-            'nlp_entity': None
+    keys.MUSICBRAINZ: {
+        keys.MUSICIAN: {
+            keys.CLASS_QID: vocabulary.MUSICIAN_QID,
+            keys.MAIN_ENTITY: models.musicbrainz_entity.MusicbrainzArtistEntity,
+            keys.LINK_ENTITY: models.musicbrainz_entity.MusicbrainzArtistLinkEntity,
+            keys.NLP_ENTITY: None,
+            keys.RELATIONSHIP_ENTITY: models.musicbrainz_entity.MusicBrainzReleaseGroupArtistRelationship
         },
-        'band': {
-            'qid': vocabulary.BAND,
-            'entity': models.musicbrainz_entity.MusicbrainzBandEntity,
-            'link_entity': models.musicbrainz_entity.MusicbrainzBandLinkEntity,
-            'nlp_entity': None
+        keys.BAND: {
+            keys.CLASS_QID: vocabulary.BAND_QID,
+            keys.MAIN_ENTITY: models.musicbrainz_entity.MusicbrainzBandEntity,
+            keys.LINK_ENTITY: models.musicbrainz_entity.MusicbrainzBandLinkEntity,
+            keys.NLP_ENTITY: None,
+            keys.RELATIONSHIP_ENTITY: models.musicbrainz_entity.MusicBrainzReleaseGroupArtistRelationship
+        },
+        keys.MUSICAL_WORK: {
+            keys.CLASS_QID: vocabulary.MUSICAL_WORK_QID,
+            keys.MAIN_ENTITY: models.musicbrainz_entity.MusicbrainzReleaseGroupEntity,
+            keys.LINK_ENTITY: models.musicbrainz_entity.MusicbrainzReleaseGroupLinkEntity,
+            keys.NLP_ENTITY: None,
+            keys.RELATIONSHIP_ENTITY: models.musicbrainz_entity.MusicBrainzReleaseGroupArtistRelationship
         }
     }
 }
@@ -117,40 +151,20 @@ TARGET_CATALOGS = {
 # When building the wikidata dump for catalogs in this array
 # also the QIDs of a person's occupations will be included
 # as part of the dump
-REQUIRE_OCCUPATIONS = [
-    'imdb'
+REQUIRE_OCCUPATIONS = {
+    keys.IMDB: [keys.ACTOR, keys.DIRECTOR,
+                keys.MUSICIAN, keys.PRODUCER, keys.WRITER]
+}
+REQUIRE_GENRE = [
+    keys.MUSICAL_WORK, keys.AUDIOVISUAL_WORK
 ]
 
-# Wikidata field & target column names
-INTERNAL_ID = 'internal_id'
-CATALOG_ID = 'catalog_id'
-QID = 'qid'
-TID = 'tid'
-ALIAS = 'alias'
-BIRTH_NAME = vocabulary.LINKER_PIDS[vocabulary.BIRTH_NAME]
-FAMILY_NAME = vocabulary.LINKER_PIDS[vocabulary.FAMILY_NAME]
-GIVEN_NAME = vocabulary.LINKER_PIDS[vocabulary.GIVEN_NAME]
-PSEUDONYM = vocabulary.LINKER_PIDS[vocabulary.PSEUDONYM]
-DATE_OF_BIRTH = vocabulary.LINKER_PIDS[vocabulary.DATE_OF_BIRTH]
-DATE_OF_DEATH = vocabulary.LINKER_PIDS[vocabulary.DATE_OF_DEATH]
-# Consistent with BaseEntity
-NAME = 'name'
-NAME_TOKENS = 'name_tokens'
-BIRTH_PRECISION = 'born_precision'
-DEATH_PRECISION = 'died_precision'
-# Consistent with BaseLinkEntity
-URL = 'url'
-URL_TOKENS = 'url_tokens'
-# Consistent with BaseNlpEntity
-DESCRIPTION = 'description'
-DESCRIPTION_TOKENS = 'description_tokens'
-# Target-specific column names
-REAL_NAME = 'real_name'
 # Cluster of fields with names
-NAME_FIELDS = (NAME, ALIAS, BIRTH_NAME, FAMILY_NAME,
-               GIVEN_NAME, PSEUDONYM, REAL_NAME)
+NAME_FIELDS = (keys.NAME, keys.ALIAS, keys.BIRTH_NAME,
+               keys.FAMILY_NAME, keys.GIVEN_NAME, keys.PSEUDONYM, keys.REAL_NAME)
 
-# File names
+# File names & folders
+SHARED_FOLDER = '/app/shared/'
 WD_TRAINING_SET = 'wikidata_%s_%s_training_set.jsonl.gz'
 WD_CLASSIFICATION_SET = 'wikidata_%s_%s_classification_set.jsonl.gz'
 SAMPLES = '%s_%s_%s_samples%02d.pkl.gz'
@@ -166,45 +180,38 @@ COMPLETE_WIKIDATA_CHUNKS = '%s_%s_%s_complete_wikidata_chunks.pkl.gz'
 COMPLETE_TARGET_CHUNKS = '%s_%s_%s_complete_target_chunks.pkl.gz'
 COMPLETE_POSITIVE_SAMPLES_INDEX = '%s_%s_%s_complete_positive_samples_index.pkl.gz'
 WIKIDATA_API_SESSION = 'wiki_api_session.pkl'
-SHARED_FOLDER = '/app/shared/'
-
-# Supervised classification
-NAIVE_BAYES = 'naive_bayes'
-LINEAR_SVM = 'linear_support_vector_machines'
-SVM = 'support_vector_machines'
-SINGLE_LAYER_PERCEPTRON = 'single_layer_perceptron'
-MULTILAYER_CLASSIFIER = 'multi_layer_perceptron'
+WORKS_BY_PEOPLE_STATEMENTS = '%s_works_by_%s_statements.csv'
 
 CLASSIFIERS = {
-    'naive_bayes': NAIVE_BAYES,
-    'support_vector_machines': SVM,
-    'linear_support_vector_machines': LINEAR_SVM,
-    'single_layer_perceptron': SINGLE_LAYER_PERCEPTRON,
-    'multi_layer_perceptron': MULTILAYER_CLASSIFIER,
-    'nb': NAIVE_BAYES,  # Shorthand
-    'svm': SVM,  # Shorthand
-    'lsvm': LINEAR_SVM,  # Shorthand
-    'slp': SINGLE_LAYER_PERCEPTRON , # Shorthand
-    'mlp': MULTILAYER_CLASSIFIER  # Shorthand
+    'naive_bayes': keys.NAIVE_BAYES,
+    'support_vector_machines': keys.SVM,
+    'linear_support_vector_machines': keys.LINEAR_SVM,
+    'single_layer_perceptron': keys.SINGLE_LAYER_PERCEPTRON,
+    'multi_layer_perceptron': keys.MULTI_LAYER_PERCEPTRON,
+    'nb': keys.NAIVE_BAYES,  # Shorthand
+    'svm': keys.SVM,  # Shorthand
+    'lsvm': keys.LINEAR_SVM,  # Shorthand
+    'slp': keys.SINGLE_LAYER_PERCEPTRON,  # Shorthand
+    'mlp': keys.MULTI_LAYER_PERCEPTRON  # Shorthand
 }
 
 PERFORMANCE_METRICS = ['precision', 'recall', 'f1']
 
 PARAMETER_GRIDS = {
-    NAIVE_BAYES: {
+    keys.NAIVE_BAYES: {
         'alpha': [0.0001, 0.001, 0.01, 0.1, 1],
         'binarize': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
     },
-    LINEAR_SVM: {
+    keys.LINEAR_SVM: {
         # liblinear fails to converge when values are 10 and 100 in some datasets
         'C': [0.01, 0.1, 1.0, 10, 100]
     },
-    SVM: {
+    keys.SVM: {
         # The execution takes too long when C=100 and kernel=linear
         'C': [0.01, 0.1, 1.0, 10],
         'kernel': ['linear', 'poly', 'rbf', 'sigmoid']
     },
-    SINGLE_LAYER_PERCEPTRON: {
+    keys.SINGLE_LAYER_PERCEPTRON: {
         'epochs': [100, 1000, 2000, 3000],
         'batch_size': [256, 512, 1024, 2048]
     }
