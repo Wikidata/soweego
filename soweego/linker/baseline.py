@@ -217,6 +217,10 @@ def similar_link_tokens_match(source, target, target_pid: str) -> Iterable[Tuple
 
     Similar tokens match means that if a set of tokens is contained in another one, it's a match.
     """
+
+    if target is None:
+        return
+
     to_exclude = set()
 
     for row_entity in tqdm(source, total=_count_num_lines_in_file(source)):

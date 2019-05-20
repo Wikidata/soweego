@@ -128,9 +128,7 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
         wd_generator = workflow.preprocess_wikidata(
             'classification', wd_reader)
 
-        all_feature_vectors = []
-        all_wd_chunks = []
-        all_target_chunks = []
+        all_feature_vectors, all_wd_chunks, all_target_chunks = None, None, None
 
         for i, wd_chunk in enumerate(wd_generator, 1):
             # TODO Also consider blocking on URLs
@@ -153,11 +151,33 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
             feature_vectors = workflow.extract_features(
                 samples, wd_chunk, target_chunk, features_path)
 
-            # keep features before adding missing features vectors, which may
+            # keep features before '_add_missing_feature_columns', which may
             # change depending on the classifier.
-            all_feature_vectors.append(feature_vectors)
-            all_wd_chunks.append(wd_chunk)
-            all_target_chunks.append(target_chunk)
+            # we keep all as a single pd.Dataframe
+
+            # if one is None then all are None
+            if all_feature_vectors is None:
+
+                # if they're None set their values to be
+                # the pd.Dataframe corresponding to the current chunk
+                all_feature_vectors = feature_vectors
+                all_wd_chunks = wd_chunk
+                all_target_chunks = target_chunk
+
+            else:
+                # if they're not None then just add the new chunk data
+                # to the end
+                all_feature_vectors = pd.concat([
+                    all_feature_vectors,
+                    feature_vectors], sort=False)
+
+                all_wd_chunks = pd.concat([
+                    all_wd_chunks,
+                    wd_chunk], sort=False)
+
+                all_target_chunks = pd.concat([
+                    all_target_chunks,
+                    target_chunk], sort=False)
 
             _add_missing_feature_columns(classifier, feature_vectors)
 
@@ -179,10 +199,9 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
             yield predictions[predictions >= threshold].drop_duplicates()
 
         # dump all processed chunks as pickled files
-        pd.concat(all_feature_vectors, sort=False).to_pickle(complete_fv_path)
-        pd.concat(all_wd_chunks, sort=False).to_pickle(complete_wd_path)
-        pd.concat(all_target_chunks, sort=False).to_pickle(
-            complete_target_path)
+        all_feature_vectors.to_pickle(complete_fv_path)
+        all_wd_chunks.to_pickle(complete_wd_path)
+        all_target_chunks.to_pickle(complete_target_path)
 
 
 def _zero_when_different_names(prediction, wikidata, target):

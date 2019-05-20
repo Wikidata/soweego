@@ -35,7 +35,8 @@ LOGGER = logging.getLogger(__name__)
 def import_cli(catalog: str, url_check: bool, dir_io: str) -> None:
     """Download, extract and import an available catalog."""
 
-    extractor = constants.DUMP_EXTRACTOR[catalog]
+    extractor = constants.DUMP_EXTRACTOR[catalog]()
+
     Importer().refresh_dump(dir_io, extractor, url_check)
 
 
