@@ -47,7 +47,7 @@ def build_wikidata(goal, catalog, entity, dir_io):
         raise ValueError(
             "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'" % goal)
 
-    catalog_pid = target_database.get_pid(catalog, entity)
+    catalog_pid = target_database.get_person_pid(catalog)
 
     if os.path.exists(wd_io_path):
         LOGGER.info(
@@ -117,7 +117,7 @@ def _get_tids(qids_and_tids):
 
 
 def preprocess(goal: str, wikidata_reader: JsonReader, target_reader: JsonReader) -> Tuple[
-    Generator[pd.DataFrame, None, None], Generator[pd.DataFrame, None, None]]:
+        Generator[pd.DataFrame, None, None], Generator[pd.DataFrame, None, None]]:
     handle_goal(goal)
     return preprocess_wikidata(goal, wikidata_reader), preprocess_target(goal, target_reader)
 
@@ -158,7 +158,6 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
         compare.add(StringList(keys.NAME_TOKENS,
                                keys.NAME_TOKENS, label='name_levenshtein'))
 
-
     # Feature 5: string kernel similarity on name tokens
         compare.add(StringList(keys.NAME_TOKENS, keys.NAME_TOKENS,
                                algorithm='cosine', analyzer='char_wb', label='name_string_kernel_cosine'))
@@ -179,10 +178,10 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
                                      occupations_col_name,
                                      label='occupation_qids'))
 
-    if in_both_datasets(constants.GENRE):
+    if in_both_datasets(keys.GENRE):
         # Feature 9: genre similar tokens
-        compare.add(SimilarTokens(constants.GENRE,
-                                  constants.GENRE, 'genre_similar_tokens'))
+        compare.add(SimilarTokens(keys.GENRE,
+                                  keys.GENRE, 'genre_similar_tokens'))
 
     feature_vectors = compare.compute(
         candidate_pairs, wikidata, target).drop_duplicates()
@@ -244,8 +243,8 @@ def preprocess_wikidata(goal, wikidata_reader):
                     tokenize_values, args=(text_utils.tokenize,))
 
         # 4b. Tokenize genres if available
-        if chunk.get(constants.GENRE) is not None:
-            chunk[constants.GENRE] = chunk[constants.GENRE].apply(
+        if chunk.get(keys.GENRE) is not None:
+            chunk[keys.GENRE] = chunk[keys.GENRE].apply(
                 tokenize_values, args=(text_utils.tokenize,))
 
         # 5. Tokenize URLs
@@ -299,17 +298,17 @@ def preprocess_target(goal, target_reader):
     # 4. Pair dates with their precision & drop precision columns
     if _will_handle_birth_date(target):
         LOGGER.info('Pairing birth date columns with precision ones ...')
-        target[constants.DATE_OF_BIRTH] = list(
-            zip(target[constants.DATE_OF_BIRTH], target[constants.BIRTH_PRECISION]))
-        target.drop(columns=[constants.BIRTH_PRECISION], inplace=True)
+        target[keys.DATE_OF_BIRTH] = list(
+            zip(target[keys.DATE_OF_BIRTH], target[keys.BIRTH_PRECISION]))
+        target.drop(columns=[keys.BIRTH_PRECISION], inplace=True)
         log_dataframe_info(
             LOGGER, target, 'Paired birth date columns with precision ones')
 
     if _will_handle_death_date(target):
         LOGGER.info('Pairing death date columns with precision ones ...')
-        target[constants.DATE_OF_DEATH] = list(
-            zip(target[constants.DATE_OF_DEATH], target[constants.DEATH_PRECISION]))
-        target.drop(columns=[constants.DEATH_PRECISION], inplace=True)
+        target[keys.DATE_OF_DEATH] = list(
+            zip(target[keys.DATE_OF_DEATH], target[keys.DEATH_PRECISION]))
+        target.drop(columns=[keys.DEATH_PRECISION], inplace=True)
 
         log_dataframe_info(
             LOGGER, target, 'Paired death date columns with precision ones')
@@ -322,7 +321,8 @@ def preprocess_target(goal, target_reader):
     log_dataframe_info(
         LOGGER, target, f"Data indexed and aggregated on '{keys.TID}' column")
     # 6. Shared preprocessing
-    target = _shared_preprocessing(target, _will_handle_birth_date(target), _will_handle_death_date(target))
+    target = _shared_preprocessing(target, _will_handle_birth_date(
+        target), _will_handle_death_date(target))
 
     LOGGER.info('Target preprocessing done')
     return target
@@ -338,11 +338,11 @@ def _shared_preprocessing(df, will_handle_birth_date, will_handle_death_date):
 
     if will_handle_birth_date:
         LOGGER.info('Handling birth dates ...')
-        _handle_dates(df, constants.DATE_OF_BIRTH)
+        _handle_dates(df, keys.DATE_OF_BIRTH)
 
     if will_handle_death_date:
         LOGGER.info('Handling death dates ...')
-        _handle_dates(df, constants.DATE_OF_DEATH)
+        _handle_dates(df, keys.DATE_OF_DEATH)
 
     return df
 
@@ -386,21 +386,21 @@ def _will_handle_dates(df: pd.DataFrame) -> bool:
 
 
 def _will_handle_birth_date(df: pd.DataFrame) -> bool:
-    dob_column = df.get(constants.DATE_OF_BIRTH)
+    dob_column = df.get(keys.DATE_OF_BIRTH)
     if dob_column is None:
         LOGGER.warning(
             "'%s' column is not in DataFrame, won't handle birth dates. Perhaps it was dropped because they contained null values only",
-            constants.DATE_OF_BIRTH)
+            keys.DATE_OF_BIRTH)
         return False
     return True
 
 
 def _will_handle_death_date(df: pd.DataFrame) -> bool:
-    dod_column = df.get(constants.DATE_OF_DEATH)
+    dod_column = df.get(keys.DATE_OF_DEATH)
     if dod_column is None:
         LOGGER.warning(
             "'%s' column is not in DataFrame, won't handle death dates. Perhaps it was dropped because they contained null values only",
-            constants.DATE_OF_DEATH)
+            keys.DATE_OF_DEATH)
         return False
     return True
 
