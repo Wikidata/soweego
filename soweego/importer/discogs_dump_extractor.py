@@ -219,16 +219,6 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                 entity = discogs_entity.DiscogsGroupEntity()
                 self._populate_band(entity_array, entity, identifier,
                                     name, living_links, node)
-            # Can't infer the entity type, so populate both
-            else:
-                LOGGER.debug(
-                    'Unknown artist type. Will add it to both musicians and bands: %s', identifier)
-                entity = discogs_entity.DiscogsMusicianEntity()
-                self._populate_musician(entity_array,
-                                        entity, identifier, name, living_links, node)
-                entity = discogs_entity.DiscogsGroupEntity()
-                self._populate_band(entity_array, entity, identifier,
-                                    name, living_links, node)
 
             # commit in batches of `self._sqlalchemy_commit_every`
             if len(entity_array) >= self._sqlalchemy_commit_every:

@@ -61,7 +61,7 @@ class BaseRelationship(AbstractConcreteBase, BASE):
     def __table_args__(cls):
         return (
             Index('idx_catalog_ids_%s' % cls.__tablename__, 'from_catalog_id',
-                  'to_catalog_id', unique=True),
+                  'to_catalog_id', unique=True, mysql_using='hash'),
             {'mysql_charset': 'utf8mb4'}
         )
 

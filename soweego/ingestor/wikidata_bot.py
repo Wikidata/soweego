@@ -16,10 +16,15 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import json
 import logging
 from datetime import date
+from re import search
+from typing import Iterable
 
 import click
 import pywikibot
 
+from soweego.commons import target_database
+from soweego.commons.constants import QID_REGEX
+from soweego.commons.keys import IMDB
 from soweego.wikidata import vocabulary
 
 LOGGER = logging.getLogger(__name__)
@@ -43,9 +48,11 @@ RETRIEVED_REFERENCE.setTarget(TIMESTAMP)
 @click.command()
 @click.argument('catalog_name', type=click.Choice(['discogs', 'imdb', 'musicbrainz', 'twitter']))
 @click.argument('matches', type=click.File())
-@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits in the Wikidata sandbox item Q4115189')
+@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits in the Wikidata sandbox item Q4115189.')
 def add_identifiers_cli(catalog_name, matches, sandbox):
-    """Bot add identifiers to existing Wikidata items.
+    """Add identifiers to existing Wikidata items.
+
+    MATCHES must be a { QID: catalog_identifier } JSON file.
     """
     if sandbox:
         LOGGER.info('Running on the Wikidata sandbox item')
@@ -55,28 +62,32 @@ def add_identifiers_cli(catalog_name, matches, sandbox):
 @click.command()
 @click.argument('catalog_name', type=click.Choice(['discogs', 'imdb', 'musicbrainz', 'twitter']))
 @click.argument('statements', type=click.File())
-@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits in the Wikidata sandbox item Q4115189')
+@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits in the Wikidata sandbox item Q4115189.')
 def add_statements_cli(catalog_name, statements, sandbox):
-    """Bot add statements to existing Wikidata items.
+    """Add statements to existing Wikidata items.
+
+    STATEMENTS must be a subject, predicate, value TSV file.
     """
-    stated_in = vocabulary.CATALOG_MAPPING.get(catalog_name)['qid']
+    stated_in = target_database.get_catalog_qid(catalog_name)
     if sandbox:
         LOGGER.info('Running on the Wikidata sandbox item')
     for statement in statements:
         subject, predicate, value = statement.rstrip().split('\t')
         if sandbox:
-            _add_or_reference(vocabulary.SANDBOX_1,
-                              predicate, value, stated_in)
+            add_or_reference_people(vocabulary.SANDBOX_1,
+                                    predicate, value, stated_in)
         else:
-            _add_or_reference(subject, predicate, value, stated_in)
+            add_or_reference_people(subject, predicate, value, stated_in)
 
 
 @click.command()
 @click.argument('catalog_name', type=click.Choice(['discogs', 'imdb', 'musicbrainz', 'twitter']))
 @click.argument('invalid_identifiers', type=click.File())
-@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits in a random Wikidata sandbox item')
+@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits in a random Wikidata sandbox item.')
 def delete_identifiers_cli(catalog_name, invalid_identifiers, sandbox):
-    """Bot delete invalid identifiers from existing Wikidata items.
+    """Delete invalid identifiers from existing Wikidata items.
+
+    INVALID_IDENTIFIERS must be a { QID: catalog_identifier } JSON file.
     """
     if sandbox:
         LOGGER.info('Running on the Wikidata sandbox item')
@@ -89,7 +100,9 @@ def delete_identifiers_cli(catalog_name, invalid_identifiers, sandbox):
 @click.argument('invalid_identifiers', type=click.File())
 @click.option('-s', '--sandbox', is_flag=True, help='Perform all edits on the Wikidata sandbox item Q4115189')
 def deprecate_identifiers_cli(catalog_name, invalid_identifiers, sandbox):
-    """Bot deprecate invalid identifiers from existing Wikidata items.
+    """Deprecate invalid identifiers from existing Wikidata items.
+
+    INVALID_IDENTIFIERS must be a { QID: catalog_identifier } JSON file.
     """
     if sandbox:
         LOGGER.info('Running on the Wikidata sandbox item')
@@ -107,41 +120,75 @@ def add_identifiers(matches: dict, catalog_name: str, sandbox: bool) -> None:
     :param sandbox: whether to perform edits on the Wikidata sandbox item Q4115189
     :type sandbox: bool
     """
-    catalog_terms = vocabulary.CATALOG_MAPPING.get(catalog_name)
+    pid = target_database.get_person_pid(catalog_name)
+    catalog_qid = target_database.get_catalog_qid(catalog_name)
     for qid, catalog_id in matches.items():
         LOGGER.info('Processing %s match: %s -> %s',
                     catalog_name, qid, catalog_id)
         if sandbox:
             LOGGER.info(
                 'Using Wikidata sandbox item %s as subject, instead of %s', vocabulary.SANDBOX_1, qid)
-            _add_or_reference(vocabulary.SANDBOX_1,
-                              catalog_terms['pid'], catalog_id, catalog_terms['qid'])
+            add_or_reference_people(vocabulary.SANDBOX_1, pid,
+                                    catalog_id, catalog_qid)
         else:
-            _add_or_reference(
-                qid, catalog_terms['pid'], catalog_id, catalog_terms['qid'])
+            add_or_reference_people(qid, pid, catalog_id, catalog_qid)
 
 
-def add_statements(statements: list, stated_in_catalog: str, sandbox: bool) -> None:
-    """Add generic statements to existing Wikidata items.
+def add_works_statements(statements: Iterable, catalog: str, sandbox: bool) -> None:
+    """Add statements to existing Wikidata works.
 
-    Addition candidates typically come from validation criteria 2 or 3
+    Statements typically come from
+    :func:`soweego.validator.enrichment.generate_statements`.
+
+    :param statements: iterable of
+    (work QID, predicate, person QID, person target ID) tuples
+    :type statements: Iterable
+    :param catalog: a supported target catalog
+    as per ``soweego.commons.constants.TARGET_CATALOGS``
+    :type catalog: str
+    :param sandbox: whether to perform edits on the Wikidata sandbox item Q4115189
+    :type sandbox: bool
+    """
+
+    # Boolean to run IMDb-specific checks
+    is_imdb = catalog == IMDB
+    catalog_qid = target_database.get_catalog_qid(catalog)
+    person_pid = target_database.get_person_pid(catalog)
+
+    for work, predicate, person, person_tid in statements:
+        LOGGER.info('Processing (%s, %s, %s) statement',
+                    work, predicate, person)
+        if sandbox:
+            add_or_reference_works(
+                vocabulary.SANDBOX_1, predicate, person, catalog_qid, person_pid, person_tid, is_imdb=is_imdb)
+        else:
+            add_or_reference_works(
+                work, predicate, person, catalog_qid, person_pid, person_tid, is_imdb=is_imdb)
+
+
+def add_people_statements(statements: Iterable, stated_in_catalog: str, sandbox: bool) -> None:
+    """Add statements to existing Wikidata people.
+
+    Statements typically come from validation criteria 2 or 3
     as per :func:`soweego.validator.checks.check_links` and
     :func:`soweego.validator.checks.check_metadata`.
 
-    :param statements: list of (subject, predicate, value) triples
-    :type statements: list
+    :param statements: iterable of (subject, predicate, value) triples
+    :type statements: Iterable
     :param stated_in_catalog: QID of the target catalog where statements come from
     :type stated_in_catalog: str
     :param sandbox: whether to perform edits on the Wikidata sandbox item Q4115189
     :type sandbox: bool
     """
     for subject, predicate, value in statements:
-        LOGGER.info('Processing (%s, %s, %s) statement')
+        LOGGER.info('Processing (%s, %s, %s) statement',
+                    subject, predicate, value)
         if sandbox:
-            _add_or_reference(vocabulary.SANDBOX_1,
-                              predicate, value, stated_in_catalog)
+            add_or_reference_people(vocabulary.SANDBOX_1,
+                                    predicate, value, stated_in_catalog)
         else:
-            _add_or_reference(subject, predicate, value, stated_in_catalog)
+            add_or_reference_people(
+                subject, predicate, value, stated_in_catalog)
 
 
 def delete_or_deprecate_identifiers(action: str, invalid: dict, catalog_name: str, sandbox: bool) -> None:
@@ -174,46 +221,61 @@ def delete_or_deprecate_identifiers(action: str, invalid: dict, catalog_name: st
                 _delete_or_deprecate(action, qid, catalog_id, catalog_name)
 
 
-def _add_or_reference(subject: str, predicate: str, value: str, stated_in: str) -> None:
-    item = pywikibot.ItemPage(REPO, subject)
-
-    # get redirect target recursively in case a redirect points
-    # to another redirect
-    while item.isRedirectPage():
-        item = item.getRedirectTarget()
-
-    data = item.get()
-    # No data at all
-    if not data:
-        LOGGER.warning('%s has no data at all', subject)
-        _add(item, predicate, value, stated_in)
+def add_or_reference_works(work: str, predicate: str, person: str, stated_in: str, person_pid: str, person_tid: str, is_imdb=False) -> None:
+    # Parse value into an item in case of QID
+    qid = search(QID_REGEX, person)
+    if not qid:
+        LOGGER.warning("%s doesn't look like a QID, won't try to add the (%s, %s, %s) statement",
+                       person, work, predicate, person)
         return
-    claims = data.get('claims')
-    # No claims
-    if not claims:
-        LOGGER.warning('%s has no claims', subject)
-        _add(item, predicate, value, stated_in)
+    person = pywikibot.ItemPage(REPO, qid.group())
+
+    subject_item, claims = _essential_checks(
+        work, predicate, person, stated_in, person_pid=person_pid, person_tid=person_tid)
+    if None in (subject_item, claims):
         return
-    # Check 1: same value in 'official website' property -> add reference
-    # See https://www.wikidata.org/wiki/User_talk:Jura1#Thanks_for_your_feedback_on_User:Soweego_bot_task_2
-    official_websites = claims.get(vocabulary.OFFICIAL_WEBSITE)
-    if official_websites:
-        for claim in official_websites:
-            if claim.getTarget() == value:
-                LOGGER.debug(
-                    "%s has an official website claim with value '%s'", subject, value)
-                _reference(claim, stated_in)
+
+    # IMDB-specific check: claims with same object item -> add reference
+    if is_imdb:
+        for pred in vocabulary.MOVIE_PIDS:
+            if _check_for_same_value(claims, work, pred, person, stated_in, person_pid=person_pid, person_tid=person_tid):
                 return
-    given_predicate_claims = claims.get(predicate)
-    # Check 2: no claim with the given predicate -> add statement
-    if not given_predicate_claims:
-        LOGGER.debug('%s has no %s claim', subject, predicate)
-        _add(item, predicate, value, stated_in)
+
+    _add_or_reference(claims, subject_item, predicate, person,
+                      stated_in, person_pid=person_pid, person_tid=person_tid)
+
+
+def add_or_reference_people(person: str, predicate: str, value: str, stated_in: str) -> None:
+    subject_item, claims = _essential_checks(
+        person, predicate, value, stated_in)
+
+    if None in (subject_item, claims):
         return
-    # Check 3: handle case-insensitive IDs: Facebook, Twitter
+
+    # If 'official website' property has the same value -> add reference
+    # See https://www.wikidata.org/wiki/User_talk:Jura1#Thanks_for_your_feedback_on_User:Soweego_bot_task_2
+    if _check_for_same_value(claims, person, vocabulary.OFFICIAL_WEBSITE, value, stated_in):
+        return
+
+    # Handle case-insensitive IDs: Facebook, Twitter
     # See https://www.wikidata.org/wiki/Topic:Unym71ais48bt6ih
-    case_insensitive = True if predicate in [
-        vocabulary.FACEBOOK_PID, vocabulary.TWITTER_USERNAME_PID] else False
+    case_insensitive = predicate in (
+        vocabulary.FACEBOOK_PID, vocabulary.TWITTER_USERNAME_PID)
+
+    _add_or_reference(claims, subject_item, predicate, value,
+                      stated_in, case_insensitive=case_insensitive)
+
+
+def _add_or_reference(claims, subject_item, predicate, value, stated_in, case_insensitive=False, person_pid=None, person_tid=None):
+    given_predicate_claims = claims.get(predicate)
+    subject_qid = subject_item.getID()
+
+    # No claim with the given predicate -> add statement
+    if not given_predicate_claims:
+        LOGGER.debug('%s has no %s claim', subject_qid, predicate)
+        _add(subject_item, predicate, value, stated_in, person_pid, person_tid)
+        return
+
     if case_insensitive:
         value = value.lower()
         existing_values = [claim_value.getTarget().lower()
@@ -221,41 +283,92 @@ def _add_or_reference(subject: str, predicate: str, value: str, stated_in: str) 
     else:
         existing_values = [claim_value.getTarget()
                            for claim_value in given_predicate_claims]
+
     # No given value -> add statement
     if value not in existing_values:
         LOGGER.debug('%s has no %s claim with value %s',
-                     subject, predicate, value)
-        _add(item, predicate, value, stated_in)
+                     subject_qid, predicate, value)
+        _add(subject_item, predicate, value, stated_in, person_pid, person_tid)
         return
+
     # Claim with the given predicate and value -> add reference
     LOGGER.debug("%s has a %s claim with value '%s'",
-                 subject, predicate, value)
+                 subject_qid, predicate, value)
     if case_insensitive:
         for claim in given_predicate_claims:
             if claim.getTarget().lower() == value:
-                _reference(claim, stated_in)
+                _reference(claim, stated_in, person_pid, person_tid)
                 return
+
     for claim in given_predicate_claims:
         if claim.getTarget() == value:
-            _reference(claim, stated_in)
+            _reference(claim, stated_in, person_pid, person_tid)
 
 
-def _add(subject_item, predicate, value, stated_in):
+def _essential_checks(subject, predicate, value, stated_in, person_pid=None, person_tid=None):
+    item = pywikibot.ItemPage(REPO, subject)
+
+    # Handle redirects
+    while item.isRedirectPage():
+        item = item.getRedirectTarget()
+
+    data = item.get()
+    # No data at all
+    if not data:
+        LOGGER.warning('%s has no data at all', subject)
+        _add(item, predicate, value, stated_in, person_pid, person_tid)
+        return None, None
+
+    claims = data.get('claims')
+    # No claims
+    if not claims:
+        LOGGER.warning('%s has no claims', subject)
+        _add(item, predicate, value, stated_in, person_pid, person_tid)
+        return None, None
+
+    return item, claims
+
+
+def _check_for_same_value(subject_claims, subject, predicate, value, stated_in, person_pid=None, person_tid=None):
+    given_predicate_claims = subject_claims.get(predicate)
+    if given_predicate_claims:
+        for claim in given_predicate_claims:
+            if claim.getTarget() == value:
+                LOGGER.debug(
+                    "%s has a %s claim with value '%s'", subject, predicate, value)
+                _reference(claim, stated_in, person_pid, person_tid)
+                return True
+    return False
+
+
+def _add(subject_item, predicate, value, stated_in, person_pid, person_tid):
     claim = pywikibot.Claim(REPO, predicate)
     claim.setTarget(value)
     subject_item.addClaim(claim)
     LOGGER.debug('Added claim: %s', claim.toJSON())
-    _reference(claim, stated_in)
+    _reference(claim, stated_in, person_pid, person_tid)
     LOGGER.info('Added (%s, %s, %s) statement',
                 subject_item.getID(), predicate, value)
 
 
-def _reference(claim, stated_in):
+def _reference(claim, stated_in, person_pid, person_tid):
     STATED_IN_REFERENCE.setTarget(
         pywikibot.ItemPage(REPO, stated_in))
-    claim.addSources([STATED_IN_REFERENCE, RETRIEVED_REFERENCE])
-    LOGGER.info('Added (%s, %s), (%s, %s) reference node', STATED_IN_REFERENCE.getID(
-    ), stated_in, RETRIEVED_REFERENCE.getID(), TODAY)
+
+    if None in (person_pid, person_tid):
+        claim.addSources([STATED_IN_REFERENCE, RETRIEVED_REFERENCE])
+
+        LOGGER.info('Added (%s, %s), (%s, %s) reference node', STATED_IN_REFERENCE.getID(
+        ), stated_in, RETRIEVED_REFERENCE.getID(), TODAY)
+    else:
+        tid_reference = pywikibot.Claim(REPO, person_pid, is_reference=True)
+        tid_reference.setTarget(person_tid)
+
+        claim.addSources(
+            [STATED_IN_REFERENCE, tid_reference, RETRIEVED_REFERENCE])
+
+        LOGGER.info('Added (%s, %s), (%s, %s), (%s, %s) reference node', STATED_IN_REFERENCE.getID(
+        ), stated_in, person_pid, person_tid, RETRIEVED_REFERENCE.getID(), TODAY)
 
 
 def _delete_or_deprecate(action: str, qid: str, catalog_id: str, catalog_name: str) -> None:
