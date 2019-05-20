@@ -14,7 +14,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
-@click.argument('target', type=click.Choice(target_database.available_targets()))
+@click.argument('target', type=click.Choice(target_database.supported_targets()))
 @click.option('--validator/--no-validator', default=False,
               help='Executes the validation steps for the target. Default: no.')
 @click.option('--importer/--no-importer', default=True,
@@ -57,7 +57,7 @@ def _importer(target: str):
 def _linker(target: str, upload: bool):
     LOGGER.info("Running linker for target: %s" % target)
     upload_option = "--upload" if upload else "--no-upload"
-    for target_type in target_database.available_types_for_target(target):
+    for target_type in target_database.supported_entities_for_target(target):
         if not target_type:
             continue
         _invoke_no_exit(evaluate.cli, ['slp', target, target_type])
@@ -69,7 +69,7 @@ def _linker(target: str, upload: bool):
 def _validator(target: str, upload: bool):
     upload_option = "--upload" if upload else "--no-upload"
     # Runs the validator for each kind of entity of the given target database
-    for entity_type in target_database.available_types_for_target(target):
+    for entity_type in target_database.supported_entities_for_target(target):
         LOGGER.info("Running validator for target %s %s" %
                     (target, entity_type))
         _invoke_no_exit(check_existence_cli, [entity_type, target, upload_option])

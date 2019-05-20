@@ -13,7 +13,7 @@ import csv
 import datetime
 import gzip
 import logging
-from typing import Dict, List, Generator, Tuple
+from typing import Dict, Generator, List, Tuple
 
 from tqdm import tqdm
 
@@ -97,7 +97,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             imdb_entity.ImdbMusicianEntity,
             imdb_entity.ImdbProducerEntity,
             imdb_entity.ImdbWriterEntity,
-            imdb_entity.ImdbPersonMovieRelationship,
+            imdb_entity.ImdbMoviePersonRelationship,
         ]
 
         db_manager = DBManager()
@@ -367,9 +367,9 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
         for title in know_for_titles:
 
-            entity_array.append(imdb_entity.ImdbPersonMovieRelationship(
-                from_catalog_id=person_info.get('nconst'),
-                to_catalog_id=title
+            entity_array.append(imdb_entity.ImdbMoviePersonRelationship(
+                from_catalog_id=title,
+                to_catalog_id=person_info.get('nconst')
             ))
 
     def _translate_professions(self, professions: List[str]) -> List[str]:
@@ -389,7 +389,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         qids = []
 
         for prof in professions:
-            qid = vocab.IMDB_PROFESSIONS_MAPPINGS.get(prof, None)
+            qid = vocab.IMDB_PROFESSIONS_MAPPING.get(prof, None)
             if qid:
                 qids.append(qid)
 

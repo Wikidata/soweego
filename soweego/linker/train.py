@@ -21,7 +21,8 @@ from pandas import MultiIndex, concat
 from sklearn.externals import joblib
 from sklearn.model_selection import GridSearchCV
 
-from soweego.commons import constants, data_gathering, target_database, utils
+from soweego.commons import (constants, data_gathering, keys, target_database,
+                             utils)
 from soweego.linker import blocking, workflow
 
 LOGGER = logging.getLogger(__name__)
@@ -29,10 +30,10 @@ LOGGER = logging.getLogger(__name__)
 
 @click.command(context_settings={'ignore_unknown_options': True, 'allow_extra_args': True})
 @click.argument('classifier', type=click.Choice(constants.CLASSIFIERS))
-@click.argument('target', type=click.Choice(target_database.available_targets()))
-@click.argument('target_type', type=click.Choice(target_database.available_types()))
+@click.argument('target', type=click.Choice(target_database.supported_targets()))
+@click.argument('target_type', type=click.Choice(target_database.supported_entities()))
 @click.option('--tune', is_flag=True, help='Run grid search for hyperparameters tuning. Default: no.')
-@click.option('-k', '--k-folds', default=5, help="Number of folds for hyperparameters tuning. Implies '--tune' Default: 5.")
+@click.option('-k', '--k-folds', default=5, help="Number of folds for hyperparameters tuning. Use with '--tune' Default: 5.")
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER,
               help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER)
 @click.pass_context
@@ -51,8 +52,8 @@ def cli(ctx, classifier, target, target_type, tune, k_folds, dir_io):
 
 
 def execute(classifier, catalog, entity, tune, k, dir_io, **kwargs):
-    if tune and classifier in (constants.SINGLE_LAYER_PERCEPTRON,
-                               constants.MULTILAYER_CLASSIFIER):
+    if tune and classifier in (keys.SINGLE_LAYER_PERCEPTRON,
+                               keys.MULTI_LAYER_PERCEPTRON):
         # TODO make Keras work with GridSearchCV
         raise NotImplementedError(
             f'Grid search for {classifier} is not supported')
@@ -122,11 +123,11 @@ def build_dataset(goal, catalog, entity, dir_io):
 
         # Samples index from Wikidata
         all_samples = blocking.full_text_query_block(
-            goal, catalog, wd_chunk[constants.NAME_TOKENS], i, target_database.get_entity(catalog, entity), dir_io)
+            goal, catalog, wd_chunk[keys.NAME_TOKENS], i, target_database.get_main_entity(catalog, entity), dir_io)
 
         # Build target chunk based on samples
         target_reader = data_gathering.gather_target_dataset(
-            goal, entity, catalog, set(all_samples.get_level_values(constants.TID)))
+            goal, entity, catalog, set(all_samples.get_level_values(keys.TID)))
 
         # Preprocess target chunk
         target_chunk = workflow.preprocess_target(
@@ -145,7 +146,7 @@ def build_dataset(goal, catalog, entity, dir_io):
 
     # positive_samples = concat(positive_samples)
     positive_samples_index = MultiIndex.from_tuples(zip(
-        positive_samples.index, positive_samples), names=[constants.QID, constants.TID])
+        positive_samples.index, positive_samples), names=[keys.QID, keys.TID])
 
     feature_vectors = feature_vectors.fillna(
         constants.FEATURE_MISSING_VALUE)
@@ -166,13 +167,13 @@ def _build_positive_samples_index(wd_reader1):
     positive_samples = []
     for chunk in wd_reader1:
         # TODO don't wipe out QIDs with > 1 positive samples!
-        tids_series = chunk.set_index(constants.QID)[constants.TID].map(
+        tids_series = chunk.set_index(keys.QID)[keys.TID].map(
             lambda cell: cell[0] if isinstance(cell, list) else cell)
         positive_samples.append(tids_series)
 
     positive_samples = concat(positive_samples)
     positive_samples_index = MultiIndex.from_tuples(zip(
-        positive_samples.index, positive_samples), names=[constants.QID, constants.TID])
+        positive_samples.index, positive_samples), names=[keys.QID, keys.TID])
     LOGGER.info('Built positive samples index from Wikidata')
     return positive_samples_index
 

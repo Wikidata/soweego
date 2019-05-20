@@ -22,7 +22,7 @@ import recordlinkage as rl
 from numpy import nan
 from pandas.io.json.json import JsonReader
 
-from soweego.commons import (constants, data_gathering, target_database,
+from soweego.commons import (constants, data_gathering, keys, target_database,
                              text_utils, url_utils)
 from soweego.commons.logging import log_dataframe_info
 from soweego.linker import classifiers, neural_networks
@@ -47,19 +47,13 @@ def build_wikidata(goal, catalog, entity, dir_io):
         raise ValueError(
             "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'" % goal)
 
-    catalog_pid = target_database.get_pid(catalog)
+    catalog_pid = target_database.get_person_pid(catalog)
 
     if os.path.exists(wd_io_path):
         LOGGER.info(
             "Will reuse existing Wikidata %s set: '%s'", goal, wd_io_path)
         if goal == 'training':
-            with gzip.open(wd_io_path, 'rt') as wd_io:
-                for line in wd_io:
-                    item = json.loads(line.rstrip())
-                    qids_and_tids[item[constants.QID]] = {
-                        constants.TID: item[constants.TID]}
-            LOGGER.debug(
-                "Reconstructed dictionary with QIDS and target IDs from '%s'", wd_io_path)
+            _reconstruct_qids_and_tids(wd_io_path, qids_and_tids)
 
     else:
         LOGGER.info(
@@ -83,6 +77,16 @@ def build_wikidata(goal, catalog, entity, dir_io):
     return wd_df_reader
 
 
+def _reconstruct_qids_and_tids(wd_io_path, qids_and_tids):
+    with gzip.open(wd_io_path, 'rt') as wd_io:
+        for line in wd_io:
+            item = json.loads(line.rstrip())
+            qids_and_tids[item[keys.QID]] = {
+                keys.TID: item[keys.TID]}
+    LOGGER.debug(
+        "Reconstructed dictionary with QIDS and target IDs from '%s'", wd_io_path)
+
+
 def build_target(goal, catalog, entity, qids_and_tids):
     handle_goal(goal)
 
@@ -94,7 +98,7 @@ def build_target(goal, catalog, entity, qids_and_tids):
                 "Invalid 'qids_and_tids' parameter: it should be None when 'goal' is 'classification'")
         qids_and_tids = {}
         data_gathering.gather_target_ids(
-            entity, catalog, target_database.get_pid(catalog), qids_and_tids)
+            entity, catalog, target_database.get_person_pid(catalog), qids_and_tids)
 
     target_df_reader = data_gathering.gather_target_dataset(
         goal, entity, catalog, _get_tids(qids_and_tids))
@@ -107,7 +111,7 @@ def build_target(goal, catalog, entity, qids_and_tids):
 def _get_tids(qids_and_tids):
     tids = set()
     for data in qids_and_tids.values():
-        for identifier in data[constants.TID]:
+        for identifier in data[keys.TID]:
             tids.add(identifier)
     return tids
 
@@ -133,38 +137,38 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
     compare = rl.Compare(n_jobs=cpu_count())
     # TODO feature engineering on more fields
     # Feature 1: exact match on names
-    if in_both_datasets(constants.NAME):
-        compare.add(ExactList(constants.NAME,
-                              constants.NAME, label='name_exact'))
+    if in_both_datasets(keys.NAME):
+        compare.add(ExactList(keys.NAME,
+                              keys.NAME, label='name_exact'))
 
     # Feature 2: exact match on URLs
-    if in_both_datasets(constants.URL):
-        compare.add(ExactList(constants.URL, constants.URL, label='url_exact'))
+    if in_both_datasets(keys.URL):
+        compare.add(ExactList(keys.URL, keys.URL, label='url_exact'))
 
     # Feature 3: dates
-    if in_both_datasets(constants.DATE_OF_BIRTH):
-        compare.add(DateCompare(constants.DATE_OF_BIRTH,
-                                constants.DATE_OF_BIRTH, label='date_of_birth'))
-    if in_both_datasets(constants.DATE_OF_DEATH):
-        compare.add(DateCompare(constants.DATE_OF_DEATH,
-                                constants.DATE_OF_DEATH, label='date_of_death'))
+    if in_both_datasets(keys.DATE_OF_BIRTH):
+        compare.add(DateCompare(keys.DATE_OF_BIRTH,
+                                keys.DATE_OF_BIRTH, label='date_of_birth'))
+    if in_both_datasets(keys.DATE_OF_DEATH):
+        compare.add(DateCompare(keys.DATE_OF_DEATH,
+                                keys.DATE_OF_DEATH, label='date_of_death'))
 
     # Feature 4: Levenshtein distance on name tokens
-    if in_both_datasets(constants.NAME_TOKENS):
-        compare.add(StringList(constants.NAME_TOKENS,
-                               constants.NAME_TOKENS, label='name_levenshtein'))
+    if in_both_datasets(keys.NAME_TOKENS):
+        compare.add(StringList(keys.NAME_TOKENS,
+                               keys.NAME_TOKENS, label='name_levenshtein'))
 
     # Feature 5: string kernel similarity on name tokens
-        compare.add(StringList(constants.NAME_TOKENS, constants.NAME_TOKENS,
+        compare.add(StringList(keys.NAME_TOKENS, keys.NAME_TOKENS,
                                algorithm='cosine', analyzer='char_wb', label='name_string_kernel_cosine'))
 
     # Feature 6: similar name tokens
-        compare.add(SimilarTokens(constants.NAME_TOKENS,
-                                  constants.NAME_TOKENS, label='similar_name_tokens'))
+        compare.add(SimilarTokens(keys.NAME_TOKENS,
+                                  keys.NAME_TOKENS, label='similar_name_tokens'))
 
     # Feature 7: cosine similarity on descriptions
-    if in_both_datasets(constants.DESCRIPTION):
-        compare.add(StringList(constants.DESCRIPTION, constants.DESCRIPTION,
+    if in_both_datasets(keys.DESCRIPTION):
+        compare.add(StringList(keys.DESCRIPTION, keys.DESCRIPTION,
                                algorithm='cosine', analyzer='soweego', label='description_cosine'))
 
     # Feature 8: occupation QIDs
@@ -185,20 +189,20 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
 
 
 def init_model(classifier, *args, **kwargs):
-    if classifier is constants.NAIVE_BAYES:
+    if classifier is keys.NAIVE_BAYES:
         model = rl.NaiveBayesClassifier(**kwargs)
 
-    elif classifier is constants.LINEAR_SVM:
+    elif classifier is keys.LINEAR_SVM:
         model = rl.SVMClassifier(**kwargs)
 
-    elif classifier is constants.SVM:
+    elif classifier is keys.SVM:
         model = classifiers.SVCClassifier(**kwargs)
 
-    elif classifier is constants.SINGLE_LAYER_PERCEPTRON:
+    elif classifier is keys.SINGLE_LAYER_PERCEPTRON:
         model = neural_networks.SingleLayerPerceptron(*args, **kwargs)
 
-    elif classifier is constants.MULTILAYER_CLASSIFIER:
-        model = neural_networks.MultiLayerPerceptron(number_of_features)
+    elif classifier is keys.MULTI_LAYER_PERCEPTRON:
+        model = neural_networks.MultiLayerPerceptron(*args, **kwargs)
 
     else:
         err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
@@ -215,9 +219,9 @@ def preprocess_wikidata(goal, wikidata_reader):
 
     for i, chunk in enumerate(wikidata_reader, 1):
         # 1. QID as index
-        chunk.set_index(constants.QID, inplace=True)
+        chunk.set_index(keys.QID, inplace=True)
         log_dataframe_info(
-            LOGGER, chunk, f"Built index from '{constants.QID}' column")
+            LOGGER, chunk, f"Built index from '{keys.QID}' column")
 
         # 2. Drop columns with null values only
         _drop_null_columns(chunk)
@@ -225,7 +229,7 @@ def preprocess_wikidata(goal, wikidata_reader):
         # 3. Training only: join target IDs if multiple
         # TODO don't wipe out QIDs with > 1 positive samples!
         if goal == 'training':
-            chunk[constants.TID] = chunk[constants.TID].map(
+            chunk[keys.TID] = chunk[keys.TID].map(
                 lambda cell: cell[0] if isinstance(cell, list) else cell)
 
         # 4. Tokenize names
@@ -235,7 +239,7 @@ def preprocess_wikidata(goal, wikidata_reader):
                     tokenize_values, args=(text_utils.tokenize,))
 
         # 5. Tokenize URLs
-        chunk[constants.URL_TOKENS] = chunk[constants.URL].apply(
+        chunk[keys.URL_TOKENS] = chunk[keys.URL].apply(
             tokenize_values, args=(url_utils.tokenize,))
 
         # 6. Shared preprocessing
@@ -255,29 +259,29 @@ def preprocess_target(goal, target_reader):
     target = pd.concat([chunk for chunk in target_reader], sort=False)
 
     # 1. Drop target DB internal ID columns
-    LOGGER.info("Dropping '%s' columns ...", constants.INTERNAL_ID)
-    target.drop(columns=constants.INTERNAL_ID, inplace=True)
+    LOGGER.info("Dropping '%s' columns ...", keys.INTERNAL_ID)
+    target.drop(columns=keys.INTERNAL_ID, inplace=True)
     log_dataframe_info(
-        LOGGER, target, f"Dropped '{constants.INTERNAL_ID}'' columns")
+        LOGGER, target, f"Dropped '{keys.INTERNAL_ID}'' columns")
 
     # 2. Rename non-null catalog ID column & drop others
     LOGGER.info("Renaming '%s' column with no null values to '%s' & dropping '%s' columns with null values ...",
-                constants.CATALOG_ID, constants.TID, constants.CATALOG_ID)
+                keys.CATALOG_ID, keys.TID, keys.CATALOG_ID)
     # If 'catalog_id' is one column (i.e., a Series),
     # then it won't have None values
-    if isinstance(target[constants.CATALOG_ID], pd.Series):
-        target[constants.TID] = target[constants.CATALOG_ID]
+    if isinstance(target[keys.CATALOG_ID], pd.Series):
+        target[keys.TID] = target[keys.CATALOG_ID]
     else:
-        no_nulls = target[constants.CATALOG_ID].dropna(axis=1)
+        no_nulls = target[keys.CATALOG_ID].dropna(axis=1)
         # It may happen that more than 1 column has no null values:
         # in this case, they must be identical,
         # so take the first one
-        target[constants.TID] = no_nulls.iloc[:, 0] if isinstance(
+        target[keys.TID] = no_nulls.iloc[:, 0] if isinstance(
             no_nulls, pd.DataFrame) else no_nulls
-    target.drop(columns=constants.CATALOG_ID, inplace=True)
+    target.drop(columns=keys.CATALOG_ID, inplace=True)
     log_dataframe_info(
         LOGGER, target,
-        f"Renamed '{constants.CATALOG_ID}' column with no null values to '{constants.TID}' & dropped '{constants.CATALOG_ID}' columns with null values")
+        f"Renamed '{keys.CATALOG_ID}' column with no null values to '{keys.TID}' & dropped '{keys.CATALOG_ID}' columns with null values")
 
     # 3. Drop columns with null values only
     LOGGER.info('Dropping columns with null values only ...')
@@ -288,22 +292,22 @@ def preprocess_target(goal, target_reader):
     # 4. Pair dates with their precision & drop precision columns
     if will_handle_dates:
         LOGGER.info('Pairing date columns with precision ones ...')
-        target[constants.DATE_OF_BIRTH] = list(
-            zip(target[constants.DATE_OF_BIRTH], target[constants.BIRTH_PRECISION]))
-        target[constants.DATE_OF_DEATH] = list(
-            zip(target[constants.DATE_OF_DEATH], target[constants.DEATH_PRECISION]))
-        target.drop(columns=[constants.BIRTH_PRECISION,
-                             constants.DEATH_PRECISION], inplace=True)
+        target[keys.DATE_OF_BIRTH] = list(
+            zip(target[keys.DATE_OF_BIRTH], target[keys.BIRTH_PRECISION]))
+        target[keys.DATE_OF_DEATH] = list(
+            zip(target[keys.DATE_OF_DEATH], target[keys.DEATH_PRECISION]))
+        target.drop(columns=[keys.BIRTH_PRECISION,
+                             keys.DEATH_PRECISION], inplace=True)
         log_dataframe_info(
             LOGGER, target, 'Paired date columns with precision ones')
 
     # 5. Aggregate denormalized data on target ID
     # TODO Token lists may contain duplicate tokens
     LOGGER.info("Aggregating denormalized data on '%s' column ...",
-                constants.TID)
-    target = target.groupby(constants.TID).agg(lambda x: list(set(x)))
+                keys.TID)
+    target = target.groupby(keys.TID).agg(lambda x: list(set(x)))
     log_dataframe_info(
-        LOGGER, target, f"Data indexed and aggregated on '{constants.TID}' column")
+        LOGGER, target, f"Data indexed and aggregated on '{keys.TID}' column")
     # 6. Shared preprocessing
     target = _shared_preprocessing(target, will_handle_dates)
 
@@ -349,7 +353,7 @@ def _handle_dates(df):
     # http://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timestamp-limitations
     # Parse into Period instead, see
     # http://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-oob
-    for column in (constants.DATE_OF_BIRTH, constants.DATE_OF_DEATH):
+    for column in (keys.DATE_OF_BIRTH, keys.DATE_OF_DEATH):
         if df.get(column) is None:
             LOGGER.warning(
                 "No '%s' column in DataFrame, won't handle its dates. Perhaps it was dropped because it contained null values only",
@@ -363,13 +367,13 @@ def _handle_dates(df):
 
 
 def _will_handle_dates(df):
-    dob_column = df.get(constants.DATE_OF_BIRTH)
-    dod_column = df.get(constants.DATE_OF_DEATH)
+    dob_column = df.get(keys.DATE_OF_BIRTH)
+    dod_column = df.get(keys.DATE_OF_DEATH)
 
     if dob_column is None and dod_column is None:
         LOGGER.warning(
             "Neither '%s' nor '%s' column in DataFrame, won't handle dates. Perhaps they were dropped because they contained null values only",
-            constants.DATE_OF_BIRTH, constants.DATE_OF_DEATH)
+            keys.DATE_OF_BIRTH, keys.DATE_OF_DEATH)
         return False
 
     return True

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""TODO module docstring"""
+"""Validator CLI commands"""
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -11,12 +11,13 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import click
 
-from soweego.validator import checks
+from soweego.validator import checks, enrichment
 
 CLI_COMMANDS = {
     'check_existence': checks.check_existence_cli,
     'check_links': checks.check_links_cli,
-    'check_metadata': checks.check_metadata_cli
+    'check_metadata': checks.check_metadata_cli,
+    'populate_works': enrichment.works_people_cli
 }
 
 
