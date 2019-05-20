@@ -145,7 +145,7 @@ TARGET_CATALOGS = {
 # also the QIDs of a person's occupations will be included
 # as part of the dump
 REQUIRE_OCCUPATIONS = {
-    'imdb': ['actor', 'director', 'musician', 'producer', 'write']
+    'imdb': ['actor', 'director', 'musician', 'producer', 'writer']
 }
 
 REQUIRE_GENRE = [
