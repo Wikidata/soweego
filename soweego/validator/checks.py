@@ -93,7 +93,7 @@ def check_existence(entity, catalog, wikidata_cache=None):
 @click.argument('entity', type=click.Choice(constants.SUPPORTED_ENTITIES))
 @click.argument('catalog', type=click.Choice(constants.TARGET_CATALOGS))
 @click.option('--wikidata-dump/--no-wikidata-dump', default=False, help='Dump links gathered from Wikidata. Default: no.')
-@click.option('--upload/--no-upload', default=True, help='Upload check results to Wikidata. Default: yes.')
+@click.option('--upload/--no-upload', default=False, help='Upload check results to Wikidata. Default: no.')
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
 @click.option('-c', '--cache', type=click.File(), default=None, help="Load Wikidata links previously dumped via '-w'. Default: no.")
 @click.option('-d', '--deprecated', type=click.File('w'), default=constants.SHARED_FOLDER + 'links_deprecated_ids.json',
@@ -184,7 +184,7 @@ def check_links(entity, catalog, wikidata_cache=None):
 @click.argument('entity', type=click.Choice(constants.SUPPORTED_ENTITIES))
 @click.argument('catalog', type=click.Choice(constants.TARGET_CATALOGS))
 @click.option('--wikidata-dump/--no-wikidata-dump', default=False, help='Dump metadata gathered from Wikidata. Default: no.')
-@click.option('--upload/--no-upload', default=True, help='Upload check results to Wikidata. Default: yes.')
+@click.option('--upload/--no-upload', default=False, help='Upload check results to Wikidata. Default: no.')
 @click.option('--sandbox/--no-sandbox', default=False, help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
 @click.option('-c', '--cache', type=click.File(), default=None, help="Load Wikidata metadata previously dumped via '-w'. Default: no.")
 @click.option('-d', '--deprecated', type=click.File('w'), default=constants.SHARED_FOLDER + 'metadata_deprecated_ids.json',
