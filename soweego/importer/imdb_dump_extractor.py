@@ -129,7 +129,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 LOGGER.debug('No start year value for %s', movie_entity)
                 pass
             try:
-                movie_entity.end_year = datetime.date(year=int(movie_info.get('endYear')), month=1, day=1)
+                movie_entity.died = datetime.date(year=int(movie_info.get('endYear')), month=1, day=1)
                 movie_entity.died_precision = 9
             except:
                 pass
