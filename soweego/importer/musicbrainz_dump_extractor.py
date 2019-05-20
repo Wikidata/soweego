@@ -27,13 +27,11 @@ from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models.base_entity import BaseEntity
-from soweego.importer.models.musicbrainz_entity import (MusicBrainzArtistBandRelationship,
-                                                        MusicbrainzArtistEntity,
-                                                        MusicbrainzArtistLinkEntity,
-                                                        MusicbrainzBandEntity,
-                                                        MusicbrainzBandLinkEntity, MusicbrainzReleaseGroupEntity,
-                                                        MusicBrainzReleaseGroupArtistRelationship,
-                                                        MusicbrainzReleaseGroupLinkEntity)
+from soweego.importer.models.musicbrainz_entity import (
+    MusicBrainzArtistBandRelationship, MusicbrainzArtistEntity,
+    MusicbrainzArtistLinkEntity, MusicbrainzBandEntity,
+    MusicbrainzBandLinkEntity, MusicBrainzReleaseGroupArtistRelationship,
+    MusicbrainzReleaseGroupEntity, MusicbrainzReleaseGroupLinkEntity)
 from soweego.wikidata.sparql_queries import external_id_pids_and_urls_query
 
 LOGGER = logging.getLogger(__name__)
@@ -67,7 +65,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         db_manager.drop(tables)
         db_manager.create(tables)
 
-        LOGGER.info("Dropped and created tables %s", tables)
+        LOGGER.info("Dropped and created tables %s", [table.__tablename__ for table in tables])
         LOGGER.info("Importing release groups")
 
         release_groups_count = self._add_entities_from_generator(
@@ -85,7 +83,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         tables = [MusicBrainzReleaseGroupArtistRelationship]
         db_manager.drop(tables)
         db_manager.create(tables)
-        LOGGER.info("Dropped and created tables %s", tables)
+        LOGGER.info("Dropped and created tables %s", [table.__tablename__ for table in tables])
         LOGGER.info("Importing relationships release-artist/band")
 
         relationships_count = self._add_entities_from_generator(
@@ -99,7 +97,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         tables = [MusicbrainzReleaseGroupLinkEntity]
         db_manager.drop(tables)
         db_manager.create(tables)
-        LOGGER.info("Dropped and created tables %s", tables)
+        LOGGER.info("Dropped and created tables %s", [table.__tablename__ for table in tables])
         LOGGER.info("Importing release groups links")
 
         link_count = self._add_entities_from_generator(
@@ -117,7 +115,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         db_manager.drop(tables)
         db_manager.create(tables)
 
-        LOGGER.info("Dropped and created tables %s", tables)
+        LOGGER.info("Dropped and created tables %s", [table.__tablename__ for table in tables])
         LOGGER.info("Importing artists and bands")
 
         artist_count = self._add_entities_from_generator(
@@ -133,7 +131,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         db_manager.drop(tables)
         db_manager.create(tables)
 
-        LOGGER.info("Dropped and created tables %s", tables)
+        LOGGER.info("Dropped and created tables %s", [table.__tablename__ for table in tables])
         LOGGER.info("Importing links")
 
         link_count = self._add_entities_from_generator(
@@ -158,7 +156,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         tables = [MusicBrainzArtistBandRelationship]
         db_manager.drop(tables)
         db_manager.create(tables)
-        LOGGER.info("Dropped and created tables %s", tables)
+        LOGGER.info("Dropped and created tables %s", [table.__tablename__ for table in tables])
         LOGGER.info("Importing relationships artist-band")
 
         def artist_band_relationships_uniqueness_filter():
