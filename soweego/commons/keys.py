@@ -24,10 +24,9 @@ PRODUCER = 'producer'
 MUSICIAN = 'musician'
 WRITER = 'writer'
 # Works
-WORK_TYPE = 'work_type'
 AUDIOVISUAL_WORK = 'audiovisual_work'
 MUSICAL_WORK = 'musical_work'
-
+WORK_TYPE = 'work_type'
 
 # Keys of helper dictionaries
 CATALOG_QID = 'catalog_qid'
@@ -68,6 +67,7 @@ SEX_OR_GENDER = 'sex_or_gender'
 PLACE_OF_BIRTH = 'place_of_birth'
 PLACE_OF_DEATH = 'place_of_death'
 OCCUPATION: 'occupations'
+GENRE = 'genres'
 BIRTH_NAME = 'birth_name'
 FAMILY_NAME = 'family_name'
 GIVEN_NAME = 'given_name'
