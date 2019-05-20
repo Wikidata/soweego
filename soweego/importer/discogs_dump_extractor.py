@@ -104,7 +104,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             entity.catalog_id = node.attrib['id']
             genres = set()
             for child in node:
-                if child.tag == "main_release":
+                if child.tag == 'main_release':
                     entity.main_release_id = child.text
                 elif child.tag == 'genres':
                     for genre in child:
