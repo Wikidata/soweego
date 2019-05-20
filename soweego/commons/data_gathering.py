@@ -33,13 +33,13 @@ LOGGER = logging.getLogger(__name__)
 def gather_target_metadata(entity, catalog):
     LOGGER.info(
         'Gathering %s birth/death dates/places and gender metadata ...', catalog)
-    entity = target_database.get_main_entity(catalog, entity)
+    db_entity = target_database.get_main_entity(catalog, entity)
     # Base metadata
-    query_fields = _build_metadata_query_fields(entity, entity, catalog)
+    query_fields = _build_metadata_query_fields(db_entity, entity, catalog)
 
     session = DBManager.connect_to_db()
     query = session.query(
-        *query_fields).filter(or_(entity.born.isnot(None), entity.died.isnot(None)))
+        *query_fields).filter(or_(db_entity.born.isnot(None), db_entity.died.isnot(None)))
     result = None
     try:
         raw_result = _run_query(query, catalog, entity)
