@@ -63,6 +63,8 @@ def cli(classifier, target, target_type, name_rule, upload, sandbox, threshold, 
     if os.path.isfile(results_path):
         os.remove(results_path)
 
+    rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
+
     for chunk in execute(target, target_type, model_path, name_rule, threshold, dir_io):
         if upload:
             _upload(chunk, target, sandbox)
@@ -87,7 +89,6 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
                                         (catalog, entity, 'classification'))
 
     classifier = joblib.load(model)
-    rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
 
     # check if files exists for these paths. If yes then just
     # preprocess them in chunks instead of recomputing
