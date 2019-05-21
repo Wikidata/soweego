@@ -25,6 +25,7 @@ from tqdm import tqdm
 
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
+from soweego.commons.utils import count_num_lines_in_file
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.musicbrainz_entity import (
@@ -292,7 +293,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
         with open(artist_path, 'r') as artistfile:
 
-            n_rows = self._count_num_lines_in_file(artistfile)
+            n_rows = count_num_lines_in_file(artistfile)
             artist_link_reader = DictReader(artistfile, delimiter='\t',
                                             fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month',
                                                         'b_day',
@@ -364,7 +365,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
         with open(artist_path, 'r') as artistfile:
 
-            n_rows = self._count_num_lines_in_file(artistfile)
+            n_rows = count_num_lines_in_file(artistfile)
 
             artist_isni_reader = DictReader(artistfile, delimiter='\t',
                                             fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month',
@@ -415,7 +416,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         with open(artist_path, 'r') as artistfile:
 
-            n_rows = self._count_num_lines_in_file(artistfile)
+            n_rows = count_num_lines_in_file(artistfile)
 
             artist_reader = DictReader(artistfile, delimiter='\t',
                                        fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',

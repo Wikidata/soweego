@@ -2,9 +2,9 @@
 # coding: utf-8
 
 import json
-import requests
-
 from collections import OrderedDict
+
+import requests
 
 # All mix'n'match catalogs
 mnm = requests.get('https://tools.wmflabs.org/mix-n-match/overview.json').json()

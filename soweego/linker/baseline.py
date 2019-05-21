@@ -23,6 +23,7 @@ from tqdm import tqdm
 
 from soweego.commons import (constants, data_gathering, keys, target_database,
                              text_utils, url_utils)
+from soweego.commons.utils import count_num_lines_in_file
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.ingestor import wikidata_bot
 from soweego.wikidata.api_requests import get_data_for_linker
@@ -154,7 +155,7 @@ def perfect_name_match(source_dataset, target_entity: BaseEntity, target_pid: st
     bucket_size = 100
     bucket_names = set()
     bucket = []
-    total = _count_num_lines_in_file(source_dataset)
+    total = count_num_lines_in_file(source_dataset)
     missing = total
     for row_entity in tqdm(source_dataset, total=total):
         entity = json.loads(row_entity)
@@ -183,7 +184,7 @@ def similar_name_tokens_match(source, target, target_pid: str, compare_dates: bo
     """
     to_exclude = set()
 
-    for row_entity in tqdm(source, total=_count_num_lines_in_file(source)):
+    for row_entity in tqdm(source, total=count_num_lines_in_file(source)):
         entity = json.loads(row_entity)
         qid = entity[keys.QID]
         for label in entity[keys.NAME]:
@@ -223,7 +224,7 @@ def similar_link_tokens_match(source, target, target_pid: str) -> Iterable[Tuple
 
     to_exclude = set()
 
-    for row_entity in tqdm(source, total=_count_num_lines_in_file(source)):
+    for row_entity in tqdm(source, total=count_num_lines_in_file(source)):
         entity = json.loads(row_entity)
         qid = entity[keys.QID]
         for url in entity[keys.URL]:
@@ -287,12 +288,3 @@ def birth_death_date_match(target_entity: BaseEntity, wikidata_entity: dict) -> 
             return True
 
     return False
-
-
-def _count_num_lines_in_file(file_) -> int:
-    # count number of rows and go back to
-    # the beginning of file
-    n_rows = len(file_.readlines())
-    file_.seek(0)
-
-    return n_rows
