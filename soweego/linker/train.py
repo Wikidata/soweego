@@ -114,11 +114,11 @@ def build_dataset(goal, catalog, entity, dir_io):
     for i, wd_chunk in enumerate(wd_generator, 1):
         # Positive samples from Wikidata
         if positive_samples is None:
-            positive_samples = wd_chunk[constants.TID]
+            positive_samples = wd_chunk[keys.TID]
         else:
             positive_samples = concat([
                 positive_samples,
-                wd_chunk[constants.TID]
+                wd_chunk[keys.TID]
             ])
 
         # Samples index from Wikidata
