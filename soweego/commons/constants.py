@@ -56,21 +56,24 @@ TARGET_CATALOGS = {
             keys.MAIN_ENTITY: models.discogs_entity.DiscogsMusicianEntity,
             keys.LINK_ENTITY: models.discogs_entity.DiscogsMusicianLinkEntity,
             keys.NLP_ENTITY: models.discogs_entity.DiscogsMusicianNlpEntity,
-            keys.RELATIONSHIP_ENTITY: models.discogs_entity.DiscogsMasterArtistRelationship
+            keys.RELATIONSHIP_ENTITY: models.discogs_entity.DiscogsMasterArtistRelationship,
+            keys.WORK_TYPE: keys.MUSICAL_WORK
         },
         keys.BAND: {
             keys.CLASS_QID: vocabulary.BAND_QID,
             keys.MAIN_ENTITY: models.discogs_entity.DiscogsGroupEntity,
             keys.LINK_ENTITY: models.discogs_entity.DiscogsGroupLinkEntity,
             keys.NLP_ENTITY: models.discogs_entity.DiscogsGroupNlpEntity,
-            keys.RELATIONSHIP_ENTITY: models.discogs_entity.DiscogsMasterArtistRelationship
+            keys.RELATIONSHIP_ENTITY: models.discogs_entity.DiscogsMasterArtistRelationship,
+            keys.WORK_TYPE: keys.MUSICAL_WORK
         },
         keys.MUSICAL_WORK: {
             keys.CLASS_QID: vocabulary.MUSICAL_WORK_QID,
             keys.MAIN_ENTITY: models.discogs_entity.DiscogsMasterEntity,
             keys.LINK_ENTITY: None,
             keys.NLP_ENTITY: None,
-            keys.RELATIONSHIP_ENTITY: models.musicbrainz_entity.MusicBrainzReleaseGroupArtistRelationship
+            keys.RELATIONSHIP_ENTITY: models.musicbrainz_entity.MusicBrainzReleaseGroupArtistRelationship,
+            keys.WORK_TYPE: None
         }
     },
     keys.IMDB: {
@@ -129,21 +132,24 @@ TARGET_CATALOGS = {
             keys.MAIN_ENTITY: models.musicbrainz_entity.MusicbrainzArtistEntity,
             keys.LINK_ENTITY: models.musicbrainz_entity.MusicbrainzArtistLinkEntity,
             keys.NLP_ENTITY: None,
-            keys.RELATIONSHIP_ENTITY: models.musicbrainz_entity.MusicBrainzReleaseGroupArtistRelationship
+            keys.RELATIONSHIP_ENTITY: models.musicbrainz_entity.MusicBrainzReleaseGroupArtistRelationship,
+            keys.WORK_TYPE: keys.MUSICAL_WORK
         },
         keys.BAND: {
             keys.CLASS_QID: vocabulary.BAND_QID,
             keys.MAIN_ENTITY: models.musicbrainz_entity.MusicbrainzBandEntity,
             keys.LINK_ENTITY: models.musicbrainz_entity.MusicbrainzBandLinkEntity,
             keys.NLP_ENTITY: None,
-            keys.RELATIONSHIP_ENTITY: models.musicbrainz_entity.MusicBrainzReleaseGroupArtistRelationship
+            keys.RELATIONSHIP_ENTITY: models.musicbrainz_entity.MusicBrainzReleaseGroupArtistRelationship,
+            keys.WORK_TYPE: keys.MUSICAL_WORK
         },
         keys.MUSICAL_WORK: {
             keys.CLASS_QID: vocabulary.MUSICAL_WORK_QID,
             keys.MAIN_ENTITY: models.musicbrainz_entity.MusicbrainzReleaseGroupEntity,
             keys.LINK_ENTITY: models.musicbrainz_entity.MusicbrainzReleaseGroupLinkEntity,
             keys.NLP_ENTITY: None,
-            keys.RELATIONSHIP_ENTITY: models.musicbrainz_entity.MusicBrainzReleaseGroupArtistRelationship
+            keys.RELATIONSHIP_ENTITY: models.musicbrainz_entity.MusicBrainzReleaseGroupArtistRelationship,
+            keys.WORK_TYPE: None
         }
     }
 }
