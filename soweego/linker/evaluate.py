@@ -49,6 +49,7 @@ def cli(ctx, classifier, target, target_type, nested, single, k_folds, metric, d
     if kwargs is None:
         sys.exit(1)
 
+    rl.set_option(*constants.CLASSIFICATION_RETURN_INDEX)
     performance_fileout = os.path.join(dir_io, constants.LINKER_PERFORMANCE %
                                        (target, target_type, classifier))
     predictions_fileout = os.path.join(dir_io, constants.LINKER_EVALUATION_PREDICTIONS %

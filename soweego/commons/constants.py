@@ -224,6 +224,7 @@ PARAMETER_GRIDS = {
 }
 
 CLASSIFICATION_RETURN_SERIES = ('classification.return_type', 'series')
+CLASSIFICATION_RETURN_INDEX = ('classification.return_type', 'index')
 CONFIDENCE_THRESHOLD = 0.5
 FEATURE_MISSING_VALUE = 0.0
 
