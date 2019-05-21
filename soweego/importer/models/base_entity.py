@@ -9,7 +9,7 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, lenzi.edoardo'
 
-from sqlalchemy import Column, Date, Index, Integer, String
+from sqlalchemy import Column, Date, Index, Integer, String, Text
 from sqlalchemy.ext.declarative import (AbstractConcreteBase, declarative_base,
                                         declared_attr)
 
@@ -23,9 +23,9 @@ class BaseEntity(AbstractConcreteBase, BASE):
     # Catalog identifier, indexed
     catalog_id = Column(String(50), nullable=False, index=True)
     # Full name
-    name = Column(String(255), nullable=False)
+    name = Column(Text, nullable=False)
     # Tokenized full name, can be null. See text_utils#tokenize
-    name_tokens = Column(String(255))
+    name_tokens = Column(Text)
     # Date of birth
     born = Column(Date)
     # Date of birth precision
@@ -61,7 +61,7 @@ class BaseRelationship(AbstractConcreteBase, BASE):
     def __table_args__(cls):
         return (
             Index('idx_catalog_ids_%s' % cls.__tablename__, 'from_catalog_id',
-                  'to_catalog_id', unique=True),
+                  'to_catalog_id', unique=True, mysql_using='hash'),
             {'mysql_charset': 'utf8mb4'}
         )
 

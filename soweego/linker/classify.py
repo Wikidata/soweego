@@ -2,6 +2,13 @@
 # -*- coding: utf-8 -*-
 
 """Supervised linking."""
+
+__author__ = 'Marco Fossati'
+__email__ = 'fossati@spaziodati.eu'
+__version__ = '1.0'
+__license__ = 'GPL-3.0'
+__copyright__ = 'Copyleft 2018, Hjfocs'
+
 import logging
 import os
 import re
@@ -13,23 +20,17 @@ from numpy import full, nan
 from pandas import DataFrame
 from sklearn.externals import joblib
 
-from soweego.commons import constants, data_gathering, target_database
+from soweego.commons import constants, data_gathering, keys, target_database
 from soweego.ingestor import wikidata_bot
 from soweego.linker import blocking, classifiers, neural_networks, workflow
-
-__author__ = 'Marco Fossati'
-__email__ = 'fossati@spaziodati.eu'
-__version__ = '1.0'
-__license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2018, Hjfocs'
 
 LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
 @click.argument('classifier', type=click.Choice(constants.CLASSIFIERS))
-@click.argument('target', type=click.Choice(target_database.available_targets()))
-@click.argument('target_type', type=click.Choice(target_database.available_types()))
+@click.argument('target', type=click.Choice(target_database.supported_targets()))
+@click.argument('target_type', type=click.Choice(target_database.supported_entities()))
 @click.option('--name-rule/--no-name-rule', default=False,
               help='Activate post-classification rule on full names: links with different full names will be filtered. Default: no.')
 @click.option('--upload/--no-upload', default=False, help='Upload links to Wikidata. Default: no.')
@@ -109,7 +110,7 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
             predictions = DataFrame(predictions).apply(
                 _zero_when_different_names, axis=1, args=(wd_chunks, target_chunks))
 
-        if target_chunks.get(constants.URL) is not None:
+        if target_chunks.get(keys.URL) is not None:
             predictions = DataFrame(predictions).apply(
                 _one_when_wikidata_link_correct, axis=1, args=(target_chunks,))
 
@@ -125,20 +126,18 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
         wd_generator = workflow.preprocess_wikidata(
             'classification', wd_reader)
 
-        all_feature_vectors = []
-        all_wd_chunks = []
-        all_target_chunks = []
+        all_feature_vectors, all_wd_chunks, all_target_chunks = None, None, None
 
         for i, wd_chunk in enumerate(wd_generator, 1):
             # TODO Also consider blocking on URLs
 
             samples = blocking.full_text_query_block(
-                'classification', catalog, wd_chunk[constants.NAME_TOKENS],
-                i, target_database.get_entity(catalog, entity), dir_io)
+                'classification', catalog, wd_chunk[keys.NAME_TOKENS],
+                i, target_database.get_main_entity(catalog, entity), dir_io)
 
             # Build target chunk based on samples
             target_reader = data_gathering.gather_target_dataset(
-                'classification', entity, catalog, set(samples.get_level_values(constants.TID)))
+                'classification', entity, catalog, set(samples.get_level_values(keys.TID)))
 
             # Preprocess target chunk
             target_chunk = workflow.preprocess_target(
@@ -150,11 +149,33 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
             feature_vectors = workflow.extract_features(
                 samples, wd_chunk, target_chunk, features_path)
 
-            # keep features before adding missing features vectors, which may
+            # keep features before '_add_missing_feature_columns', which may
             # change depending on the classifier.
-            all_feature_vectors.append(feature_vectors)
-            all_wd_chunks.append(wd_chunk)
-            all_target_chunks.append(target_chunk)
+            # we keep all as a single pd.Dataframe
+
+            # if one is None then all are None
+            if all_feature_vectors is None:
+
+                # if they're None set their values to be
+                # the pd.Dataframe corresponding to the current chunk
+                all_feature_vectors = feature_vectors
+                all_wd_chunks = wd_chunk
+                all_target_chunks = target_chunk
+
+            else:
+                # if they're not None then just add the new chunk data
+                # to the end
+                all_feature_vectors = pd.concat([
+                    all_feature_vectors,
+                    feature_vectors], sort=False)
+
+                all_wd_chunks = pd.concat([
+                    all_wd_chunks,
+                    wd_chunk], sort=False)
+
+                all_target_chunks = pd.concat([
+                    all_target_chunks,
+                    target_chunk], sort=False)
 
             _add_missing_feature_columns(classifier, feature_vectors)
 
@@ -167,7 +188,7 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
                 predictions = DataFrame(predictions).apply(
                     _zero_when_different_names, axis=1, args=(wd_chunk, target_chunk))
 
-            if target_chunk.get(constants.URL) is not None:
+            if target_chunk.get(keys.URL) is not None:
                 predictions = DataFrame(predictions).apply(
                     _one_when_wikidata_link_correct, axis=1, args=(target_chunk,))
 
@@ -176,10 +197,9 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
             yield predictions[predictions >= threshold].drop_duplicates()
 
         # dump all processed chunks as pickled files
-        pd.concat(all_feature_vectors, sort=False).to_pickle(complete_fv_path)
-        pd.concat(all_wd_chunks, sort=False).to_pickle(complete_wd_path)
-        pd.concat(all_target_chunks, sort=False).to_pickle(
-            complete_target_path)
+        all_feature_vectors.to_pickle(complete_fv_path)
+        all_wd_chunks.to_pickle(complete_wd_path)
+        all_target_chunks.to_pickle(complete_target_path)
 
 
 def _zero_when_different_names(prediction, wikidata, target):
@@ -201,7 +221,7 @@ def _zero_when_different_names(prediction, wikidata, target):
 def _one_when_wikidata_link_correct(prediction, target):
     qid, tid = prediction.name
 
-    urls = target.loc[tid][constants.URL]
+    urls = target.loc[tid][keys.URL]
     if urls:
         for u in urls:
             if u:
