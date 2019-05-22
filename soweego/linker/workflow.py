@@ -179,9 +179,10 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
                                      label='occupation_qids'))
 
     if in_both_datasets(keys.GENRE):
-        # Feature 9: genre similar tokens
+    # Feature 9: genre similar tokens
         compare.add(SimilarTokens(keys.GENRE,
-                                  keys.GENRE, 'genre_similar_tokens'))
+                                  keys.GENRE,
+                                  label='genre_similar_tokens'))
 
     feature_vectors = compare.compute(
         candidate_pairs, wikidata, target).drop_duplicates()
