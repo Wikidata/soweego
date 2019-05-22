@@ -83,10 +83,9 @@ def _lookup_label(item_value):
     return _return_monolingual_strings(item_value, labels)
 
 
-def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_and_tids,
-                    no_labels_count, no_aliases_count, no_descriptions_count,
-                    no_sitelinks_count, no_links_count, no_ext_ids_count, no_claims_count,
-                    needs_occupations, needs_genre) -> List[Dict]:
+def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_and_tids, no_labels_count,
+                    no_aliases_count, no_descriptions_count, no_sitelinks_count, no_links_count, no_ext_ids_count,
+                    no_claims_count, needs_occupation, needs_genre, needs_publication_date) -> List[Dict]:
     """
     This function will be consumed by the `get_data_for_linker`
     function in this module. It allows the buckets coming from
@@ -173,7 +172,7 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
 
         # Expected claims
         to_write.update(_return_claims_for_linker(
-            qid, claims, no_claims_count, needs_occupations, needs_genre))
+            qid, claims, no_claims_count, needs_occupation, needs_genre, needs_publication_date))
 
         # add result to `bucket_results`
         bucket_results.append(to_write)
@@ -198,8 +197,9 @@ def get_data_for_linker(catalog: str, entity_type: str, qids: set, url_pids: set
     # check if for this specific catalog
     # we need to get the occupations
     if catalog in constants.REQUIRE_OCCUPATION.keys():
-        needs_occupations = entity_type in constants.REQUIRE_OCCUPATION[catalog]
+        needs_occupation = entity_type in constants.REQUIRE_OCCUPATION[catalog]
     needs_genre = entity_type in constants.REQUIRE_GENRE
+    needs_publication_date = entity_type in constants.REQUIRE_PUBLICATION_DATE
 
     # create a partial function. Here all parameters, except
     # for the actual `bucket` are given to `_process_bucket`.
@@ -219,8 +219,9 @@ def get_data_for_linker(catalog: str, entity_type: str, qids: set, url_pids: set
                             no_links_count=no_links_count,
                             no_ext_ids_count=no_ext_ids_count,
                             no_claims_count=no_claims_count,
-                            needs_occupations=needs_occupations,
-                            needs_genre=needs_genre)
+                            needs_occupation=needs_occupation,
+                            needs_genre=needs_genre,
+                            needs_publication_date=needs_publication_date)
 
     # create a pool of threads and map the list of buckets using `pool_function`
     with Pool() as pool:
@@ -363,15 +364,23 @@ def _return_third_party_urls(qid, claims, url_pids, no_count):
     return to_return
 
 
-def _return_claims_for_linker(qid, claims, no_count, need_occupations, need_genre):
+def _return_claims_for_linker(qid, claims, no_count, needs_occupation, needs_genre, needs_publication_date):
     to_return = defaultdict(set)
     expected_pids = set(vocabulary.LINKER_PIDS.keys())
 
-    if not need_occupations:
+    if not needs_occupation:
         expected_pids.remove(vocabulary.OCCUPATION)
 
-    if not need_genre:
+    if not needs_genre:
         expected_pids.remove(vocabulary.GENRE)
+
+    # If we need publication dates, it means we are dealing
+    # with works, so remove birth and death dates
+    if needs_publication_date:
+        expected_pids.remove(vocabulary.DATE_OF_BIRTH)
+        expected_pids.remove(vocabulary.DATE_OF_DEATH)
+    else:
+        expected_pids.remove(vocabulary.PUBLICATION_DATE)
 
     available = expected_pids.intersection(claims.keys())
     if available:
