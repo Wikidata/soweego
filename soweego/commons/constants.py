@@ -21,19 +21,19 @@ QID_REGEX = r'Q\d+'
 PID_REGEX = r'P\d+'
 
 # Entities and corresponding Wikidata query
-SUPPORTED_QUERY_TYPES = (keys.CLASS, keys.OCCUPATION)
+SUPPORTED_QUERY_TYPES = (keys.CLASS_QUERY, keys.OCCUPATION_QUERY)
 SUPPORTED_QUERY_SELECTORS = (
     keys.IDENTIFIER, keys.LINKS, keys.DATASET, keys.METADATA)
 
 SUPPORTED_ENTITIES = {
-    keys.ACTOR: keys.OCCUPATION,
-    keys.BAND: keys.CLASS,
-    keys.DIRECTOR: keys.OCCUPATION,
-    keys.MUSICIAN: keys.OCCUPATION,
-    keys.PRODUCER: keys.OCCUPATION,
-    keys.WRITER: keys.OCCUPATION,
-    keys.MUSICAL_WORK: keys.CLASS,
-    keys.AUDIOVISUAL_WORK: keys.CLASS
+    keys.ACTOR: keys.OCCUPATION_QUERY,
+    keys.BAND: keys.CLASS_QUERY,
+    keys.DIRECTOR: keys.OCCUPATION_QUERY,
+    keys.MUSICIAN: keys.OCCUPATION_QUERY,
+    keys.PRODUCER: keys.OCCUPATION_QUERY,
+    keys.WRITER: keys.OCCUPATION_QUERY,
+    keys.MUSICAL_WORK: keys.CLASS_QUERY,
+    keys.AUDIOVISUAL_WORK: keys.CLASS_QUERY
 }
 
 # Target catalogs imported into the internal DB
@@ -158,12 +158,11 @@ TARGET_CATALOGS = {
 # also the QIDs of a person's occupations will be included
 # as part of the dump
 REQUIRE_OCCUPATION = {
-    keys.IMDB: [keys.ACTOR, keys.DIRECTOR,
-                keys.MUSICIAN, keys.PRODUCER, keys.WRITER]
+    keys.IMDB: (keys.ACTOR, keys.DIRECTOR,
+                keys.MUSICIAN, keys.PRODUCER, keys.WRITER)
 }
-REQUIRE_GENRE = [
-    keys.MUSICAL_WORK, keys.AUDIOVISUAL_WORK
-]
+REQUIRE_GENRE = (keys.AUDIOVISUAL_WORK, keys.MUSICAL_WORK)
+REQUIRE_PUBLICATION_DATE = (keys.AUDIOVISUAL_WORK, keys.MUSICAL_WORK)
 
 # Cluster of fields with names
 NAME_FIELDS = (keys.NAME, keys.ALIAS, keys.BIRTH_NAME,

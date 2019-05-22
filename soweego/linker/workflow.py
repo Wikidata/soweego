@@ -178,10 +178,10 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
                                      occupations_col_name,
                                      label='occupation_qids'))
 
-    if in_both_datasets(keys.GENRE):
+    if in_both_datasets(keys.GENRES):
     # Feature 9: genre similar tokens
-        compare.add(SimilarTokens(keys.GENRE,
-                                  keys.GENRE,
+        compare.add(SimilarTokens(keys.GENRES,
+                                  keys.GENRES,
                                   label='genre_similar_tokens'))
 
     feature_vectors = compare.compute(
@@ -244,8 +244,8 @@ def preprocess_wikidata(goal, wikidata_reader):
                     tokenize_values, args=(text_utils.tokenize,))
 
         # 4b. Tokenize genres if available
-        if chunk.get(keys.GENRE) is not None:
-            chunk[keys.GENRE] = chunk[keys.GENRE].apply(
+        if chunk.get(keys.GENRES) is not None:
+            chunk[keys.GENRES] = chunk[keys.GENRES].apply(
                 tokenize_values, args=(text_utils.tokenize,))
 
         # 5. Tokenize URLs

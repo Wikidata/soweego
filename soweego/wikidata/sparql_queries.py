@@ -118,15 +118,15 @@ def run_query(query_type: tuple, class_qid: str, catalog_pid: str, result_per_pa
                          (how, constants.SUPPORTED_QUERY_TYPES))
 
     if what == keys.IDENTIFIER:
-        query = IDENTIFIER_QUERY_TEMPLATE % (vocabulary.INSTANCE_OF, class_qid, catalog_pid) if how == keys.CLASS else IDENTIFIER_QUERY_TEMPLATE % (
+        query = IDENTIFIER_QUERY_TEMPLATE % (vocabulary.INSTANCE_OF, class_qid, catalog_pid) if how == keys.CLASS_QUERY else IDENTIFIER_QUERY_TEMPLATE % (
             vocabulary.OCCUPATION, class_qid, catalog_pid)
         return _parse_query_result(keys.IDENTIFIER, _run_paged_query(result_per_page, query))
     elif what == keys.LINKS:
-        query = LINKS_QUERY_TEMPLATE % (vocabulary.INSTANCE_OF, class_qid, catalog_pid) if how == keys.CLASS else LINKS_QUERY_TEMPLATE % (
+        query = LINKS_QUERY_TEMPLATE % (vocabulary.INSTANCE_OF, class_qid, catalog_pid) if how == keys.CLASS_QUERY else LINKS_QUERY_TEMPLATE % (
             vocabulary.OCCUPATION, class_qid, catalog_pid)
         return _parse_query_result(keys.LINKS, _run_paged_query(result_per_page, query))
     elif what == keys.DATASET:
-        query = DATASET_QUERY_TEMPLATE % (vocabulary.INSTANCE_OF, class_qid, catalog_pid) if how == keys.CLASS else DATASET_QUERY_TEMPLATE % (
+        query = DATASET_QUERY_TEMPLATE % (vocabulary.INSTANCE_OF, class_qid, catalog_pid) if how == keys.CLASS_QUERY else DATASET_QUERY_TEMPLATE % (
             vocabulary.OCCUPATION, class_qid, catalog_pid)
         return _parse_query_result(keys.DATASET, _run_paged_query(result_per_page, query))
     elif what == keys.METADATA:
