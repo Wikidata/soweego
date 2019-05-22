@@ -157,7 +157,7 @@ TARGET_CATALOGS = {
 # When building the wikidata dump for catalogs in this array
 # also the QIDs of a person's occupations will be included
 # as part of the dump
-REQUIRE_OCCUPATIONS = {
+REQUIRE_OCCUPATION = {
     keys.IMDB: [keys.ACTOR, keys.DIRECTOR,
                 keys.MUSICIAN, keys.PRODUCER, keys.WRITER]
 }
