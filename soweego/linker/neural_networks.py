@@ -11,14 +11,18 @@ __copyright__ = 'Copyleft 2019, Hjfocs'
 
 import logging
 import os
+from contextlib import redirect_stderr
 
-from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
-from keras.layers import BatchNormalization, Dense, Dropout
-from keras.models import Sequential
 from recordlinkage.adapters import KerasAdapter
 from recordlinkage.base import BaseClassifier
 
 from soweego.commons import constants
+
+with redirect_stderr(open(os.devnull, "w")):
+    from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
+    from keras.layers import BatchNormalization, Dense, Dropout
+    from keras.models import Sequential
+
 
 LOGGER = logging.getLogger(__name__)
 
