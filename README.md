@@ -2,6 +2,8 @@
 
 **Work in progress!**
 
+[![Build Status](https://travis-ci.com/Wikidata/soweego.svg?branch=master)](https://travis-ci.com/Wikidata/soweego)
+
 # soweego
 _soweego_ is an entity linking system that connects Wikidata items to trusted external catalogs.
 
