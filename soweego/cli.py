@@ -10,11 +10,18 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import logging
+import os
 
 import click
+import tensorflow as tf
 
 from soweego import (commons, importer, ingestor, linker, pipeline, validator,
                      wikidata)
+
+# set env variable to ignore tensorflow warnings
+# (only errors are printed)
+tf.logging.set_verbosity(tf.logging.ERROR)
+
 
 CLI_COMMANDS = {
     'importer': importer.cli.cli,
