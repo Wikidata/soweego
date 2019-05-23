@@ -4,4 +4,5 @@ python: "3.7"
 script:
     - isort -y -rc
     - autoflake -i -r --remove-all-unused-imports --remove-unused-variables
+    - black -S -l 80
 
