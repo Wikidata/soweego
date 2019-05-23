@@ -5,4 +5,5 @@ script:
     - isort -y -rc soweego
     - autoflake -i -r --remove-all-unused-imports --remove-unused-variables soweego
     - black -S -l 80 soweego
+    - flake8 --max-line-length 80 --max-complexity 10 soweego
 
