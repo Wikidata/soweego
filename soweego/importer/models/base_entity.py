@@ -17,6 +17,7 @@ BASE = declarative_base()
 
 
 class BaseEntity(AbstractConcreteBase, BASE):
+    """Each database entity should conform with this interface"""
     __tablename__ = None
     internal_id = Column(Integer, unique=True,
                          primary_key=True, autoincrement=True)
@@ -45,10 +46,12 @@ class BaseEntity(AbstractConcreteBase, BASE):
         )
 
     def __repr__(self) -> str:
-        return "<BaseEntity(catalog_id='{0}', name='{1}')>".format(self.catalog_id, self.name)
+        return "<BaseEntity(catalog_id='{0}', name='{1}')>".format(
+            self.catalog_id, self.name)
 
 
 class BaseRelationship(AbstractConcreteBase, BASE):
+    """Each database relationship should conform with this interface"""
     __tablename__ = None
     internal_id = Column(Integer, unique=True,
                          primary_key=True, autoincrement=True)
@@ -70,4 +73,5 @@ class BaseRelationship(AbstractConcreteBase, BASE):
         self.to_catalog_id = to_catalog_id
 
     def __repr__(self):
-        return '<BaseRelationship object({0} -> {1})>'.format(self.from_catalog_id, self.to_catalog_id)
+        return '<BaseRelationship object({0} -> {1})>'.format(
+            self.from_catalog_id, self.to_catalog_id)

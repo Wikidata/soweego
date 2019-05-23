@@ -81,10 +81,9 @@ def check_links_cli(catalog: str):
 
         with Pool() as pool:
             # Validate each link
-            for resolved, res_entity in tqdm(pool.imap_unordered(_resolve_url,
-                                                                 session.query(
-                                                                     entity)),
-                                             total=total):
+            for resolved, res_entity in tqdm(
+                    pool.imap_unordered(_resolve_url, session.query(entity)),
+                    total=total):
                 if not resolved:
                     session_delete = DBManager.connect_to_db()
                     # if not valid delete
@@ -104,6 +103,7 @@ def check_links_cli(catalog: str):
 
 
 class Importer:
+    """Downloads the latest dump of a certain target"""
 
     def refresh_dump(self, output_folder: str, extractor: BaseDumpExtractor,
                      resolve: bool):
@@ -122,13 +122,13 @@ class Importer:
 
             LOGGER.info("Retrieving last modified of %s", download_url)
 
-            last_modified = client.http_call(download_url,
-                                             'HEAD').headers[keys.LAST_MODIFIED]
+            last_modified = client.http_call(download_url, 'HEAD').headers[
+                keys.LAST_MODIFIED]
 
             try:
                 last_modified = datetime.datetime.strptime(
                     last_modified, '%a, %d %b %Y %H:%M:%S GMT').strftime(
-                    '%Y%m%d_%H%M%S')
+                        '%Y%m%d_%H%M%S')
             except TypeError:
                 LOGGER.info(
                     "Last modified not available, using now as replacement")
@@ -151,6 +151,7 @@ class Importer:
 
         extractor.extract_and_populate(filepaths, resolve)
 
-    def _update_dump(self, dump_url: str, file_output_path: str):
+    @staticmethod
+    def _update_dump(dump_url: str, file_output_path: str):
         """Download the dump"""
         client.download_file(dump_url, file_output_path)

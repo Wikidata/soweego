@@ -11,7 +11,6 @@ __copyright__ = 'Copyleft 2018, MaxFrax96'
 
 import logging
 import os
-import re
 import shutil
 import tarfile
 from collections import defaultdict
@@ -39,20 +38,21 @@ LOGGER = logging.getLogger(__name__)
 
 
 class MusicBrainzDumpExtractor(BaseDumpExtractor):
+    """Defines where to download Musicbrainz dump and how to post-process it"""
+
     _sqlalchemy_commit_every = 1_000_000
 
     def get_dump_download_urls(self) -> Iterable[str]:
-        latest_version = requests.get(
-            'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/LATEST').text.rstrip()
-        return [
-            'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/%s/mbdump.tar.bz2' % latest_version]
+        base_url = 'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport'
+        latest_version = requests.get(f'{base_url}/LATEST').text.rstrip()
+        return [f'{base_url}/%s/mbdump.tar.bz2' % latest_version]
 
     def extract_and_populate(self, dump_file_paths: Iterable[str],
                              resolve: bool):
         dump_file_path = dump_file_paths[0]
-        dump_path = os.path.join(os.path.dirname(
-            os.path.abspath(dump_file_path)),
-            "%s_%s" % (os.path.basename(dump_file_path), 'extracted'))
+        dump_path = os.path.join(
+            os.path.dirname(os.path.abspath(dump_file_path)),
+            f"{os.path.basename(dump_file_path)}_extracted")
 
         if not os.path.isdir(dump_path):
             with tarfile.open(dump_file_path, "r:bz2") as tar:
@@ -249,10 +249,13 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         return n_total_entities, n_added_entities
 
-    def _get_urls_for_entity_id(self, dump_path: str, l_path: str,
+    @staticmethod
+    def _get_urls_for_entity_id(dump_path: str, l_path: str,
                                 resolve: bool) -> dict:
-        """given a l_{something}_url relationship file, return a dict of somethingid-[urls]"""
-        LOGGER.info(f"Loading {l_path} relationships")
+        """given a l_{something}_url relationship file, return a dict of
+        somethingid-[urls]"""
+
+        LOGGER.info(f"Loading %s relationships" % l_path)
 
         urlid_entityid_relationship = {}
 
@@ -267,8 +270,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 # url id matched with its user id
                 if relationship[3] in urlid_entityid_relationship:
                     LOGGER.warning(
-                        'Url with ID %s has multiple entities, only one will be stored',
-                        relationship[3])
+                        'Url with ID %s has multiple entities, only one will '
+                        'be stored', relationship[3])
                 else:
                     urlid_entityid_relationship[relationship[3]] = relationship[
                         2]
@@ -373,15 +376,14 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 break
             for pid, formatter in result.items():
                 if pid == 'P213':
-                    for url_formatter, regex in formatter.items():
-                        r = re.compile(regex)
-
+                    for url_formatter, _ in formatter.items():
                         with open(isni_file_path, 'r') as artistfile:
                             for artistid_isni in DictReader(artistfile,
                                                             delimiter='\t',
                                                             fieldnames=['id',
-                                                                        'isni']):
-                                # If ISNI is valid, generates an url for the artist
+                                                                        'isni'
+                                                                        ]):
+                                # If ISNI is valid, generates an url
                                 artistid = artistid_isni['id']
                                 isni = artistid_isni['isni']
 
@@ -438,8 +440,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         # Key is the entity id which has a list of aliases
         with open(artist_alias_path, 'r') as aliasesfile:
-            for alias in DictReader(aliasesfile, delimiter='\t', fieldnames=[
-                'id', 'parent_id', 'label']):
+            for alias in DictReader(aliasesfile, delimiter='\t',
+                                    fieldnames=['id', 'parent_id', 'label']):
                 aliases[alias['parent_id']].append(alias['label'])
 
         LOGGER.info('Getting area IDs and related names')
@@ -504,7 +506,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
                     yield current_entity
 
-    def _artist_band_relationship_generator(self, dump_path):
+    @staticmethod
+    def _artist_band_relationship_generator(dump_path):
         link_types = set(['855', '103', '305', '965', '895'])
         link_file_path = os.path.join(dump_path, 'mbdump', 'link')
         to_invert = set()
@@ -553,8 +556,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         LOGGER.info('Adding relationships into DB')
 
         for relation in tqdm(relationships):
-            translation0, translation1 = ids_translator[relation[0]
-                                         ], ids_translator[relation[1]]
+            translation0, translation1 = ids_translator[relation[0]], \
+                                         ids_translator[relation[1]]
 
             if translation0 and translation1:
                 if relation in to_invert:
@@ -585,7 +588,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                         entity.born = dateprec[0]
                 yield entity
 
-    def _release_group_artist_relationship_generator(self, dump_path):
+    @staticmethod
+    def _release_group_artist_relationship_generator(dump_path):
         release_group_path = os.path.join(dump_path, 'mbdump', 'release_group')
 
         artist_credit_release = defaultdict(list)
@@ -644,7 +648,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 info['b_year'], info['b_month'], info['b_day'])
             entity.born = birth_date[0]
             entity.born_precision = birth_date[1]
-        except:
+        except KeyError:
             entity.born = None
             entity.born_precision = None
 
@@ -653,12 +657,11 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 info['d_year'], info['d_month'], info['d_day'])
             entity.died = death_date[0]
             entity.died_precision = death_date[1]
-        except:
+        except KeyError:
             entity.died = None
             entity.died_precision = None
 
-        if isinstance(entity, MusicbrainzArtistEntity) or isinstance(entity,
-                                                                     MusicbrainzBandEntity):
+        if isinstance(entity, (MusicbrainzArtistEntity, MusicbrainzBandEntity)):
             try:
                 entity.birth_place = areas[info['b_place']]
             except KeyError:
@@ -668,7 +671,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             except KeyError:
                 entity.death_place = None
 
-    def _fill_link_entity(self, entity, gid, link):
+    @staticmethod
+    def _fill_link_entity(entity, gid, link):
         entity.catalog_id = gid
         entity.url = link
         entity.is_wiki = url_utils.is_wiki_link(link)
@@ -676,7 +680,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         if url_tokens:
             entity.url_tokens = ' '.join(url_tokens)
 
-    def _alias_entities(self, entity: BaseEntity, aliases_class, aliases: []):
+    @staticmethod
+    def _alias_entities(entity: BaseEntity, aliases_class, aliases: []):
         for alias_label in aliases:
             alias_entity = aliases_class()
             alias_entity.catalog_id = entity.catalog_id
@@ -693,17 +698,20 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 alias_entity.name_tokens = ' '.join(name_tokens)
             yield alias_entity
 
-    def _get_date_and_precision(self, year, month, day):
+    @staticmethod
+    def _get_date_and_precision(year, month, day):
         date_list = [year, month, day]
         precision = -1
 
         try:
             if date_list[0] != '\\N' and int(date_list[0]) < 0:
                 LOGGER.warning(
-                    'Failed to convert date (%s/%s/%s). Encountered negative year, '
+                    'Failed to convert date (%s/%s/%s).'
+                    'Encountered negative year, '
                     'which Python Date object does not support', *date_list)
 
-                # We can't parse the date, so we treat is as if it wasn't available
+                # We can't parse the date,
+                # so we treat is as if it wasn't available
                 date_list[0] = '\\N'
 
             null_index = date_list.index('\\N')
@@ -715,20 +723,23 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         date_list = ['0001' if i == '\\N' else i for i in date_list]
 
         if precision == -1:
-            return (None, None)
+            return None, None
 
         return (date(int(date_list[0]), int(date_list[1]), int(date_list[2])),
                 precision)
 
-    def _check_person(self, type_code):
+    @staticmethod
+    def _check_person(type_code):
         # person, character
         return type_code in ['1', '4']
 
-    def _check_band(self, type_code):
+    @staticmethod
+    def _check_band(type_code):
         # group, orchestra, choir
         return type_code in ['2', '5', '6']
 
-    def _artist_gender(self, gender_code):
+    @staticmethod
+    def _artist_gender(gender_code):
         genders = {'1': 'male', '2': 'female'}
         return genders.get(gender_code, None)
 

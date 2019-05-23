@@ -18,11 +18,11 @@ LOGGER = logging.getLogger(__name__)
 class BaseDumpExtractor:
     """Defines where to download a certain dump and how to post-process it."""
 
-    def extract_and_populate(self, dump_file_path: Iterable[str],
+    def extract_and_populate(self, dump_file_paths: Iterable[str],
                              resolve: bool):
         """Extract relevant data and populate SQL Alchemy entities accordingly.
 
-        :param dump_file_path: Iterable of paths where downloaded dumps are
+        :param dump_file_paths: Iterable of paths where downloaded dumps are
         placed.
         :param resolve: Tells if the system will resolve the urls to validate
         them.

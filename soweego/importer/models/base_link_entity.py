@@ -17,6 +17,8 @@ BASE = declarative_base()
 
 
 class BaseLinkEntity(AbstractConcreteBase, BASE):
+    """Describes the basic structure of a entity containing links"""
+
     __tablename__ = None
     internal_id = Column(Integer, unique=True,
                          primary_key=True, autoincrement=True)
@@ -39,4 +41,5 @@ class BaseLinkEntity(AbstractConcreteBase, BASE):
         )
 
     def __repr__(self) -> str:
-        return "<BaseLinkEntity(catalog_id='{0}', url='{1}')>".format(self.catalog_id, self.url)
+        return "<BaseLinkEntity(catalog_id='{0}', url='{1}')>".format(
+            self.catalog_id, self.url)

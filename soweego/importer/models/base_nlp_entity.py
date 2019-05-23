@@ -9,7 +9,6 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
-
 from sqlalchemy import Column, Index, Integer, String, Text
 from sqlalchemy.ext.declarative import (AbstractConcreteBase, declarative_base,
                                         declared_attr)
@@ -18,6 +17,7 @@ BASE = declarative_base()
 
 
 class BaseNlpEntity(AbstractConcreteBase, BASE):
+    """Base strucuture for storing data useful for NLP processes"""
     __tablename__ = None
     internal_id = Column(Integer, unique=True,
                          primary_key=True, autoincrement=True)
@@ -38,4 +38,5 @@ class BaseNlpEntity(AbstractConcreteBase, BASE):
         )
 
     def __repr__(self) -> str:
-        return "<BaseNlpEntity(catalog_id='{0}', description='{1}')>".format(self.catalog_id, self.description)
+        return "<BaseNlpEntity(catalog_id='{0}', description='{1}')>".format(
+            self.catalog_id, self.description)

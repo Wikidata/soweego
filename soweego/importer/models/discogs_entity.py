@@ -29,6 +29,7 @@ MASTER_ARTIST_RELATIONSHIP_TABLE = 'discogs_master_artist_relationship'
 
 
 class DiscogsBaseEntity(BaseEntity):
+    """Each Discogs entity should inherit this structure"""
     __tablename__ = BASE_ENTITY
     # Name in real life
     real_name = Column(Text)
@@ -39,6 +40,7 @@ class DiscogsBaseEntity(BaseEntity):
 
 
 class DiscogsMusicianEntity(DiscogsBaseEntity):
+    """Describes a Musician in discogs"""
     __tablename__ = MUSICIAN_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
@@ -46,6 +48,7 @@ class DiscogsMusicianEntity(DiscogsBaseEntity):
 
 
 class DiscogsMusicianLinkEntity(BaseLinkEntity):
+    """Describes a musician web link in discogs"""
     __tablename__ = MUSICIAN_LINK_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
@@ -53,6 +56,7 @@ class DiscogsMusicianLinkEntity(BaseLinkEntity):
 
 
 class DiscogsMusicianNlpEntity(BaseNlpEntity, BASE):
+    """Describes textual data of a Musician in discogs"""
     __tablename__ = MUSICIAN_NLP_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
@@ -60,6 +64,7 @@ class DiscogsMusicianNlpEntity(BaseNlpEntity, BASE):
 
 
 class DiscogsGroupEntity(DiscogsBaseEntity):
+    """Describes a musical group in discogs"""
     __tablename__ = GROUP_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
@@ -67,6 +72,7 @@ class DiscogsGroupEntity(DiscogsBaseEntity):
 
 
 class DiscogsGroupLinkEntity(BaseLinkEntity):
+    """Describes a musical group web link in discogs"""
     __tablename__ = GROUP_LINK_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
@@ -74,6 +80,7 @@ class DiscogsGroupLinkEntity(BaseLinkEntity):
 
 
 class DiscogsGroupNlpEntity(BaseNlpEntity, BASE):
+    """Describes textual data of a musical group in discogs"""
     __tablename__ = GROUP_NLP_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
@@ -81,6 +88,7 @@ class DiscogsGroupNlpEntity(BaseNlpEntity, BASE):
 
 
 class DiscogsMasterEntity(DiscogsBaseEntity):
+    """Describes a master release in discogs"""
     __tablename__ = MASTER_TABLE
     __mapper_args__ = {
         'polymorphic_identity': __tablename__,
@@ -92,6 +100,8 @@ class DiscogsMasterEntity(DiscogsBaseEntity):
 
 
 class DiscogsMasterArtistRelationship(BaseRelationship):
+    """Describes the relationship between a master release and the
+    artist/group whom made it """
     __tablename__ = MASTER_ARTIST_RELATIONSHIP_TABLE
 
     __mapper_args__ = {
