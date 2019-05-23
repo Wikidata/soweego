@@ -17,10 +17,10 @@ import xml.etree.ElementTree as et
 from datetime import date, datetime
 from typing import Iterable, Tuple
 
+from lxml import etree
 from requests import get
 from tqdm import tqdm
 
-from lxml import etree
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
@@ -48,76 +48,145 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
     _sqlalchemy_commit_every = 1_000_000
 
     def get_dump_download_urls(self) -> Iterable[str]:
+        urls = []
         response = get(DUMP_LIST_URL_TEMPLATE.format(date.today().year))
         root = et.fromstring(response.text)
         # 4 dump files, sorted alphabetically: artists, labels, masters, releases
-        latest = list(root)[-4]  # Take the 4th from last child
-        dump_file_name = None
-        for child in latest:
-            if 'Key' in child.tag:
-                dump_file_name = child.text
-        if dump_file_name is None:
+        dumps = [list(root)[-4], list(root)[-2]]  # Take the 2nd and 4th from last child
+        for dump in dumps:
+            for child in dump:
+                if 'Key' in child.tag:
+                    urls.append(DUMP_BASE_URL + child.text)
+                    break
+        if not urls:
             LOGGER.error(
                 'Failed to get the Discogs dump download URL: are we at the very start of the year?')
             return None
-        return [DUMP_BASE_URL + dump_file_name]
+        return urls
 
     def extract_and_populate(self, dump_file_paths: Iterable[str], resolve: bool):
-        dump_file_path = dump_file_paths[0]
+        self.process_artists_dump(dump_file_paths[0], resolve)
+        self.process_masters_dump(dump_file_paths[1], resolve)
+
+    def process_masters_dump(self, dump_file_path, resolve):
         LOGGER.info(
-            "Starting import of musicians and bands from Discogs dump '%s'", dump_file_path)
+            "Starting import of masters from Discogs dump '%s'", dump_file_path)
         start = datetime.now()
-
-        tables = [discogs_entity.DiscogsMusicianEntity, discogs_entity.DiscogsMusicianNlpEntity,
-                  discogs_entity.DiscogsMusicianLinkEntity,
-                  discogs_entity.DiscogsGroupEntity, discogs_entity.DiscogsGroupNlpEntity,
-                  discogs_entity.DiscogsGroupLinkEntity]
-
+        tables = [discogs_entity.DiscogsMasterEntity, discogs_entity.DiscogsMasterArtistRelationship]
         db_manager = DBManager()
         LOGGER.info('Connected to database: %s', db_manager.get_engine().url)
-
         db_manager.drop(tables)
         db_manager.create(tables)
         LOGGER.info('SQL tables dropped and re-created: %s',
                     [table.__tablename__ for table in tables])
-
         extracted_path = '.'.join(dump_file_path.split('.')[:-1])
-
         # Extract dump file if it has not yet been extracted
         if not os.path.exists(extracted_path):
-
             LOGGER.info('Extracting dump file')
 
             with gzip.open(dump_file_path, 'rb') as f_in:
                 with open(extracted_path, 'wb') as f_out:
                     shutil.copyfileobj(f_in, f_out)
 
-        def g_process_et_items() -> Iterable[Tuple]:
-            """
-            Generator: Processes ElementTree items in a memory
-            efficient way
-            """
+        # count number of entries
+        n_rows = sum(1 for _ in self._g_process_et_items(extracted_path, 'master'))
+        session = db_manager.new_session()
+        entity_array = []  # array to which we'll add the entities
+        relationships_set = set()
+        self.total_entities = 0
+        for _, node in tqdm(self._g_process_et_items(extracted_path, 'master'), total=n_rows):
 
-            context: etree.ElementTree = etree.iterparse(
-                extracted_path,
-                events=('end',),
-                tag='artist')
+            if not node.tag == 'master':
+                continue
 
-            for event, elem in context:
-                yield event, elem
+            self.total_entities += 1
+            entity = discogs_entity.DiscogsMasterEntity()
+            entity.catalog_id = node.attrib['id']
+            genres = set()
+            for child in node:
+                if child.tag == 'main_release':
+                    entity.main_release_id = child.text
+                elif child.tag == 'genres':
+                    for genre in child:
+                        genres.update(text_utils.tokenize(genre.text))
+                elif child.tag == 'styles':
+                    for style in child:
+                        genres.update(text_utils.tokenize(style.text))
+                elif child.tag == 'title':
+                    entity.name = child.text
+                    entity.name_tokens = ' '.join(text_utils.tokenize(child.text))
+                elif child.tag == 'data_quality':
+                    entity.data_quality = child.text.lower()
+                elif child.tag == 'year':
+                    try:
+                        entity.born = date(year=int(child.text), month=1, day=1)
+                        entity.born_precision = 9
+                    except:
+                        LOGGER.debug(f'Master with id {entity.catalog_id} has an invalid year: {child.text}')
+                elif child.tag == 'artists':
+                    for artist in child:
+                        relationships_set.add((entity.catalog_id, artist.find('id').text))
 
-                # delete content of node once we're done processing
-                # it. If we don't then it would stay in memory
-                elem.clear()
+            entity.genres = ' '.join(genres)
+            entity_array.append(entity)
+            # commit in batches of `self._sqlalchemy_commit_every`
+            if len(entity_array) >= self._sqlalchemy_commit_every:
+                LOGGER.info('Adding batch of entities to the database, this will take a while. '
+                            'Progress will resume soon.')
+
+                insert_start_time = datetime.now()
+
+                session.bulk_save_objects(entity_array)
+                session.commit()
+                session.expunge_all()  # clear session
+
+                entity_array.clear()  # clear entity array
+
+                LOGGER.debug('It took %s to add %s entities to the database',
+                             datetime.now() - insert_start_time,
+                             self._sqlalchemy_commit_every)
+        # finally commit remaining entities in session
+        # (if any), and close session
+        session.bulk_save_objects(entity_array)
+        session.bulk_save_objects(
+            [discogs_entity.DiscogsMasterArtistRelationship(id1, id2) for id1, id2 in relationships_set])
+        session.commit()
+        session.close()
+
+        end = datetime.now()
+        LOGGER.info('Import completed in %s. Total entities: %d. Total relationships %s.', end - start,
+                    self.total_entities, len(relationships_set))
+        # once the import process is complete, we can safely delete the extracted discogs dump
+        os.remove(extracted_path)
+
+    def process_artists_dump(self, dump_file_path, resolve):
+        LOGGER.info(
+            "Starting import of musicians and bands from Discogs dump '%s'", dump_file_path)
+        start = datetime.now()
+        tables = [discogs_entity.DiscogsMusicianEntity, discogs_entity.DiscogsMusicianNlpEntity,
+                  discogs_entity.DiscogsMusicianLinkEntity,
+                  discogs_entity.DiscogsGroupEntity, discogs_entity.DiscogsGroupNlpEntity,
+                  discogs_entity.DiscogsGroupLinkEntity]
+        db_manager = DBManager()
+        LOGGER.info('Connected to database: %s', db_manager.get_engine().url)
+        db_manager.drop(tables)
+        db_manager.create(tables)
+        LOGGER.info('SQL tables dropped and re-created: %s',
+                    [table.__tablename__ for table in tables])
+        extracted_path = '.'.join(dump_file_path.split('.')[:-1])
+        # Extract dump file if it has not yet been extracted
+        if not os.path.exists(extracted_path):
+            LOGGER.info('Extracting dump file')
+
+            with gzip.open(dump_file_path, 'rb') as f_in:
+                with open(extracted_path, 'wb') as f_out:
+                    shutil.copyfileobj(f_in, f_out)
 
         # count number of entries
-        n_rows = sum(1 for _ in g_process_et_items())
-
+        n_rows = sum(1 for _ in self._g_process_et_items(extracted_path, 'artist'))
         session = db_manager.new_session()
-
         entity_array = []  # array to which we'll add the entities
-
-        for _, node in tqdm(g_process_et_items(), total=n_rows):
+        for _, node in tqdm(self._g_process_et_items(extracted_path, 'artist'), total=n_rows):
 
             if not node.tag == 'artist':
                 continue
@@ -141,30 +210,19 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             # Musician
             groups = node.find('groups')
             members = node.find('members')
-            if groups:
+            if groups is not None:
                 entity = discogs_entity.DiscogsMusicianEntity()
                 self._populate_musician(entity_array,
                                         entity, identifier, name, living_links, node)
             # Band
-            elif members:
-                entity = discogs_entity.DiscogsGroupEntity()
-                self._populate_band(entity_array, entity, identifier,
-                                    name, living_links, node)
-            # Can't infer the entity type, so populate both
-            else:
-                LOGGER.debug(
-                    'Unknown artist type. Will add it to both musicians and bands: %s', identifier)
-                entity = discogs_entity.DiscogsMusicianEntity()
-                self._populate_musician(entity_array,
-                                        entity, identifier, name, living_links, node)
+            elif members is not None:
                 entity = discogs_entity.DiscogsGroupEntity()
                 self._populate_band(entity_array, entity, identifier,
                                     name, living_links, node)
 
             # commit in batches of `self._sqlalchemy_commit_every`
             if len(entity_array) >= self._sqlalchemy_commit_every:
-
-                LOGGER.info('Adding batch of entities to the database, this might take a couple of minutes. '
+                LOGGER.info('Adding batch of entities to the database, this will take a while. '
                             'Progress will resume soon.')
 
                 insert_start_time = datetime.now()
@@ -176,21 +234,18 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                 entity_array.clear()  # clear entity array
 
                 LOGGER.debug('It took %s to add %s entities to the database',
-                             datetime.now()-insert_start_time,
+                             datetime.now() - insert_start_time,
                              self._sqlalchemy_commit_every)
-
         # finally commit remaining entities in session
         # (if any), and close session
         session.bulk_save_objects(entity_array)
         session.commit()
         session.close()
-
         end = datetime.now()
         LOGGER.info(
             'Import completed in %s. Total entities: %d - %d musicians with %d links - %d bands with %d links - %d discarded dead links.',
             end - start, self.total_entities, self.musicians, self.musician_links, self.bands, self.band_links,
             self.dead_links)
-
         # once the import process is complete, we can safely delete the extracted discogs dump
         os.remove(extracted_path)
 
@@ -243,7 +298,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
 
     def _populate_name_variations(self, entity_array, artist_node, current_entity, identifier):
         name_variations_node = artist_node.find('namevariations')
-        if name_variations_node:
+        if name_variations_node is not None:
             children = list(name_variations_node)
             if children:
                 for e in self._denormalize_name_variation_entities(
@@ -322,7 +377,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
     def _extract_living_links(self, artist_node, identifier, resolve: bool):
         LOGGER.debug('Extracting living links from artist %s', identifier)
         urls = artist_node.find('urls')
-        if urls:
+        if urls is not None:
             for url_element in urls.iterfind('url'):
                 url = url_element.text
                 if not url:
@@ -362,3 +417,21 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             self.musician_links += 1
         elif isinstance(entity, discogs_entity.DiscogsGroupLinkEntity):
             self.band_links += 1
+
+    def _g_process_et_items(self, path, tag) -> Iterable[Tuple]:
+        """
+        Generator: Processes ElementTree items in a memory
+        efficient way
+        """
+
+        context: etree.ElementTree = etree.iterparse(
+            path,
+            events=('end',),
+            tag=tag)
+
+        for event, elem in context:
+            yield event, elem
+
+            # delete content of node once we're done processing
+            # it. If we don't then it would stay in memory
+            elem.clear()

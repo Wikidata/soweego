@@ -16,21 +16,17 @@ import logging
 import os
 import time
 from csv import DictReader
-from functools import lru_cache
 from re import search
 from typing import Generator, Set
 
 import click
 from requests import get
 
-from soweego.commons import constants
+from soweego.commons import constants, keys
 from soweego.commons.logging import log_request_data
 from soweego.wikidata import vocabulary
 
 LOGGER = logging.getLogger(__name__)
-
-ITEM_REGEX = r'Q\d+'
-PID_REGEX = r'P\d+'
 
 WIKIDATA_SPARQL_ENDPOINT = 'https://query.wikidata.org/sparql'
 DEFAULT_RESPONSE_FORMAT = 'text/tab-separated-values'
@@ -99,7 +95,6 @@ def identifier_class_based_query_cli(ontology_class, identifier_property, result
             "Class-based identifier query result dumped as JSON lines to '%s'", outfile.name)
 
 
-@lru_cache()
 def run_query(query_type: tuple, class_qid: str, catalog_pid: str, result_per_page: int) -> Generator:
     """Run a filled SPARQL query template against the Wikidata endpoint with eventual paging.
 
@@ -122,19 +117,19 @@ def run_query(query_type: tuple, class_qid: str, catalog_pid: str, result_per_pa
         raise ValueError('Bad query type: %s. It should be one of %s' %
                          (how, constants.SUPPORTED_QUERY_TYPES))
 
-    if what == constants.IDENTIFIER:
-        query = IDENTIFIER_QUERY_TEMPLATE % (vocabulary.INSTANCE_OF, class_qid, catalog_pid) if how == constants.CLASS else IDENTIFIER_QUERY_TEMPLATE % (
+    if what == keys.IDENTIFIER:
+        query = IDENTIFIER_QUERY_TEMPLATE % (vocabulary.INSTANCE_OF, class_qid, catalog_pid) if how == keys.CLASS_QUERY else IDENTIFIER_QUERY_TEMPLATE % (
             vocabulary.OCCUPATION, class_qid, catalog_pid)
-        return _parse_query_result(constants.IDENTIFIER, _run_paged_query(result_per_page, query))
-    elif what == constants.LINKS:
-        query = LINKS_QUERY_TEMPLATE % (vocabulary.INSTANCE_OF, class_qid, catalog_pid) if how == constants.CLASS else LINKS_QUERY_TEMPLATE % (
+        return _parse_query_result(keys.IDENTIFIER, _run_paged_query(result_per_page, query))
+    elif what == keys.LINKS:
+        query = LINKS_QUERY_TEMPLATE % (vocabulary.INSTANCE_OF, class_qid, catalog_pid) if how == keys.CLASS_QUERY else LINKS_QUERY_TEMPLATE % (
             vocabulary.OCCUPATION, class_qid, catalog_pid)
-        return _parse_query_result(constants.LINKS, _run_paged_query(result_per_page, query))
-    elif what == constants.DATASET:
-        query = DATASET_QUERY_TEMPLATE % (vocabulary.INSTANCE_OF, class_qid, catalog_pid) if how == constants.CLASS else DATASET_QUERY_TEMPLATE % (
+        return _parse_query_result(keys.LINKS, _run_paged_query(result_per_page, query))
+    elif what == keys.DATASET:
+        query = DATASET_QUERY_TEMPLATE % (vocabulary.INSTANCE_OF, class_qid, catalog_pid) if how == keys.CLASS_QUERY else DATASET_QUERY_TEMPLATE % (
             vocabulary.OCCUPATION, class_qid, catalog_pid)
-        return _parse_query_result(constants.DATASET, _run_paged_query(result_per_page, query))
-    elif what == constants.METADATA:
+        return _parse_query_result(keys.DATASET, _run_paged_query(result_per_page, query))
+    elif what == keys.METADATA:
         # TODO implement metadata query
         raise NotImplementedError
     else:
@@ -154,7 +149,6 @@ def catalog_qid_query(catalog_pid):
         yield valid_qid.group()
 
 
-@lru_cache()
 def url_pids_query():
     LOGGER.info('Retrieving PIDs with URL values')
     result_set = make_request(URL_PIDS_QUERY)
@@ -165,7 +159,6 @@ def url_pids_query():
         yield valid_pid.group()
 
 
-@lru_cache()
 def external_id_pids_and_urls_query():
     LOGGER.info(
         'Retrieving PIDs with external ID values, their formatter URLs and regexps')
@@ -203,7 +196,7 @@ def external_id_pids_and_urls_query():
             LOGGER.warning(
                 'Skipping malformed query result: no Wikidata property in %s', pid_uri_dict)
             continue
-        pid = search(PID_REGEX, pid_uri)
+        pid = search(constants.PID_REGEX, pid_uri)
         if not pid:
             LOGGER.warning(
                 'Skipping malformed query result: invalid Wikidata property URI %s in %s', pid_uri, result)
@@ -217,7 +210,7 @@ def _get_valid_pid(result):
         LOGGER.warning(
             'Skipping malformed query result: no Wikidata property in %s', result)
         return None
-    pid = search(PID_REGEX, pid_uri)
+    pid = search(constants.PID_REGEX, pid_uri)
     if not pid:
         LOGGER.warning(
             'Skipping malformed query result: invalid Wikidata property URI %s in %s', pid_uri, result)
@@ -228,7 +221,7 @@ def _get_valid_pid(result):
 def identifier_class_based_query(ontology_class, identifier_property, results_per_page):
     query = IDENTIFIER_QUERY_TEMPLATE % (
         vocabulary.INSTANCE_OF, ontology_class, identifier_property)
-    return _parse_query_result(constants.IDENTIFIER, _run_paged_query(results_per_page, query))
+    return _parse_query_result(keys.IDENTIFIER, _run_paged_query(results_per_page, query))
 
 
 def _parse_query_result(query_type, result_set):
@@ -236,10 +229,10 @@ def _parse_query_result(query_type, result_set):
     # it should never happen, but it actually does
     identifier_or_link = False
     for result in result_set:
-        if query_type == constants.IDENTIFIER:
+        if query_type == keys.IDENTIFIER:
             identifier_or_link = result.get(IDENTIFIER_BINDING)
             to_be_logged = 'external identifier'
-        elif query_type == constants.LINKS:
+        elif query_type == keys.LINKS:
             identifier_or_link = result.get(LINK_BINDING)
             to_be_logged = 'third-party URL'
 
@@ -252,7 +245,7 @@ def _parse_query_result(query_type, result_set):
         if not valid_qid:
             continue
 
-        if query_type == constants.DATASET:
+        if query_type == keys.DATASET:
             yield valid_qid.group()
         else:
             yield valid_qid.group(), identifier_or_link
@@ -264,7 +257,7 @@ def _get_valid_qid(result):
         LOGGER.warning(
             'Skipping malformed query result: no Wikidata item in %s', result)
         return None
-    qid = search(ITEM_REGEX, item_uri)
+    qid = search(constants.QID_REGEX, item_uri)
     if not qid:
         LOGGER.warning(
             'Skipping malformed query result: invalid Wikidata item URI %s in %s', item_uri, result)
@@ -332,7 +325,7 @@ def identifier_occupation_based_query_cli(identifier_property, occupation_class,
 def identifier_occupation_based_query(occupation_class, identifier_property, results_per_page):
     query = IDENTIFIER_QUERY_TEMPLATE % (
         vocabulary.OCCUPATION, occupation_class, identifier_property)
-    return _parse_query_result(constants.IDENTIFIER, _run_paged_query(results_per_page, query))
+    return _parse_query_result(keys.IDENTIFIER, _run_paged_query(results_per_page, query))
 
 
 @click.command()

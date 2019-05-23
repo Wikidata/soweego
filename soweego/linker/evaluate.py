@@ -23,7 +23,7 @@ from sklearn.externals import joblib
 from sklearn.model_selection import (GridSearchCV, StratifiedKFold,
                                      train_test_split)
 
-from soweego.commons import constants, target_database, utils
+from soweego.commons import constants, keys, target_database, utils
 from soweego.linker import train, workflow
 
 LOGGER = logging.getLogger(__name__)
@@ -31,14 +31,14 @@ LOGGER = logging.getLogger(__name__)
 
 @click.command(context_settings={'ignore_unknown_options': True, 'allow_extra_args': True})
 @click.argument('classifier', type=click.Choice(constants.CLASSIFIERS))
-@click.argument('target', type=click.Choice(target_database.available_targets()))
-@click.argument('target_type', type=click.Choice(target_database.available_types()))
+@click.argument('target', type=click.Choice(target_database.supported_targets()))
+@click.argument('target_type', type=click.Choice(target_database.supported_entities()))
 @click.option('--nested', is_flag=True, help='Compute a nested cross-validation with hyperparameters tuning via grid search.')
 @click.option('--single', is_flag=True, help='Compute a single evaluation over all k folds, instead of k evaluations.')
 @click.option('-k', '--k-folds', default=5, help="Number of folds, default: 5.")
 @click.option('-m', '--metric', type=click.Choice(constants.PERFORMANCE_METRICS),
               default='f1',
-              help="Performance metric for nested cross-validation. Implies '--nested'. Default: f1.")
+              help="Performance metric for nested cross-validation. Use with '--nested'. Default: f1.")
 @click.option('-d', '--dir-io', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER, help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER)
 @click.pass_context
 def cli(ctx, classifier, target, target_type, nested, single, k_folds, metric, dir_io):
@@ -49,6 +49,7 @@ def cli(ctx, classifier, target, target_type, nested, single, k_folds, metric, d
     if kwargs is None:
         sys.exit(1)
 
+    rl.set_option(*constants.CLASSIFICATION_RETURN_INDEX)
     performance_fileout = os.path.join(dir_io, constants.LINKER_PERFORMANCE %
                                        (target, target_type, classifier))
     predictions_fileout = os.path.join(dir_io, constants.LINKER_EVALUATION_PREDICTIONS %
@@ -136,8 +137,8 @@ def _compute_performance(test_index, predictions, test_vectors_size):
 
 
 def nested_k_fold_with_grid_search(classifier, param_grid, catalog, entity, k, scoring, dir_io, **kwargs):
-    if classifier in (constants.SINGLE_LAYER_PERCEPTRON,
-                      constants.MULTILAYER_CLASSIFIER):
+    if classifier in (keys.SINGLE_LAYER_PERCEPTRON,
+                      keys.MULTI_LAYER_PERCEPTRON):
         # TODO make Keras work with GridSearchCV
         raise NotImplementedError(
             f'Grid search for {classifier} is not supported')

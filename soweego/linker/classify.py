@@ -2,23 +2,6 @@
 # -*- coding: utf-8 -*-
 
 """Supervised linking."""
-import functools
-import logging
-import os
-import re
-from csv import DictReader
-from typing import Callable, List, Union
-
-import click
-import numpy as np
-import pandas as pd
-import recordlinkage as rl
-from numpy import full, nan
-from sklearn.externals import joblib
-
-from soweego.commons import constants, data_gathering, target_database
-from soweego.ingestor import wikidata_bot
-from soweego.linker import blocking, classifiers, neural_networks, workflow
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -26,23 +9,39 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+import functools
+import logging
+import os
+import re
+from typing import List, Union
+
+import click
+import pandas as pd
+import recordlinkage as rl
+from numpy import full, nan
+from sklearn.externals import joblib
+
+from soweego.commons import constants, data_gathering, keys, target_database
+from soweego.ingestor import wikidata_bot
+from soweego.linker import blocking, classifiers, neural_networks, workflow
+
 LOGGER = logging.getLogger(__name__)
 
 
 POSSIBLE_FIELDS_FOR_CLASSIFICATION_BLOCKING = [
-    constants.NAME,
-    constants.NAME_TOKENS,
-    constants.URL,
-    constants.URL_TOKENS,
-    constants.DATE_OF_BIRTH,
-    constants.DATE_OF_DEATH
+    keys.NAME,
+    keys.NAME_TOKENS,
+    keys.URL,
+    keys.URL_TOKENS,
+    keys.DATE_OF_BIRTH,
+    keys.DATE_OF_DEATH
 ]
 
 
 @click.command()
 @click.argument('classifier', type=click.Choice(constants.CLASSIFIERS))
-@click.argument('target', type=click.Choice(target_database.available_targets()))
-@click.argument('target_type', type=click.Choice(target_database.available_types()))
+@click.argument('target', type=click.Choice(target_database.supported_targets()))
+@click.argument('target_type', type=click.Choice(target_database.supported_entities()))
 @click.option('--upload/--no-upload', default=False, help='Upload links to Wikidata. Default: no.')
 @click.option('--sandbox/--no-sandbox', default=False,
               help='Upload to the Wikidata sandbox item Q4115189. Default: no.')
@@ -52,8 +51,8 @@ POSSIBLE_FIELDS_FOR_CLASSIFICATION_BLOCKING = [
               help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER)
 @click.option('-pb', '--post-block-fields',
               type=click.Choice([
-                  constants.NAME,
-                  constants.URL,
+                  keys.NAME,
+                  keys.URL,
               ]),
               multiple=True,
               help='Fields on which to perform the post-classification blocking.')
@@ -80,7 +79,7 @@ def cli(classifier, target, target_type, upload, sandbox, threshold, dir_io, pos
     # Ensure that the model exists
     if not os.path.isfile(model_path):
         err_msg = 'No classifier model found at path: %s ' % model_path
-        LOGGER.critical('File does not exist - ' + err_msg)
+        LOGGER.critical('File does not exist - %s', err_msg)
         raise FileNotFoundError(err_msg)
 
     # If results path exists then delete it. If not new we results
@@ -89,9 +88,12 @@ def cli(classifier, target, target_type, upload, sandbox, threshold, dir_io, pos
         os.remove(results_path)
 
     # set defaults for blocking only if any of them is None
-    elif [target_block, wd_block].count(None) >= 1:
+    if [target_block, wd_block].count(None) >= 1:
         # set value of both, to the the first value which is not None
-        wd_block = target_block = wd_block or target_block or constants.NAME_TOKENS
+        # If both are None then default to block on `keys.NAME_TOKENS`
+        wd_block = target_block = wd_block or target_block or keys.NAME_TOKENS
+
+    rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
 
     for chunk in execute(target, target_type, model_path, threshold, dir_io, post_block_fields, target_block, wd_block):
         if upload:
@@ -117,7 +119,6 @@ def execute(catalog, entity, model, threshold, dir_io, post_block_fields, target
                                         (catalog, entity, 'classification'))
 
     classifier = joblib.load(model)
-    rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
 
     # check if files exists for these paths. If yes then just
     # preprocess them in chunks instead of recomputing
@@ -143,8 +144,7 @@ def execute(catalog, entity, model, threshold, dir_io, post_block_fields, target
                                                     target_chunks,
                                                     post_block_fields)
 
-        # if WD link is present and correct then predicion is 1
-        if target_chunks.get(constants.URL) is not None:
+        if target_chunks.get(keys.URL) is not None:
             predictions = pd.DataFrame(predictions).apply(
                 _one_when_wikidata_link_correct, axis=1, args=(target_chunks,))
 
@@ -160,9 +160,7 @@ def execute(catalog, entity, model, threshold, dir_io, post_block_fields, target
         wd_generator = workflow.preprocess_wikidata(
             'classification', wd_reader)
 
-        all_feature_vectors = []
-        all_wd_chunks = []
-        all_target_chunks = []
+        all_feature_vectors, all_wd_chunks, all_target_chunks = None, None, None
 
         for i, wd_chunk in enumerate(wd_generator, 1):
             # TODO Also consider blocking on URLs
@@ -173,7 +171,7 @@ def execute(catalog, entity, model, threshold, dir_io, post_block_fields, target
 
             # Build target chunk based on samples
             target_reader = data_gathering.gather_target_dataset(
-                'classification', entity, catalog, set(samples.get_level_values(constants.TID)))
+                'classification', entity, catalog, set(samples.get_level_values(keys.TID)))
 
             # Preprocess target chunk
             target_chunk = workflow.preprocess_target(
@@ -185,11 +183,33 @@ def execute(catalog, entity, model, threshold, dir_io, post_block_fields, target
             feature_vectors = workflow.extract_features(
                 samples, wd_chunk, target_chunk, features_path)
 
-            # keep features before adding missing features vectors, which may
+            # keep features before '_add_missing_feature_columns', which may
             # change depending on the classifier.
-            all_feature_vectors.append(feature_vectors)
-            all_wd_chunks.append(wd_chunk)
-            all_target_chunks.append(target_chunk)
+            # we keep all as a single pd.Dataframe
+
+            # if one is None then all are None
+            if all_feature_vectors is None:
+
+                # if they're None set their values to be
+                # the pd.Dataframe corresponding to the current chunk
+                all_feature_vectors = feature_vectors
+                all_wd_chunks = wd_chunk
+                all_target_chunks = target_chunk
+
+            else:
+                # if they're not None then just add the new chunk data
+                # to the end
+                all_feature_vectors = pd.concat([
+                    all_feature_vectors,
+                    feature_vectors], sort=False)
+
+                all_wd_chunks = pd.concat([
+                    all_wd_chunks,
+                    wd_chunk], sort=False)
+
+                all_target_chunks = pd.concat([
+                    all_target_chunks,
+                    target_chunk], sort=False)
 
             _add_missing_feature_columns(classifier, feature_vectors)
 
@@ -202,8 +222,7 @@ def execute(catalog, entity, model, threshold, dir_io, post_block_fields, target
                                                         target_chunk,
                                                         post_block_fields)
 
-            # if WD link is present and correct then predicion is 1
-            if target_chunk.get(constants.URL) is not None:
+            if target_chunk.get(keys.URL) is not None:
                 predictions = pd.DataFrame(predictions).apply(
                     _one_when_wikidata_link_correct, axis=1, args=(target_chunk,))
 
@@ -212,10 +231,9 @@ def execute(catalog, entity, model, threshold, dir_io, post_block_fields, target
             yield predictions[predictions >= threshold].drop_duplicates()
 
         # dump all processed chunks as pickled files
-        pd.concat(all_feature_vectors, sort=False).to_pickle(complete_fv_path)
-        pd.concat(all_wd_chunks, sort=False).to_pickle(complete_wd_path)
-        pd.concat(all_target_chunks, sort=False).to_pickle(
-            complete_target_path)
+        all_feature_vectors.to_pickle(complete_fv_path)
+        all_wd_chunks.to_pickle(complete_wd_path)
+        all_target_chunks.to_pickle(complete_target_path)
 
 
 def _post_classification_blocking(predictions: pd.Series, wd_chunk: pd.DataFrame, target_chunk: pd.DataFrame,
@@ -267,7 +285,7 @@ def _zero_when_not_exact_match(prediction: pd.Series,
 def _one_when_wikidata_link_correct(prediction, target):
     qid, tid = prediction.name
 
-    urls = target.loc[tid][constants.URL]
+    urls = target.loc[tid][keys.URL]
     if urls:
         for u in urls:
             if u:

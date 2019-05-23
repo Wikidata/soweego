@@ -21,7 +21,7 @@
   "handlers": {
     "console": {
       "formatter": "soweego",
-      "class": "logging.StreamHandler",
+      "class": "soweego.commons.logging.TqdmLoggingHandler",
       "level": "INFO"
     },
     "debug_file_handler": {

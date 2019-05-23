@@ -9,11 +9,12 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, tupini07'
 
+import copy
 import csv
 import datetime
 import gzip
 import logging
-from typing import Dict, List, Generator, Tuple
+from typing import Dict, Generator, List, Tuple
 
 from tqdm import tqdm
 
@@ -30,7 +31,6 @@ DUMP_URL_MOVIE_INFO = 'https://datasets.imdbws.com/title.basics.tsv.gz'
 
 
 class ImdbDumpExtractor(BaseDumpExtractor):
-
     # Counters
     n_actors = 0
     n_directors = 0
@@ -97,7 +97,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             imdb_entity.ImdbMusicianEntity,
             imdb_entity.ImdbProducerEntity,
             imdb_entity.ImdbWriterEntity,
-            imdb_entity.ImdbPersonMovieRelationship,
+            imdb_entity.ImdbMoviePersonRelationship,
         ]
 
         db_manager = DBManager()
@@ -118,17 +118,36 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             movie_entity = imdb_entity.ImdbMovieEntity()
             movie_entity.catalog_id = movie_info.get('tconst')
             movie_entity.title_type = movie_info.get('titleType')
-            movie_entity.primary_title = movie_info.get('primaryTitle')
-            movie_entity.original_title = movie_info.get('originalTitle')
+            movie_entity.name = movie_info.get('primaryTitle')
+            movie_entity.name_tokens = ' '.join(
+                text_utils.tokenize(movie_info.get('primaryTitle')))
             movie_entity.is_adult = True if movie_info.get(
                 'isAdult') == '1' else False
-            movie_entity.start_year = movie_info.get('startYear')
-            movie_entity.end_year = movie_info.get('endYear')
+            try:
+                movie_entity.born = datetime.date(
+                    year=int(movie_info.get('startYear')), month=1, day=1)
+                movie_entity.born_precision = 9
+            except:
+                LOGGER.debug('No start year value for %s', movie_entity)
+            try:
+                movie_entity.died = datetime.date(
+                    year=int(movie_info.get('endYear')), month=1, day=1)
+                movie_entity.died_precision = 9
+            except:
+                LOGGER.debug('No end year value for %s', movie_entity)
             movie_entity.runtime_minutes = movie_info.get('runtimeMinutes')
 
             if movie_info.get('genres'):  # if movie has a genre specified
-                movie_entity.genres = movie_info.get(
-                    'genres').replace(',', ' ')
+                movie_entity.genres = ' '.join(text_utils.tokenize(movie_info.get(
+                    'genres')))
+
+            # Creates entity for alias
+            alias = movie_info.get('originalTitle')
+            if alias is not None and movie_entity.name != alias:
+                alias_entity = copy.deepcopy(movie_entity)
+                alias_entity.name = alias
+                alias_entity.name_tokens = ' '.join(text_utils.tokenize(alias))
+                entity_array.append(alias_entity)
 
             entity_array.append(movie_entity)
 
@@ -260,8 +279,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 # adding everything to session and commiting once the for loop
                 # is done
                 if len(entity_array) >= self._sqlalchemy_commit_every:
-
-                    LOGGER.info('Adding batch of entities to the database, this might take a couple of minutes. '
+                    LOGGER.info('Adding batch of entities to the database, this will take a while. '
                                 'Progress will resume soon.')
 
                     insert_start_time = datetime.datetime.now()
@@ -273,7 +291,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                     entity_array.clear()  # clear entity array
 
                     LOGGER.debug('It took %s to add %s entities to the database',
-                                 datetime.datetime.now()-insert_start_time,
+                                 datetime.datetime.now() - insert_start_time,
                                  len(entity_array))
 
             # commit remaining entities
@@ -332,7 +350,6 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         # The array of primary professions gets translated to a list
         # of the QIDs that represent said professions in Wikidata
         if person_info.get('primaryProfession'):
-
             # get QIDs of occupations for person
             translated_occupations = self._translate_professions(
                 person_info.get('primaryProfession').split(',')
@@ -367,9 +384,9 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
         for title in know_for_titles:
 
-            entity_array.append(imdb_entity.ImdbPersonMovieRelationship(
-                from_catalog_id=person_info.get('nconst'),
-                to_catalog_id=title
+            entity_array.append(imdb_entity.ImdbMoviePersonRelationship(
+                from_catalog_id=title,
+                to_catalog_id=person_info.get('nconst')
             ))
 
     def _translate_professions(self, professions: List[str]) -> List[str]:
@@ -389,7 +406,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         qids = []
 
         for prof in professions:
-            qid = vocab.IMDB_PROFESSIONS_MAPPINGS.get(prof, None)
+            qid = vocab.IMDB_PROFESSIONS_MAPPING.get(prof, None)
             if qid:
                 qids.append(qid)
 

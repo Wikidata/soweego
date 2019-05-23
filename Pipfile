@@ -17,6 +17,7 @@ tqdm = "*"
 lxml = "*"
 tensorflow = "*"
 keras = "*"
+colored-traceback = "*"
 
 [dev-packages]
 pylint = "*"

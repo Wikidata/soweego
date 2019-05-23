@@ -19,7 +19,7 @@ import pandas as pd
 from recordlinkage import Index
 from tqdm import tqdm
 
-from soweego.commons import constants, data_gathering, target_database
+from soweego.commons import constants, data_gathering, keys, target_database
 from soweego.commons.data_gathering import tokens_fulltext_search
 from soweego.linker.workflow import handle_goal
 
@@ -27,7 +27,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def train_test_block(wikidata_df: pd.DataFrame, target_df: pd.DataFrame) -> pd.MultiIndex:
-    blocking_column = constants.TID
+    blocking_column = keys.TID
 
     LOGGER.info(
         "Blocking on column '%s' to get positive samples ...", blocking_column)
@@ -59,7 +59,7 @@ def full_text_query_block(goal: str, catalog: str, wikidata_series: pd.Series, c
     qids_and_tids = _extract_target_candidates(wikidata_series, target_entity)
 
     samples_index = pd.MultiIndex.from_tuples(
-        qids_and_tids, names=[constants.QID, constants.TID])
+        qids_and_tids, names=[keys.QID, keys.TID])
     LOGGER.debug('%s %s samples index chunk %d random example:\n%s',
                  catalog, goal, chunk_number, samples_index.to_series().sample(5))
 
@@ -86,12 +86,12 @@ def prefect_block_on_column(goal: str, catalog: str, entity: str, wikidata_serie
 
     # By default we suppose that the target entity is the base entity for catalog
     # and entity name
-    target_entity = target_database.get_entity(catalog, entity)
+    target_entity = target_database.get_main_entity(catalog, entity)
 
     # choose the correct `blocking_fn` based on the
     # column we're blocking on.
     # The blocking functions should accept 2 parameters a (target_entity, data_to_block_on)
-    if column == constants.NAME_TOKENS:
+    if column == keys.NAME_TOKENS:
         # Since `data_gathering.tokens_fulltext_search` accepts more
         # than one parameter we create a partial function, setting the value
         # of all parameters except for the (target_entity, data_to_block_on) ones
@@ -100,13 +100,13 @@ def prefect_block_on_column(goal: str, catalog: str, entity: str, wikidata_serie
                               where_clause=None,
                               limit=5)
 
-    elif column == constants.URL:
+    elif column == keys.URL:
         blocking_fn = partial(data_gathering.perfect_url_search,
                               target_column=target_column,
                               link_entity=target_database.get_link_entity(
                                   catalog, entity))
 
-    elif column == constants.URL_TOKENS:
+    elif column == keys.URL_TOKENS:
         blocking_fn = partial(data_gathering.perfect_url_token_search,
                               boolean_mode=False,
                               target_column=target_column,
@@ -163,7 +163,7 @@ def prefect_block_on_column(goal: str, catalog: str, entity: str, wikidata_serie
                                   for entity in matches]
 
     samples_index = pd.MultiIndex.from_tuples(
-        qids_and_tids, names=[constants.QID, constants.TID])
+        qids_and_tids, names=[keys.QID, keys.TID])
 
     LOGGER.debug('%s %s samples index chunk %d random example:\n%s',
                  catalog, goal, chunk_number, samples_index.to_series().sample(5))
