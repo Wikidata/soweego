@@ -68,7 +68,8 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             if value == '\\N':
                 entity[key] = None
 
-    def extract_and_populate(self, dump_file_paths: List[str], resolve: bool) -> None:
+    def extract_and_populate(self, dump_file_paths: List[str],
+                             resolve: bool) -> None:
         """
         Extracts the data in the dumps (person and movie) and processes them.
         It then proceeds to add the appropriate data to the database. 
@@ -112,7 +113,8 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         LOGGER.info('Starting import of movies ...')
 
         # Here we open the movie dump file, and add everything to the DB
-        for movie_info, entity_array in self._loop_through_entities(movies_file_path):
+        for movie_info, entity_array in self._loop_through_entities(
+                movies_file_path):
 
             # create the movie SQLAlchemy entity and populate it
             movie_entity = imdb_entity.ImdbMovieEntity()
@@ -138,8 +140,9 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             movie_entity.runtime_minutes = movie_info.get('runtimeMinutes')
 
             if movie_info.get('genres'):  # if movie has a genre specified
-                movie_entity.genres = ' '.join(text_utils.tokenize(movie_info.get(
-                    'genres')))
+                movie_entity.genres = ' '.join(
+                    text_utils.tokenize(movie_info.get(
+                        'genres')))
 
             # Creates entity for alias
             alias = movie_info.get('originalTitle')
@@ -164,7 +167,8 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         # reset timer for persons import
         start = datetime.datetime.now()
 
-        for person_info, entity_array in self._loop_through_entities(person_file_path):
+        for person_info, entity_array in self._loop_through_entities(
+                person_file_path):
 
             # IMDb saves the list of professions as a comma separated
             # string
@@ -239,7 +243,8 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                     self.n_directors, self.n_musicians, self.n_producers,
                     self.n_writers, self.n_misc)
 
-    def _loop_through_entities(self, file_path: str) -> Generator[Tuple[Dict, List], None, None]:
+    def _loop_through_entities(self, file_path: str) -> Generator[
+        Tuple[Dict, List], None, None]:
         """
         Generator that given an IMDb dump file (which
         should be ".tsv.gz" format) it loops through every
@@ -279,8 +284,9 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 # adding everything to session and commiting once the for loop
                 # is done
                 if len(entity_array) >= self._sqlalchemy_commit_every:
-                    LOGGER.info('Adding batch of entities to the database, this will take a while. '
-                                'Progress will resume soon.')
+                    LOGGER.info(
+                        'Adding batch of entities to the database, this will take a while. '
+                        'Progress will resume soon.')
 
                     insert_start_time = datetime.datetime.now()
 
@@ -290,9 +296,10 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
                     entity_array.clear()  # clear entity array
 
-                    LOGGER.debug('It took %s to add %s entities to the database',
-                                 datetime.datetime.now() - insert_start_time,
-                                 len(entity_array))
+                    LOGGER.debug(
+                        'It took %s to add %s entities to the database',
+                        datetime.datetime.now() - insert_start_time,
+                        len(entity_array))
 
             # commit remaining entities
             session.bulk_save_objects(entity_array)
@@ -359,7 +366,8 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             # occupation of the entity type (ie, for ActorEntity
             # don't include 'actor' occupation since it is implicit)
             person_entity.occupations = ' '.join(
-                occ for occ in translated_occupations if occ != person_entity.table_occupation)
+                occ for occ in translated_occupations if
+                occ != person_entity.table_occupation)
 
         entity_array.append(person_entity)
 
@@ -383,7 +391,6 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             'knownForTitles').split(',')
 
         for title in know_for_titles:
-
             entity_array.append(imdb_entity.ImdbMoviePersonRelationship(
                 from_catalog_id=title,
                 to_catalog_id=person_info.get('nconst')

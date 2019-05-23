@@ -34,6 +34,7 @@ from soweego.importer.models.musicbrainz_entity import (
     MusicbrainzBandLinkEntity, MusicBrainzReleaseGroupArtistRelationship,
     MusicbrainzReleaseGroupEntity, MusicbrainzReleaseGroupLinkEntity)
 from soweego.wikidata.sparql_queries import external_id_pids_and_urls_query
+from soweego.commons.utils import count_num_lines_in_file
 
 LOGGER = logging.getLogger(__name__)
 
@@ -44,9 +45,11 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
     def get_dump_download_urls(self) -> Iterable[str]:
         latest_version = requests.get(
             'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/LATEST').text.rstrip()
-        return ['http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/%s/mbdump.tar.bz2' % latest_version]
+        return [
+            'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport/%s/mbdump.tar.bz2' % latest_version]
 
-    def extract_and_populate(self, dump_file_paths: Iterable[str], resolve: bool):
+    def extract_and_populate(self, dump_file_paths: Iterable[str],
+                             resolve: bool):
         dump_file_path = dump_file_paths[0]
         dump_path = os.path.join(os.path.dirname(
             os.path.abspath(dump_file_path)),
@@ -66,7 +69,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         db_manager.drop(tables)
         db_manager.create(tables)
 
-        LOGGER.info("Dropped and created tables %s", [table.__tablename__ for table in tables])
+        LOGGER.info("Dropped and created tables %s",
+                    [table.__tablename__ for table in tables])
         LOGGER.info("Importing release groups")
 
         release_groups_count = self._add_entities_from_generator(
@@ -78,13 +82,17 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         LOGGER.debug("Added %s/%s release group records", *release_groups_count)
 
         def release_artist_relationships_uniqueness_filter():
-            yield from [MusicBrainzReleaseGroupArtistRelationship(item[0], item[1]) for item in
-                        set(self._release_group_artist_relationship_generator(dump_path))]
+            yield from [
+                MusicBrainzReleaseGroupArtistRelationship(item[0], item[1]) for
+                item in
+                set(self._release_group_artist_relationship_generator(
+                    dump_path))]
 
         tables = [MusicBrainzReleaseGroupArtistRelationship]
         db_manager.drop(tables)
         db_manager.create(tables)
-        LOGGER.info("Dropped and created tables %s", [table.__tablename__ for table in tables])
+        LOGGER.info("Dropped and created tables %s",
+                    [table.__tablename__ for table in tables])
         LOGGER.info("Importing relationships release-artist/band")
 
         relationships_count = self._add_entities_from_generator(
@@ -98,7 +106,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         tables = [MusicbrainzReleaseGroupLinkEntity]
         db_manager.drop(tables)
         db_manager.create(tables)
-        LOGGER.info("Dropped and created tables %s", [table.__tablename__ for table in tables])
+        LOGGER.info("Dropped and created tables %s",
+                    [table.__tablename__ for table in tables])
         LOGGER.info("Importing release groups links")
 
         link_count = self._add_entities_from_generator(
@@ -116,7 +125,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         db_manager.drop(tables)
         db_manager.create(tables)
 
-        LOGGER.info("Dropped and created tables %s", [table.__tablename__ for table in tables])
+        LOGGER.info("Dropped and created tables %s",
+                    [table.__tablename__ for table in tables])
         LOGGER.info("Importing artists and bands")
 
         artist_count = self._add_entities_from_generator(
@@ -132,7 +142,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         db_manager.drop(tables)
         db_manager.create(tables)
 
-        LOGGER.info("Dropped and created tables %s", [table.__tablename__ for table in tables])
+        LOGGER.info("Dropped and created tables %s",
+                    [table.__tablename__ for table in tables])
         LOGGER.info("Importing links")
 
         link_count = self._add_entities_from_generator(
@@ -157,12 +168,15 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         tables = [MusicBrainzArtistBandRelationship]
         db_manager.drop(tables)
         db_manager.create(tables)
-        LOGGER.info("Dropped and created tables %s", [table.__tablename__ for table in tables])
+        LOGGER.info("Dropped and created tables %s",
+                    [table.__tablename__ for table in tables])
         LOGGER.info("Importing relationships artist-band")
 
         def artist_band_relationships_uniqueness_filter():
-            yield from [MusicBrainzArtistBandRelationship(item[0], item[1]) for item in
-                        set(self._artist_band_relationship_generator(dump_path))]
+            yield from [MusicBrainzArtistBandRelationship(item[0], item[1]) for
+                        item in
+                        set(self._artist_band_relationship_generator(
+                            dump_path))]
 
         relationships_count = self._add_entities_from_generator(
             db_manager,
@@ -217,9 +231,10 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
                     entity_array.clear()  # clear entity array
 
-                    LOGGER.debug("It took %s to add %s entities to the database",
-                                 datetime.now() - insert_start_time,
-                                 len(entity_array))
+                    LOGGER.debug(
+                        "It took %s to add %s entities to the database",
+                        datetime.now() - insert_start_time,
+                        len(entity_array))
 
                 n_added_entities += 1
 
@@ -235,7 +250,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         return n_total_entities, n_added_entities
 
-    def _get_urls_for_entity_id(self, dump_path: str, l_path: str, resolve: bool) -> dict:
+    def _get_urls_for_entity_id(self, dump_path: str, l_path: str,
+                                resolve: bool) -> dict:
         """given a l_{something}_url relationship file, return a dict of somethingid-[urls]"""
         LOGGER.info(f"Loading {l_path} relationships")
 
@@ -246,12 +262,17 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                                            delimiter='\t',
                                            fieldnames=[i for i in range(0, 6)])
 
-            for relationship in tqdm(url_relationships, total=self._count_num_lines_in_file(tsvfile)):
+            for relationship in tqdm(url_relationships,
+                                     total=count_num_lines_in_file(
+                                         tsvfile)):
                 # url id matched with its user id
                 if relationship[3] in urlid_entityid_relationship:
-                    LOGGER.warning('Url with ID %s has multiple entities, only one will be stored', relationship[3])
+                    LOGGER.warning(
+                        'Url with ID %s has multiple entities, only one will be stored',
+                        relationship[3])
                 else:
-                    urlid_entityid_relationship[relationship[3]] = relationship[2]
+                    urlid_entityid_relationship[relationship[3]] = relationship[
+                        2]
 
         url_path = os.path.join(dump_path, 'mbdump', 'url')
         url_entityid = {}
@@ -261,9 +282,11 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         # Translates URL IDs to the relative URL
         with open(url_path, "r") as tsvfile:
 
-            urls = DictReader(tsvfile, delimiter='\t', fieldnames=[i for i in range(0, 5)])
+            urls = DictReader(tsvfile, delimiter='\t',
+                              fieldnames=[i for i in range(0, 5)])
 
-            for url_record in tqdm(urls, total=self._count_num_lines_in_file(tsvfile)):
+            for url_record in tqdm(urls, total=count_num_lines_in_file(
+                    tsvfile)):
 
                 urlid = url_record[0]
                 if urlid in urlid_entityid_relationship:
@@ -272,7 +295,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                             continue
                         if resolve and not url_utils.resolve(candidate_url):
                             continue
-                        url_entityid[candidate_url] = urlid_entityid_relationship[urlid]
+                        url_entityid[candidate_url] = \
+                            urlid_entityid_relationship[urlid]
                         del urlid_entityid_relationship[urlid]
 
         entityid_url = defaultdict(list)
@@ -286,7 +310,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         l_artist_url_path = os.path.join(dump_path, 'mbdump', 'l_artist_url')
 
         # Loads all the relationships between URL and ARTIST ID
-        artistid_url = self._get_urls_for_entity_id(dump_path, l_artist_url_path, resolve)
+        artistid_url = self._get_urls_for_entity_id(dump_path,
+                                                    l_artist_url_path, resolve)
 
         LOGGER.info('Adding link entities to DB')
         # Translates ARTIST ID to the relative ARTIST
@@ -295,9 +320,12 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
             n_rows = count_num_lines_in_file(artistfile)
             artist_link_reader = DictReader(artistfile, delimiter='\t',
-                                            fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month',
+                                            fieldnames=['id', 'gid', 'label',
+                                                        'sort_label', 'b_year',
+                                                        'b_month',
                                                         'b_day',
-                                                        'd_year', 'd_month', 'd_day', 'type_id'])
+                                                        'd_year', 'd_month',
+                                                        'd_day', 'type_id'])
 
             for artist in tqdm(artist_link_reader, total=n_rows):
 
@@ -315,15 +343,18 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                             yield current_entity
 
     def _release_group_link_generator(self, dump_path: str, resolve: bool):
-        l_release_group_url_path = os.path.join(dump_path, 'mbdump', 'l_release_group_url')
+        l_release_group_url_path = os.path.join(dump_path, 'mbdump',
+                                                'l_release_group_url')
 
-        release_group_id_urls = self._get_urls_for_entity_id(dump_path, l_release_group_url_path,
+        release_group_id_urls = self._get_urls_for_entity_id(dump_path,
+                                                             l_release_group_url_path,
                                                              resolve)
 
         release_group_path = os.path.join(dump_path, 'mbdump', 'release_group')
         with open(release_group_path) as rfile:
-            n_rows = self._count_num_lines_in_file(rfile)
-            releases = DictReader(rfile, delimiter='\t', fieldnames=['id', 'gid', 'label'])
+            n_rows = count_num_lines_in_file(rfile)
+            releases = DictReader(rfile, delimiter='\t',
+                                  fieldnames=['id', 'gid', 'label'])
 
             for release in tqdm(releases, total=n_rows):
                 if release['id'] in release_group_id_urls:
@@ -347,7 +378,10 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                         r = re.compile(regex)
 
                         with open(isni_file_path, 'r') as artistfile:
-                            for artistid_isni in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'isni']):
+                            for artistid_isni in DictReader(artistfile,
+                                                            delimiter='\t',
+                                                            fieldnames=['id',
+                                                                        'isni']):
                                 # If ISNI is valid, generates an url for the artist
                                 artistid = artistid_isni['id']
                                 isni = artistid_isni['isni']
@@ -357,7 +391,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                                 for candidate_url in url_utils.clean(link):
                                     if not url_utils.validate(candidate_url):
                                         continue
-                                    if resolve and not url_utils.resolve(candidate_url):
+                                    if resolve and not url_utils.resolve(
+                                            candidate_url):
                                         continue
                                     artist_link[artistid] = candidate_url
                     done = True
@@ -368,9 +403,12 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             n_rows = count_num_lines_in_file(artistfile)
 
             artist_isni_reader = DictReader(artistfile, delimiter='\t',
-                                            fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month',
+                                            fieldnames=['id', 'gid', 'label',
+                                                        'sort_label', 'b_year',
+                                                        'b_month',
                                                         'b_day',
-                                                        'd_year', 'd_month', 'd_day', 'type_id'])
+                                                        'd_year', 'd_month',
+                                                        'd_day', 'type_id'])
 
             for artist in tqdm(artist_isni_reader, total=n_rows):
                 try:
@@ -409,7 +447,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         # Key is the area internal id, value is the name
         with open(area_path, 'r') as areafile:
-            for area in DictReader(areafile, delimiter='\t', fieldnames=['id', 'gid', 'name']):
+            for area in DictReader(areafile, delimiter='\t',
+                                   fieldnames=['id', 'gid', 'name']):
                 areas[area['id']] = area['name'].lower()
 
         LOGGER.info('Importing artist entities into DB')
@@ -419,9 +458,14 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             n_rows = count_num_lines_in_file(artistfile)
 
             artist_reader = DictReader(artistfile, delimiter='\t',
-                                       fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month', 'b_day',
-                                                   'd_year', 'd_month', 'd_day', 'type_id', 'area', 'gender', 'ND1',
-                                                   'ND2', 'ND3', 'ND4', 'b_place', 'd_place'])
+                                       fieldnames=['id', 'gid', 'label',
+                                                   'sort_label', 'b_year',
+                                                   'b_month', 'b_day',
+                                                   'd_year', 'd_month', 'd_day',
+                                                   'type_id', 'area', 'gender',
+                                                   'ND1',
+                                                   'ND2', 'ND3', 'ND4',
+                                                   'b_place', 'd_place'])
 
             for artist in tqdm(artist_reader, total=n_rows):
                 if self._check_person(artist['type_id']):
@@ -437,7 +481,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
                     # Creates an entity foreach available alias
                     for alias in self._alias_entities(
-                            current_entity, MusicbrainzArtistEntity, aliases[artist['id']]):
+                            current_entity, MusicbrainzArtistEntity,
+                            aliases[artist['id']]):
                         alias.gender = current_entity.gender
                         yield alias
 
@@ -454,7 +499,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
                     # Creates an entity foreach available alias
                     for alias in self._alias_entities(
-                            current_entity, MusicbrainzBandEntity, aliases[artist['id']]):
+                            current_entity, MusicbrainzBandEntity,
+                            aliases[artist['id']]):
                         yield alias
 
                     yield current_entity
@@ -500,7 +546,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
         with open(artist_path, 'r') as artistfile:
-            for artist in DictReader(artistfile, delimiter='\t', fieldnames=['id', 'gid']):
+            for artist in DictReader(artistfile, delimiter='\t',
+                                     fieldnames=['id', 'gid']):
                 if artist['id'] in ids_translator:
                     ids_translator[artist['id']] = artist['gid']
 
@@ -525,9 +572,11 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         with open(release_group_path, 'r') as releasefile:
             release_reader = DictReader(releasefile, delimiter='\t',
-                                        fieldnames=['id', 'gid', 'label', 'artist_credit', 'type_id'])
+                                        fieldnames=['id', 'gid', 'label',
+                                                    'artist_credit', 'type_id'])
 
-            for row in tqdm(release_reader, total=self._count_num_lines_in_file(releasefile)):
+            for row in tqdm(release_reader,
+                            total=count_num_lines_in_file(releasefile)):
                 entity = MusicbrainzReleaseGroupEntity()
                 self._fill_entity(entity, row, None)
                 if row['id'] in release_group_datesprec:
@@ -543,33 +592,41 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         artist_credit_release = defaultdict(list)
 
         with open(release_group_path, 'r') as releasefile:
-            n_rows = self._count_num_lines_in_file(releasefile)
+            n_rows = count_num_lines_in_file(releasefile)
             release_reader = DictReader(releasefile, delimiter='\t',
-                                        fieldnames=['id', 'gid', 'label', 'artist_credit', 'type_id'])
+                                        fieldnames=['id', 'gid', 'label',
+                                                    'artist_credit', 'type_id'])
             for row in tqdm(release_reader, total=n_rows):
                 artist_credit_release[row['artist_credit']].append(row['gid'])
 
-        artist_credit_name_path = os.path.join(dump_path, 'mbdump', 'artist_credit_name')
+        artist_credit_name_path = os.path.join(dump_path, 'mbdump',
+                                               'artist_credit_name')
 
         artist_id_release = defaultdict(list)
         with open(artist_credit_name_path) as artistcreditfile:
             artist_credit_reader = DictReader(artistcreditfile, delimiter='\t',
-                                              fieldnames=['id', 'nd', 'artist_id', 'artist_name'])
+                                              fieldnames=['id', 'nd',
+                                                          'artist_id',
+                                                          'artist_name'])
 
-            n_rows = self._count_num_lines_in_file(artistcreditfile)
+            n_rows = count_num_lines_in_file(artistcreditfile)
             for row in tqdm(artist_credit_reader, total=n_rows):
-                artist_id_release[row['artist_id']] = artist_credit_release[row['id']]
+                artist_id_release[row['artist_id']] = artist_credit_release[
+                    row['id']]
                 # memory free up for performance
                 del artist_credit_release[row['id']]
 
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
         with open(artist_path, 'r') as artistfile:
 
-            n_rows = self._count_num_lines_in_file(artistfile)
+            n_rows = count_num_lines_in_file(artistfile)
             artist_link_reader = DictReader(artistfile, delimiter='\t',
-                                            fieldnames=['id', 'gid', 'label', 'sort_label', 'b_year', 'b_month',
+                                            fieldnames=['id', 'gid', 'label',
+                                                        'sort_label', 'b_year',
+                                                        'b_month',
                                                         'b_day',
-                                                        'd_year', 'd_month', 'd_day', 'type_id'])
+                                                        'd_year', 'd_month',
+                                                        'd_day', 'type_id'])
 
             for artist in tqdm(artist_link_reader, total=n_rows):
                 for release_id in artist_id_release[artist['id']]:
@@ -601,7 +658,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             entity.died = None
             entity.died_precision = None
 
-        if isinstance(entity, MusicbrainzArtistEntity) or isinstance(entity, MusicbrainzBandEntity):
+        if isinstance(entity, MusicbrainzArtistEntity) or isinstance(entity,
+                                                                     MusicbrainzBandEntity):
             try:
                 entity.birth_place = areas[info['b_place']]
             except KeyError:
@@ -642,8 +700,9 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         try:
             if date_list[0] != '\\N' and int(date_list[0]) < 0:
-                LOGGER.warning('Failed to convert date (%s/%s/%s). Encountered negative year, '
-                               'which Python Date object does not support', *date_list)
+                LOGGER.warning(
+                    'Failed to convert date (%s/%s/%s). Encountered negative year, '
+                    'which Python Date object does not support', *date_list)
 
                 # We can't parse the date, so we treat is as if it wasn't available
                 date_list[0] = '\\N'
@@ -659,7 +718,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         if precision == -1:
             return (None, None)
 
-        return (date(int(date_list[0]), int(date_list[1]), int(date_list[2])), precision)
+        return (date(int(date_list[0]), int(date_list[1]), int(date_list[2])),
+                precision)
 
     def _check_person(self, type_code):
         # person, character
@@ -673,26 +733,21 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         genders = {'1': 'male', '2': 'female'}
         return genders.get(gender_code, None)
 
-    def _count_num_lines_in_file(self, file_) -> int:
-
-        # count number of rows and go back to
-        # the beginning of file
-        n_rows = sum(1 for line in file_)
-        file_.seek(0)
-
-        return n_rows
-
     def _retrieve_release_group_dates(self, dump_path):
         release_dateprec = defaultdict(lambda: (date.today(), 0))
 
-        release_country_path = os.path.join(dump_path, 'mbdump', 'release_country')
+        release_country_path = os.path.join(dump_path, 'mbdump',
+                                            'release_country')
 
         with open(release_country_path) as rfile:
             releases = DictReader(rfile, delimiter='\t',
-                                  fieldnames=['release_id', 'country_id', 'year', 'month', 'day'])
+                                  fieldnames=['release_id', 'country_id',
+                                              'year', 'month', 'day'])
 
             for release in releases:
-                date_prec = self._get_date_and_precision(release['year'], release['month'], release['day'])
+                date_prec = self._get_date_and_precision(release['year'],
+                                                         release['month'],
+                                                         release['day'])
 
                 if date_prec[0] is None:
                     continue
@@ -700,13 +755,18 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 if date_prec[0] < release_dateprec[release['release_id']][0]:
                     release_dateprec[release['release_id']] = date_prec
 
-        release_country_path = os.path.join(dump_path, 'mbdump', 'release_unknown_country')
+        release_country_path = os.path.join(dump_path, 'mbdump',
+                                            'release_unknown_country')
 
         with open(release_country_path) as rfile:
-            releases = DictReader(rfile, delimiter='\t', fieldnames=['release_id', 'year', 'month', 'day'])
+            releases = DictReader(rfile, delimiter='\t',
+                                  fieldnames=['release_id', 'year', 'month',
+                                              'day'])
 
             for release in releases:
-                date_prec = self._get_date_and_precision(release['year'], release['month'], release['day'])
+                date_prec = self._get_date_and_precision(release['year'],
+                                                         release['month'],
+                                                         release['day'])
 
                 if date_prec[0] is None:
                     continue
@@ -718,10 +778,13 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         release_path = os.path.join(dump_path, 'mbdump', 'release')
         with open(release_path) as rfile:
             releases = DictReader(rfile, delimiter='\t',
-                                  fieldnames=['release_id', 'gid', 'name', 'credits', 'release_group_id'])
+                                  fieldnames=['release_id', 'gid', 'name',
+                                              'credits', 'release_group_id'])
 
             for release in releases:
-                if release_dateprec[release['release_id']][0] < release_group_dateprec[release['release_group_id']][0]:
-                    release_group_dateprec[release['release_group_id']] = release_dateprec[release['release_id']]
+                if release_dateprec[release['release_id']][0] < \
+                        release_group_dateprec[release['release_group_id']][0]:
+                    release_group_dateprec[release['release_group_id']] = \
+                        release_dateprec[release['release_id']]
 
         return release_group_dateprec
