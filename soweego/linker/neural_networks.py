@@ -19,6 +19,9 @@ from recordlinkage.base import BaseClassifier
 from soweego.commons import constants
 
 with redirect_stderr(open(os.devnull, "w")):
+    # When the keras module is initialized it will print a message to `stderr`
+    # saying which backend it is using. To avoid this behavior we
+    # redirect stderr to `devnull` for the statements in this block.
     from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
     from keras.layers import BatchNormalization, Dense, Dropout
     from keras.models import Sequential
