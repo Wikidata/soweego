@@ -34,7 +34,6 @@ from soweego.importer.models.musicbrainz_entity import (
     MusicbrainzBandLinkEntity, MusicBrainzReleaseGroupArtistRelationship,
     MusicbrainzReleaseGroupEntity, MusicbrainzReleaseGroupLinkEntity)
 from soweego.wikidata.sparql_queries import external_id_pids_and_urls_query
-from soweego.commons.utils import count_num_lines_in_file
 
 LOGGER = logging.getLogger(__name__)
 

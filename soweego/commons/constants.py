@@ -12,9 +12,8 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 from typing import TypeVar
 
 from soweego.commons import keys
-from soweego.importer import (discogs_dump_extractor, imdb_dump_extractor,
-                              models, musicbrainz_dump_extractor)
 from soweego.wikidata import vocabulary
+from soweego.importer import models
 
 # Wikidata items & properties regexes
 QID_REGEX = r'Q\d+'
@@ -39,14 +38,8 @@ SUPPORTED_ENTITIES = {
 # Target catalogs imported into the internal DB
 # DB entity Python types for typed function signatures
 DB_ENTITY = TypeVar('DB_ENTITY', models.base_entity.BaseEntity,
-                    models.base_link_entity.BaseLinkEntity, models.base_nlp_entity.BaseNlpEntity)
-
-# Dump extractors
-DUMP_EXTRACTOR = {
-    'discogs': discogs_dump_extractor.DiscogsDumpExtractor,
-    'musicbrainz': musicbrainz_dump_extractor.MusicBrainzDumpExtractor,
-    'imdb': imdb_dump_extractor.ImdbDumpExtractor
-}
+                    models.base_link_entity.BaseLinkEntity,
+                    models.base_nlp_entity.BaseNlpEntity)
 
 # DB entities and their Wikidata class QID
 TARGET_CATALOGS = {
@@ -167,7 +160,8 @@ REQUIRE_GENRE = [
 
 # Cluster of fields with names
 NAME_FIELDS = (keys.NAME, keys.ALIAS, keys.BIRTH_NAME,
-               keys.FAMILY_NAME, keys.GIVEN_NAME, keys.PSEUDONYM, keys.REAL_NAME)
+               keys.FAMILY_NAME, keys.GIVEN_NAME, keys.PSEUDONYM,
+               keys.REAL_NAME)
 
 # File names & folders
 SHARED_FOLDER = '/app/shared/'

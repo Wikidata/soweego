@@ -22,8 +22,17 @@ from soweego.commons import http_client as client
 from soweego.commons import keys, target_database, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
+from soweego.importer.musicbrainz_dump_extractor import MusicBrainzDumpExtractor
+from soweego.importer.discogs_dump_extractor import DiscogsDumpExtractor
+from soweego.importer.imdb_dump_extractor import ImdbDumpExtractor
 
 LOGGER = logging.getLogger(__name__)
+
+DUMP_EXTRACTOR = {
+    'musicbrainz': MusicBrainzDumpExtractor,
+    'discogs': DiscogsDumpExtractor,
+    'imdb': ImdbDumpExtractor
+}
 
 
 @click.command()
@@ -39,7 +48,7 @@ LOGGER = logging.getLogger(__name__)
 def import_cli(catalog: str, url_check: bool, dir_io: str) -> None:
     """Download, extract and import an available catalog."""
 
-    extractor = constants.DUMP_EXTRACTOR[catalog]()
+    extractor = DUMP_EXTRACTOR[catalog]()
 
     Importer().refresh_dump(dir_io, extractor, url_check)
 
