@@ -8,7 +8,7 @@ script:
     - git config --global user.name "travis"
     - git config --global user.email "travis@soweego.eqiad.wmflabs"
     - git config --global push.default simple
-    - git checkout -b travis
+    - git checkout -B travis
     - git commit -am "format code & organize imports"
     - git push --quiet --set-upstream https://marfox:$GITHUB_API_KEY@github.com/Wikidata/soweego travis
 
