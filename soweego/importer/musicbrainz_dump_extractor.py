@@ -255,7 +255,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         """given a l_{something}_url relationship file, return a dict of
         somethingid-[urls]"""
 
-        LOGGER.info(f"Loading %s relationships" % l_path)
+        LOGGER.info(f"Loading %s relationships", l_path)
 
         urlid_entityid_relationship = {}
 

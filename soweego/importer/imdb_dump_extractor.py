@@ -123,22 +123,23 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             movie_entity = imdb_entity.ImdbMovieEntity()
             movie_entity.catalog_id = movie_info.get('tconst')
             movie_entity.title_type = movie_info.get('titleType')
-            movie_entity.name = movie_info.get('primaryTitle')
-            movie_entity.name_tokens = ' '.join(
-                text_utils.tokenize(movie_info.get('primaryTitle')))
+            if movie_info.get('primaryTitle') is not None:
+                movie_entity.name = movie_info.get('primaryTitle')
+                movie_entity.name_tokens = ' '.join(
+                    text_utils.tokenize(movie_info.get('primaryTitle')))
             movie_entity.is_adult = True if movie_info.get(
                 'isAdult') == '1' else False
             try:
                 movie_entity.born = datetime.date(
                     year=int(movie_info.get('startYear')), month=1, day=1)
                 movie_entity.born_precision = 9
-            except (KeyError, ValueError):
+            except (KeyError, TypeError):
                 LOGGER.debug('No start year value for %s', movie_entity)
             try:
                 movie_entity.died = datetime.date(
                     year=int(movie_info.get('endYear')), month=1, day=1)
                 movie_entity.died_precision = 9
-            except (KeyError, ValueError):
+            except (KeyError, TypeError):
                 LOGGER.debug('No end year value for %s', movie_entity)
             movie_entity.runtime_minutes = movie_info.get('runtimeMinutes')
 
