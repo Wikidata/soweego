@@ -27,6 +27,11 @@ while getopts :s:c: o; do
 done
 shift "$((OPTIND - 1))"
 
+git reset --hard HEAD
+git clean -f -d
+
+git pull
+
 cp "$CREDENTIALS_PATH" "$DOCKER_SHARED_FOLDER/credentials.json"
 
 docker build --rm -f "Dockerfile.pipeline" -t maxfrax/soweego:pipeline .
