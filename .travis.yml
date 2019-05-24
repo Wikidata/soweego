@@ -10,12 +10,9 @@ script:
             git config --global user.name "travis"
             git config --global user.email "travis@soweego.eqiad.wmflabs"
             git config --global push.default simple
-            git remote rm origin
-            git remote add origin https://$GITHUB_USER:$GITHUB_API_KEY@github.com/Wikidata/soweego
             git checkout -B travis
-            git branch --set-upstream-to=origin/travis travis
-            git pull --quiet
+            git pull --quiet origin travis
             git commit -am "format code & organize imports"
-            git push --quiet
+            git push --quiet --set-upstream https://$GITHUB_USER:$GITHUB_API_KEY@github.com/Wikidata/soweego travis
         fi
 
