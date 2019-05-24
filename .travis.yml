@@ -11,6 +11,7 @@ script:
             git config --global user.email "travis@soweego.eqiad.wmflabs"
             git config --global push.default simple
             git checkout -B travis
+            git pull --quiet
             git commit -am "format code & organize imports"
             git push --quiet --set-upstream https://$GITHUB_USER:$GITHUB_API_KEY@github.com/Wikidata/soweego travis
         fi
