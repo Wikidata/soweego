@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """Dump extractor abstract class"""
-import logging
 import time
-from typing import Iterable
+
+import logging
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -12,14 +12,14 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+from typing import Iterable
 
 LOGGER = logging.getLogger(__name__)
 
 
 class BaseDumpExtractor:
-    def extract_and_populate(
-        self, dump_file_path: Iterable[str], resolve: bool
-    ):
+
+    def extract_and_populate(self, dump_file_path: Iterable[str], resolve: bool):
         """Extract relevant data and populate SQL Alchemy entities accordingly.
 
         :param dump_file_path: Iterable of paths where downloaded dumps are placed.

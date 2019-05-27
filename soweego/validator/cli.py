@@ -17,7 +17,7 @@ CLI_COMMANDS = {
     'check_existence': checks.check_existence_cli,
     'check_links': checks.check_links_cli,
     'check_metadata': checks.check_metadata_cli,
-    'populate_works': enrichment.works_people_cli,
+    'populate_works': enrichment.works_people_cli
 }
 
 
@@ -25,3 +25,4 @@ CLI_COMMANDS = {
 @click.pass_context
 def cli(ctx):
     """Sanity checks of existing identifiers in Wikidata."""
+    pass

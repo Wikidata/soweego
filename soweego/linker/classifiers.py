@@ -35,11 +35,9 @@ class SVCClassifier(SKLearnAdapter, BaseClassifier):
         # only the second column, which is the probability
         # of belonging to the class 1
 
-        assert self.kernel.classes_[1] == 1, (
-            'Invalid classes, the SVC predict probability '
-            'expects that the second class in the trained '
-            f'model is 1. It currently is: {self.kernel.classes_[1]}'
-        )
+        assert self.kernel.classes_[1] == 1, ('Invalid classes, the SVC predict probability '
+                                              'expects that the second class in the trained '
+                                              f'model is 1. It currently is: {self.kernel.classes_[1]}')
 
         probabilities = self.kernel.predict_proba(x)[:, 1]
 
