@@ -27,7 +27,7 @@ LOGGER = logging.getLogger(__name__)
 
 SUPPORTED_TARGETS = set(target_database.supported_targets()) ^ {keys.TWITTER}
 MNM_DB = 's51434__mixnmatch_p'
-CATALOG_DESCRIPTION = 'uploaded by soweego'
+CATALOG_DESCRIPTION = 'Uploaded by soweego'
 SEARCH_WP_FIELD = 'en'
 CINEMA = 'cinema'
 MUSIC = 'music'
@@ -69,7 +69,7 @@ def cli(catalog, entity, links):
 def add_catalog(catalog, entity):
     db_entity = mix_n_match.MnMCatalog()
 
-    name = f'{catalog}_{entity}'
+    name = f'{catalog.title()} {entity}'
     db_entity.name = name
     db_entity.active = 1
     db_entity.desc = CATALOG_DESCRIPTION
@@ -83,18 +83,17 @@ def add_catalog(catalog, entity):
     db_entity.wd_prop = int(wd_prop.lstrip('P'))
     db_entity.search_wp = SEARCH_WP_FIELD
 
-    session = DBManager(MNM_DB).connect_to_db()
+    import ipdb; ipdb.set_trace()
+    session = DBManager(MNM_DB).new_session()
     try:
         existing = session.query(mix_n_match.MnMCatalog).filter_by(name=name).first()
-        if db_entity is existing:
-            LOGGER.info('%s %s catalog metadata is up to date', catalog, entity)
-        elif existing is None:
+        if existing is None:
             LOGGER.info('Inserting %s %s catalog metadata ... ', catalog, entity)
             session.add(db_entity)
             session.commit()
         else:
             LOGGER.info('Updating %s %s catalog metadata ... ', catalog, entity)
-            session.add(db_entity)
+            # FIXME
             session.commit()
     except:
         session.rollback()
