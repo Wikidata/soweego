@@ -10,9 +10,9 @@ script:
             git config --global user.name "travis"
             git config --global user.email "travis@soweego.eqiad.wmflabs"
             git config --global push.default simple
-            git checkout -B travis
+            git checkout $TRAVIS_BRANCH
             git commit -am "format code & organize imports"
-            git pull --quiet origin travis
-            git push --quiet --set-upstream https://$GITHUB_USER:$GITHUB_API_KEY@github.com/Wikidata/soweego travis
+            git pull --quiet origin $TRAVIS_BRANCH
+            git push --quiet --set-upstream https://$GITHUB_USER:$GITHUB_API_KEY@github.com/Wikidata/soweego $TRAVIS_BRANCH
         fi
 
