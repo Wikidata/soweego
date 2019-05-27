@@ -58,7 +58,7 @@ ENTITY_TYPES = {
 @click.argument('entity', type=click.Choice(target_database.supported_entities()))
 @click.argument('links', type=click.File())
 def cli(catalog, entity, links):
-    """Add identifiers to existing Wikidata items.
+    """Upload identifiers to the mix'n'match tool.
 
     LINKS must be a QID, catalog_identifier CSV file.
     """
@@ -83,7 +83,6 @@ def add_catalog(catalog, entity):
     db_entity.wd_prop = int(wd_prop.lstrip('P'))
     db_entity.search_wp = SEARCH_WP_FIELD
 
-
     session = DBManager(MNM_DB).connect_to_db()
     try:
         existing = session.query(mix_n_match.MnMCatalog).filter_by(name=name).first()
@@ -92,9 +91,11 @@ def add_catalog(catalog, entity):
         elif existing is None:
             LOGGER.info('Inserting %s %s catalog metadata ... ', catalog, entity)
             session.add(db_entity)
+            session.commit()
         else:
             LOGGER.info('Updating %s %s catalog metadata ... ', catalog, entity)
             session.add(db_entity)
+            session.commit()
     except:
         session.rollback()
         raise
@@ -106,7 +107,10 @@ def add_catalog(catalog, entity):
 
 def add_links(catalog, links):
     # TODO inserire/aggiornare links in tabella entry
+    pass
 
 
 def activate_catalog(catalog):
     # TODO mandare la richiesta HTTP per attivare il catalogo
+    pass
+
