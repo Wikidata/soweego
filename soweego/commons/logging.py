@@ -32,8 +32,13 @@ DEFAULT_CONFIG = {
     'version': 1,
     'disable_existing_loggers': False,
     'loggers': {
-        '': {'level': 'WARNING', 'handlers': ['console', 'debug_file_handler']},
-        'soweego': {'level': 'INFO'},
+        '': {
+            'level': 'WARNING',
+            'handlers': ['console', 'debug_file_handler']
+        },
+        'soweego': {
+            'level': 'INFO',
+        },
     },
     'formatters': {
         'soweego': {
@@ -44,7 +49,7 @@ DEFAULT_CONFIG = {
         'console': {
             'formatter': 'soweego',
             'class': 'soweego.commons.logging.TqdmLoggingHandler',
-            'level': 'INFO',
+            'level': 'INFO'
         },
         'debug_file_handler': {
             'formatter': 'soweego',
@@ -52,13 +57,13 @@ DEFAULT_CONFIG = {
             'filename': 'debug.log',
             'mode': 'w',
             'class': 'logging.FileHandler',
-            'encoding': 'utf8',
-        },
-    },
+            'encoding': 'utf8'
+        }
+    }
 }
 
 
-class TqdmLoggingHandler(logging.StreamHandler):
+class TqdmLoggingHandler (logging.StreamHandler):
     """
     Custom logging handler. This ensures that TQDM
     progress bars always stay at the bottom of the
@@ -70,7 +75,7 @@ class TqdmLoggingHandler(logging.StreamHandler):
         super().__init__(stream)
 
     # we only overwrite `Logging.StreamHandler`
-    # emit method
+    # emit method 
     def emit(self, record):
         try:
             msg = self.format(record)
@@ -107,7 +112,7 @@ def log_request_data(http_response, logger):
         'method': http_response.request.method,
         'url': http_response.request.url,
         'headers': http_response.request.headers,
-        'decoded_body': unquote_plus(repr(http_response.request.body)),
+        'decoded_body': unquote_plus(repr(http_response.request.body))
     }
     logger.debug("Request sent: %s", sent_request)
     return 0

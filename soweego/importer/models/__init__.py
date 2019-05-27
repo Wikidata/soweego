@@ -4,5 +4,4 @@ from soweego.importer.models import (
     base_nlp_entity,
     discogs_entity,
     imdb_entity,
-    musicbrainz_entity,
-)
+    musicbrainz_entity)

@@ -32,16 +32,14 @@ LOGGER = logging.getLogger(__name__)
 
 def gather_target_metadata(entity, catalog):
     LOGGER.info(
-        'Gathering %s birth/death dates/places and gender metadata ...', catalog
-    )
+        'Gathering %s birth/death dates/places and gender metadata ...', catalog)
     db_entity = target_database.get_main_entity(catalog, entity)
     # Base metadata
     query_fields = _build_metadata_query_fields(db_entity, entity, catalog)
 
     session = DBManager.connect_to_db()
-    query = session.query(*query_fields).filter(
-        or_(db_entity.born.isnot(None), db_entity.died.isnot(None))
-    )
+    query = session.query(
+        *query_fields).filter(or_(db_entity.born.isnot(None), db_entity.died.isnot(None)))
     result = None
     try:
         raw_result = _run_query(query, catalog, entity)
@@ -57,13 +55,8 @@ def gather_target_metadata(entity, catalog):
     return result
 
 
-def tokens_fulltext_search(
-    target_entity: constants.DB_ENTITY,
-    boolean_mode: bool,
-    tokens: Iterable[str],
-    where_clause=None,
-    limit: int = 10,
-) -> Iterable[constants.DB_ENTITY]:
+def tokens_fulltext_search(target_entity: constants.DB_ENTITY, boolean_mode: bool, tokens: Iterable[str],
+                           where_clause=None, limit: int = 10) -> Iterable[constants.DB_ENTITY]:
     if issubclass(target_entity, models.base_entity.BaseEntity):
         column = target_entity.name_tokens
     elif issubclass(target_entity, models.base_link_entity.BaseLinkEntity):
@@ -75,32 +68,23 @@ def tokens_fulltext_search(
         raise ValueError('Bad target entity class: %s' % target_entity)
 
     tokens = filter(None, tokens)
-    terms = (
-        ' '.join(map('+{0}'.format, tokens))
-        if boolean_mode
-        else ' '.join(tokens)
-    )
+    terms = ' '.join(map('+{0}'.format, tokens)
+                     ) if boolean_mode else ' '.join(tokens)
     ft_search = column.match(terms)
 
     session = DBManager.connect_to_db()
     try:
         if where_clause is None:
-            query = session.query(target_entity).filter(ft_search).limit(limit)
+            query = session.query(target_entity).filter(
+                ft_search).limit(limit)
         else:
-            query = (
-                session.query(target_entity)
-                .filter(ft_search)
-                .filter(where_clause)
-                .limit(limit)
-            )
+            query = session.query(target_entity).filter(
+                ft_search).filter(where_clause).limit(limit)
 
         count = query.count()
         if count == 0:
             LOGGER.debug(
-                "No result from full-text index query to %s. Terms: '%s'",
-                target_entity.__name__,
-                terms,
-            )
+                "No result from full-text index query to %s. Terms: '%s'", target_entity.__name__, terms)
             session.commit()
         else:
             for row in query:
@@ -113,9 +97,7 @@ def tokens_fulltext_search(
         session.close()
 
 
-def name_fulltext_search(
-    target_entity: constants.DB_ENTITY, query: str
-) -> Iterable[constants.DB_ENTITY]:
+def name_fulltext_search(target_entity: constants.DB_ENTITY, query: str) -> Iterable[constants.DB_ENTITY]:
     ft_search = target_entity.name.match(query)
 
     session = DBManager.connect_to_db()
@@ -130,16 +112,11 @@ def name_fulltext_search(
         session.close()
 
 
-def perfect_name_search(
-    target_entity: constants.DB_ENTITY, to_search: str
-) -> Iterable[constants.DB_ENTITY]:
+def perfect_name_search(target_entity: constants.DB_ENTITY, to_search: str) -> Iterable[constants.DB_ENTITY]:
     session = DBManager.connect_to_db()
     try:
-        for r in (
-            session.query(target_entity)
-            .filter(target_entity.name == to_search)
-            .all()
-        ):
+        for r in session.query(target_entity).filter(
+                target_entity.name == to_search).all():
             yield r
 
     except:
@@ -149,16 +126,11 @@ def perfect_name_search(
         session.close()
 
 
-def perfect_name_search_bucket(
-    target_entity: constants.DB_ENTITY, to_search: set
-) -> Iterable[constants.DB_ENTITY]:
+def perfect_name_search_bucket(target_entity: constants.DB_ENTITY, to_search: set) -> Iterable[constants.DB_ENTITY]:
     session = DBManager.connect_to_db()
     try:
-        for r in (
-            session.query(target_entity)
-            .filter(target_entity.name.in_(to_search))
-            .all()
-        ):
+        for r in session.query(target_entity).filter(
+                target_entity.name.in_(to_search)).all():
             yield r
 
     except:
@@ -171,13 +143,11 @@ def perfect_name_search_bucket(
 def gather_target_dataset(goal, entity_type, catalog, identifiers):
     workflow.handle_goal(goal)
 
-    base, link, nlp = (
-        target_database.get_main_entity(catalog, entity_type),
-        target_database.get_link_entity(catalog, entity_type),
-        target_database.get_nlp_entity(catalog, entity_type),
-    )
+    base, link, nlp = target_database.get_main_entity(catalog, entity_type), target_database.get_link_entity(
+        catalog, entity_type), target_database.get_nlp_entity(catalog, entity_type)
 
-    LOGGER.info('Gathering %s %s for the linker ...', catalog, goal)
+    LOGGER.info(
+        'Gathering %s %s for the linker ...', catalog, goal)
 
     db_engine = DBManager().get_engine().execution_options(stream_results=True)
 
@@ -196,9 +166,8 @@ def gather_target_dataset(goal, entity_type, catalog, identifiers):
         query = query.outerjoin(tb, base.catalog_id == tb.catalog_id)
 
     # finally, add the filter condition to the query
-    query = query.filter(base.catalog_id.in_(identifiers)).enable_eagerloads(
-        False
-    )
+    query = query.filter(base.catalog_id.in_(
+        identifiers)).enable_eagerloads(False)
 
     statement = query.statement
     LOGGER.debug('SQL query to be fired: %s', statement)
@@ -222,9 +191,7 @@ def _build_dataset_relevant_fields(base, link, nlp):
     return fields
 
 
-def _dump_target_dataset_query_result(
-    result, relevant_fields, fileout, chunk_size=1000
-):
+def _dump_target_dataset_query_result(result, relevant_fields, fileout, chunk_size=1000):
     chunk = []
 
     for res in result:
@@ -273,24 +240,17 @@ def _run_query(query, catalog, entity_type, page=1000):
     count = query.count()
     if count == 0:
         LOGGER.warning(
-            "No data available for %s %s. Stopping here", catalog, entity_type
-        )
+            "No data available for %s %s. Stopping here", catalog, entity_type)
         return None
-    LOGGER.info(
-        'Got %d internal IDs with data from %s %s', count, catalog, entity_type
-    )
+    LOGGER.info('Got %d internal IDs with data from %s %s',
+                count, catalog, entity_type)
     return query.yield_per(page).enable_eagerloads(False)
 
 
 def _build_metadata_query_fields(entity, entity_type, catalog):
     # Base metadata
-    query_fields = [
-        entity.catalog_id,
-        entity.born,
-        entity.born_precision,
-        entity.died,
-        entity.died_precision,
-    ]
+    query_fields = [entity.catalog_id, entity.born,
+                    entity.born_precision, entity.died, entity.died_precision]
     # Check additional metadata
     if hasattr(entity, 'gender'):
         query_fields.append(entity.gender)
@@ -299,15 +259,13 @@ def _build_metadata_query_fields(entity, entity_type, catalog):
     if hasattr(entity, 'birth_place'):
         query_fields.append(entity.birth_place)
     else:
-        LOGGER.info(
-            '%s %s has no birth place information', catalog, entity_type
-        )
+        LOGGER.info('%s %s has no birth place information',
+                    catalog, entity_type)
     if hasattr(entity, 'death_place'):
         query_fields.append(entity.death_place)
     else:
-        LOGGER.info(
-            '%s %s has no death place information', catalog, entity_type
-        )
+        LOGGER.info('%s %s has no death place information',
+                    catalog, entity_type)
     return query_fields
 
 
@@ -354,10 +312,7 @@ def gather_target_links(entity, catalog):
         count = query.count()
         if count == 0:
             LOGGER.warning(
-                "No links available for %s %s. Stopping validation here",
-                catalog,
-                entity,
-            )
+                "No links available for %s %s. Stopping validation here", catalog, entity)
             return None
         LOGGER.info('Got %d links from %s %s', count, catalog, entity)
         result = query.all()
@@ -377,37 +332,26 @@ def gather_target_links(entity, catalog):
 def _get_catalog_entity(entity_type, catalog_constants):
     catalog_entity = catalog_constants.get(entity_type)
     if not catalog_entity:
-        LOGGER.critical(
-            'Bad entity type: %s. It should be one of %s',
-            entity_type,
-            catalog_constants,
-        )
-        raise ValueError(
-            'Bad entity type: %s. It should be one of %s'
-            % (entity_type, catalog_constants.keys())
-        )
+        LOGGER.critical('Bad entity type: %s. It should be one of %s',
+                        entity_type, catalog_constants)
+        raise ValueError('Bad entity type: %s. It should be one of %s' %
+                         (entity_type, catalog_constants.keys()))
     return catalog_entity
 
 
 def _get_catalog_constants(catalog):
     catalog_constants = constants.TARGET_CATALOGS.get(catalog)
     if not catalog_constants:
-        LOGGER.critical(
-            'Bad catalog: %s. It should be one of %s',
-            catalog,
-            constants.TARGET_CATALOGS.keys(),
-        )
-        raise ValueError(
-            'Bad catalog: %s. It should be one of %s'
-            % (catalog, constants.TARGET_CATALOGS.keys())
-        )
+        LOGGER.critical('Bad catalog: %s. It should be one of %s',
+                        catalog, constants.TARGET_CATALOGS.keys())
+        raise ValueError('Bad catalog: %s. It should be one of %s' %
+                         (catalog, constants.TARGET_CATALOGS.keys()))
     return catalog_constants
 
 
 def gather_wikidata_metadata(wikidata):
     LOGGER.info(
-        'Gathering Wikidata birth/death dates/places and gender metadata from the Web API. This will take a while ...'
-    )
+        'Gathering Wikidata birth/death dates/places and gender metadata from the Web API. This will take a while ...')
     total = 0
     # Generator of generators
     for entity in api_requests.get_metadata(wikidata.keys()):
@@ -422,12 +366,9 @@ def gather_wikidata_metadata(wikidata):
 
 def gather_wikidata_links(wikidata, url_pids, ext_id_pids_to_urls):
     LOGGER.info(
-        'Gathering Wikidata sitelinks, third-party links, and external identifier links from the Web API. This will take a while ...'
-    )
+        'Gathering Wikidata sitelinks, third-party links, and external identifier links from the Web API. This will take a while ...')
     total = 0
-    for generator in api_requests.get_links(
-        wikidata.keys(), url_pids, ext_id_pids_to_urls
-    ):
+    for generator in api_requests.get_links(wikidata.keys(), url_pids, ext_id_pids_to_urls):
         for qid, url in generator:
             if not wikidata[qid].get('links'):
                 wikidata[qid]['links'] = set()
@@ -450,15 +391,12 @@ def gather_relevant_pids():
                     except re.error:
                         LOGGER.debug(
                             "Using 'regex' third-party library. Formatter regex not supported by the 're' standard library: %s",
-                            formatter_regex,
-                        )
+                            formatter_regex)
                         try:
                             compiled_regex = regex.compile(formatter_regex)
                         except regex.error:
                             LOGGER.debug(
-                                "Giving up. Formatter regex not supported by 'regex': %s",
-                                formatter_regex,
-                            )
+                                "Giving up. Formatter regex not supported by 'regex': %s", formatter_regex)
                             compiled_regex = None
                 else:
                     compiled_regex = None
@@ -468,15 +406,9 @@ def gather_relevant_pids():
 
 def gather_target_ids(entity, catalog, catalog_pid, aggregated):
     LOGGER.info(
-        'Gathering Wikidata %s items with %s identifiers ...', entity, catalog
-    )
+        'Gathering Wikidata %s items with %s identifiers ...', entity, catalog)
     query_type = keys.IDENTIFIER, constants.SUPPORTED_ENTITIES.get(entity)
-    for qid, target_id in sparql_queries.run_query(
-        query_type,
-        target_database.get_class_qid(catalog, entity),
-        catalog_pid,
-        0,
-    ):
+    for qid, target_id in sparql_queries.run_query(query_type, target_database.get_class_qid(catalog, entity), catalog_pid, 0):
         if not aggregated.get(qid):
             aggregated[qid] = {keys.TID: set()}
         aggregated[qid][keys.TID].add(target_id)
@@ -485,19 +417,10 @@ def gather_target_ids(entity, catalog, catalog_pid, aggregated):
 
 def gather_qids(entity, catalog, catalog_pid):
     LOGGER.info(
-        'Gathering Wikidata %s items with no %s identifiers ...',
-        entity,
-        catalog,
-    )
+        'Gathering Wikidata %s items with no %s identifiers ...', entity, catalog)
     query_type = keys.DATASET, constants.SUPPORTED_ENTITIES.get(entity)
-    qids = set(
-        sparql_queries.run_query(
-            query_type,
-            target_database.get_class_qid(catalog, entity),
-            catalog_pid,
-            0,
-        )
-    )
+    qids = set(sparql_queries.run_query(
+        query_type, target_database.get_class_qid(catalog, entity), catalog_pid, 0))
     LOGGER.info('Got %d Wikidata items', len(qids))
     return qids
 
@@ -509,10 +432,10 @@ def extract_ids_from_urls(to_add, ext_id_pids_to_urls):
     for qid, urls in to_add.items():
         for url in urls:
             ext_id, pid = url_utils.get_external_id_from_url(
-                url, ext_id_pids_to_urls
-            )
+                url, ext_id_pids_to_urls)
             if ext_id:
                 ext_ids_to_add.append((qid, pid, ext_id))
             else:
-                urls_to_add.append((qid, vocabulary.DESCRIBED_AT_URL, url))
+                urls_to_add.append(
+                    (qid, vocabulary.DESCRIBED_AT_URL, url))
     return ext_ids_to_add, urls_to_add
