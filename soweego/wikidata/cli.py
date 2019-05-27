@@ -20,10 +20,8 @@ CLI_COMMANDS = {
     'values_query': sparql_queries.values_query,
     'get_sitelinks_for_sample': sample_additional_info.get_sitelinks_for_sample,
     'get_links_for_sample': sample_additional_info.get_links_for_sample,
-    'get_birth_death_dates_for_sample':
-        sample_additional_info.get_birth_death_dates_for_sample,
-    'get_url_formatters_for_properties':
-        sample_additional_info.get_url_formatters_for_properties
+    'get_birth_death_dates_for_sample': sample_additional_info.get_birth_death_dates_for_sample,
+    'get_url_formatters_for_properties': sample_additional_info.get_url_formatters_for_properties,
 }
 
 
@@ -31,4 +29,3 @@ CLI_COMMANDS = {
 @click.pass_context
 def cli(ctx):
     """Read/write operations on Wikidata."""
-    pass
