@@ -2,7 +2,7 @@ dist: xenial
 language: python
 python: 3.7
 script:
-    - git checkout $TRAVIS_BRANCH
+    - git checkout $TRAVIS_PULL_REQUEST_BRANCH
     - isort -y -rc soweego
     - autoflake -i -r --remove-all-unused-imports --remove-unused-variables soweego
     - black -S -l 80 soweego
@@ -12,6 +12,6 @@ script:
             git config --global user.email "travis@soweego.eqiad.wmflabs"
             git config --global push.default simple
             git commit -am "format code & organize imports"
-            git push --quiet --set-upstream https://$GITHUB_USER:$GITHUB_API_KEY@github.com/Wikidata/soweego $TRAVIS_BRANCH
+            git push --quiet --set-upstream https://$GITHUB_USER:$GITHUB_API_KEY@github.com/Wikidata/soweego $TRAVIS_PULL_REQUEST_BRANCH
         fi
 
