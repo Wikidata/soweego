@@ -13,11 +13,12 @@ import logging
 
 import click
 
-from soweego import (commons, wikidata)
+from soweego import commons
+from soweego import pipeline as pipeline_cli
+from soweego import wikidata
 from soweego.importer import cli as importer_cli
 from soweego.ingestor import cli as ingestor_cli
 from soweego.linker import cli as linker_cli
-from soweego import pipeline as pipeline_cli
 from soweego.validator import cli as validator_cli
 from soweego.wikidata import cli as wikidata_cli
 
@@ -27,7 +28,7 @@ CLI_COMMANDS = {
     'linker': linker_cli.cli,
     'validator': validator_cli.cli,
     'wikidata': wikidata_cli.cli,
-    'run': pipeline_cli.cli
+    'run': pipeline_cli.cli,
 }
 
 # Avoid verbose requests logging
@@ -35,10 +36,13 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 
 
 @click.group(commands=CLI_COMMANDS)
-@click.option('-l', '--log-level',
-              type=(str, click.Choice(commons.logging.LEVELS)),
-              multiple=True,
-              help='Module name followed by one of [DEBUG, INFO, WARNING, ERROR, CRITICAL]. Multiple pairs allowed.')
+@click.option(
+    '-l',
+    '--log-level',
+    type=(str, click.Choice(commons.logging.LEVELS)),
+    multiple=True,
+    help='Module name followed by one of [DEBUG, INFO, WARNING, ERROR, CRITICAL]. Multiple pairs allowed.',
+)
 @click.pass_context
 def cli(ctx, log_level):
     """Link Wikidata items to trusted external catalogs."""

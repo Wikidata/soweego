@@ -3,6 +3,7 @@
 
 """Dump extractor abstract class"""
 import logging
+from typing import Iterable
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -10,7 +11,6 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
-from typing import Iterable
 
 LOGGER = logging.getLogger(__name__)
 
@@ -18,8 +18,9 @@ LOGGER = logging.getLogger(__name__)
 class BaseDumpExtractor:
     """Defines where to download a certain dump and how to post-process it."""
 
-    def extract_and_populate(self, dump_file_paths: Iterable[str],
-                             resolve: bool):
+    def extract_and_populate(
+        self, dump_file_paths: Iterable[str], resolve: bool
+    ):
         """Extract relevant data and populate SQL Alchemy entities accordingly.
 
         :param dump_file_paths: Iterable of paths where downloaded dumps are

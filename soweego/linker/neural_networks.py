@@ -29,11 +29,14 @@ class _BaseNN(KerasAdapter, BaseClassifier):
     NN implementations.
     """
 
-    def _fit(self, features, answers,
-             batch_size=constants.BATCH_SIZE,
-             epochs=constants.EPOCHS,
-             validation_split=constants.VALIDATION_SPLIT
-             ):
+    def _fit(
+        self,
+        features,
+        answers,
+        batch_size=constants.BATCH_SIZE,
+        epochs=constants.EPOCHS,
+        validation_split=constants.VALIDATION_SPLIT,
+    ):
         history = self.kernel.fit(
             x=features,
             y=answers,
@@ -41,17 +44,22 @@ class _BaseNN(KerasAdapter, BaseClassifier):
             batch_size=batch_size,
             epochs=epochs,
             callbacks=[
-                EarlyStopping(monitor='val_loss', patience=100,
-                              verbose=2, restore_best_weights=True),
+                EarlyStopping(
+                    monitor='val_loss',
+                    patience=100,
+                    verbose=2,
+                    restore_best_weights=True,
+                ),
                 ModelCheckpoint(
                     os.path.join(
                         constants.SHARED_FOLDER,
-                        constants.NEURAL_NETWORK_CHECKPOINT_MODEL % self.__class__.__name__
+                        constants.NEURAL_NETWORK_CHECKPOINT_MODEL
+                        % self.__class__.__name__,
                     ),
-                    save_best_only=True
+                    save_best_only=True,
                 ),
-                TensorBoard(log_dir=constants.SHARED_FOLDER)
-            ]
+                TensorBoard(log_dir=constants.SHARED_FOLDER),
+            ],
         )
         LOGGER.info('Fit parameters: %s', history.params)
 
@@ -67,11 +75,12 @@ class SingleLayerPerceptron(_BaseNN):
 
         model = Sequential()
         model.add(
-            Dense(1, input_dim=input_dim, activation=constants.ACTIVATION))
+            Dense(1, input_dim=input_dim, activation=constants.ACTIVATION)
+        )
         model.compile(
             optimizer=kwargs.get('optimizer', constants.OPTIMIZER),
             loss=constants.LOSS,
-            metrics=constants.METRICS
+            metrics=constants.METRICS,
         )
 
         self.kernel = model
@@ -83,19 +92,20 @@ class MultiLayerPerceptron(_BaseNN):
     def __init__(self, input_dimension):
         super(MultiLayerPerceptron, self).__init__()
 
-        model = Sequential([
-            Dense(128, input_dim=input_dimension, activation='relu'),
-            BatchNormalization(),
-            Dense(32, activation='relu'),
-            BatchNormalization(),
-            Dense(1, activation='sigmoid')
-
-        ])
+        model = Sequential(
+            [
+                Dense(128, input_dim=input_dimension, activation='relu'),
+                BatchNormalization(),
+                Dense(32, activation='relu'),
+                BatchNormalization(),
+                Dense(1, activation='sigmoid'),
+            ]
+        )
 
         model.compile(
             optimizer='adadelta',
             loss='binary_crossentropy',
-            metrics=['accuracy']
+            metrics=['accuracy'],
         )
 
         self.kernel = model
