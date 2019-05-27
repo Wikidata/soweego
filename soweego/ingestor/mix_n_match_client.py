@@ -67,10 +67,33 @@ def cli(catalog, entity, links):
 
 
 def add_catalog(catalog, entity):
-    db_entity = mix_n_match.MnMCatalog()
+    name_field = f'{catalog.title()} {entity}'
 
-    name = f'{catalog.title()} {entity}'
-    db_entity.name = name
+    import ipdb; ipdb.set_trace()
+    session = DBManager(MNM_DB).new_session()
+    try:
+        existing = session.query(mix_n_match.MnMCatalog).filter_by(name=name_field).first()
+        if existing is None:
+            LOGGER.info('Inserting %s %s catalog metadata ... ', catalog, entity)
+            db_entity = mix_n_match.MnMCatalog()
+            _set_catalog_fields(db_entity, name_field, catalog, entity)
+            session.add(db_entity)
+            session.commit()
+        else:
+            LOGGER.info('Updating %s %s catalog metadata ... ', catalog, entity)
+            _set_catalog_fields(existing, name_field, catalog, entity)
+            session.commit()
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+    LOGGER.info('Catalog metadata insertion/update went fine')
+
+
+def _set_catalog_fields(db_entity, name_field, catalog, entity):
+    db_entity.name = name_field
     db_entity.active = 1
     db_entity.desc = CATALOG_DESCRIPTION
     db_entity.type = CATALOG_TYPES.get(catalog, '')
@@ -82,26 +105,6 @@ def add_catalog(catalog, entity):
         wd_prop = target_database.get_work_pid(catalog)
     db_entity.wd_prop = int(wd_prop.lstrip('P'))
     db_entity.search_wp = SEARCH_WP_FIELD
-
-    import ipdb; ipdb.set_trace()
-    session = DBManager(MNM_DB).new_session()
-    try:
-        existing = session.query(mix_n_match.MnMCatalog).filter_by(name=name).first()
-        if existing is None:
-            LOGGER.info('Inserting %s %s catalog metadata ... ', catalog, entity)
-            session.add(db_entity)
-            session.commit()
-        else:
-            LOGGER.info('Updating %s %s catalog metadata ... ', catalog, entity)
-            # FIXME
-            session.commit()
-    except:
-        session.rollback()
-        raise
-    finally:
-        session.close()
-
-    LOGGER.info('Catalog metadata insertion/update went fine')
 
 
 def add_links(catalog, links):
