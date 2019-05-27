@@ -37,8 +37,8 @@ class MnMCatalog(BASE):
     active = Column(TINYINT(1), nullable=False, default=1)
     betamatch_hint = Column(String(64), nullable=False, default='')
     owner = Column(Integer, nullable=False, default=2)
-    limiter = Column(TINYTEXT, nullable=False, default=None)
-    note = Column(TINYTEXT, nullable=False, default=None)
+    limiter = Column(TINYTEXT, nullable=False, default='')
+    note = Column(TINYTEXT, nullable=False, default='')
     source_item = Column(Integer)
     has_person_date = Column(String(16), nullable=False, default='')
     taxon_run = Column(TINYINT(4), nullable=False, default=0)
@@ -47,7 +47,7 @@ class MnMCatalog(BASE):
 class MnMEntry(BASE):
     __tablename__ = ENTRY_TABLE
     id = Column(INTEGER(11, unsigned=True), unique=True, primary_key=True, autoincrement=True)
-    catalog = Column(INTEGER(10, unsigned=True), nullable=False, index=True, default=None)
+    catalog = Column(INTEGER(10, unsigned=True), nullable=False, index=True)
     ext_id = Column(String(255), nullable=False, index=True, default='')
     ext_url = Column(String(255), nullable=False, default='')
     ext_name = Column(String(128), nullable=False, index=True, default='')
