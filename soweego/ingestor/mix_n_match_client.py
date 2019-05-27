@@ -82,6 +82,7 @@ def add_catalog(catalog, entity):
         else:
             LOGGER.info('Updating %s %s catalog metadata ... ', catalog, entity)
             _set_catalog_fields(existing, name_field, catalog, entity)
+            session.add(existing)
             session.commit()
     except:
         session.rollback()
@@ -97,6 +98,7 @@ def _set_catalog_fields(db_entity, name_field, catalog, entity):
     db_entity.active = 1
     db_entity.desc = CATALOG_DESCRIPTION
     db_entity.type = CATALOG_TYPES.get(catalog, '')
+    db_entity.source_item = int(target_database.get_catalog_qid(catalog).lstrip('Q'))
     entity_type = ENTITY_TYPES.get(entity)
     if entity_type is PERSON:
         wd_prop = target_database.get_person_pid(catalog)
