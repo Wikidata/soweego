@@ -15,6 +15,7 @@ from sklearn.model_selection import StratifiedKFold
 
 from soweego.commons.keys import (MULTI_LAYER_PERCEPTRON,
                                   SINGLE_LAYER_PERCEPTRON)
+from soweego.linker.workflow import init_model
 
 LOGGER = logging.getLogger(__name__)
 
@@ -57,7 +58,6 @@ def prepare_stratified_k_fold(k, dataset, positive_samples_index):
 
 
 def initialize_classifier(classifier, dataset, **kwargs):
-    from soweego.linker.workflow import init_model
     if classifier in (SINGLE_LAYER_PERCEPTRON, MULTI_LAYER_PERCEPTRON):
         model = init_model(classifier, dataset.shape[1], **kwargs)
     else:
