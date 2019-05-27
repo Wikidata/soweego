@@ -375,28 +375,27 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             if done:
                 break
             for pid, formatter in result.items():
-                if pid == 'P213':
-                    for url_formatter, _ in formatter.items():
-                        with open(isni_file_path, 'r') as artistfile:
-                            for artistid_isni in DictReader(artistfile,
-                                                            delimiter='\t',
-                                                            fieldnames=['id',
-                                                                        'isni'
-                                                                        ]):
-                                # If ISNI is valid, generates an url
-                                artistid = artistid_isni['id']
-                                isni = artistid_isni['isni']
+                if pid != 'P213':
+                    continue
+                for url_formatter, _ in formatter.items():
+                    with open(isni_file_path, 'r') as artistfile:
+                        for artistid_isni in DictReader(artistfile,
+                                                        delimiter='\t',
+                                                        fieldnames=['id',
+                                                                    'isni']):
+                            # If ISNI is valid, generates an url
+                            artistid = artistid_isni['id']
+                            isni = artistid_isni['isni']
 
-                                link = url_formatter.replace(
-                                    '$1', isni)
-                                for candidate_url in url_utils.clean(link):
-                                    if not url_utils.validate(candidate_url):
-                                        continue
-                                    if resolve and not url_utils.resolve(
-                                            candidate_url):
-                                        continue
-                                    artist_link[artistid] = candidate_url
-                    done = True
+                            link = url_formatter.replace('$1', isni)
+                            for candidate_url in url_utils.clean(link):
+                                if not url_utils.validate(candidate_url):
+                                    continue
+                                if resolve and not url_utils.resolve(
+                                        candidate_url):
+                                    continue
+                                artist_link[artistid] = candidate_url
+                done = True
 
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
         with open(artist_path, 'r') as artistfile:
