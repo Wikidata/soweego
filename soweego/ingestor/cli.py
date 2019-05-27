@@ -17,7 +17,7 @@ CLI_COMMANDS = {
     'add_identifiers': wikidata_bot.add_identifiers_cli,
     'delete_identifiers': wikidata_bot.delete_identifiers_cli,
     'deprecate_identifiers': wikidata_bot.deprecate_identifiers_cli,
-    'add_statements': wikidata_bot.add_statements_cli
+    'add_statements': wikidata_bot.add_statements_cli,
 }
 
 
@@ -25,4 +25,3 @@ CLI_COMMANDS = {
 @click.pass_context
 def cli(ctx):
     """Ingest soweego output into Wikidata."""
-    pass

@@ -1,0 +1,18 @@
+dist: xenial
+language: python
+python: 3.7
+script:
+    - isort -y -rc soweego
+    - autoflake -i -r --remove-all-unused-imports --remove-unused-variables soweego
+    - black -S -l 80 soweego
+    - |
+        if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+            git config --global user.name "travis"
+            git config --global user.email "travis@soweego.eqiad.wmflabs"
+            git config --global push.default simple
+            git checkout -B $TRAVIS_PULL_REQUEST_BRANCH
+            git commit -am "format code & organize imports"
+            git pull --quiet origin $TRAVIS_PULL_REQUEST_BRANCH
+            git push --quiet --set-upstream https://$GITHUB_USER:$GITHUB_API_KEY@github.com/Wikidata/soweego $TRAVIS_PULL_REQUEST_BRANCH
+        fi
+

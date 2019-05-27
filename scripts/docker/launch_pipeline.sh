@@ -27,7 +27,18 @@ while getopts :s:c: o; do
 done
 shift "$((OPTIND - 1))"
 
+
+#Creates the shared folder if it not exists
+mkdir -p DOCKER_SHARED_FOLDER
+
+# Reset and update the project source code
+git reset --hard HEAD
+git clean -f -d
+git pull
+
+# Sets up the credentials file
 cp "$CREDENTIALS_PATH" "$DOCKER_SHARED_FOLDER/credentials.json"
 
+# Builds and runs docker
 docker build --rm -f "Dockerfile.pipeline" -t maxfrax/soweego:pipeline .
 docker run -it --rm --name soweego-pipeline-$RANDOM --env-file .env --volume "${DOCKER_SHARED_FOLDER}":"/app/shared" maxfrax/soweego:pipeline -c "/app/shared/credentials.json" "$@"

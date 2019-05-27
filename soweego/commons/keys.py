@@ -54,8 +54,8 @@ DATASET = 'dataset'
 METADATA = 'metadata'
 
 # SPARQL queries
-CLASS = 'class'
-OCCUPATION = 'occupation'
+CLASS_QUERY = 'class_query'
+OCCUPATION_QUERY = 'occupation_query'
 
 # Wikidata & target pandas.DataFrame column names
 QID = 'qid'
@@ -66,8 +66,8 @@ ALIAS = 'alias'
 SEX_OR_GENDER = 'sex_or_gender'
 PLACE_OF_BIRTH = 'place_of_birth'
 PLACE_OF_DEATH = 'place_of_death'
-OCCUPATION: 'occupations'
-GENRE = 'genres'
+OCCUPATIONS = 'occupations'
+GENRES = 'genres'
 BIRTH_NAME = 'birth_name'
 FAMILY_NAME = 'family_name'
 GIVEN_NAME = 'given_name'
