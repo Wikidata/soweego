@@ -19,6 +19,8 @@ from datetime import date, datetime
 from typing import Iterable, Tuple
 
 import requests
+from sqlalchemy.exc import IntegrityError
+from tqdm import tqdm
 
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
@@ -26,13 +28,16 @@ from soweego.commons.utils import count_num_lines_in_file
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.musicbrainz_entity import (
-    MusicBrainzArtistBandRelationship, MusicbrainzArtistEntity,
-    MusicbrainzArtistLinkEntity, MusicbrainzBandEntity,
-    MusicbrainzBandLinkEntity, MusicBrainzReleaseGroupArtistRelationship,
-    MusicbrainzReleaseGroupEntity, MusicbrainzReleaseGroupLinkEntity)
+    MusicBrainzArtistBandRelationship,
+    MusicbrainzArtistEntity,
+    MusicbrainzArtistLinkEntity,
+    MusicbrainzBandEntity,
+    MusicbrainzBandLinkEntity,
+    MusicBrainzReleaseGroupArtistRelationship,
+    MusicbrainzReleaseGroupEntity,
+    MusicbrainzReleaseGroupLinkEntity,
+)
 from soweego.wikidata.sparql_queries import external_id_pids_and_urls_query
-from sqlalchemy.exc import IntegrityError
-from tqdm import tqdm
 
 LOGGER = logging.getLogger(__name__)
 
@@ -48,7 +53,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         return [f'{base_url}/%s/mbdump.tar.bz2' % latest_version]
 
     def extract_and_populate(
-            self, dump_file_paths: Iterable[str], resolve: bool
+        self, dump_file_paths: Iterable[str], resolve: bool
     ):
         dump_file_path = dump_file_paths[0]
         dump_path = os.path.join(
@@ -186,7 +191,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         shutil.rmtree(dump_path, ignore_errors=True)
 
     def _add_entities_from_generator(
-            self, db_manager, generator_, *args
+        self, db_manager, generator_, *args
     ) -> Tuple[int, int]:
         """
         Adds all entities yielded by a generator to the DB
@@ -254,7 +259,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
     @staticmethod
     def _get_urls_for_entity_id(
-            dump_path: str, l_path: str, resolve: bool
+        dump_path: str, l_path: str, resolve: bool
     ) -> dict:
         """given a l_{something}_url relationship file, return a dict of
         somethingid-[urls]"""
@@ -269,7 +274,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             )
 
             for relationship in tqdm(
-                    url_relationships, total=count_num_lines_in_file(tsvfile)
+                url_relationships, total=count_num_lines_in_file(tsvfile)
             ):
                 # url id matched with its user id
                 if relationship[3] in urlid_entityid_relationship:
@@ -296,7 +301,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             )
 
             for url_record in tqdm(
-                    urls, total=count_num_lines_in_file(tsvfile)
+                urls, total=count_num_lines_in_file(tsvfile)
             ):
 
                 urlid = url_record[0]
@@ -404,10 +409,11 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                     continue
                 for url_formatter, _ in formatter.items():
                     with open(isni_file_path, 'r') as artistfile:
-                        for artistid_isni in DictReader(artistfile,
-                                                        delimiter='\t',
-                                                        fieldnames=['id',
-                                                                    'isni']):
+                        for artistid_isni in DictReader(
+                            artistfile,
+                            delimiter='\t',
+                            fieldnames=['id', 'isni'],
+                        ):
                             # If ISNI is valid, generates an url
                             artistid = artistid_isni['id']
                             isni = artistid_isni['isni']
@@ -417,7 +423,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                                 if not url_utils.validate(candidate_url):
                                     continue
                                 if resolve and not url_utils.resolve(
-                                        candidate_url):
+                                    candidate_url
+                                ):
                                     continue
                                 artist_link[artistid] = candidate_url
                 done = True
@@ -477,9 +484,9 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         # Key is the entity id which has a list of aliases
         with open(artist_alias_path, 'r') as aliasesfile:
             for alias in DictReader(
-                    aliasesfile,
-                    delimiter='\t',
-                    fieldnames=['id', 'parent_id', 'label'],
+                aliasesfile,
+                delimiter='\t',
+                fieldnames=['id', 'parent_id', 'label'],
             ):
                 aliases[alias['parent_id']].append(alias['label'])
 
@@ -488,7 +495,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         # Key is the area internal id, value is the name
         with open(area_path, 'r') as areafile:
             for area in DictReader(
-                    areafile, delimiter='\t', fieldnames=['id', 'gid', 'name']
+                areafile, delimiter='\t', fieldnames=['id', 'gid', 'name']
             ):
                 areas[area['id']] = area['name'].lower()
 
@@ -539,9 +546,9 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
                     # Creates an entity foreach available alias
                     for alias in self._alias_entities(
-                            current_entity,
-                            MusicbrainzArtistEntity,
-                            aliases[artist['id']],
+                        current_entity,
+                        MusicbrainzArtistEntity,
+                        aliases[artist['id']],
                     ):
                         alias.gender = current_entity.gender
                         yield alias
@@ -559,9 +566,9 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
                     # Creates an entity foreach available alias
                     for alias in self._alias_entities(
-                            current_entity,
-                            MusicbrainzBandEntity,
-                            aliases[artist['id']],
+                        current_entity,
+                        MusicbrainzBandEntity,
+                        aliases[artist['id']],
                     ):
                         yield alias
 
@@ -614,7 +621,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         artist_path = os.path.join(dump_path, 'mbdump', 'artist')
         with open(artist_path, 'r') as artistfile:
             for artist in DictReader(
-                    artistfile, delimiter='\t', fieldnames=['id', 'gid']
+                artistfile, delimiter='\t', fieldnames=['id', 'gid']
             ):
                 if artist['id'] in ids_translator:
                     ids_translator[artist['id']] = artist['gid']
@@ -652,7 +659,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             )
 
             for row in tqdm(
-                    release_reader, total=count_num_lines_in_file(releasefile)
+                release_reader, total=count_num_lines_in_file(releasefile)
             ):
                 entity = MusicbrainzReleaseGroupEntity()
                 self._fill_entity(entity, row, None)
@@ -903,8 +910,8 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
             for release in releases:
                 if (
-                        release_dateprec[release['release_id']][0]
-                        < release_group_dateprec[release['release_group_id']][0]
+                    release_dateprec[release['release_id']][0]
+                    < release_group_dateprec[release['release_group_id']][0]
                 ):
                     release_group_dateprec[
                         release['release_group_id']
