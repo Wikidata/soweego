@@ -13,7 +13,7 @@ import logging
 import os
 
 from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
-from keras.layers import BatchNormalization, Dense, Dropout
+from keras.layers import BatchNormalization, Dense
 from keras.models import Sequential
 from recordlinkage.adapters import KerasAdapter
 from recordlinkage.base import BaseClassifier

@@ -33,7 +33,8 @@ def handle_extra_cli_args(args):
                 kwargs[key] = value
         except ValueError:
             LOGGER.critical(
-                "Bad format for extra argument '%s'. It should be 'argument=value'", extra_arg)
+                "Bad format for extra argument '%s'. It should be 'argument=value'",
+                extra_arg)
             return None
     return kwargs
 
@@ -64,3 +65,12 @@ def initialize_classifier(classifier, dataset, **kwargs):
 
     LOGGER.info('Model initialized: %s', model)
     return model
+
+
+def count_num_lines_in_file(file_) -> int:
+    # count number of rows and go back to
+    # the beginning of file
+    n_rows = len(file_.readlines())
+    file_.seek(0)
+
+    return n_rows

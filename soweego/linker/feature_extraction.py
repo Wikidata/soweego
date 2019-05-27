@@ -11,7 +11,7 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import itertools
 import logging
-from multiprocessing import Manager, Process
+from multiprocessing import Manager
 from typing import List, Set, Tuple
 
 import jellyfish
@@ -23,7 +23,6 @@ from sklearn.feature_extraction.text import CountVectorizer
 
 from soweego.commons import constants, text_utils
 from soweego.wikidata import sparql_queries
-
 
 LOGGER = logging.getLogger(__name__)
 _threading_manager = Manager()

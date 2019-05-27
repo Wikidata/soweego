@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-import requests
 import json
 import re
-
 from collections import defaultdict
+
+import requests
 
 WD = '/Users/focs/soweego/soweego/wikidata/resources/'
 SAMPLE = 'imdb_unlinked_producers_sample'
