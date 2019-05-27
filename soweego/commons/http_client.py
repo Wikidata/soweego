@@ -38,8 +38,8 @@ def download_file(url, filePath):
     try:
         file_size = int(requests.head(url).headers["Content-Length"])
         pbar = tqdm(
-            total=file_size,
-            unit='B', unit_scale=True, desc=url.split('/')[-1])
+            total=file_size, unit='B', unit_scale=True, desc=url.split('/')[-1]
+        )
 
         stream = requests.get(url, stream=True, verify=False)
         with open(filePath, 'wb') as f:
@@ -48,7 +48,7 @@ def download_file(url, filePath):
                     f.write(chunk)
                     f.flush()
                     pbar.update(1024)
-                    
+
             pbar.close()
 
     except Exception as e:

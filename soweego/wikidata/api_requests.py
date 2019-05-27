@@ -51,7 +51,9 @@ def parse_wikidata_value(value):
     date_value = value.get('time')
     if date_value and date_value.startswith('-'):  # Drop BC support
         LOGGER.warning(
-            'Cannot parse BC (Before Christ) date, Python does not support it: %s', date_value)
+            'Cannot parse BC (Before Christ) date, Python does not support it: %s',
+            date_value,
+        )
         return None
     if date_value:
         return date_value[1:], value['precision']  # Get rid of leading '+'
@@ -69,7 +71,7 @@ def _lookup_label(item_value):
     request_params = {
         'action': 'wbgetentities',
         'format': 'json',
-        'props': 'labels'
+        'props': 'labels',
     }
     response_body = _make_request([item_value], request_params)
     if not response_body:
@@ -83,9 +85,23 @@ def _lookup_label(item_value):
     return _return_monolingual_strings(item_value, labels)
 
 
-def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_and_tids, no_labels_count,
-                    no_aliases_count, no_descriptions_count, no_sitelinks_count, no_links_count, no_ext_ids_count,
-                    no_claims_count, needs_occupation, needs_genre, needs_publication_date) -> List[Dict]:
+def _process_bucket(
+    bucket,
+    request_params,
+    url_pids,
+    ext_id_pids_to_urls,
+    qids_and_tids,
+    no_labels_count,
+    no_aliases_count,
+    no_descriptions_count,
+    no_sitelinks_count,
+    no_links_count,
+    no_ext_ids_count,
+    no_claims_count,
+    needs_occupation,
+    needs_genre,
+    needs_publication_date,
+) -> List[Dict]:
     """
     This function will be consumed by the `get_data_for_linker`
     function in this module. It allows the buckets coming from
@@ -127,15 +143,13 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
             no_labels_count += 1
             continue
         to_write[keys.QID] = qid
-        to_write[keys.NAME] = _return_monolingual_strings(
-            qid, labels)
+        to_write[keys.NAME] = _return_monolingual_strings(qid, labels)
 
         # Aliases
         aliases = entity.get('aliases')
         if aliases:
             # Merge them into labels
-            to_write[keys.NAME].update(
-                _return_aliases(qid, aliases))
+            to_write[keys.NAME].update(_return_aliases(qid, aliases))
         else:
             LOGGER.debug('%s has no aliases', qid)
             no_aliases_count += 1
@@ -146,7 +160,8 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
         descriptions = entity.get('descriptions')
         if descriptions:
             to_write[keys.DESCRIPTION] = list(
-                _return_monolingual_strings(qid, descriptions))
+                _return_monolingual_strings(qid, descriptions)
+            )
         else:
             LOGGER.debug('%s has no descriptions', qid)
             no_descriptions_count += 1
@@ -162,17 +177,29 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
 
         # Third-party URLs
         to_write[keys.URL].update(
-            _return_third_party_urls(qid, claims, url_pids, no_links_count))
+            _return_third_party_urls(qid, claims, url_pids, no_links_count)
+        )
 
         # External ID URLs
-        to_write[keys.URL].update(_return_ext_id_urls(
-            qid, claims, ext_id_pids_to_urls, no_ext_ids_count))
+        to_write[keys.URL].update(
+            _return_ext_id_urls(
+                qid, claims, ext_id_pids_to_urls, no_ext_ids_count
+            )
+        )
         # Convert set to list for JSON serialization
         to_write[keys.URL] = list(to_write[keys.URL])
 
         # Expected claims
-        to_write.update(_return_claims_for_linker(
-            qid, claims, no_claims_count, needs_occupation, needs_genre, needs_publication_date))
+        to_write.update(
+            _return_claims_for_linker(
+                qid,
+                claims,
+                no_claims_count,
+                needs_occupation,
+                needs_genre,
+                needs_publication_date,
+            )
+        )
 
         # add result to `bucket_results`
         bucket_results.append(to_write)
@@ -180,9 +207,15 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
     return bucket_results
 
 
-def get_data_for_linker(catalog: str, entity_type: str, qids: set, url_pids: set, ext_id_pids_to_urls: dict,
-                        fileout: TextIO,
-                        qids_and_tids: dict) -> None:
+def get_data_for_linker(
+    catalog: str,
+    entity_type: str,
+    qids: set,
+    url_pids: set,
+    ext_id_pids_to_urls: dict,
+    fileout: TextIO,
+    qids_and_tids: dict,
+) -> None:
     no_labels_count = 0
     no_aliases_count = 0
     no_descriptions_count = 0
@@ -192,7 +225,8 @@ def get_data_for_linker(catalog: str, entity_type: str, qids: set, url_pids: set
     no_claims_count = 0
 
     qid_buckets, request_params = _prepare_request(
-        qids, 'labels|aliases|descriptions|sitelinks|claims')
+        qids, 'labels|aliases|descriptions|sitelinks|claims'
+    )
 
     # check if for this specific catalog
     # we need to get the occupations
@@ -207,40 +241,51 @@ def get_data_for_linker(catalog: str, entity_type: str, qids: set, url_pids: set
     # to give it one parameter, which is the bucket.
     # This is done so that we can easily map the list of
     # buckets with this function using `multiprocessing.Pool`
-    pool_function = partial(_process_bucket,
-                            request_params=request_params,
-                            url_pids=url_pids,
-                            ext_id_pids_to_urls=ext_id_pids_to_urls,
-                            qids_and_tids=qids_and_tids,
-                            no_labels_count=no_labels_count,
-                            no_aliases_count=no_aliases_count,
-                            no_descriptions_count=no_descriptions_count,
-                            no_sitelinks_count=no_sitelinks_count,
-                            no_links_count=no_links_count,
-                            no_ext_ids_count=no_ext_ids_count,
-                            no_claims_count=no_claims_count,
-                            needs_occupation=needs_occupation,
-                            needs_genre=needs_genre,
-                            needs_publication_date=needs_publication_date)
+    pool_function = partial(
+        _process_bucket,
+        request_params=request_params,
+        url_pids=url_pids,
+        ext_id_pids_to_urls=ext_id_pids_to_urls,
+        qids_and_tids=qids_and_tids,
+        no_labels_count=no_labels_count,
+        no_aliases_count=no_aliases_count,
+        no_descriptions_count=no_descriptions_count,
+        no_sitelinks_count=no_sitelinks_count,
+        no_links_count=no_links_count,
+        no_ext_ids_count=no_ext_ids_count,
+        no_claims_count=no_claims_count,
+        needs_occupation=needs_occupation,
+        needs_genre=needs_genre,
+        needs_publication_date=needs_publication_date,
+    )
 
     # create a pool of threads and map the list of buckets using `pool_function`
     with Pool() as pool:
         # `processed_bucket` will be a list of dicts, where each dict
         # is a processed entity from the bucket
-        for processed_bucket in pool.imap_unordered(pool_function,
-                                                    tqdm(qid_buckets, total=len(qid_buckets))):
+        for processed_bucket in pool.imap_unordered(
+            pool_function, tqdm(qid_buckets, total=len(qid_buckets))
+        ):
             # join results into a string so that we can write them to
             # the dump file
-            to_write = ''.join(json.dumps(result, ensure_ascii=False) + '\n' for
-                               result in processed_bucket)
+            to_write = ''.join(
+                json.dumps(result, ensure_ascii=False) + '\n'
+                for result in processed_bucket
+            )
 
             fileout.write(to_write)
             fileout.flush()
 
     LOGGER.info(
         'QIDs: got %d with no labels, %d with no aliases, %d with no descriptions, %d with no sitelinks, %d with no third-party links, %d with no external ID links, %d with no expected claims',
-        no_labels_count, no_aliases_count, no_descriptions_count, no_sitelinks_count, no_links_count, no_ext_ids_count,
-        no_claims_count)
+        no_labels_count,
+        no_aliases_count,
+        no_descriptions_count,
+        no_sitelinks_count,
+        no_links_count,
+        no_ext_ids_count,
+        no_claims_count,
+    )
 
 
 def get_metadata(qids: set) -> Generator[tuple, None, None]:
@@ -259,13 +304,24 @@ def get_metadata(qids: set) -> Generator[tuple, None, None]:
                 continue
             # Remember this yields a generator of generators
             # see https://stackoverflow.com/questions/6503079/understanding-nested-yield-return-in-python#6503192
-            yield _yield_expected_values(qid, claims, vocabulary.METADATA_PIDS, no_claims_count, include_pid=True)
+            yield _yield_expected_values(
+                qid,
+                claims,
+                vocabulary.METADATA_PIDS,
+                no_claims_count,
+                include_pid=True,
+            )
 
-    LOGGER.info('Got %d QIDs with no %s claims',
-                no_claims_count, vocabulary.METADATA_PIDS)
+    LOGGER.info(
+        'Got %d QIDs with no %s claims',
+        no_claims_count,
+        vocabulary.METADATA_PIDS,
+    )
 
 
-def get_links(qids: set, url_pids: set, ext_id_pids_to_urls: dict) -> Generator[tuple, None, None]:
+def get_links(
+    qids: set, url_pids: set, ext_id_pids_to_urls: dict
+) -> Generator[tuple, None, None]:
     """Get sitelinks and third-party links for each Wikidata item in the given set.
 
     :param qids: set of Wikidata QIDs
@@ -294,15 +350,22 @@ def get_links(qids: set, url_pids: set, ext_id_pids_to_urls: dict) -> Generator[
             claims = entity.get('claims')
             if claims:
                 # Third-party links
-                yield _yield_expected_values(qid, claims, url_pids, no_links_count)
+                yield _yield_expected_values(
+                    qid, claims, url_pids, no_links_count
+                )
                 # External ID links
-                yield _yield_ext_id_links(ext_id_pids_to_urls,
-                                          claims, qid, no_ext_ids_count)
+                yield _yield_ext_id_links(
+                    ext_id_pids_to_urls, claims, qid, no_ext_ids_count
+                )
             else:
                 LOGGER.warning('No claims for QID %s', qid)
 
-    LOGGER.info('QIDs: got %d with no sitelinks, %d with no third-party links, %d with no external ID links',
-                no_sitelinks_count, no_links_count, no_ext_ids_count)
+    LOGGER.info(
+        'QIDs: got %d with no sitelinks, %d with no third-party links, %d with no external ID links',
+        no_sitelinks_count,
+        no_links_count,
+        no_ext_ids_count,
+    )
 
 
 def _return_monolingual_strings(qid, strings):
@@ -314,7 +377,10 @@ def _return_monolingual_strings(qid, strings):
         string = data.get('value')
         if not string:
             LOGGER.warning(
-                'Skipping malformed monolingual string with no value for %s: %s', qid, data)
+                'Skipping malformed monolingual string with no value for %s: %s',
+                qid,
+                data,
+            )
             continue
         to_return.add(string)
     return to_return
@@ -330,7 +396,10 @@ def _return_aliases(qid, aliases):
             alias = data.get('value')
             if not alias:
                 LOGGER.warning(
-                    'Skipping malformed alias with no value for %s: %s', qid, data)
+                    'Skipping malformed alias with no value for %s: %s',
+                    qid,
+                    data,
+                )
                 continue
             to_return.add(alias)
     return to_return
@@ -347,8 +416,9 @@ def _return_third_party_urls(qid, claims, url_pids, no_count):
     to_return = set()
     available = url_pids.intersection(claims.keys())
     if available:
-        LOGGER.debug('Available third-party URL PIDs for %s: %s',
-                     qid, available)
+        LOGGER.debug(
+            'Available third-party URL PIDs for %s: %s', qid, available
+        )
         for pid in available:
             for pid_claim in claims[pid]:
                 value = _extract_value_from_claim(pid_claim, pid, qid)
@@ -364,7 +434,9 @@ def _return_third_party_urls(qid, claims, url_pids, no_count):
     return to_return
 
 
-def _return_claims_for_linker(qid, claims, no_count, needs_occupation, needs_genre, needs_publication_date):
+def _return_claims_for_linker(
+    qid, claims, no_count, needs_occupation, needs_genre, needs_publication_date
+):
     to_return = defaultdict(set)
     expected_pids = set(vocabulary.LINKER_PIDS.keys())
 
@@ -395,10 +467,15 @@ def _return_claims_for_linker(qid, claims, no_count, needs_occupation, needs_gen
                 pid_label = vocabulary.LINKER_PIDS.get(pid)
 
                 if not pid_label:
-                    LOGGER.critical('PID label lookup failed: %s. The PID should be one of %s',
-                                    pid, expected_pids)
-                    raise ValueError('PID label lookup failed: %s. The PID should be one of %s' % (
-                        pid, expected_pids))
+                    LOGGER.critical(
+                        'PID label lookup failed: %s. The PID should be one of %s',
+                        pid,
+                        expected_pids,
+                    )
+                    raise ValueError(
+                        'PID label lookup failed: %s. The PID should be one of %s'
+                        % (pid, expected_pids)
+                    )
 
                 if pid == vocabulary.OCCUPATION:
                     # for occupations we only need their QID
@@ -426,14 +503,12 @@ def _return_claims_for_linker(qid, claims, no_count, needs_occupation, needs_gen
 
 def _return_ext_id_urls(qid, claims, ext_id_pids_to_urls, no_count):
     to_return = set()
-    available = set(
-        ext_id_pids_to_urls.keys()).intersection(claims.keys())
+    available = set(ext_id_pids_to_urls.keys()).intersection(claims.keys())
     if available:
         LOGGER.debug('Available external ID PIDs for %s: %s', qid, available)
         for pid in available:
             for pid_claim in claims[pid]:
-                ext_id = _extract_value_from_claim(
-                    pid_claim, pid, qid)
+                ext_id = _extract_value_from_claim(pid_claim, pid, qid)
                 if not ext_id:
                     continue
                 for formatter_url in ext_id_pids_to_urls[pid]:
@@ -449,7 +524,10 @@ def _yield_monolingual_strings(qid, strings, string_type):
         string = data.get('value')
         if not string:
             LOGGER.warning(
-                'Skipping malformed monolingual string with no value for %s: %s', qid, data)
+                'Skipping malformed monolingual string with no value for %s: %s',
+                qid,
+                data,
+            )
             continue
         yield qid, language_code, string, string_type
 
@@ -460,7 +538,10 @@ def _yield_aliases(qid, aliases):
             alias = data.get('value')
             if not alias:
                 LOGGER.warning(
-                    'Skipping malformed alias with no value for %s: %s', qid, data)
+                    'Skipping malformed alias with no value for %s: %s',
+                    qid,
+                    data,
+                )
                 continue
             yield qid, language_code, alias, keys.ALIAS
 
@@ -478,37 +559,39 @@ def _yield_sitelinks(entity, qid, no_sitelinks_count):
 
 
 def _yield_ext_id_links(ext_id_pids_to_urls, claims, qid, no_ext_ids_count):
-    available_ext_id_pids = set(
-        ext_id_pids_to_urls.keys()).intersection(claims.keys())
+    available_ext_id_pids = set(ext_id_pids_to_urls.keys()).intersection(
+        claims.keys()
+    )
     if not available_ext_id_pids:
-        LOGGER.debug(
-            'No external identifier links for %s', qid)
+        LOGGER.debug('No external identifier links for %s', qid)
         no_ext_ids_count += 1
     else:
         LOGGER.debug(
-            'Available PIDs with external IDs for %s: %s', qid, available_ext_id_pids)
+            'Available PIDs with external IDs for %s: %s',
+            qid,
+            available_ext_id_pids,
+        )
         for pid in available_ext_id_pids:
             for pid_claim in claims[pid]:
-                ext_id = _extract_value_from_claim(
-                    pid_claim, pid, qid)
+                ext_id = _extract_value_from_claim(pid_claim, pid, qid)
                 if not ext_id:
                     continue
                 for formatter_url in ext_id_pids_to_urls[pid]:
                     yield qid, formatter_url.replace('$1', ext_id)
 
 
-def _yield_expected_values(qid, claims, expected_pids, count, include_pid=False):
+def _yield_expected_values(
+    qid, claims, expected_pids, count, include_pid=False
+):
     available = expected_pids.intersection(claims.keys())
     if not available:
         LOGGER.debug('No %s expected claims for %s', expected_pids, qid)
         count += 1
     else:
-        LOGGER.debug(
-            'Available claims for %s: %s', qid, available)
+        LOGGER.debug('Available claims for %s: %s', qid, available)
         for pid in available:
             for pid_claim in claims[pid]:
-                value = _extract_value_from_claim(
-                    pid_claim, pid, qid)
+                value = _extract_value_from_claim(pid_claim, pid, qid)
                 if not value:
                     continue
                 if include_pid:
@@ -522,7 +605,7 @@ def _prepare_request(qids, props):
     request_params = {
         'action': 'wbgetentities',
         'format': 'json',
-        'props': props
+        'props': props,
     }
     return qid_buckets, request_params
 
@@ -531,17 +614,22 @@ def _get_authentication_token(session: requests.Session) -> str:
     """
     Using a session instance, get a token we can use for authentication
     """
-    token_request = session.get(WIKIDATA_API_URL, params={
-        'action': 'query',
-        'meta': 'tokens',
-        'type': 'login',
-        'format': 'json'
-    }).json()
+    token_request = session.get(
+        WIKIDATA_API_URL,
+        params={
+            'action': 'query',
+            'meta': 'tokens',
+            'type': 'login',
+            'format': 'json',
+        },
+    ).json()
 
     return token_request['query']['tokens']['logintoken']
 
 
-def _do_bot_login(session: requests.Session, token: str, bot_password: str) -> bool:
+def _do_bot_login(
+    session: requests.Session, token: str, bot_password: str
+) -> bool:
     """
     Tries to login with a session, given token and password. Returns a boolean
     stating whether the login was successful or not.
@@ -549,13 +637,16 @@ def _do_bot_login(session: requests.Session, token: str, bot_password: str) -> b
     Cookies for authentication are automatically saved into the session.
     """
 
-    login_r = session.post(WIKIDATA_API_URL, data={
-        'action': 'login',
-        'lgname': 'Soweego bot',
-        'lgpassword': bot_password,
-        'lgtoken': token,
-        'format': 'json'
-    }).json()
+    login_r = session.post(
+        WIKIDATA_API_URL,
+        data={
+            'action': 'login',
+            'lgname': 'Soweego bot',
+            'lgpassword': bot_password,
+            'lgtoken': token,
+            'format': 'json',
+        },
+    ).json()
 
     lg_success = login_r['login']['result'] != 'Failed'
 
@@ -578,11 +669,10 @@ def _load_cached_bot_session(dump_path: str) -> requests.Session:
         session = pickle.load(file)
 
         # check if session is still valid
-        res = session.get(WIKIDATA_API_URL, params={
-            'action': 'query',
-            'assert': 'user',
-            'format': 'json'
-        })
+        res = session.get(
+            WIKIDATA_API_URL,
+            params={'action': 'query', 'assert': 'user', 'format': 'json'},
+        )
 
         # if the assert query failed then it means
         # we need to renew the session
@@ -601,8 +691,8 @@ def get_authenticated_session():
     """
 
     wiki_api_dump_path = os.path.join(
-        constants.SHARED_FOLDER,
-        constants.WIKIDATA_API_SESSION)
+        constants.SHARED_FOLDER, constants.WIKIDATA_API_SESSION
+    )
 
     try:
         return _load_cached_bot_session(wiki_api_dump_path)
@@ -616,8 +706,10 @@ def get_authenticated_session():
         # proceed.
 
         print('\n----- Authentication for the bot required -----')
-        print('Please input the password to authenticate the bot, or leave blank if '
-              "you don't want to authenticate")
+        print(
+            'Please input the password to authenticate the bot, or leave blank if '
+            "you don't want to authenticate"
+        )
 
         while True:
             bot_password = input('Password: ')
@@ -626,8 +718,10 @@ def get_authenticated_session():
 
             if bot_password == '':
                 # maximum bucket size when unauthenticated is 50
-                LOGGER.info('No password provided so unauthenticated session will be used '
-                            'for this execution.')
+                LOGGER.info(
+                    'No password provided so unauthenticated session will be used '
+                    'for this execution.'
+                )
 
                 global BUCKET_SIZE
                 BUCKET_SIZE = 50
@@ -640,8 +734,7 @@ def get_authenticated_session():
             token = _get_authentication_token(session)
 
             # do login
-            lg_success, lg_message = _do_bot_login(
-                session, token, bot_password)
+            lg_success, lg_message = _do_bot_login(session, token, bot_password)
 
             # if login successful then break, else try again
             if lg_success:
@@ -673,18 +766,27 @@ def _make_request(bucket, params):
             log_request_data(response, LOGGER)
         except ChunkedEncodingError:
             LOGGER.warning(
-                'Connection broken, retrying the request to the Wikidata API')
+                'Connection broken, retrying the request to the Wikidata API'
+            )
             connection_is_ok = False
         else:
             connection_is_ok = True
         if connection_is_ok:
             break
     if not response.ok:
-        LOGGER.warning('Skipping failed %s to the Wikidata API. Reason: %d %s - Full URL: %s',
-                       response.request.method, response.status_code, response.reason, response.request.url)
+        LOGGER.warning(
+            'Skipping failed %s to the Wikidata API. Reason: %d %s - Full URL: %s',
+            response.request.method,
+            response.status_code,
+            response.reason,
+            response.request.url,
+        )
         return None
     LOGGER.debug(
-        'Successful %s to the Wikidata API. Status code: %d', response.request.method, response.status_code)
+        'Successful %s to the Wikidata API. Status code: %d',
+        response.request.method,
+        response.status_code,
+    )
     return response.json()
 
 
@@ -693,35 +795,40 @@ def _extract_value_from_claim(pid_claim, pid, qid):
     main_snak = pid_claim.get('mainsnak')
     if not main_snak:
         LOGGER.warning(
-            'Skipping malformed (%s, %s) claim with no main snak', qid, pid)
+            'Skipping malformed (%s, %s) claim with no main snak', qid, pid
+        )
         LOGGER.debug('Malformed claim: %s', pid_claim)
         return None
     snak_type = main_snak.get('snaktype')
     if not snak_type:
         LOGGER.warning(
-            'Skipping malformed (%s, %s) claim with no snak type', qid, pid)
+            'Skipping malformed (%s, %s) claim with no snak type', qid, pid
+        )
         LOGGER.debug('Malformed claim: %s', pid_claim)
         return None
     if snak_type == 'novalue':
         LOGGER.warning(
-            "Skipping unexpected (%s, %s) claim with 'novalue' snak type", qid, pid)
-        LOGGER.debug(
-            "Unexpected claim with 'novalue' snak type: %s", pid_claim)
+            "Skipping unexpected (%s, %s) claim with 'novalue' snak type",
+            qid,
+            pid,
+        )
+        LOGGER.debug("Unexpected claim with 'novalue' snak type: %s", pid_claim)
         return None
     data_value = main_snak.get('datavalue')
     if not data_value:
         LOGGER.warning(
-            "Skipping unexpected (%s, %s) claim with no 'datavalue'", qid, pid)
+            "Skipping unexpected (%s, %s) claim with no 'datavalue'", qid, pid
+        )
         LOGGER.debug("Unexpected claim with no 'datavalue': %s", pid_claim)
         return None
     value = data_value.get('value')
     if not value:
         LOGGER.warning(
-            'Skipping malformed (%s, %s) claim with no value', qid, pid)
+            'Skipping malformed (%s, %s) claim with no value', qid, pid
+        )
         LOGGER.debug('Malformed claim: %s', pid_claim)
         return None
-    LOGGER.debug(
-        'QID: %s - PID: %s - Value: %s', qid, pid, value)
+    LOGGER.debug('QID: %s - PID: %s - Value: %s', qid, pid, value)
     return value
 
 
@@ -737,8 +844,15 @@ def _build_sitelink_url(site, title):
         project = 'wikimedia'
     netloc_builder.append(project)
     netloc_builder.append('org')
-    url = urlunsplit(('https', '.'.join(netloc_builder),
-                      '/wiki/%s' % title.replace(' ', '_'), '', ''))
+    url = urlunsplit(
+        (
+            'https',
+            '.'.join(netloc_builder),
+            '/wiki/%s' % title.replace(' ', '_'),
+            '',
+            '',
+        )
+    )
     LOGGER.debug('Site: %s - Title: %s - Full URL: %s', site, title, url)
     return url
 
@@ -752,6 +866,10 @@ def _make_buckets(qids):
             buckets.append(current_bucket)
             current_bucket = []
     buckets.append(current_bucket)
-    LOGGER.info('Made %d buckets of size %d out of %d QIDs to comply with the Wikidata API limits',
-                len(buckets), BUCKET_SIZE, len(qids))
+    LOGGER.info(
+        'Made %d buckets of size %d out of %d QIDs to comply with the Wikidata API limits',
+        len(buckets),
+        BUCKET_SIZE,
+        len(qids),
+    )
     return buckets

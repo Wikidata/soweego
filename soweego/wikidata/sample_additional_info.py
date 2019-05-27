@@ -6,9 +6,12 @@ from collections import defaultdict
 import click
 import iso8601
 
-from soweego.wikidata.sparql_queries import (make_request, query_birth_death,
-                                             query_info_for,
-                                             query_wikipedia_articles_for)
+from soweego.wikidata.sparql_queries import (
+    make_request,
+    query_birth_death,
+    query_info_for,
+    query_wikipedia_articles_for,
+)
 
 
 def get_wikidata_id_from_uri(uri):
@@ -26,7 +29,10 @@ def get_sample_buckets(sample_path):
     size = 100
     labels_qid = json.load(open(sample_path))
     entities = ["wd:%s" % v for k, v in labels_qid.items()]
-    return [set(entities[i*size:(i+1)*size]) for i in range(0, int((len(entities)/size+1)))]
+    return [
+        set(entities[i * size : (i + 1) * size])
+        for i in range(0, int((len(entities) / size + 1)))
+    ]
 
 
 def get_date_strings(timestamp, precision):
@@ -37,7 +43,11 @@ def get_date_strings(timestamp, precision):
         date = iso8601.parse_date(timesplit).date()
 
         if precisionsplit == "11":
-            return [str(date.year), '%s%s' % (date.year, date.month), '%s%s%s' % (date.year, date.month, date.day)]
+            return [
+                str(date.year),
+                '%s%s' % (date.year, date.month),
+                '%s%s%s' % (date.year, date.month, date.day),
+            ]
         elif precisionsplit == "10":
             return [str(date.year), '%s%s' % (date.year, date.month)]
         else:
@@ -65,21 +75,25 @@ def get_links_for_sample(sample_path, url_formatters, output):
     for bucket in buckets:
         # Downloads the first bucket
         result = make_request(
-            query_info_for(bucket, [k for k, v in formatters_dict.items()]))
+            query_info_for(bucket, [k for k, v in formatters_dict.items()])
+        )
         for id_row in result:
             # Extracts the wikidata id from the URI
             entity_id = get_wikidata_id_from_uri(id_row['?id'])
             url_id[trim_first_last_characters(id_row['?id'])] = entity_id
-            # Foreach id in the response, creates the full url and adds it to the dict
+            #  Foreach id in the response, creates the full url and adds it to the dict
             for col in result.fieldnames:
                 prop_id = col[1:]
                 if col != '?id' and id_row[col]:
                     if formatters_dict.get(prop_id):
-                        url_id[formatters_dict[prop_id].replace(
-                            '$1', id_row[col])] = entity_id
+                        url_id[
+                            formatters_dict[prop_id].replace('$1', id_row[col])
+                        ] = entity_id
                     else:
                         print(
-                            '%s does not have an entry in the formatters file' % col)
+                            '%s does not have an entry in the formatters file'
+                            % col
+                        )
 
     json.dump(url_id, open(filepath, 'w'), indent=2, ensure_ascii=False)
 
@@ -99,8 +113,7 @@ def get_sitelinks_for_sample(sample_path, output):
 
     for bucket in buckets:
         # Downloads the first bucket
-        result = make_request(
-            query_wikipedia_articles_for(bucket))
+        result = make_request(query_wikipedia_articles_for(bucket))
         for article_row in result:
             site_url = trim_first_last_characters(article_row['?article'])
             entity_id = get_wikidata_id_from_uri(article_row['?id'])
@@ -126,15 +139,22 @@ def get_birth_death_dates_for_sample(sample_path, output):
             qid = get_wikidata_id_from_uri(date_row['?id'])
             # creates the combination of all birth dates strings and all death dates strings
             if date_row['?birth']:
-                for b in get_date_strings(date_row['?birth'], date_row['?b_precision']):
+                for b in get_date_strings(
+                    date_row['?birth'], date_row['?b_precision']
+                ):
                     if date_row['?death']:
-                        for d in get_date_strings(date_row['?death'], date_row['?d_precision']):
-                            labeldate_qid['%s|%s-%s' %
-                                          (qid_labels[qid], b, d)] = qid
+                        for d in get_date_strings(
+                            date_row['?death'], date_row['?d_precision']
+                        ):
+                            labeldate_qid[
+                                '%s|%s-%s' % (qid_labels[qid], b, d)
+                            ] = qid
                     else:
                         labeldate_qid['%s|%s' % (qid_labels[qid], b)] = qid
             else:
-                for d in get_date_strings(date_row['?death'], date_row['?d_precision']):
+                for d in get_date_strings(
+                    date_row['?death'], date_row['?d_precision']
+                ):
                     labeldate_qid['%s|-%s' % (qid_labels[qid], d)] = qid
 
     json.dump(labeldate_qid, open(filepath, 'w'), indent=2, ensure_ascii=False)
@@ -151,9 +171,10 @@ def get_url_formatters_for_properties(property_mapping_path, output):
 
     formatters = {}
     for _, prop_id in properties.items():
-        query = """SELECT * WHERE { wd:%s wdt:P1630 ?formatterUrl . }""" % prop_id
+        query = (
+            """SELECT * WHERE { wd:%s wdt:P1630 ?formatterUrl . }""" % prop_id
+        )
         for r in make_request(query):
             formatters[prop_id] = r['?formatterUrl']
 
-    json.dump(formatters, open(filepath, 'w'),
-              indent=2, ensure_ascii=False)
+    json.dump(formatters, open(filepath, 'w'), indent=2, ensure_ascii=False)
