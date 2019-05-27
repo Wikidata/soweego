@@ -40,51 +40,37 @@ class DiscogsBaseEntity(BaseEntity):
 
 class DiscogsMusicianEntity(DiscogsBaseEntity):
     __tablename__ = MUSICIAN_TABLE
-    __mapper_args__ = {
-        'polymorphic_identity': __tablename__,
-        'concrete': True}
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
 class DiscogsMusicianLinkEntity(BaseLinkEntity):
     __tablename__ = MUSICIAN_LINK_TABLE
-    __mapper_args__ = {
-        'polymorphic_identity': __tablename__,
-        'concrete': True}
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
 class DiscogsMusicianNlpEntity(BaseNlpEntity, BASE):
     __tablename__ = MUSICIAN_NLP_TABLE
-    __mapper_args__ = {
-        'polymorphic_identity': __tablename__,
-        'concrete': True}
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
 class DiscogsGroupEntity(DiscogsBaseEntity):
     __tablename__ = GROUP_TABLE
-    __mapper_args__ = {
-        'polymorphic_identity': __tablename__,
-        'concrete': True}
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
 class DiscogsGroupLinkEntity(BaseLinkEntity):
     __tablename__ = GROUP_LINK_TABLE
-    __mapper_args__ = {
-        'polymorphic_identity': __tablename__,
-        'concrete': True}
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
 class DiscogsGroupNlpEntity(BaseNlpEntity, BASE):
     __tablename__ = GROUP_NLP_TABLE
-    __mapper_args__ = {
-        'polymorphic_identity': __tablename__,
-        'concrete': True}
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
 class DiscogsMasterEntity(DiscogsBaseEntity):
     __tablename__ = MASTER_TABLE
-    __mapper_args__ = {
-        'polymorphic_identity': __tablename__,
-        'concrete': True}
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
     main_release_id = Column(String(50))
     genres = Column(Text)
@@ -94,9 +80,7 @@ class DiscogsMasterEntity(DiscogsBaseEntity):
 class DiscogsMasterArtistRelationship(BaseRelationship):
     __tablename__ = MASTER_ARTIST_RELATIONSHIP_TABLE
 
-    __mapper_args__ = {
-        'polymorphic_identity': __tablename__,
-        'concrete': True}
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
     def __repr__(self):
         return super().__repr__()
