@@ -35,7 +35,7 @@ MNM_API_ACTIVATION_PARAMS = {
     'catalog': None  # To be filled by activate_catalog
 }
 
-CATALOG_DESCRIPTION = 'Uploaded by soweego'
+CATALOG_NOTE = 'Uploaded by soweego'
 SEARCH_WP_FIELD = 'en'
 CINEMA = 'cinema'
 MUSIC = 'music'
@@ -77,7 +77,6 @@ def cli(catalog, entity, links):
 def add_catalog(catalog, entity):
     name_field = f'{catalog.title()} {entity}'
 
-    import ipdb; ipdb.set_trace()
     session = DBManager(MNM_DB).new_session()
     catalog_id = None
     try:
@@ -87,13 +86,13 @@ def add_catalog(catalog, entity):
             db_entity = mix_n_match.MnMCatalog()
             _set_catalog_fields(db_entity, name_field, catalog, entity)
             session.add(db_entity)
-            catalog_id = db_entity.id
             session.commit()
+            catalog_id = db_entity.id
         else:
             LOGGER.info('Updating %s %s catalog ... ', catalog, entity)
+            catalog_id = existing.id
             _set_catalog_fields(existing, name_field, catalog, entity)
             session.add(existing)
-            catalog_id = existing.id
             session.commit()
     except:
         session.rollback()
@@ -108,7 +107,7 @@ def add_catalog(catalog, entity):
 def _set_catalog_fields(db_entity, name_field, catalog, entity):
     db_entity.name = name_field
     db_entity.active = 1
-    db_entity.desc = CATALOG_DESCRIPTION
+    db_entity.note = CATALOG_NOTE
     db_entity.type = CATALOG_TYPES.get(catalog, '')
     db_entity.source_item = int(target_database.get_catalog_qid(catalog).lstrip('Q'))
     entity_type = ENTITY_TYPES.get(entity)
