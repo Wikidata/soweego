@@ -17,6 +17,7 @@ __copyright__ = 'Copyleft 2019, Hjfocs'
 from sqlalchemy import Column, String, Integer, Float
 from sqlalchemy.dialects.mysql import INTEGER, TINYINT, TINYTEXT
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.sql.expression import func
 
 BASE = declarative_base()
 CATALOG_TABLE = 'catalog'
@@ -55,6 +56,7 @@ class MnMEntry(BASE):
     q = Column(Integer, index=True)
     user = Column(INTEGER(10, unsigned=True), index=True)
     timestamp = Column(String(16), index=True)
-    random = Column(Float, index=True)
+    # TODO check if rand() as default value works, otherwise just use python random
+    random = Column(Float, index=True, default=func.rand())
     type = Column(String(16), nullable=False, index=True, default='')
 
