@@ -16,9 +16,11 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2019, Hjfocs'
 
 import logging
+from sys import exit
 
 import click
 import requests
+from sqlalchemy.exc import SQLAlchemyError
 
 from soweego.commons import target_database, keys
 from soweego.commons.db_manager import DBManager
@@ -71,6 +73,9 @@ def cli(catalog, entity, links):
     LINKS must be a QID, catalog_identifier CSV file.
     """
     catalog_id = add_catalog(catalog, entity)
+    if catalog_id is None:
+        exit(1)
+
     activate_catalog(catalog_id, catalog, entity)
 
 
@@ -78,7 +83,6 @@ def add_catalog(catalog, entity):
     name_field = f'{catalog.title()} {entity}'
 
     session = DBManager(MNM_DB).new_session()
-    catalog_id = None
     try:
         existing = session.query(mix_n_match.MnMCatalog).filter_by(name=name_field).first()
         if existing is None:
@@ -94,9 +98,14 @@ def add_catalog(catalog, entity):
             _set_catalog_fields(existing, name_field, catalog, entity)
             session.add(existing)
             session.commit()
-    except:
+    except SQLAlchemyError as error:
+        LOGGER.error("Failed catalog addition/update due to %s. "
+                     "You can enable the debug log with the CLI option "
+                     "'-l soweego.ingestor DEBUG' for more details",
+                     error.__class__.__name__)
+        LOGGER.debug(error)
         session.rollback()
-        raise
+        return None
     finally:
         session.close()
 
