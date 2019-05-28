@@ -18,6 +18,7 @@ __copyright__ = 'Copyleft 2019, Hjfocs'
 import logging
 
 import click
+import requests
 
 from soweego.commons import target_database, keys
 from soweego.commons.db_manager import DBManager
@@ -26,7 +27,14 @@ from soweego.importer.models import mix_n_match
 LOGGER = logging.getLogger(__name__)
 
 SUPPORTED_TARGETS = set(target_database.supported_targets()) ^ {keys.TWITTER}
+
 MNM_DB = 's51434__mixnmatch_p'
+MNM_API_URL = 'https://tools.wmflabs.org/mix-n-match/api.php'
+MNM_API_ACTIVATION_PARAMS = {
+    'query': 'update_overview',
+    'catalog': None  # To be filled by activate_catalog
+}
+
 CATALOG_DESCRIPTION = 'Uploaded by soweego'
 SEARCH_WP_FIELD = 'en'
 CINEMA = 'cinema'
@@ -62,8 +70,8 @@ def cli(catalog, entity, links):
 
     LINKS must be a QID, catalog_identifier CSV file.
     """
-    # FIXME inferire catalog ed entity dal nome del file discogs_musician_linker_result.csv.gz
-    add_catalog(catalog, entity)
+    catalog_id = add_catalog(catalog, entity)
+    activate_catalog(catalog_id, catalog, entity)
 
 
 def add_catalog(catalog, entity):
@@ -71,18 +79,21 @@ def add_catalog(catalog, entity):
 
     import ipdb; ipdb.set_trace()
     session = DBManager(MNM_DB).new_session()
+    catalog_id = None
     try:
         existing = session.query(mix_n_match.MnMCatalog).filter_by(name=name_field).first()
         if existing is None:
-            LOGGER.info('Inserting %s %s catalog metadata ... ', catalog, entity)
+            LOGGER.info("Adding %s %s catalog to the mix'n'match DB ... ", catalog, entity)
             db_entity = mix_n_match.MnMCatalog()
             _set_catalog_fields(db_entity, name_field, catalog, entity)
             session.add(db_entity)
+            catalog_id = db_entity.id
             session.commit()
         else:
-            LOGGER.info('Updating %s %s catalog metadata ... ', catalog, entity)
+            LOGGER.info('Updating %s %s catalog ... ', catalog, entity)
             _set_catalog_fields(existing, name_field, catalog, entity)
             session.add(existing)
+            catalog_id = existing.id
             session.commit()
     except:
         session.rollback()
@@ -90,7 +101,8 @@ def add_catalog(catalog, entity):
     finally:
         session.close()
 
-    LOGGER.info('Catalog metadata insertion/update went fine')
+    LOGGER.info('Catalog addition/update went fine. Internal ID: %d', catalog_id)
+    return catalog_id
 
 
 def _set_catalog_fields(db_entity, name_field, catalog, entity):
@@ -114,7 +126,35 @@ def add_links(catalog, links):
     pass
 
 
-def activate_catalog(catalog):
-    # TODO mandare la richiesta HTTP per attivare il catalogo
-    pass
+def activate_catalog(catalog_id, catalog, entity):
+    MNM_API_ACTIVATION_PARAMS['catalog'] = catalog_id
+    activated = requests.get(MNM_API_URL, params=MNM_API_ACTIVATION_PARAMS)
 
+    if activated.ok:
+        try:
+            json_status = activated.json()
+        except ValueError:
+            LOGGER.error(
+                'Activation of %s %s (catalog ID: %d) failed. '
+                'Reason: no JSON response',
+                catalog, entity, catalog_id
+            )
+            LOGGER.debug('Response from %s: %s', activated.url, activated.text)
+            return
+
+        if json_status.get('status') == 'OK':
+            LOGGER.info(
+                '%s %s (catalog ID: %d) successfully activated',
+                catalog, entity, catalog_id
+            )
+        else:
+            LOGGER.error(
+                'Activation of %s %s (catalog ID: %d) failed. Reason: %s',
+                catalog, entity, catalog_id, json_status
+            )
+    else:
+        LOGGER.error(
+            'Activation request for %s %s (catalog ID: %d) '
+            'failed with HTTP error code %d',
+            catalog, entity, catalog_id, activated.status_code
+        )
