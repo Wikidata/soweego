@@ -48,9 +48,28 @@ TIMESTAMP_FORMAT = '%Y%m%d%H%M%S'  # 20190528131053
 NOTE_FIELD = 'Uploaded by soweego'
 SEARCH_WP_FIELD = 'en'
 EXT_DESC_FIELD = 'soweego confidence score: {}'
+USER_FIELD = 0 # stands for 'automatically matched'
 CINEMA = 'cinema'
 MUSIC = 'music'
 SOCIAL = 'social'
+
+ARTIST = 'artist'
+MASTER = 'master'
+NAME = 'name'
+RELEASE_GROUP = 'release-group'
+TITLE = 'title'
+
+DISCOGS_BASE_URL = 'https://www.discogs.com'
+IMDB_BASE_URL = 'https://www.imdb.com'
+MUSICBRAINZ_BASE_URL = 'https://musicbrainz.org'
+DISCOGS_PERSON_URL = f'{DISCOGS_BASE_URL}/{ARTIST}/'
+DISCOGS_WORK_URL = f'{DISCOGS_BASE_URL}/{MASTER}/'
+IMDB_PERSON_URL = f'{IMDB_BASE_URL}/{NAME}/'
+IMDB_WORK_URL = f'{IMDB_BASE_URL}/{TITLE}/'
+MUSICBRAINZ_PERSON_URL = f'{MUSICBRAINZ_BASE_URL}/{ARTIST}/'
+MUSICBRAINZ_WORK_URL = f'{MUSICBRAINZ_BASE_URL}/{RELEASE_GROUP}/'
+TWITTER_URL = 'https://twitter.com/'
+
 CATALOG_TYPES = {
     keys.DISCOGS: MUSIC,
     keys.IMDB: CINEMA,
@@ -71,12 +90,26 @@ ENTITY_TYPES = {
     keys.AUDIOVISUAL_WORK: WORK
 }
 
+CATALOG_ENTITY_URLS = {
+    f'{keys.DISCOGS}_{keys.MUSICIAN}': DISCOGS_PERSON_URL,
+    f'{keys.DISCOGS}_{keys.BAND}': DISCOGS_PERSON_URL,
+    f'{keys.DISCOGS}_{keys.MUSICAL_WORK}': DISCOGS_WORK_URL,
+    f'{keys.MUSICBRAINZ}_{keys.MUSICIAN}': MUSICBRAINZ_PERSON_URL,
+    f'{keys.MUSICBRAINZ}_{keys.BAND}': MUSICBRAINZ_PERSON_URL,
+    f'{keys.MUSICBRAINZ}_{keys.MUSICAL_WORK}': MUSICBRAINZ_WORK_URL,
+    f'{keys.IMDB}_{keys.ACTOR}': IMDB_PERSON_URL,
+    f'{keys.IMDB}_{keys.DIRECTOR}': IMDB_PERSON_URL,
+    f'{keys.IMDB}_{keys.MUSICIAN}': IMDB_PERSON_URL,
+    f'{keys.IMDB}_{keys.PRODUCER}': IMDB_PERSON_URL,
+    f'{keys.IMDB}_{keys.WRITER}': IMDB_PERSON_URL,
+    f'{keys.IMDB}_{keys.AUDIOVISUAL_WORK}': IMDB_WORK_URL,
+    keys.TWITTER: TWITTER_URL
+}
 
 
 @click.command()
 @click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
 @click.argument('entity', type=click.Choice(target_database.supported_entities()))
-# FIXME soglia da decidere
 @click.argument('threshold', type=float)
 @click.argument('links', type=click.Path(exists=True, dir_okay=False))
 def cli(catalog, entity, threshold, links):
@@ -146,6 +179,9 @@ def _set_catalog_fields(db_entity, name_field, catalog, entity):
 
 
 def add_links(file_path, catalog_id, catalog, entity, threshold):
+    url_prefix = CATALOG_ENTITY_URLS.get(f'{catalog}_{entity}')
+    if url_prefix is None:
+        LOGGER.debug('URL not available for %s %s', catalog, entity)
     # Set human as default when the relevant class QID
     # is not an instance-of (P31) value
     if SUPPORTED_ENTITIES.get(entity) == keys.CLASS_QUERY:
@@ -158,7 +194,6 @@ def add_links(file_path, catalog_id, catalog, entity, threshold):
         catalog, entity, catalog_id
     )
     start = datetime.now()
-    import ipdb; ipdb.set_trace()
     links = read_csv(file_path, names=INPUT_CSV_HEADER)
     # Filter links above threshold,
     # sort by confidence in ascending order,
@@ -173,8 +208,10 @@ def add_links(file_path, catalog_id, catalog, entity, threshold):
     session = DBManager(MNM_DB).new_session()
     try:
         for qid, tid, score in tqdm(links_reader, total=n_links):
+            url = '' if url_prefix is None else url_prefix + tid
+
             db_entity = mix_n_match.MnMEntry()
-            _set_entry_fields(db_entity, catalog_id, qid, tid, class_qid, score)
+            _set_entry_fields(db_entity, catalog_id, qid, tid, url, class_qid, score)
             batch.append(db_entity)
 
             if len(batch) >= COMMIT_EVERY:
@@ -219,13 +256,15 @@ def add_links(file_path, catalog_id, catalog, entity, threshold):
         )
 
 
-def _set_entry_fields(db_entity, catalog_id, qid, tid, class_qid, confidence_score):
+def _set_entry_fields(db_entity, catalog_id, qid, tid, url, class_qid, confidence_score):
     db_entity.catalog = catalog_id
     db_entity.q = int(qid.lstrip('Q'))
     db_entity.ext_id = tid
+    db_entity.ext_name = tid
+    db_entity.ext_url = url
     db_entity.type = class_qid
     db_entity.ext_desc = EXT_DESC_FIELD.format(confidence_score)
-    db_entity.user = 0
+    db_entity.user = USER_FIELD
     db_entity.timestamp = datetime.now().strftime(TIMESTAMP_FORMAT)
 
 
