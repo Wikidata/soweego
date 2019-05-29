@@ -76,10 +76,10 @@ ENTITY_TYPES = {
 @click.command()
 @click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
 @click.argument('entity', type=click.Choice(target_database.supported_entities()))
-@click.argument('links', type=click.Path(exists=True, dir_okay=False))
 # FIXME soglia da decidere
 @click.argument('threshold', type=float)
-def cli(catalog, entity, links, threshold):
+@click.argument('links', type=click.Path(exists=True, dir_okay=False))
+def cli(catalog, entity, threshold, links):
     """Upload identifiers to the mix'n'match tool.
 
     LINKS must be a CSV file path, with format:
@@ -158,12 +158,13 @@ def add_links(file_path, catalog_id, catalog, entity, threshold):
         catalog, entity, catalog_id
     )
     start = datetime.now()
+    import ipdb; ipdb.set_trace()
     links = read_csv(file_path, names=INPUT_CSV_HEADER)
     # Filter links above threshold,
     # sort by confidence in ascending order,
     # drop duplicate TIDs,
     # keep the duplicate with the best score (last one)
-    links[links[keys.CONFIDENCE] >= threshold].sort_values(keys.CONFIDENCE).drop_duplicates(keys.TID, keep='last', inplace=True)
+    links = links[links[keys.CONFIDENCE] >= threshold].sort_values(keys.CONFIDENCE).drop_duplicates(keys.TID, keep='last')
 
     n_links = len(links)
     links_reader = links.itertuples(index=False, name=None)
@@ -173,7 +174,7 @@ def add_links(file_path, catalog_id, catalog, entity, threshold):
     try:
         for qid, tid, score in tqdm(links_reader, total=n_links):
             db_entity = mix_n_match.MnMEntry()
-            _set_entry_fields(db_entity, catalog_id, qid, tid, class_qid)
+            _set_entry_fields(db_entity, catalog_id, qid, tid, class_qid, score)
             batch.append(db_entity)
 
             if len(batch) >= COMMIT_EVERY:
