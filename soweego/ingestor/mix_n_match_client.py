@@ -15,14 +15,13 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2019, Hjfocs'
 
-import csv
-import gzip
 import logging
 from datetime import datetime
 from sys import exit
 
 import click
 import requests
+from pandas import read_csv
 from sqlalchemy.exc import SQLAlchemyError
 from tqdm import tqdm
 
@@ -35,6 +34,8 @@ from soweego.wikidata.vocabulary import HUMAN_QID
 LOGGER = logging.getLogger(__name__)
 
 SUPPORTED_TARGETS = set(target_database.supported_targets()) ^ {keys.TWITTER}
+INPUT_CSV_HEADER = (keys.QID, keys.TID, keys.CONFIDENCE)
+COMMIT_EVERY = 10_000  # DB entity batch size
 
 MNM_DB = 's51434__mixnmatch_p'
 MNM_API_URL = 'https://tools.wmflabs.org/mix-n-match/api.php'
@@ -44,8 +45,9 @@ MNM_API_ACTIVATION_PARAMS = {
 }
 
 TIMESTAMP_FORMAT = '%Y%m%d%H%M%S'  # 20190528131053
-CATALOG_NOTE = 'Uploaded by soweego'
+NOTE_FIELD = 'Uploaded by soweego'
 SEARCH_WP_FIELD = 'en'
+EXT_DESC_FIELD = 'soweego confidence score: {}'
 CINEMA = 'cinema'
 MUSIC = 'music'
 SOCIAL = 'social'
@@ -69,24 +71,27 @@ ENTITY_TYPES = {
     keys.AUDIOVISUAL_WORK: WORK
 }
 
-COMMIT_EVERY = 10_000  # DB entity batch size
 
 
 @click.command()
 @click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
 @click.argument('entity', type=click.Choice(target_database.supported_entities()))
 @click.argument('links', type=click.Path(exists=True, dir_okay=False))
-def cli(catalog, entity, links):
+# FIXME soglia da decidere
+@click.argument('threshold', type=float)
+def cli(catalog, entity, links, threshold):
     """Upload identifiers to the mix'n'match tool.
 
-    LINKS must be a GZIPped CSV file path, with format:
+    LINKS must be a CSV file path, with format:
     QID, catalog_identifier, confidence_score.
+
+    The CSV file can come compressed.
     """
     catalog_id = add_catalog(catalog, entity)
     if catalog_id is None:
         exit(1)
 
-    add_links(links, catalog_id, catalog, entity)
+    add_links(links, catalog_id, catalog, entity, threshold)
     activate_catalog(catalog_id, catalog, entity)
 
 
@@ -127,7 +132,7 @@ def add_catalog(catalog, entity):
 def _set_catalog_fields(db_entity, name_field, catalog, entity):
     db_entity.name = name_field
     db_entity.active = 1
-    db_entity.note = CATALOG_NOTE
+    db_entity.note = NOTE_FIELD
     db_entity.type = CATALOG_TYPES.get(catalog, '')
     db_entity.source_item = int(target_database.get_catalog_qid(catalog).lstrip('Q'))
     entity_type = ENTITY_TYPES.get(entity)
@@ -140,7 +145,7 @@ def _set_catalog_fields(db_entity, name_field, catalog, entity):
     db_entity.search_wp = SEARCH_WP_FIELD
 
 
-def add_links(file_path, catalog_id, catalog, entity):
+def add_links(file_path, catalog_id, catalog, entity, threshold):
     # Set human as default when the relevant class QID
     # is not an instance-of (P31) value
     if SUPPORTED_ENTITIES.get(entity) == keys.CLASS_QUERY:
@@ -153,65 +158,74 @@ def add_links(file_path, catalog_id, catalog, entity):
         catalog, entity, catalog_id
     )
     start = datetime.now()
-    with gzip.open(file_path, 'rt') as fin:
-        n_lines = sum(1 for line in fin)
-        fin.seek(0)
+    links = read_csv(file_path, names=INPUT_CSV_HEADER)
+    # Filter links above threshold,
+    # sort by confidence in ascending order,
+    # drop duplicate TIDs,
+    # keep the duplicate with the best score (last one)
+    links[links[keys.CONFIDENCE] >= threshold].sort_values(keys.CONFIDENCE).drop_duplicates(keys.TID, keep='last', inplace=True)
 
-        reader = csv.reader(fin)
-        batch = []
-        session = DBManager(MNM_DB).new_session()
-        try:
-            for qid, tid, score in tqdm(reader, total=n_lines):
-                db_entity = mix_n_match.MnMEntry()
-                _set_entry_fields(db_entity, catalog_id, qid, tid, class_qid)
-                batch.append(db_entity)
+    n_links = len(links)
+    links_reader = links.itertuples(index=False, name=None)
 
-                if len(batch) >= COMMIT_EVERY:
-                    LOGGER.info(
-                        'Adding batch of %d %s %s links, this may take a while ...',
-                        COMMIT_EVERY, catalog, entity
-                    )
-                    session.bulk_save_objects(batch)
-                    session.commit()
+    batch = []
+    session = DBManager(MNM_DB).new_session()
+    try:
+        for qid, tid, score in tqdm(links_reader, total=n_links):
+            db_entity = mix_n_match.MnMEntry()
+            _set_entry_fields(db_entity, catalog_id, qid, tid, class_qid)
+            batch.append(db_entity)
 
-                    # Clear session & batch entities
-                    session.expunge_all()
-                    batch.clear()
+            if len(batch) >= COMMIT_EVERY:
+                LOGGER.info(
+                    'Adding batch of %d %s %s links, this may take a while ...',
+                    COMMIT_EVERY, catalog, entity
+                )
+                session.bulk_save_objects(batch)
+                session.commit()
 
-            LOGGER.info(
-                'Adding last batch of %d %s %s links, this may take a while ...',
-                len(batch), catalog, entity
-            )
-            # Commit remaining entities
-            session.bulk_save_objects(batch)
-            session.commit()
+                # Clear session & batch entities
+                session.expunge_all()
+                batch.clear()
 
-        except SQLAlchemyError as error:
-            LOGGER.error("Failed addition/update due to %s. "
-                         "You can enable the debug log with the CLI option "
-                         "'-l soweego.ingestor DEBUG' for more details",
-                         error.__class__.__name__)
-            LOGGER.debug(error)
-            session.rollback()
+        LOGGER.info(
+            'Adding last batch of %d %s %s links, this may take a while ...',
+            len(batch), catalog, entity
+        )
+        # Commit remaining entities
+        session.bulk_save_objects(batch)
+        session.commit()
+        success = True
 
-        finally:
-            session.close()
+    except SQLAlchemyError as error:
+        LOGGER.error("Failed addition/update due to %s. "
+                     "You can enable the debug log with the CLI option "
+                     "'-l soweego.ingestor DEBUG' for more details",
+                     error.__class__.__name__)
+        LOGGER.debug(error)
+        session.rollback()
+        success = False
 
-    end = datetime.now()
-    LOGGER.info(
-        'Import of %s %s links (catalog ID: %d) completed in %s. '
-        'Total links: %d',
-        catalog, entity, catalog_id, end - start, n_lines
-    )
+    finally:
+        session.close()
+
+    if success:
+        end = datetime.now()
+        LOGGER.info(
+            'Import of %s %s links (catalog ID: %d) completed in %s. '
+            'Total links: %d',
+            catalog, entity, catalog_id, end - start, n_links
+        )
 
 
-def _set_entry_fields(db_entity, catalog_id, qid, tid, class_qid):
+def _set_entry_fields(db_entity, catalog_id, qid, tid, class_qid, confidence_score):
     db_entity.catalog = catalog_id
     db_entity.q = int(qid.lstrip('Q'))
     db_entity.ext_id = tid
+    db_entity.type = class_qid
+    db_entity.ext_desc = EXT_DESC_FIELD.format(confidence_score)
     db_entity.user = 0
     db_entity.timestamp = datetime.now().strftime(TIMESTAMP_FORMAT)
-    db_entity.type = class_qid
 
 
 def activate_catalog(catalog_id, catalog, entity):
