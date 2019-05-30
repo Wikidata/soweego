@@ -210,13 +210,18 @@ def add_links(file_path, catalog_id, catalog, entity, threshold):
         curated = session.query(mix_n_match.MnMEntry.ext_id).filter(
             mix_n_match.MnMEntry.catalog == catalog_id,
             mix_n_match.MnMEntry.user != 0
-        ).all()
+        )
+        # Result is a tuple: (tid,)
+        curated = [res[0] for res in curated]
+
         n_deleted = session.query(mix_n_match.MnMEntry).filter(
             mix_n_match.MnMEntry.catalog == catalog_id,
             mix_n_match.MnMEntry.user == 0
         ).delete(synchronize_session=False)
+
         session.commit()
         session.expunge_all()
+
         LOGGER.info(
             'Kept %d curated links, deleted %d remaining links',
             len(curated), n_deleted
@@ -229,6 +234,7 @@ def add_links(file_path, catalog_id, catalog, entity, threshold):
             error.__class__.__name__
         )
         LOGGER.debug(error)
+
         session.rollback()
         success = False
 
