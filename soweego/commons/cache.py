@@ -133,13 +133,19 @@ def cached(function):
     20
 
     """
+
     def wrapper(*args, **kwargs):
-        key = str([function.__module__]) + \
-            function.__name__ + str(args) + str(kwargs)
+        key = (
+            str([function.__module__])
+            + function.__name__
+            + str(args)
+            + str(kwargs)
+        )
         res = get_value(key)
         if res is None:
             res = function(*args, **kwargs)
             if res is not None:
                 set_value(key, res)
         return res
+
     return wrapper
