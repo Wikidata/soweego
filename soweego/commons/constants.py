@@ -18,17 +18,22 @@ from soweego.importer.imdb_dump_extractor import ImdbDumpExtractor
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.base_link_entity import BaseLinkEntity
 from soweego.importer.models.base_nlp_entity import BaseNlpEntity
-from soweego.importer.models.discogs_entity import DiscogsMusicianEntity, \
-    DiscogsMusicianLinkEntity, DiscogsMusicianNlpEntity, DiscogsMasterEntity, \
-    DiscogsGroupNlpEntity, DiscogsMasterArtistRelationship, \
-    DiscogsGroupLinkEntity, DiscogsGroupEntity
-from soweego.importer.models.imdb_entity import ImdbActorEntity, \
-    ImdbDirectorEntity, ImdbMovieEntity, ImdbMusicianEntity, \
-    ImdbMoviePersonRelationship, ImdbProducerEntity, ImdbWriterEntity
-from soweego.importer.models.musicbrainz_entity import MusicbrainzArtistEntity, \
-    MusicbrainzBandEntity, MusicbrainzArtistLinkEntity, \
-    MusicbrainzBandLinkEntity, MusicBrainzReleaseGroupArtistRelationship, \
-    MusicbrainzReleaseGroupEntity, MusicbrainzReleaseGroupLinkEntity
+from soweego.importer.models.discogs_entity import (
+    DiscogsGroupEntity, DiscogsGroupLinkEntity, DiscogsGroupNlpEntity,
+    DiscogsMasterArtistRelationship, DiscogsMasterEntity,
+    DiscogsMusicianEntity, DiscogsMusicianLinkEntity, DiscogsMusicianNlpEntity)
+from soweego.importer.models.imdb_entity import (ImdbActorEntity,
+                                                 ImdbDirectorEntity,
+                                                 ImdbMovieEntity,
+                                                 ImdbMoviePersonRelationship,
+                                                 ImdbMusicianEntity,
+                                                 ImdbProducerEntity,
+                                                 ImdbWriterEntity)
+from soweego.importer.models.musicbrainz_entity import (
+    MusicbrainzArtistEntity, MusicbrainzArtistLinkEntity,
+    MusicbrainzBandEntity, MusicbrainzBandLinkEntity,
+    MusicBrainzReleaseGroupArtistRelationship, MusicbrainzReleaseGroupEntity,
+    MusicbrainzReleaseGroupLinkEntity)
 from soweego.wikidata import vocabulary
 
 # Wikidata items & properties regexes

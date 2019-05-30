@@ -13,11 +13,12 @@ import logging
 
 import click
 
-from soweego import (commons, wikidata)
+from soweego import commons
+from soweego import pipeline as pipeline_cli
+from soweego import wikidata
 from soweego.importer import cli as importer_cli
 from soweego.ingestor import cli as ingestor_cli
 from soweego.linker import cli as linker_cli
-from soweego import pipeline as pipeline_cli
 from soweego.validator import cli as validator_cli
 from soweego.wikidata import cli as wikidata_cli
 
@@ -27,7 +28,7 @@ CLI_COMMANDS = {
     'linker': linker_cli.cli,
     'validator': validator_cli.cli,
     'wikidata': wikidata_cli.cli,
-    'run': pipeline_cli.cli
+    'run': pipeline_cli.cli,
 }
 
 # Avoid verbose requests logging
