@@ -212,7 +212,10 @@ def add_links(file_path, catalog_id, catalog, entity, confidence_range):
     # drop duplicate TIDs,
     # keep the duplicate with the best score (last one)
     links = (
-        links[(links[keys.CONFIDENCE] >= confidence_range[0]) & (links[keys.CONFIDENCE] <= confidence_range[1])]
+        links[
+            (links[keys.CONFIDENCE] >= confidence_range[0])
+            & (links[keys.CONFIDENCE] <= confidence_range[1])
+        ]
         .sort_values(keys.CONFIDENCE)
         .drop_duplicates(keys.TID, keep='last')
     )
