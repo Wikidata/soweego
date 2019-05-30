@@ -34,10 +34,11 @@ class DBManager():
     __engine: Engine
     __credentials = None
 
-    def __init__(self):
+    def __init__(self, db_name=None):
         credentials = DBManager.get_credentials()
         db_engine = credentials[keys.DB_ENGINE]
-        db_name = credentials[keys.PROD_DB]
+        if db_name is None:
+            db_name = credentials[keys.PROD_DB]
         user = credentials[keys.USER]
         password = credentials[keys.PASSWORD]
         host = credentials[keys.HOST]
