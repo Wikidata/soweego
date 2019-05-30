@@ -13,27 +13,39 @@ from typing import TypeVar
 
 from soweego.commons import keys
 from soweego.importer.discogs_dump_extractor import DiscogsDumpExtractor
-from soweego.importer.musicbrainz_dump_extractor import MusicBrainzDumpExtractor
 from soweego.importer.imdb_dump_extractor import ImdbDumpExtractor
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.base_link_entity import BaseLinkEntity
 from soweego.importer.models.base_nlp_entity import BaseNlpEntity
 from soweego.importer.models.discogs_entity import (
-    DiscogsGroupEntity, DiscogsGroupLinkEntity, DiscogsGroupNlpEntity,
-    DiscogsMasterArtistRelationship, DiscogsMasterEntity,
-    DiscogsMusicianEntity, DiscogsMusicianLinkEntity, DiscogsMusicianNlpEntity)
-from soweego.importer.models.imdb_entity import (ImdbActorEntity,
-                                                 ImdbDirectorEntity,
-                                                 ImdbMovieEntity,
-                                                 ImdbMoviePersonRelationship,
-                                                 ImdbMusicianEntity,
-                                                 ImdbProducerEntity,
-                                                 ImdbWriterEntity)
+    DiscogsGroupEntity,
+    DiscogsGroupLinkEntity,
+    DiscogsGroupNlpEntity,
+    DiscogsMasterArtistRelationship,
+    DiscogsMasterEntity,
+    DiscogsMusicianEntity,
+    DiscogsMusicianLinkEntity,
+    DiscogsMusicianNlpEntity,
+)
+from soweego.importer.models.imdb_entity import (
+    ImdbActorEntity,
+    ImdbDirectorEntity,
+    ImdbMovieEntity,
+    ImdbMoviePersonRelationship,
+    ImdbMusicianEntity,
+    ImdbProducerEntity,
+    ImdbWriterEntity,
+)
 from soweego.importer.models.musicbrainz_entity import (
-    MusicbrainzArtistEntity, MusicbrainzArtistLinkEntity,
-    MusicbrainzBandEntity, MusicbrainzBandLinkEntity,
-    MusicBrainzReleaseGroupArtistRelationship, MusicbrainzReleaseGroupEntity,
-    MusicbrainzReleaseGroupLinkEntity)
+    MusicbrainzArtistEntity,
+    MusicbrainzArtistLinkEntity,
+    MusicbrainzBandEntity,
+    MusicbrainzBandLinkEntity,
+    MusicBrainzReleaseGroupArtistRelationship,
+    MusicbrainzReleaseGroupEntity,
+    MusicbrainzReleaseGroupLinkEntity,
+)
+from soweego.importer.musicbrainz_dump_extractor import MusicBrainzDumpExtractor
 from soweego.wikidata import vocabulary
 
 # Wikidata items & properties regexes
@@ -80,7 +92,7 @@ TARGET_CATALOGS = {
             keys.LINK_ENTITY: DiscogsMusicianLinkEntity,
             keys.NLP_ENTITY: DiscogsMusicianNlpEntity,
             keys.RELATIONSHIP_ENTITY: DiscogsMasterArtistRelationship,
-            keys.WORK_TYPE: keys.MUSICAL_WORK
+            keys.WORK_TYPE: keys.MUSICAL_WORK,
         },
         keys.BAND: {
             keys.CLASS_QID: vocabulary.BAND_QID,
@@ -88,7 +100,7 @@ TARGET_CATALOGS = {
             keys.LINK_ENTITY: DiscogsGroupLinkEntity,
             keys.NLP_ENTITY: DiscogsGroupNlpEntity,
             keys.RELATIONSHIP_ENTITY: DiscogsMasterArtistRelationship,
-            keys.WORK_TYPE: keys.MUSICAL_WORK
+            keys.WORK_TYPE: keys.MUSICAL_WORK,
         },
         keys.MUSICAL_WORK: {
             keys.CLASS_QID: vocabulary.MUSICAL_WORK_QID,
@@ -96,8 +108,8 @@ TARGET_CATALOGS = {
             keys.LINK_ENTITY: None,
             keys.NLP_ENTITY: None,
             keys.RELATIONSHIP_ENTITY: MusicBrainzReleaseGroupArtistRelationship,
-            keys.WORK_TYPE: None
-        }
+            keys.WORK_TYPE: None,
+        },
     },
     keys.IMDB: {
         keys.ACTOR: {
@@ -106,7 +118,7 @@ TARGET_CATALOGS = {
             keys.LINK_ENTITY: None,
             keys.NLP_ENTITY: None,
             keys.RELATIONSHIP_ENTITY: ImdbMoviePersonRelationship,
-            keys.WORK_TYPE: keys.AUDIOVISUAL_WORK
+            keys.WORK_TYPE: keys.AUDIOVISUAL_WORK,
         },
         keys.DIRECTOR: {
             keys.CLASS_QID: vocabulary.FILM_DIRECTOR_QID,
@@ -114,7 +126,7 @@ TARGET_CATALOGS = {
             keys.LINK_ENTITY: None,
             keys.NLP_ENTITY: None,
             keys.RELATIONSHIP_ENTITY: ImdbMoviePersonRelationship,
-            keys.WORK_TYPE: keys.AUDIOVISUAL_WORK
+            keys.WORK_TYPE: keys.AUDIOVISUAL_WORK,
         },
         keys.MUSICIAN: {
             keys.CLASS_QID: vocabulary.MUSICIAN_QID,
@@ -122,7 +134,7 @@ TARGET_CATALOGS = {
             keys.LINK_ENTITY: None,
             keys.NLP_ENTITY: None,
             keys.RELATIONSHIP_ENTITY: ImdbMoviePersonRelationship,
-            keys.WORK_TYPE: keys.AUDIOVISUAL_WORK
+            keys.WORK_TYPE: keys.AUDIOVISUAL_WORK,
         },
         keys.PRODUCER: {
             keys.CLASS_QID: vocabulary.FILM_PRODUCER_QID,
@@ -130,7 +142,7 @@ TARGET_CATALOGS = {
             keys.LINK_ENTITY: None,
             keys.NLP_ENTITY: None,
             keys.RELATIONSHIP_ENTITY: ImdbMoviePersonRelationship,
-            keys.WORK_TYPE: keys.AUDIOVISUAL_WORK
+            keys.WORK_TYPE: keys.AUDIOVISUAL_WORK,
         },
         keys.WRITER: {
             keys.CLASS_QID: vocabulary.SCREENWRITER_QID,
@@ -138,7 +150,7 @@ TARGET_CATALOGS = {
             keys.LINK_ENTITY: None,
             keys.NLP_ENTITY: None,
             keys.RELATIONSHIP_ENTITY: ImdbMoviePersonRelationship,
-            keys.WORK_TYPE: keys.AUDIOVISUAL_WORK
+            keys.WORK_TYPE: keys.AUDIOVISUAL_WORK,
         },
         keys.AUDIOVISUAL_WORK: {
             keys.CLASS_QID: vocabulary.AUDIOVISUAL_WORK_QID,
@@ -146,8 +158,8 @@ TARGET_CATALOGS = {
             keys.LINK_ENTITY: None,
             keys.NLP_ENTITY: None,
             keys.RELATIONSHIP_ENTITY: ImdbMoviePersonRelationship,
-            keys.WORK_TYPE: None
-        }
+            keys.WORK_TYPE: None,
+        },
     },
     keys.MUSICBRAINZ: {
         keys.MUSICIAN: {
@@ -156,7 +168,7 @@ TARGET_CATALOGS = {
             keys.LINK_ENTITY: MusicbrainzArtistLinkEntity,
             keys.NLP_ENTITY: None,
             keys.RELATIONSHIP_ENTITY: MusicBrainzReleaseGroupArtistRelationship,
-            keys.WORK_TYPE: keys.MUSICAL_WORK
+            keys.WORK_TYPE: keys.MUSICAL_WORK,
         },
         keys.BAND: {
             keys.CLASS_QID: vocabulary.BAND_QID,
@@ -164,7 +176,7 @@ TARGET_CATALOGS = {
             keys.LINK_ENTITY: MusicbrainzBandLinkEntity,
             keys.NLP_ENTITY: None,
             keys.RELATIONSHIP_ENTITY: MusicBrainzReleaseGroupArtistRelationship,
-            keys.WORK_TYPE: keys.MUSICAL_WORK
+            keys.WORK_TYPE: keys.MUSICAL_WORK,
         },
         keys.MUSICAL_WORK: {
             keys.CLASS_QID: vocabulary.MUSICAL_WORK_QID,
@@ -172,9 +184,9 @@ TARGET_CATALOGS = {
             keys.LINK_ENTITY: MusicbrainzReleaseGroupLinkEntity,
             keys.NLP_ENTITY: None,
             keys.RELATIONSHIP_ENTITY: MusicBrainzReleaseGroupArtistRelationship,
-            keys.WORK_TYPE: None
-        }
-    }
+            keys.WORK_TYPE: None,
+        },
+    },
 }
 
 # When building the wikidata dump for catalogs in this array
