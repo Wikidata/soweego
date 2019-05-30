@@ -23,6 +23,8 @@ BASE = declarative_base()
 CATALOG_TABLE = 'catalog'
 ENTRY_TABLE = 'entry'
 
+CATALOG_OWNER = 2362992  # soweego bot MnM user ID
+
 
 class MnMCatalog(BASE):
     __tablename__ = CATALOG_TABLE
@@ -37,7 +39,7 @@ class MnMCatalog(BASE):
     autosync = Column(String(64), nullable=False, default='')
     active = Column(TINYINT(1), nullable=False, default=1)
     betamatch_hint = Column(String(64), nullable=False, default='')
-    owner = Column(Integer, nullable=False, default=2)
+    owner = Column(Integer, nullable=False, default=CATALOG_OWNER)
     limiter = Column(TINYTEXT, nullable=False, default='')
     note = Column(TINYTEXT, nullable=False, default='')
     source_item = Column(Integer)
