@@ -27,11 +27,21 @@ LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
-@click.argument('catalog', type=click.Choice(target_database.supported_targets()))
-@click.option('--url-check', is_flag=True,
-              help='Check for rotten URLs while importing. Default: no. WARNING: this will dramatically increase the import time.')
-@click.option('-d', '--dir-io', type=click.Path(file_okay=False), default=constants.SHARED_FOLDER,
-              help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER)
+@click.argument(
+    'catalog', type=click.Choice(target_database.supported_targets())
+)
+@click.option(
+    '--url-check',
+    is_flag=True,
+    help='Check for rotten URLs while importing. Default: no. WARNING: this will dramatically increase the import time.',
+)
+@click.option(
+    '-d',
+    '--dir-io',
+    type=click.Path(file_okay=False),
+    default=constants.SHARED_FOLDER,
+    help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER,
+)
 def import_cli(catalog: str, url_check: bool, dir_io: str) -> None:
     """Download, extract and import an available catalog."""
 
@@ -45,7 +55,9 @@ def _resolve_url(res):
 
 
 @click.command()
-@click.argument('catalog', type=click.Choice(target_database.supported_targets()))
+@click.argument(
+    'catalog', type=click.Choice(target_database.supported_targets())
+)
 def check_links_cli(catalog: str):
     """Check for rotten URLs of an imported catalog."""
     for entity_type in target_database.supported_entities_for_target(catalog):
@@ -53,8 +65,11 @@ def check_links_cli(catalog: str):
         LOGGER.info("Validating %s %s links...", catalog, entity_type)
         entity = target_database.get_link_entity(catalog, entity_type)
         if not entity:
-            LOGGER.info("%s %s does not have a links table. Skipping...",
-                        catalog, entity_type)
+            LOGGER.info(
+                "%s %s does not have a links table. Skipping...",
+                catalog,
+                entity_type,
+            )
             continue
 
         session = DBManager.connect_to_db()
@@ -63,8 +78,10 @@ def check_links_cli(catalog: str):
 
         with Pool() as pool:
             # Validate each link
-            for resolved, res_entity in tqdm(pool.imap_unordered(_resolve_url,
-                                                                 session.query(entity)), total=total):
+            for resolved, res_entity in tqdm(
+                pool.imap_unordered(_resolve_url, session.query(entity)),
+                total=total,
+            ):
                 if not resolved:
                     session_delete = DBManager.connect_to_db()
                     # if not valid delete
@@ -79,13 +96,15 @@ def check_links_cli(catalog: str):
                         session_delete.close()
 
         session.close()
-        LOGGER.info("Removed %s/%s from %s %s",
-                    removed, total, catalog, entity_type)
+        LOGGER.info(
+            "Removed %s/%s from %s %s", removed, total, catalog, entity_type
+        )
 
 
 class Importer:
-
-    def refresh_dump(self, output_folder: str, downloader: BaseDumpExtractor, resolve: bool):
+    def refresh_dump(
+        self, output_folder: str, downloader: BaseDumpExtractor, resolve: bool
+    ):
         """Downloads the dump, if necessary,
         and calls the handler over the dump file"""
         filepaths = []
@@ -94,16 +113,21 @@ class Importer:
 
             LOGGER.info("Retrieving last modified of %s", download_url)
 
-            last_modified = client.http_call(download_url,
-                                             'HEAD').headers[keys.LAST_MODIFIED]
+            last_modified = client.http_call(download_url, 'HEAD').headers[
+                keys.LAST_MODIFIED
+            ]
 
             try:
                 last_modified = datetime.datetime.strptime(
-                    last_modified, '%a, %d %b %Y %H:%M:%S GMT').strftime('%Y%m%d_%H%M%S')
+                    last_modified, '%a, %d %b %Y %H:%M:%S GMT'
+                ).strftime('%Y%m%d_%H%M%S')
             except TypeError:
                 LOGGER.info(
-                    "Last modified not available, using now as replacement")
-                last_modified = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+                    "Last modified not available, using now as replacement"
+                )
+                last_modified = datetime.datetime.now().strftime(
+                    '%Y%m%d_%H%M%S'
+                )
 
             extensions = download_url.split('/')[-1].split('.')[1:]
 
@@ -114,7 +138,9 @@ class Importer:
             # Check if the current dump is up-to-date
             if not os.path.isfile(file_full_path):
                 LOGGER.info(
-                    "%s not previously downloaded, downloading now...", download_url)
+                    "%s not previously downloaded, downloading now...",
+                    download_url,
+                )
                 self._update_dump(download_url, file_full_path)
             filepaths.append(file_full_path)
 

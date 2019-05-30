@@ -15,7 +15,7 @@ from soweego.importer import importer
 
 CLI_COMMANDS = {
     'import': importer.import_cli,
-    'check_links': importer.check_links_cli
+    'check_links': importer.check_links_cli,
 }
 
 
@@ -23,4 +23,3 @@ CLI_COMMANDS = {
 @click.pass_context
 def cli(ctx):
     """Import target dumps into the database."""
-    pass
