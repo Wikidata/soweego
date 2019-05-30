@@ -7,8 +7,8 @@ import click
 
 from soweego.commons import target_database
 from soweego.commons.db_manager import DBManager
-from soweego.importer.importer import import_cli
 from soweego.importer.importer import check_links_cli as validate_links
+from soweego.importer.importer import import_cli
 from soweego.linker import baseline, classify, evaluate, train
 from soweego.validator.checks import (
     check_existence_cli,
@@ -50,15 +50,18 @@ LOGGER = logging.getLogger(__name__)
     default=None,
     help="default: None",
 )
-def cli(target: str, validator: bool, importer: bool, linker: bool,
-        upload: bool,
-        credentials_path: str,
-        ):
+def cli(
+    target: str,
+    validator: bool,
+    importer: bool,
+    linker: bool,
+    upload: bool,
+    credentials_path: str,
+):
     """Executes importer/linker and optionally validator for a target"""
 
     if credentials_path:
-        LOGGER.info(
-            "Using database credentials from file %s", credentials_path)
+        LOGGER.info("Using database credentials from file %s", credentials_path)
         DBManager.set_credentials_from_path(credentials_path)
 
     if importer:
