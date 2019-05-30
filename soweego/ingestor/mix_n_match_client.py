@@ -179,6 +179,7 @@ def _set_catalog_fields(db_entity, name_field, catalog, entity):
 
 
 def add_links(file_path, catalog_id, catalog, entity, threshold):
+    success = True  # Flag to log that everything went fine
     url_prefix = CATALOG_ENTITY_URLS.get(f'{catalog}_{entity}')
     if url_prefix is None:
         LOGGER.debug('URL not available for %s %s', catalog, entity)
@@ -189,11 +190,6 @@ def add_links(file_path, catalog_id, catalog, entity, threshold):
     else:
         class_qid = HUMAN_QID
 
-    LOGGER.info(
-        "Starting import of %s %s links (catalog ID: %d) into the mix'n'match DB ...",
-        catalog, entity, catalog_id
-    )
-    start = datetime.now()
     links = read_csv(file_path, names=INPUT_CSV_HEADER)
     # Filter links above threshold,
     # sort by confidence in ascending order,
@@ -201,11 +197,50 @@ def add_links(file_path, catalog_id, catalog, entity, threshold):
     # keep the duplicate with the best score (last one)
     links = links[links[keys.CONFIDENCE] >= threshold].sort_values(keys.CONFIDENCE).drop_duplicates(keys.TID, keep='last')
 
+    LOGGER.info(
+        "Starting import of %s %s links (catalog ID: %d) into the mix'n'match DB ...",
+        catalog, entity, catalog_id
+    )
+    start = datetime.now()
+    session = DBManager(MNM_DB).new_session()
+    curated = []
+
+    # Note that the session is kept open after these operations
+    try:
+        curated = session.query(mix_n_match.MnMEntry.ext_id).filter(
+            mix_n_match.MnMEntry.catalog == catalog_id,
+            mix_n_match.MnMEntry.user != 0
+        ).all()
+        n_deleted = session.query(mix_n_match.MnMEntry).filter(
+            mix_n_match.MnMEntry.catalog == catalog_id,
+            mix_n_match.MnMEntry.user == 0
+        ).delete(synchronize_session=False)
+        session.commit()
+        session.expunge_all()
+        LOGGER.info(
+            'Kept %d curated links, deleted %d remaining links',
+            len(curated), n_deleted
+        )
+    except SQLAlchemyError as error:
+        LOGGER.error(
+            "Failed query of existing links due to %s. "
+            "You can enable the debug log with the CLI option "
+            "'-l soweego.ingestor DEBUG' for more details",
+            error.__class__.__name__
+        )
+        LOGGER.debug(error)
+        session.rollback()
+        success = False
+
+    # Filter curated links:
+    # rows with tids that are NOT (~) in curated tids
+    links = links[~links[keys.TID].isin(curated)]
+
     n_links = len(links)
     links_reader = links.itertuples(index=False, name=None)
 
     batch = []
-    session = DBManager(MNM_DB).new_session()
+
     try:
         for qid, tid, score in tqdm(links_reader, total=n_links):
             url = '' if url_prefix is None else url_prefix + tid
@@ -233,13 +268,14 @@ def add_links(file_path, catalog_id, catalog, entity, threshold):
         # Commit remaining entities
         session.bulk_save_objects(batch)
         session.commit()
-        success = True
 
     except SQLAlchemyError as error:
-        LOGGER.error("Failed addition/update due to %s. "
-                     "You can enable the debug log with the CLI option "
-                     "'-l soweego.ingestor DEBUG' for more details",
-                     error.__class__.__name__)
+        LOGGER.error(
+            "Failed addition/update due to %s. "
+            "You can enable the debug log with the CLI option "
+            "'-l soweego.ingestor DEBUG' for more details",
+            error.__class__.__name__
+        )
         LOGGER.debug(error)
         session.rollback()
         success = False
