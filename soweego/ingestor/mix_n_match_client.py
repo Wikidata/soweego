@@ -112,9 +112,9 @@ CATALOG_ENTITY_URLS = {
 @click.argument(
     'entity', type=click.Choice(target_database.supported_entities())
 )
-@click.argument('threshold', type=float)
+@click.argument('confidence_range', type=(float, float))
 @click.argument('links', type=click.Path(exists=True, dir_okay=False))
-def cli(catalog, entity, threshold, links):
+def cli(catalog, entity, confidence_range, links):
     """Upload identifiers to the mix'n'match tool.
 
     LINKS must be a CSV file path, with format:
@@ -126,7 +126,7 @@ def cli(catalog, entity, threshold, links):
     if catalog_id is None:
         exit(1)
 
-    add_links(links, catalog_id, catalog, entity, threshold)
+    add_links(links, catalog_id, catalog, entity, confidence_range)
     activate_catalog(catalog_id, catalog, entity)
 
 
@@ -194,7 +194,7 @@ def _set_catalog_fields(db_entity, name_field, catalog, entity):
     db_entity.search_wp = SEARCH_WP_FIELD
 
 
-def add_links(file_path, catalog_id, catalog, entity, threshold):
+def add_links(file_path, catalog_id, catalog, entity, confidence_range):
     success = True  # Flag to log that everything went fine
     url_prefix = CATALOG_ENTITY_URLS.get(f'{catalog}_{entity}')
     if url_prefix is None:
@@ -212,7 +212,7 @@ def add_links(file_path, catalog_id, catalog, entity, threshold):
     # drop duplicate TIDs,
     # keep the duplicate with the best score (last one)
     links = (
-        links[links[keys.CONFIDENCE] >= threshold]
+        links[(links[keys.CONFIDENCE] >= confidence_range[0]) & (links[keys.CONFIDENCE] <= confidence_range[1])]
         .sort_values(keys.CONFIDENCE)
         .drop_duplicates(keys.TID, keep='last')
     )
