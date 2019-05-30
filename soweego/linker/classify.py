@@ -65,7 +65,9 @@ def cli(classifier, target, target_type, name_rule, upload, sandbox, threshold, 
 
     rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
 
+    # Save results of classification to results file
     for chunk in execute(target, target_type, model_path, name_rule, threshold, dir_io):
+
         if upload:
             _upload(chunk, target, sandbox)
 
@@ -104,13 +106,7 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
         target_chunks = pd.read_pickle(complete_target_path)
 
         # remove duplicate entries from target_chunks
-        target_chunks = (target_chunks
-                        # make TID a normal column
-                         .reset_index() 
-                         # remove duplicated TID rows 
-                         .drop_duplicates(subset=keys.TID) 
-                         # finally reset TID as the index
-                         .set_index(keys.TID))
+        target_chunks = target_chunks[~target_chunks.index.duplicated()]
 
         _add_missing_feature_columns(classifier, fvectors)
 
@@ -126,7 +122,11 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
             predictions = DataFrame(predictions).apply(
                 _one_when_wikidata_link_correct, axis=1, args=(target_chunks,))
 
-        yield predictions[predictions >= threshold].drop_duplicates()
+        # get all 'confident' predictions
+        above_threshold = predictions[predictions >= threshold]
+
+        # yield only those predictions which are not duplicate
+        yield above_threshold[~above_threshold.index.duplicated()]
 
     else:
 
@@ -206,7 +206,11 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
 
             LOGGER.info('Chunk %d classified', i)
 
-            yield predictions[predictions >= threshold].drop_duplicates()
+            # get all 'confident' predictions
+            above_threshold = predictions[predictions >= threshold]
+
+            # yield only those predictions which are not duplicate
+            yield above_threshold[~above_threshold.index.duplicated()]
 
         # dump all processed chunks as pickled files
         all_feature_vectors.to_pickle(complete_fv_path)
