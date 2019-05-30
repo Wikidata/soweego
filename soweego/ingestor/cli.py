@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""TODO module docstring"""
+"""Ingestor CLI commands."""
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -14,10 +14,11 @@ import click
 from soweego.ingestor import mix_n_match_client, wikidata_bot
 
 CLI_COMMANDS = {
-    'add_identifiers': wikidata_bot.add_identifiers_cli,
-    'delete_identifiers': wikidata_bot.delete_identifiers_cli,
-    'deprecate_identifiers': wikidata_bot.deprecate_identifiers_cli,
-    'add_statements': wikidata_bot.add_statements_cli,
+    'add': wikidata_bot.add_cli,
+    'add_people_statements': wikidata_bot.add_people_statements_cli,
+    'add_works_statements': wikidata_bot.add_works_statements_cli,
+    'delete': wikidata_bot.delete_cli,
+    'deprecate': wikidata_bot.deprecate_cli,
     'mix_n_match': mix_n_match_client.cli,
 }
 

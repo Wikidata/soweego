@@ -24,7 +24,7 @@ import pywikibot
 
 from soweego.commons import target_database
 from soweego.commons.constants import QID_REGEX
-from soweego.commons.keys import IMDB
+from soweego.commons.keys import IMDB, TWITTER
 from soweego.wikidata import vocabulary
 
 LOGGER = logging.getLogger(__name__)
@@ -51,132 +51,135 @@ RETRIEVED_REFERENCE = pywikibot.Claim(
 )
 RETRIEVED_REFERENCE.setTarget(TIMESTAMP)
 
+# We also support Twitter
+SUPPORTED_TARGETS = target_database.supported_targets() ^ {TWITTER}
+
 
 @click.command()
-@click.argument(
-    'catalog_name',
-    type=click.Choice(['discogs', 'imdb', 'musicbrainz', 'twitter']),
-)
-@click.argument('matches', type=click.File())
-@click.option(
-    '-s',
-    '--sandbox',
-    is_flag=True,
-    help='Perform all edits in the Wikidata sandbox item Q4115189.',
-)
-def add_identifiers_cli(catalog_name, matches, sandbox):
+@click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
+@click.argument('identifiers', type=click.File())
+@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits on the Wikidata sandbox item Q4115189.')
+def add_cli(catalog, identifiers, sandbox):
     """Add identifiers to existing Wikidata items.
 
-    MATCHES must be a { QID: catalog_identifier } JSON file.
+    IDENTIFIERS must be a { QID: catalog_identifier } JSON file.
     """
     if sandbox:
-        LOGGER.info('Running on the Wikidata sandbox item')
-    add_identifiers(json.load(matches), catalog_name, sandbox)
+        LOGGER.info('Running on the Wikidata sandbox item ...')
+
+    add_identifiers(json.load(identifiers), catalog, sandbox)
 
 
 @click.command()
-@click.argument(
-    'catalog_name',
-    type=click.Choice(['discogs', 'imdb', 'musicbrainz', 'twitter']),
-)
+@click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
 @click.argument('statements', type=click.File())
-@click.option(
-    '-s',
-    '--sandbox',
-    is_flag=True,
-    help='Perform all edits in the Wikidata sandbox item Q4115189.',
-)
-def add_statements_cli(catalog_name, statements, sandbox):
-    """Add statements to existing Wikidata items.
+@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits on the Wikidata sandbox item Q4115189.')
+def add_people_statements_cli(catalog, statements, sandbox):
+    """Add statements to existing Wikidata people.
 
-    STATEMENTS must be a subject, predicate, value TSV file.
+    STATEMENTS must be a person_QID, PID, value CSV file.
     """
-    stated_in = target_database.get_catalog_qid(catalog_name)
+    stated_in = target_database.get_catalog_qid(catalog)
+
     if sandbox:
-        LOGGER.info('Running on the Wikidata sandbox item')
+        LOGGER.info('Running on the Wikidata sandbox item ...')
+
     for statement in statements:
-        subject, predicate, value = statement.rstrip().split('\t')
+        person, predicate, value = statement.rstrip().split(',')
         if sandbox:
             add_or_reference_people(
                 vocabulary.SANDBOX_1, predicate, value, stated_in
             )
         else:
-            add_or_reference_people(subject, predicate, value, stated_in)
+            add_or_reference_people(person, predicate, value, stated_in)
 
 
 @click.command()
-@click.argument(
-    'catalog_name',
-    type=click.Choice(['discogs', 'imdb', 'musicbrainz', 'twitter']),
-)
+@click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
+@click.argument('statements', type=click.File())
+@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits on the Wikidata sandbox item Q4115189.')
+def add_works_statements_cli(catalog, statements, sandbox):
+    """Add statements to existing Wikidata works.
+
+    STATEMENTS must be a work_QID, PID, person_QID, person_target_ID CSV file.
+    """
+    catalog_qid, is_imdb, person_pid = _get_works_args(catalog)
+
+    if sandbox:
+        LOGGER.info('Running on the Wikidata sandbox item ...')
+
+    for statement in statements:
+        work, predicate, person, person_tid = statement.rstrip().split(',')
+        if sandbox:
+            add_or_reference_works(vocabulary.SANDBOX_1, predicate,
+                                   person, catalog_qid, person_pid,
+                                   person_tid, is_imdb)
+        else:
+            add_or_reference_works(work, predicate, person, catalog_qid,
+                                   person_pid, person_tid, is_imdb)
+
+
+def _get_works_args(catalog):
+    # Boolean to run IMDb-specific checks
+    is_imdb = catalog == IMDB
+    catalog_qid = target_database.get_catalog_qid(catalog)
+    person_pid = target_database.get_person_pid(catalog)
+    return catalog_qid, is_imdb, person_pid
+
+
+@click.command()
+@click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
 @click.argument('invalid_identifiers', type=click.File())
-@click.option(
-    '-s',
-    '--sandbox',
-    is_flag=True,
-    help='Perform all edits in a random Wikidata sandbox item.',
-)
-def delete_identifiers_cli(catalog_name, invalid_identifiers, sandbox):
+@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits on the Wikidata sandbox item Q4115189.')
+def delete_cli(catalog, invalid_identifiers, sandbox):
     """Delete invalid identifiers from existing Wikidata items.
 
     INVALID_IDENTIFIERS must be a { QID: catalog_identifier } JSON file.
     """
     if sandbox:
-        LOGGER.info('Running on the Wikidata sandbox item')
-    delete_or_deprecate_identifiers(
-        'delete', json.load(invalid_identifiers), catalog_name, sandbox
-    )
+        LOGGER.info('Running on the Wikidata sandbox item ...')
+
+    delete_or_deprecate_identifiers('delete', json.load(
+        invalid_identifiers), catalog, sandbox)
 
 
 @click.command()
-@click.argument(
-    'catalog_name',
-    type=click.Choice(['discogs', 'imdb', 'musicbrainz', 'twitter']),
-)
+@click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
 @click.argument('invalid_identifiers', type=click.File())
-@click.option(
-    '-s',
-    '--sandbox',
-    is_flag=True,
-    help='Perform all edits on the Wikidata sandbox item Q4115189',
-)
-def deprecate_identifiers_cli(catalog_name, invalid_identifiers, sandbox):
+@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits on the Wikidata sandbox item Q4115189.')
+def deprecate_cli(catalog, invalid_identifiers, sandbox):
     """Deprecate invalid identifiers from existing Wikidata items.
 
     INVALID_IDENTIFIERS must be a { QID: catalog_identifier } JSON file.
     """
     if sandbox:
-        LOGGER.info('Running on the Wikidata sandbox item')
-    delete_or_deprecate_identifiers(
-        'deprecate', json.load(invalid_identifiers), catalog_name, sandbox
-    )
+        LOGGER.info('Running on the Wikidata sandbox item ...')
+
+    delete_or_deprecate_identifiers('deprecate', json.load(
+        invalid_identifiers), catalog, sandbox)
 
 
-def add_identifiers(matches: dict, catalog_name: str, sandbox: bool) -> None:
+def add_identifiers(identifiers: dict, catalog: str, sandbox: bool) -> None:
     """Add identifier statements to existing Wikidata items.
 
-    :param matches: a ``{QID: catalog_identifier}`` dictionary
-    :type matches: dict
-    :param catalog_name: the name of the target catalog, e.g., ``musicbrainz``
-    :type catalog_name: str
+    :param identifiers: a ``{QID: catalog_identifier}`` dictionary
+    :type identifiers: dict
+    :param catalog: the name of the target catalog, e.g., ``musicbrainz``
+    :type catalog: str
     :param sandbox: whether to perform edits on the Wikidata sandbox item Q4115189
     :type sandbox: bool
     """
-    pid = target_database.get_person_pid(catalog_name)
-    catalog_qid = target_database.get_catalog_qid(catalog_name)
-    for qid, catalog_id in matches.items():
-        LOGGER.info(
-            'Processing %s match: %s -> %s', catalog_name, qid, catalog_id
-        )
+    pid = target_database.get_person_pid(catalog)
+    catalog_qid = target_database.get_catalog_qid(catalog)
+
+    for qid, catalog_id in identifiers.items():
+        LOGGER.info('Processing %s match: %s -> %s',
+                    catalog, qid, catalog_id)
         if sandbox:
-            LOGGER.info(
-                'Using Wikidata sandbox item %s as subject, instead of %s',
-                vocabulary.SANDBOX_1,
-                qid,
-            )
-            add_or_reference_people(
-                vocabulary.SANDBOX_1, pid, catalog_id, catalog_qid
-            )
+            LOGGER.debug(
+                'Using Wikidata sandbox item %s as subject, instead of %s', vocabulary.SANDBOX_1, qid)
+            add_or_reference_people(vocabulary.SANDBOX_1, pid,
+                                    catalog_id, catalog_qid)
         else:
             add_or_reference_people(qid, pid, catalog_id, catalog_qid)
 
@@ -198,11 +201,7 @@ def add_works_statements(
     :param sandbox: whether to perform edits on the Wikidata sandbox item Q4115189
     :type sandbox: bool
     """
-
-    # Boolean to run IMDb-specific checks
-    is_imdb = catalog == IMDB
-    catalog_qid = target_database.get_catalog_qid(catalog)
-    person_pid = target_database.get_person_pid(catalog)
+    catalog_qid, is_imdb, person_pid = _get_works_args(catalog)
 
     for work, predicate, person, person_tid in statements:
         LOGGER.info(
@@ -210,29 +209,17 @@ def add_works_statements(
         )
         if sandbox:
             add_or_reference_works(
-                vocabulary.SANDBOX_1,
-                predicate,
-                person,
-                catalog_qid,
-                person_pid,
-                person_tid,
-                is_imdb=is_imdb,
+                vocabulary.SANDBOX_1, predicate, person, catalog_qid,
+                person_pid, person_tid, is_imdb=is_imdb
             )
         else:
             add_or_reference_works(
-                work,
-                predicate,
-                person,
-                catalog_qid,
-                person_pid,
-                person_tid,
-                is_imdb=is_imdb,
+                work, predicate, person, catalog_qid,
+                person_pid, person_tid, is_imdb=is_imdb
             )
 
 
-def add_people_statements(
-    statements: Iterable, stated_in_catalog: str, sandbox: bool
-) -> None:
+def add_people_statements(statements: Iterable, stated_in_catalog: str, sandbox: bool) -> None:
     """Add statements to existing Wikidata people.
 
     Statements typically come from validation criteria 2 or 3
@@ -298,15 +285,8 @@ def delete_or_deprecate_identifiers(
                 _delete_or_deprecate(action, qid, catalog_id, catalog_name)
 
 
-def add_or_reference_works(
-    work: str,
-    predicate: str,
-    person: str,
-    stated_in: str,
-    person_pid: str,
-    person_tid: str,
-    is_imdb=False,
-) -> None:
+def add_or_reference_works(work: str, predicate: str, person: str, stated_in: str, person_pid: str, person_tid: str,
+                           is_imdb=False) -> None:
     # Parse value into an item in case of QID
     qid = search(QID_REGEX, person)
     if not qid:
@@ -334,15 +314,8 @@ def add_or_reference_works(
     # IMDB-specific check: claims with same object item -> add reference
     if is_imdb:
         for pred in vocabulary.MOVIE_PIDS:
-            if _check_for_same_value(
-                claims,
-                work,
-                pred,
-                person,
-                stated_in,
-                person_pid=person_pid,
-                person_tid=person_tid,
-            ):
+            if _check_for_same_value(claims, work, pred, person, stated_in, person_pid=person_pid,
+                                     person_tid=person_tid):
                 return
 
     _add_or_reference(
@@ -376,30 +349,14 @@ def add_or_reference_people(
     # Handle case-insensitive IDs: Facebook, Twitter
     # See https://www.wikidata.org/wiki/Topic:Unym71ais48bt6ih
     case_insensitive = predicate in (
-        vocabulary.FACEBOOK_PID,
-        vocabulary.TWITTER_USERNAME_PID,
-    )
+        vocabulary.FACEBOOK_PID, vocabulary.TWITTER_USERNAME_PID)
 
-    _add_or_reference(
-        claims,
-        subject_item,
-        predicate,
-        value,
-        stated_in,
-        case_insensitive=case_insensitive,
-    )
+    _add_or_reference(claims, subject_item, predicate, value,
+                      stated_in, case_insensitive=case_insensitive)
 
 
-def _add_or_reference(
-    claims,
-    subject_item,
-    predicate,
-    value,
-    stated_in,
-    case_insensitive=False,
-    person_pid=None,
-    person_tid=None,
-):
+def _add_or_reference(claims, subject_item, predicate, value, stated_in, case_insensitive=False, person_pid=None,
+                      person_tid=None):
     given_predicate_claims = claims.get(predicate)
     subject_qid = subject_item.getID()
 
