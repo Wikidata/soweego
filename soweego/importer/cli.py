@@ -11,16 +11,12 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import click
 
-from soweego.importer import importer
+from soweego.importer.importer import check_links_cli, import_cli
 
-CLI_COMMANDS = {
-    'import': importer.import_cli,
-    'check_links': importer.check_links_cli
-}
+CLI_COMMANDS = {'import': import_cli, 'check_links': check_links_cli}
 
 
 @click.group(name='importer', commands=CLI_COMMANDS)
 @click.pass_context
 def cli(ctx):
     """Import target dumps into the database."""
-    pass
