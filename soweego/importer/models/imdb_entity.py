@@ -32,8 +32,9 @@ WRITER_TABLE = 'imdb_writer'
 
 class ImdbMovieEntity(BaseEntity):
     __tablename__ = MOVIE_TABLE
-    internal_id = Column(Integer, unique=True,
-                         primary_key=True, autoincrement=True)
+    internal_id = Column(
+        Integer, unique=True, primary_key=True, autoincrement=True
+    )
 
     title_type = Column(String(100))
     primary_title = Column(Text)
@@ -53,9 +54,7 @@ class ImdbPersonEntity(BaseEntity):
     table_occupation = None
 
     __tablename__ = BASE_PERSON_TABLE
-    __mapper_args__ = {
-        'polymorphic_identity': __tablename__,
-        'concrete': True}
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
     gender = Column(String(10))
 
@@ -74,53 +73,41 @@ class ImdbActorEntity(ImdbPersonEntity):
     table_occupation = vocabulary.ACTOR_QID
 
     __tablename__ = ACTOR_TABLE
-    __mapper_args__ = {
-        'polymorphic_identity': __tablename__,
-        'concrete': True}
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
 class ImdbDirectorEntity(ImdbPersonEntity):
     table_occupation = vocabulary.FILM_DIRECTOR_QID
 
     __tablename__ = DIRECTOR_TABLE
-    __mapper_args__ = {
-        'polymorphic_identity': __tablename__,
-        'concrete': True}
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
 class ImdbMusicianEntity(ImdbPersonEntity):
     table_occupation = vocabulary.MUSICIAN_QID
 
     __tablename__ = MUSICIAN_TABLE
-    __mapper_args__ = {
-        'polymorphic_identity': __tablename__,
-        'concrete': True}
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
 class ImdbProducerEntity(ImdbPersonEntity):
     table_occupation = vocabulary.FILM_PRODUCER_QID
 
     __tablename__ = PRODUCER_TABLE
-    __mapper_args__ = {
-        'polymorphic_identity': __tablename__,
-        'concrete': True}
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
 class ImdbWriterEntity(ImdbPersonEntity):
     table_occupation = vocabulary.SCREENWRITER_QID
 
     __tablename__ = WRITER_TABLE
-    __mapper_args__ = {
-        'polymorphic_identity': __tablename__,
-        'concrete': True}
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
 class ImdbMoviePersonRelationship(BaseRelationship):
     __tablename__ = MOVIE_PERSON_RELATIONSHIP_TABLE
 
-    __mapper_args__ = {
-        'polymorphic_identity': __tablename__,
-        'concrete': True}
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
     def __repr__(self):
         return super().__repr__()

@@ -11,14 +11,14 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import click
 
-from soweego.ingestor import wikidata_bot, mix_n_match_client
+from soweego.ingestor import mix_n_match_client, wikidata_bot
 
 CLI_COMMANDS = {
     'add_identifiers': wikidata_bot.add_identifiers_cli,
     'delete_identifiers': wikidata_bot.delete_identifiers_cli,
     'deprecate_identifiers': wikidata_bot.deprecate_identifiers_cli,
     'add_statements': wikidata_bot.add_statements_cli,
-    'mix_n_match': mix_n_match_client.cli
+    'mix_n_match': mix_n_match_client.cli,
 }
 
 
@@ -26,4 +26,3 @@ CLI_COMMANDS = {
 @click.pass_context
 def cli(ctx):
     """Ingest soweego output into Wikidata."""
-    pass

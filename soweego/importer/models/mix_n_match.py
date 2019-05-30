@@ -14,7 +14,7 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2019, Hjfocs'
 
-from sqlalchemy import Column, String, Integer, Float
+from sqlalchemy import Column, Float, Integer, String
 from sqlalchemy.dialects.mysql import INTEGER, TINYINT, TINYTEXT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql.expression import func
@@ -28,7 +28,12 @@ CATALOG_OWNER = 2362992  # soweego bot MnM user ID
 
 class MnMCatalog(BASE):
     __tablename__ = CATALOG_TABLE
-    id = Column(INTEGER(11, unsigned=True), unique=True, primary_key=True, autoincrement=True)
+    id = Column(
+        INTEGER(11, unsigned=True),
+        unique=True,
+        primary_key=True,
+        autoincrement=True,
+    )
     name = Column(String(128), unique=True)
     url = Column(String(128))
     desc = Column(TINYTEXT)
@@ -49,7 +54,12 @@ class MnMCatalog(BASE):
 
 class MnMEntry(BASE):
     __tablename__ = ENTRY_TABLE
-    id = Column(INTEGER(11, unsigned=True), unique=True, primary_key=True, autoincrement=True)
+    id = Column(
+        INTEGER(11, unsigned=True),
+        unique=True,
+        primary_key=True,
+        autoincrement=True,
+    )
     catalog = Column(INTEGER(10, unsigned=True), nullable=False, index=True)
     ext_id = Column(String(255), nullable=False, index=True, default='')
     ext_url = Column(String(255), nullable=False, default='')
@@ -60,4 +70,3 @@ class MnMEntry(BASE):
     timestamp = Column(String(16), index=True)
     random = Column(Float, index=True, default=func.rand())
     type = Column(String(16), nullable=False, index=True, default='')
-

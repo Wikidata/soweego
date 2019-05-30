@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-import requests
 import json
 import re
-
 from collections import defaultdict
+
+import requests
 
 WD = '/Users/focs/soweego/soweego/wikidata/resources/'
 SAMPLE = 'imdb_unlinked_producers_sample'
@@ -35,7 +35,13 @@ for b in buckets:
     for qid in r['entities']:
         entity = r['entities'][qid]
         if entity.get('sitelinks'):
-            site_qid[entity['sitelinks']['enwiki']['title'].replace(' ', '_')] = qid
+            site_qid[
+                entity['sitelinks']['enwiki']['title'].replace(' ', '_')
+            ] = qid
 
-json.dump(site_qid, open(WD + SAMPLE + '_sitelinks.json', 'w'), indent=2, ensure_ascii=False)
-
+json.dump(
+    site_qid,
+    open(WD + SAMPLE + '_sitelinks.json', 'w'),
+    indent=2,
+    ensure_ascii=False,
+)

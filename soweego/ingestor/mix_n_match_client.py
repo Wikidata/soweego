@@ -25,7 +25,7 @@ from pandas import read_csv
 from sqlalchemy.exc import SQLAlchemyError
 from tqdm import tqdm
 
-from soweego.commons import target_database, keys
+from soweego.commons import keys, target_database
 from soweego.commons.constants import SUPPORTED_ENTITIES
 from soweego.commons.db_manager import DBManager
 from soweego.importer.models import mix_n_match
@@ -41,14 +41,14 @@ MNM_DB = 's51434__mixnmatch_p'
 MNM_API_URL = 'https://tools.wmflabs.org/mix-n-match/api.php'
 MNM_API_ACTIVATION_PARAMS = {
     'query': 'update_overview',
-    'catalog': None  # To be filled by activate_catalog
+    'catalog': None,  # To be filled by activate_catalog
 }
 
 TIMESTAMP_FORMAT = '%Y%m%d%H%M%S'  # 20190528131053
 NOTE_FIELD = 'Uploaded by soweego'
 SEARCH_WP_FIELD = 'en'
 EXT_DESC_FIELD = 'soweego confidence score: {}'
-USER_FIELD = 0 # stands for 'automatically matched'
+USER_FIELD = 0  # stands for 'automatically matched'
 CINEMA = 'Cinema'
 MUSIC = 'Music'
 SOCIAL = 'Social network'
@@ -74,7 +74,7 @@ CATALOG_TYPES = {
     keys.DISCOGS: MUSIC,
     keys.IMDB: CINEMA,
     keys.MUSICBRAINZ: MUSIC,
-    keys.TWITTER: SOCIAL
+    keys.TWITTER: SOCIAL,
 }
 
 PERSON = 'person'
@@ -87,7 +87,7 @@ ENTITY_TYPES = {
     keys.PRODUCER: PERSON,
     keys.WRITER: PERSON,
     keys.MUSICAL_WORK: WORK,
-    keys.AUDIOVISUAL_WORK: WORK
+    keys.AUDIOVISUAL_WORK: WORK,
 }
 
 CATALOG_ENTITY_URLS = {
@@ -103,13 +103,15 @@ CATALOG_ENTITY_URLS = {
     f'{keys.IMDB}_{keys.PRODUCER}': IMDB_PERSON_URL,
     f'{keys.IMDB}_{keys.WRITER}': IMDB_PERSON_URL,
     f'{keys.IMDB}_{keys.AUDIOVISUAL_WORK}': IMDB_WORK_URL,
-    keys.TWITTER: TWITTER_URL
+    keys.TWITTER: TWITTER_URL,
 }
 
 
 @click.command()
 @click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
-@click.argument('entity', type=click.Choice(target_database.supported_entities()))
+@click.argument(
+    'entity', type=click.Choice(target_database.supported_entities())
+)
 @click.argument('threshold', type=float)
 @click.argument('links', type=click.Path(exists=True, dir_okay=False))
 def cli(catalog, entity, threshold, links):
@@ -133,9 +135,17 @@ def add_catalog(catalog, entity):
 
     session = DBManager(MNM_DB).new_session()
     try:
-        existing = session.query(mix_n_match.MnMCatalog).filter_by(name=name_field).first()
+        existing = (
+            session.query(mix_n_match.MnMCatalog)
+            .filter_by(name=name_field)
+            .first()
+        )
         if existing is None:
-            LOGGER.info("Adding %s %s catalog to the mix'n'match DB ... ", catalog, entity)
+            LOGGER.info(
+                "Adding %s %s catalog to the mix'n'match DB ... ",
+                catalog,
+                entity,
+            )
             db_entity = mix_n_match.MnMCatalog()
             _set_catalog_fields(db_entity, name_field, catalog, entity)
             session.add(db_entity)
@@ -148,17 +158,21 @@ def add_catalog(catalog, entity):
             session.add(existing)
             session.commit()
     except SQLAlchemyError as error:
-        LOGGER.error("Failed catalog addition/update due to %s. "
-                     "You can enable the debug log with the CLI option "
-                     "'-l soweego.ingestor DEBUG' for more details",
-                     error.__class__.__name__)
+        LOGGER.error(
+            "Failed catalog addition/update due to %s. "
+            "You can enable the debug log with the CLI option "
+            "'-l soweego.ingestor DEBUG' for more details",
+            error.__class__.__name__,
+        )
         LOGGER.debug(error)
         session.rollback()
         return None
     finally:
         session.close()
 
-    LOGGER.info('Catalog addition/update went fine. Internal ID: %d', catalog_id)
+    LOGGER.info(
+        'Catalog addition/update went fine. Internal ID: %d', catalog_id
+    )
     return catalog_id
 
 
@@ -167,7 +181,9 @@ def _set_catalog_fields(db_entity, name_field, catalog, entity):
     db_entity.active = 1
     db_entity.note = NOTE_FIELD
     db_entity.type = CATALOG_TYPES.get(catalog, '')
-    db_entity.source_item = int(target_database.get_catalog_qid(catalog).lstrip('Q'))
+    db_entity.source_item = int(
+        target_database.get_catalog_qid(catalog).lstrip('Q')
+    )
     entity_type = ENTITY_TYPES.get(entity)
     if entity_type is PERSON:
         wd_prop = target_database.get_person_pid(catalog)
@@ -195,11 +211,17 @@ def add_links(file_path, catalog_id, catalog, entity, threshold):
     # sort by confidence in ascending order,
     # drop duplicate TIDs,
     # keep the duplicate with the best score (last one)
-    links = links[links[keys.CONFIDENCE] >= threshold].sort_values(keys.CONFIDENCE).drop_duplicates(keys.TID, keep='last')
+    links = (
+        links[links[keys.CONFIDENCE] >= threshold]
+        .sort_values(keys.CONFIDENCE)
+        .drop_duplicates(keys.TID, keep='last')
+    )
 
     LOGGER.info(
         "Starting import of %s %s links (catalog ID: %d) into the mix'n'match DB ...",
-        catalog, entity, catalog_id
+        catalog,
+        entity,
+        catalog_id,
     )
     start = datetime.now()
     session = DBManager(MNM_DB).new_session()
@@ -209,29 +231,34 @@ def add_links(file_path, catalog_id, catalog, entity, threshold):
     try:
         curated = session.query(mix_n_match.MnMEntry.ext_id).filter(
             mix_n_match.MnMEntry.catalog == catalog_id,
-            mix_n_match.MnMEntry.user != 0
+            mix_n_match.MnMEntry.user != 0,
         )
         # Result is a tuple: (tid,)
         curated = [res[0] for res in curated]
 
-        n_deleted = session.query(mix_n_match.MnMEntry).filter(
-            mix_n_match.MnMEntry.catalog == catalog_id,
-            mix_n_match.MnMEntry.user == 0
-        ).delete(synchronize_session=False)
+        n_deleted = (
+            session.query(mix_n_match.MnMEntry)
+            .filter(
+                mix_n_match.MnMEntry.catalog == catalog_id,
+                mix_n_match.MnMEntry.user == 0,
+            )
+            .delete(synchronize_session=False)
+        )
 
         session.commit()
         session.expunge_all()
 
         LOGGER.info(
             'Kept %d curated links, deleted %d remaining links',
-            len(curated), n_deleted
+            len(curated),
+            n_deleted,
         )
     except SQLAlchemyError as error:
         LOGGER.error(
             "Failed query of existing links due to %s. "
             "You can enable the debug log with the CLI option "
             "'-l soweego.ingestor DEBUG' for more details",
-            error.__class__.__name__
+            error.__class__.__name__,
         )
         LOGGER.debug(error)
 
@@ -252,13 +279,17 @@ def add_links(file_path, catalog_id, catalog, entity, threshold):
             url = '' if url_prefix is None else url_prefix + tid
 
             db_entity = mix_n_match.MnMEntry()
-            _set_entry_fields(db_entity, catalog_id, qid, tid, url, class_qid, score)
+            _set_entry_fields(
+                db_entity, catalog_id, qid, tid, url, class_qid, score
+            )
             batch.append(db_entity)
 
             if len(batch) >= COMMIT_EVERY:
                 LOGGER.info(
                     'Adding batch of %d %s %s links, this may take a while ...',
-                    COMMIT_EVERY, catalog, entity
+                    COMMIT_EVERY,
+                    catalog,
+                    entity,
                 )
                 session.bulk_save_objects(batch)
                 session.commit()
@@ -269,7 +300,9 @@ def add_links(file_path, catalog_id, catalog, entity, threshold):
 
         LOGGER.info(
             'Adding last batch of %d %s %s links, this may take a while ...',
-            len(batch), catalog, entity
+            len(batch),
+            catalog,
+            entity,
         )
         # Commit remaining entities
         session.bulk_save_objects(batch)
@@ -280,7 +313,7 @@ def add_links(file_path, catalog_id, catalog, entity, threshold):
             "Failed addition/update due to %s. "
             "You can enable the debug log with the CLI option "
             "'-l soweego.ingestor DEBUG' for more details",
-            error.__class__.__name__
+            error.__class__.__name__,
         )
         LOGGER.debug(error)
         session.rollback()
@@ -294,11 +327,17 @@ def add_links(file_path, catalog_id, catalog, entity, threshold):
         LOGGER.info(
             'Import of %s %s links (catalog ID: %d) completed in %s. '
             'Total links: %d',
-            catalog, entity, catalog_id, end - start, n_links
+            catalog,
+            entity,
+            catalog_id,
+            end - start,
+            n_links,
         )
 
 
-def _set_entry_fields(db_entity, catalog_id, qid, tid, url, class_qid, confidence_score):
+def _set_entry_fields(
+    db_entity, catalog_id, qid, tid, url, class_qid, confidence_score
+):
     db_entity.catalog = catalog_id
     db_entity.q = int(qid.lstrip('Q'))
     db_entity.ext_id = tid
@@ -321,7 +360,9 @@ def activate_catalog(catalog_id, catalog, entity):
             LOGGER.error(
                 'Activation of %s %s (catalog ID: %d) failed. '
                 'Reason: no JSON response',
-                catalog, entity, catalog_id
+                catalog,
+                entity,
+                catalog_id,
             )
             LOGGER.debug('Response from %s: %s', activated.url, activated.text)
             return
@@ -329,16 +370,24 @@ def activate_catalog(catalog_id, catalog, entity):
         if json_status.get('status') == 'OK':
             LOGGER.info(
                 '%s %s (catalog ID: %d) successfully activated',
-                catalog, entity, catalog_id
+                catalog,
+                entity,
+                catalog_id,
             )
         else:
             LOGGER.error(
                 'Activation of %s %s (catalog ID: %d) failed. Reason: %s',
-                catalog, entity, catalog_id, json_status
+                catalog,
+                entity,
+                catalog_id,
+                json_status,
             )
     else:
         LOGGER.error(
             'Activation request for %s %s (catalog ID: %d) '
             'failed with HTTP error code %d',
-            catalog, entity, catalog_id, activated.status_code
+            catalog,
+            entity,
+            catalog_id,
+            activated.status_code,
         )
