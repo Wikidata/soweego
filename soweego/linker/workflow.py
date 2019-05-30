@@ -26,9 +26,9 @@ from soweego.commons import (constants, data_gathering, keys, target_database,
                              text_utils, url_utils)
 from soweego.commons.logging import log_dataframe_info
 from soweego.linker import classifiers, neural_networks
-from soweego.linker.feature_extraction import (DateCompare, ExactList,
-                                               OccupationQidSet, SimilarTokens,
-                                               StringList)
+from soweego.linker.feature_extraction import (CompareTokens, DateCompare,
+                                               ExactList, OccupationQidSet,
+                                               SimilarTokens, StringList)
 from soweego.wikidata import api_requests, vocabulary
 
 LOGGER = logging.getLogger(__name__)
@@ -134,18 +134,23 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
         """Checks if `col` is available in both datasets"""
         return (col in wikidata.columns) and (col in target.columns)
 
-    compare = rl.Compare(n_jobs=cpu_count())
+    compare = rl.Compare(n_jobs=1)  # cpu_count())
     # TODO feature engineering on more fields
     # Feature 1: exact match on names
     if in_both_datasets(keys.NAME):
         compare.add(ExactList(keys.NAME,
                               keys.NAME, label='name_exact'))
 
-    # Feature 2: exact match on URLs
     if in_both_datasets(keys.URL):
+        # Feature 2: exact match on URLs
         compare.add(ExactList(keys.URL, keys.URL, label='url_exact'))
 
-    # Feature 3: dates
+        # Feature 3: match on URL tokens
+        compare.add(CompareTokens(keys.URL_TOKENS, keys.URL_TOKENS,
+                                  label='url_tokens',
+                                  stopwords=text_utils.STOPWORDS_URL_TOKENS))
+
+    # Feature 4: dates
     if in_both_datasets(keys.DATE_OF_BIRTH):
         compare.add(DateCompare(keys.DATE_OF_BIRTH,
                                 keys.DATE_OF_BIRTH, label='date_of_birth'))
@@ -153,33 +158,33 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
         compare.add(DateCompare(keys.DATE_OF_DEATH,
                                 keys.DATE_OF_DEATH, label='date_of_death'))
 
-    # Feature 4: Levenshtein distance on name tokens
+    # Feature 5: Levenshtein distance on name tokens
     if in_both_datasets(keys.NAME_TOKENS):
         compare.add(StringList(keys.NAME_TOKENS,
                                keys.NAME_TOKENS, label='name_levenshtein'))
 
-    # Feature 5: string kernel similarity on name tokens
+    # Feature 6: string kernel similarity on name tokens
         compare.add(StringList(keys.NAME_TOKENS, keys.NAME_TOKENS,
                                algorithm='cosine', analyzer='char_wb', label='name_string_kernel_cosine'))
 
-    # Feature 6: similar name tokens
+    # Feature 7: similar name tokens
         compare.add(SimilarTokens(keys.NAME_TOKENS,
                                   keys.NAME_TOKENS, label='similar_name_tokens'))
 
-    # Feature 7: cosine similarity on descriptions
+    # Feature 8: cosine similarity on descriptions
     if in_both_datasets(keys.DESCRIPTION):
         compare.add(StringList(keys.DESCRIPTION, keys.DESCRIPTION,
                                algorithm='cosine', analyzer='soweego', label='description_cosine'))
 
-    # Feature 8: occupation QIDs
+    # Feature 9: occupation QIDs
     occupations_col_name = vocabulary.LINKER_PIDS[vocabulary.OCCUPATION]
     if in_both_datasets(occupations_col_name):
         compare.add(OccupationQidSet(occupations_col_name,
                                      occupations_col_name,
                                      label='occupation_qids'))
 
+    # Feature 10: genre similar tokens
     if in_both_datasets(keys.GENRES):
-    # Feature 9: genre similar tokens
         compare.add(SimilarTokens(keys.GENRES,
                                   keys.GENRES,
                                   label='genre_similar_tokens'))
