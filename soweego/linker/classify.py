@@ -103,6 +103,15 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
         wd_chunks = pd.read_pickle(complete_wd_path)
         target_chunks = pd.read_pickle(complete_target_path)
 
+        # remove duplicate entries from target_chunks
+        target_chunks = (target_chunks
+                        # make TID a normal column
+                         .reset_index() 
+                         # remove duplicated TID rows 
+                         .drop_duplicates(subset=keys.TID) 
+                         # finally reset TID as the index
+                         .set_index(keys.TID))
+
         _add_missing_feature_columns(classifier, fvectors)
 
         predictions = classifier.predict(fvectors) if isinstance(
@@ -222,9 +231,14 @@ def _zero_when_different_names(prediction, wikidata, target):
 
 
 def _one_when_wikidata_link_correct(prediction, target):
+
     qid, tid = prediction.name
 
     urls = target.loc[tid][keys.URL]
+
+    # if isinstance(urls, pd.Series) and len(urls) > 0:
+    #     urls = list(urls)[0]
+
     if urls:
         for u in urls:
             if u:
