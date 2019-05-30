@@ -13,8 +13,7 @@ import logging
 
 from sklearn.model_selection import StratifiedKFold
 
-from soweego.commons.keys import (MULTI_LAYER_PERCEPTRON,
-                                  SINGLE_LAYER_PERCEPTRON)
+from soweego.commons.keys import MULTI_LAYER_PERCEPTRON, SINGLE_LAYER_PERCEPTRON
 from soweego.linker.workflow import init_model
 
 LOGGER = logging.getLogger(__name__)

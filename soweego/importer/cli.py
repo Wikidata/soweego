@@ -11,12 +11,9 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import click
 
-from soweego.importer.importer import import_cli, check_links_cli
+from soweego.importer.importer import check_links_cli, import_cli
 
-CLI_COMMANDS = {
-    'import': import_cli,
-    'check_links': check_links_cli
-}
+CLI_COMMANDS = {'import': import_cli, 'check_links': check_links_cli}
 
 
 @click.group(name='importer', commands=CLI_COMMANDS)
