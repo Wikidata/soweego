@@ -134,7 +134,7 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
         """Checks if `col` is available in both datasets"""
         return (col in wikidata.columns) and (col in target.columns)
 
-    compare = rl.Compare(n_jobs=1)  # cpu_count())
+    compare = rl.Compare(n_jobs=cpu_count())
     # TODO feature engineering on more fields
     # Feature 1: exact match on names
     if in_both_datasets(keys.NAME):
@@ -189,8 +189,14 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
                                   keys.GENRES,
                                   label='genre_similar_tokens'))
 
+    # calculate feature vectors
     feature_vectors = compare.compute(
-        candidate_pairs, wikidata, target).drop_duplicates()
+        candidate_pairs, wikidata, target
+    )
+
+    # drop duplicate FV
+    feature_vectors = feature_vectors[~feature_vectors.index.duplicated()]
+
     pd.to_pickle(feature_vectors, path_io)
 
     LOGGER.info("Features dumped to '%s'", path_io)
