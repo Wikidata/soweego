@@ -90,7 +90,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         LOGGER.debug("Added %s/%s release group records", *release_groups_count)
 
         def release_artist_relationships_uniqueness_filter():
-            """Remves duplicates from
+            """Remove duplicates from
             _release_group_artist_relationship_generator """
             yield from [
                 MusicBrainzReleaseGroupArtistRelationship(item[0], item[1])

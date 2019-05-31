@@ -58,6 +58,7 @@ CLASS_QUERY = 'class_query'
 OCCUPATION_QUERY = 'occupation_query'
 
 # Wikidata & target pandas.DataFrame column names
+CONFIDENCE = 'confidence'
 QID = 'qid'
 INTERNAL_ID = 'internal_id'
 CATALOG_ID = 'catalog_id'
