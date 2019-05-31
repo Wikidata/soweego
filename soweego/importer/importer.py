@@ -22,8 +22,17 @@ from soweego.commons import http_client as client
 from soweego.commons import keys, target_database, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
+from soweego.importer.discogs_dump_extractor import DiscogsDumpExtractor
+from soweego.importer.imdb_dump_extractor import ImdbDumpExtractor
+from soweego.importer.musicbrainz_dump_extractor import MusicBrainzDumpExtractor
 
 LOGGER = logging.getLogger(__name__)
+
+DUMP_EXTRACTOR = {
+    'musicbrainz': MusicBrainzDumpExtractor,
+    'discogs': DiscogsDumpExtractor,
+    'imdb': ImdbDumpExtractor,
+}
 
 
 @click.command()
@@ -33,19 +42,20 @@ LOGGER = logging.getLogger(__name__)
 @click.option(
     '--url-check',
     is_flag=True,
-    help='Check for rotten URLs while importing. Default: no. WARNING: this will dramatically increase the import time.',
+    help='Check for rotten URLs while importing. Default: no.'
+    'WARNING: this will dramatically increase the import time.',
 )
 @click.option(
     '-d',
     '--dir-io',
     type=click.Path(file_okay=False),
     default=constants.SHARED_FOLDER,
-    help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER,
+    help=f"Input/output directory," f"default: '{constants.SHARED_FOLDER}'.",
 )
 def import_cli(catalog: str, url_check: bool, dir_io: str) -> None:
     """Download, extract and import an available catalog."""
 
-    extractor = constants.DUMP_EXTRACTOR[catalog]()
+    extractor = DUMP_EXTRACTOR[catalog]()
 
     Importer().refresh_dump(dir_io, extractor, url_check)
 
@@ -59,7 +69,11 @@ def _resolve_url(res):
     'catalog', type=click.Choice(target_database.supported_targets())
 )
 def check_links_cli(catalog: str):
-    """Check for rotten URLs of an imported catalog."""
+    """
+    Check for rotten URLs of an imported catalog.
+
+    :param catalog: one of the keys of constants.TARGET_CATALOGS
+    """
     for entity_type in target_database.supported_entities_for_target(catalog):
 
         LOGGER.info("Validating %s %s links...", catalog, entity_type)
@@ -102,14 +116,23 @@ def check_links_cli(catalog: str):
 
 
 class Importer:
+    """Downloads the latest dump of a certain target"""
+
     def refresh_dump(
-        self, output_folder: str, downloader: BaseDumpExtractor, resolve: bool
+        self, output_folder: str, extractor: BaseDumpExtractor, resolve: bool
     ):
-        """Downloads the dump, if necessary,
-        and calls the handler over the dump file"""
+        """
+        Downloads the dump, if necessary, and calls the handler over the dump
+        file.
+        :param output_folder: folder in which the downloaded dumps will be
+        stored
+        :param extractor: BaseDumpExtractor implementation to process the dump
+        :param resolve: try to resolve each url in the dump to check if it
+        works?
+        """
         filepaths = []
 
-        for download_url in downloader.get_dump_download_urls():
+        for download_url in extractor.get_dump_download_urls():
 
             LOGGER.info("Retrieving last modified of %s", download_url)
 
@@ -144,8 +167,9 @@ class Importer:
                 self._update_dump(download_url, file_full_path)
             filepaths.append(file_full_path)
 
-        downloader.extract_and_populate(filepaths, resolve)
+        extractor.extract_and_populate(filepaths, resolve)
 
-    def _update_dump(self, dump_url: str, file_output_path: str):
+    @staticmethod
+    def _update_dump(dump_url: str, file_output_path: str):
         """Download the dump"""
         client.download_file(dump_url, file_output_path)
