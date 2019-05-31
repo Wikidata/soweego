@@ -50,7 +50,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
     def get_dump_download_urls(self) -> Iterable[str]:
         base_url = 'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport'
         latest_version = requests.get(f'{base_url}/LATEST').text.rstrip()
-        return [f'{base_url}/%s/mbdump.tar.bz2' % latest_version]
+        return [f'{base_url}/{latest_version}/mbdump.tar.bz2']
 
     def extract_and_populate(
         self, dump_file_paths: Iterable[str], resolve: bool
