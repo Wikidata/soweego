@@ -9,7 +9,7 @@ from soweego.commons import target_database
 from soweego.commons.db_manager import DBManager
 from soweego.importer.importer import check_links_cli as validate_links
 from soweego.importer.importer import import_cli
-from soweego.linker import baseline, classify, evaluate, train
+from soweego.linker import classify, evaluate, train
 from soweego.validator.checks import (
     check_existence_cli,
     check_links_cli,
