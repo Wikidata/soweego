@@ -102,9 +102,6 @@ def _linker(target: str, upload: bool):
         _invoke_no_exit(
             classify.cli, ['slp', target, target_type, upload_option]
         )
-        _invoke_no_exit(
-            baseline.cli, [target, target_type, '-s', 'all', upload_option]
-        )
 
 
 def _validator(target: str, upload: bool):
