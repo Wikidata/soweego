@@ -1,3 +1,5 @@
+"""Module to run full soweego pipeline"""
+
 import logging
 from typing import Callable
 
@@ -5,7 +7,8 @@ import click
 
 from soweego.commons import target_database
 from soweego.commons.db_manager import DBManager
-from soweego.importer.importer import check_links_cli, import_cli
+from soweego.importer.importer import check_links_cli as validate_links
+from soweego.importer.importer import import_cli
 from soweego.linker import classify, evaluate, train
 from soweego.validator.checks import (
     check_existence_cli,
@@ -58,9 +61,7 @@ def cli(
     """Executes importer/linker and optionally validator for a target"""
 
     if credentials_path:
-        LOGGER.info(
-            "Using database credentials from file %s" % credentials_path
-        )
+        LOGGER.info("Using database credentials from file %s", credentials_path)
         DBManager.set_credentials_from_path(credentials_path)
 
     if importer:
@@ -80,16 +81,18 @@ def cli(
 
 
 def _importer(target: str):
+    """Contains all the command the importer has to do"""
     LOGGER.info(
-        "Running importer for target: %s without resolving the URLs" % target
+        "Running importer for target: %s without resolving the URLs", target
     )
     _invoke_no_exit(import_cli, [target])
-    LOGGER.info("Validating URL resolving them for target %s" % target)
-    _invoke_no_exit(check_links_cli, [target])
+    LOGGER.info("Validating URL resolving them for target %s", target)
+    _invoke_no_exit(validate_links, [target])
 
 
 def _linker(target: str, upload: bool):
-    LOGGER.info("Running linker for target: %s" % target)
+    """Contains all the command the linker has to do"""
+    LOGGER.info("Running linker for target: %s", target)
     upload_option = "--upload" if upload else "--no-upload"
     for target_type in target_database.supported_entities_for_target(target):
         if not target_type:
@@ -102,12 +105,11 @@ def _linker(target: str, upload: bool):
 
 
 def _validator(target: str, upload: bool):
+    """Contains all the command the validator has to do"""
     upload_option = "--upload" if upload else "--no-upload"
     # Runs the validator for each kind of entity of the given target database
     for entity_type in target_database.supported_entities_for_target(target):
-        LOGGER.info(
-            "Running validator for target %s %s" % (target, entity_type)
-        )
+        LOGGER.info("Running validator for target %s %s", target, entity_type)
         _invoke_no_exit(
             check_existence_cli, [entity_type, target, upload_option]
         )
@@ -118,6 +120,7 @@ def _validator(target: str, upload: bool):
 
 
 def _invoke_no_exit(function: Callable, args: list):
+    """Given a function avoids that it exits the program"""
     try:
         function(args)
     except SystemExit:
