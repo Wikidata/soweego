@@ -31,6 +31,8 @@ DUMP_URL_MOVIE_INFO = 'https://datasets.imdbws.com/title.basics.tsv.gz'
 
 
 class ImdbDumpExtractor(BaseDumpExtractor):
+    """Defines where to download Imdb dump and how to post-process it"""
+
     # Counters
     n_actors = 0
     n_directors = 0
@@ -52,7 +54,8 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         """
         return [DUMP_URL_PERSON_INFO, DUMP_URL_MOVIE_INFO]
 
-    def _normalize_null(self, entity: Dict) -> None:
+    @staticmethod
+    def _normalize_null(entity: Dict) -> None:
         """
         IMDB represents a null entry with \\N , this method converts
         all \\N to None so that they're saved as null in the database.
@@ -73,7 +76,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
     ) -> None:
         """
         Extracts the data in the dumps (person and movie) and processes them.
-        It then proceeds to add the appropriate data to the database. 
+        It then proceeds to add the appropriate data to the database.
 
         See
         :ref:`soweego.importer.models.imdb_entity` module to see the SQLAlchemy
@@ -124,10 +127,11 @@ class ImdbDumpExtractor(BaseDumpExtractor):
             movie_entity = imdb_entity.ImdbMovieEntity()
             movie_entity.catalog_id = movie_info.get('tconst')
             movie_entity.title_type = movie_info.get('titleType')
-            movie_entity.name = movie_info.get('primaryTitle')
-            movie_entity.name_tokens = ' '.join(
-                text_utils.tokenize(movie_info.get('primaryTitle'))
-            )
+            if movie_info.get('primaryTitle') is not None:
+                movie_entity.name = movie_info.get('primaryTitle')
+                movie_entity.name_tokens = ' '.join(
+                    text_utils.tokenize(movie_info.get('primaryTitle'))
+                )
             movie_entity.is_adult = (
                 True if movie_info.get('isAdult') == '1' else False
             )
@@ -136,14 +140,14 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                     year=int(movie_info.get('startYear')), month=1, day=1
                 )
                 movie_entity.born_precision = 9
-            except:
+            except (KeyError, TypeError):
                 LOGGER.debug('No start year value for %s', movie_entity)
             try:
                 movie_entity.died = datetime.date(
                     year=int(movie_info.get('endYear')), month=1, day=1
                 )
                 movie_entity.died_precision = 9
-            except:
+            except (KeyError, TypeError):
                 LOGGER.debug('No end year value for %s', movie_entity)
             movie_entity.runtime_minutes = movie_info.get('runtimeMinutes')
 
@@ -304,15 +308,15 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 # yield the cleaned dict
                 yield entity_info, entity_array
 
-                # every `_sqlalchemy_commit_every` loops we commit the session to
-                # the DB. This is more efficient than commiting every loop, and
-                # is not so hard on the memory requirements as would be
-                # adding everything to session and commiting once the for loop
-                # is done
+                # every `_sqlalchemy_commit_every` loops we commit the
+                # session to the DB. This is more efficient than commiting
+                # every loop, and is not so hard on the memory requirements
+                # as would be adding everything to session and commiting once
+                # the for loop is done
                 if len(entity_array) >= self._sqlalchemy_commit_every:
                     LOGGER.info(
-                        'Adding batch of entities to the database, this will take a while. '
-                        'Progress will resume soon.'
+                        'Adding batch of entities to the database, '
+                        'this will take a while. Progress will resume soon.'
                     )
 
                     insert_start_time = datetime.datetime.now()
@@ -410,8 +414,9 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
         entity_array.append(person_entity)
 
+    @staticmethod
     def _populate_person_movie_relations(
-        self, person_info: Dict, entity_array: object
+        person_info: Dict, entity_array: object
     ) -> None:
         """
         Given a `person_info` we extract the ID that the person has
@@ -430,7 +435,6 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         know_for_titles = person_info.get('knownForTitles').split(',')
 
         for title in know_for_titles:
-
             entity_array.append(
                 imdb_entity.ImdbMoviePersonRelationship(
                     from_catalog_id=title,
@@ -438,7 +442,8 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 )
             )
 
-    def _translate_professions(self, professions: List[str]) -> List[str]:
+    @staticmethod
+    def _translate_professions(professions: List[str]) -> List[str]:
         """
         Gets the list of professions (as a list of strings) directly from IMDb
         and translates these to a list of Wikidata QIDs for each specific

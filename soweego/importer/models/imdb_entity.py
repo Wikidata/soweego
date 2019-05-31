@@ -31,6 +31,8 @@ WRITER_TABLE = 'imdb_writer'
 
 
 class ImdbMovieEntity(BaseEntity):
+    """Describes the Movie Entity for Imdb"""
+
     __tablename__ = MOVIE_TABLE
     internal_id = Column(
         Integer, unique=True, primary_key=True, autoincrement=True
@@ -44,10 +46,15 @@ class ImdbMovieEntity(BaseEntity):
     genres = Column(String(255), nullable=True)
 
     def __repr__(self) -> str:
-        return f'<ImdbMovieEntity(catalog_id="{self.catalog_id}", title="{self.original_title}")>'
+        return (
+            f'<ImdbMovieEntity(catalog_id="{self.catalog_id}", '
+            f'title="{self.original_title}")>'
+        )
 
 
 class ImdbPersonEntity(BaseEntity):
+    """Describes the Person Entity for Imdb"""
+
     # each table/entity type should be associated with
     # an occupation (defined in vocabulary.py) which
     # is the main occupation for people in said table
@@ -70,6 +77,8 @@ class ImdbPersonEntity(BaseEntity):
 
 
 class ImdbActorEntity(ImdbPersonEntity):
+    """Describes the Actor Entity for Imdb"""
+
     table_occupation = vocabulary.ACTOR_QID
 
     __tablename__ = ACTOR_TABLE
@@ -77,6 +86,8 @@ class ImdbActorEntity(ImdbPersonEntity):
 
 
 class ImdbDirectorEntity(ImdbPersonEntity):
+    """Describes the Director Entity for Imdb"""
+
     table_occupation = vocabulary.FILM_DIRECTOR_QID
 
     __tablename__ = DIRECTOR_TABLE
@@ -84,6 +95,8 @@ class ImdbDirectorEntity(ImdbPersonEntity):
 
 
 class ImdbMusicianEntity(ImdbPersonEntity):
+    """Describes the Musician Entity for Imdb"""
+
     table_occupation = vocabulary.MUSICIAN_QID
 
     __tablename__ = MUSICIAN_TABLE
@@ -91,6 +104,8 @@ class ImdbMusicianEntity(ImdbPersonEntity):
 
 
 class ImdbProducerEntity(ImdbPersonEntity):
+    """Describes the Producer Entity for Imdb"""
+
     table_occupation = vocabulary.FILM_PRODUCER_QID
 
     __tablename__ = PRODUCER_TABLE
@@ -98,6 +113,8 @@ class ImdbProducerEntity(ImdbPersonEntity):
 
 
 class ImdbWriterEntity(ImdbPersonEntity):
+    """Describes the Writer Entity for Imdb"""
+
     table_occupation = vocabulary.SCREENWRITER_QID
 
     __tablename__ = WRITER_TABLE
@@ -105,6 +122,8 @@ class ImdbWriterEntity(ImdbPersonEntity):
 
 
 class ImdbMoviePersonRelationship(BaseRelationship):
+    """Describes the relationship between a movie and a person"""
+
     __tablename__ = MOVIE_PERSON_RELATIONSHIP_TABLE
 
     __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}

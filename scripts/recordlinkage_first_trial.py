@@ -1,8 +1,10 @@
 # coding: utf-8
-import recordlinkage
-import pandas
 import csv
 import json
+
+import pandas
+import recordlinkage
+
 get_ipython().run_line_magic('cd', '~/discogs/')
 from collections import defaultdict
 r = csv.DictReader(open('discogs_sample_for_recordlinkage'), delimiter='\t')
@@ -91,7 +93,8 @@ matches = features[features.sum(axis=1) > 3]
 len(matches)
 matches
 get_ipython().run_line_magic('pinfo', 'pandas.Series')
-from recordlinkage.preprocessing import clean, phonetic
+from recordlinkage.preprocessing import clean
+
 wikidata
 etichette = json.load(open('/Users/focs/wikidata/label2qid_1_percent_sample.json'))
 etichette
