@@ -73,13 +73,6 @@ SUPPORTED_ENTITIES = {
 # DB entity Python types for typed function signatures
 DB_ENTITY = TypeVar('DB_ENTITY', BaseEntity, BaseLinkEntity, BaseNlpEntity)
 
-# Dump extractors
-DUMP_EXTRACTOR = {
-    'discogs': DiscogsDumpExtractor,
-    'musicbrainz': MusicBrainzDumpExtractor,
-    'imdb': ImdbDumpExtractor,
-}
-
 # DB entities and their Wikidata class QID
 TARGET_CATALOGS = {
     keys.DISCOGS: {

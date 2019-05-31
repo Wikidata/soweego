@@ -29,9 +29,9 @@ from soweego.importer.musicbrainz_dump_extractor import MusicBrainzDumpExtractor
 LOGGER = logging.getLogger(__name__)
 
 DUMP_EXTRACTOR = {
-    'musicbrainz': MusicBrainzDumpExtractor,
-    'discogs': DiscogsDumpExtractor,
-    'imdb': ImdbDumpExtractor,
+    keys.DISCOGS: DiscogsDumpExtractor,
+    keys.IMDB: ImdbDumpExtractor,
+    keys.MUSICBRAINZ: MusicBrainzDumpExtractor,
 }
 
 
