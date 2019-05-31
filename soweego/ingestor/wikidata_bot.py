@@ -57,12 +57,61 @@ SUPPORTED_TARGETS = target_database.supported_targets() ^ {TWITTER}
 
 @click.command()
 @click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
+@click.argument('invalid_identifiers', type=click.File())
+@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits on the Wikidata sandbox item Q4115189.')
+def delete_cli(catalog, invalid_identifiers, sandbox):
+    """Delete invalid identifiers.
+
+    INVALID_IDENTIFIERS must be a JSON file.
+    Format: { QID: catalog_identifier }
+    """
+    if sandbox:
+        LOGGER.info('Running on the Wikidata sandbox item ...')
+
+    delete_or_deprecate_identifiers('delete', json.load(
+        invalid_identifiers), catalog, sandbox)
+
+
+@click.command()
+@click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
+@click.argument('invalid_identifiers', type=click.File())
+@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits on the Wikidata sandbox item Q4115189.')
+def deprecate_cli(catalog, invalid_identifiers, sandbox):
+    """Deprecate invalid identifiers.
+
+    INVALID_IDENTIFIERS must be a JSON file.
+    Format: { QID: catalog_identifier }
+    """
+    if sandbox:
+        LOGGER.info('Running on the Wikidata sandbox item ...')
+
+    delete_or_deprecate_identifiers('deprecate', json.load(
+        invalid_identifiers), catalog, sandbox)
+
+
+@click.command()
+@click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
 @click.argument('identifiers', type=click.File())
 @click.option('-s', '--sandbox', is_flag=True, help='Perform all edits on the Wikidata sandbox item Q4115189.')
-def add_cli(catalog, identifiers, sandbox):
-    """Add identifiers to existing Wikidata items.
+def identifiers_cli(catalog, identifiers, sandbox):
+    """Add identifiers.
 
-    IDENTIFIERS must be a { QID: catalog_identifier } JSON file.
+    IDENTIFIERS must be a JSON file.
+    Format: { QID: catalog_identifier }
+
+    If the identifier already exists, just add a reference.
+
+    Example:
+
+    echo '{ "Q446627": "266995" }' > rhell.json
+
+    python -m soweego ingest identifiers discogs rhell.json
+
+    Result:
+
+    claim (Richard Hell, Discogs artist ID, 266995)
+
+    reference (stated in, Discogs), (retrieved, today)
     """
     if sandbox:
         LOGGER.info('Running on the Wikidata sandbox item ...')
@@ -74,10 +123,25 @@ def add_cli(catalog, identifiers, sandbox):
 @click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
 @click.argument('statements', type=click.File())
 @click.option('-s', '--sandbox', is_flag=True, help='Perform all edits on the Wikidata sandbox item Q4115189.')
-def add_people_statements_cli(catalog, statements, sandbox):
-    """Add statements to existing Wikidata people.
+def people_cli(catalog, statements, sandbox):
+    """Add statements to Wikidata people.
 
-    STATEMENTS must be a person_QID, PID, value CSV file.
+    STATEMENTS must be a CSV file.
+    Format: person_QID, PID, value
+
+    If the claim already exists, just add a reference.
+
+    Example:
+
+    echo Q312387,P463,Q483407 > joey.csv
+
+    python -m soweego ingest people discogs joey.csv
+
+    Result:
+
+    claim (Joey Ramone, member of, Ramones)
+
+    reference (stated in, Discogs), (retrieved, today)
     """
     stated_in = target_database.get_catalog_qid(catalog)
 
@@ -98,10 +162,25 @@ def add_people_statements_cli(catalog, statements, sandbox):
 @click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
 @click.argument('statements', type=click.File())
 @click.option('-s', '--sandbox', is_flag=True, help='Perform all edits on the Wikidata sandbox item Q4115189.')
-def add_works_statements_cli(catalog, statements, sandbox):
-    """Add statements to existing Wikidata works.
+def works_cli(catalog, statements, sandbox):
+    """Add statements to Wikidata works.
 
-    STATEMENTS must be a work_QID, PID, person_QID, person_target_ID CSV file.
+    STATEMENTS must be a CSV file.
+    Format: work_QID, PID, person_QID, person_target_ID
+
+    If the claim already exists, just add a reference.
+
+    Example:
+
+    echo Q4354548,P175,Q5969,139984 > cmon.csv
+
+    python -m soweego ingest works discogs cmon.csv
+
+    Result:
+
+    claim (C'mon Everybody, performer, Eddie Cochran)
+
+    reference (stated in, Discogs), (Discogs artist ID, 139984), (retrieved, today)
     """
     catalog_qid, is_imdb, person_pid = _get_works_args(catalog)
 
@@ -117,46 +196,6 @@ def add_works_statements_cli(catalog, statements, sandbox):
         else:
             add_or_reference_works(work, predicate, person, catalog_qid,
                                    person_pid, person_tid, is_imdb)
-
-
-def _get_works_args(catalog):
-    # Boolean to run IMDb-specific checks
-    is_imdb = catalog == IMDB
-    catalog_qid = target_database.get_catalog_qid(catalog)
-    person_pid = target_database.get_person_pid(catalog)
-    return catalog_qid, is_imdb, person_pid
-
-
-@click.command()
-@click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
-@click.argument('invalid_identifiers', type=click.File())
-@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits on the Wikidata sandbox item Q4115189.')
-def delete_cli(catalog, invalid_identifiers, sandbox):
-    """Delete invalid identifiers from existing Wikidata items.
-
-    INVALID_IDENTIFIERS must be a { QID: catalog_identifier } JSON file.
-    """
-    if sandbox:
-        LOGGER.info('Running on the Wikidata sandbox item ...')
-
-    delete_or_deprecate_identifiers('delete', json.load(
-        invalid_identifiers), catalog, sandbox)
-
-
-@click.command()
-@click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
-@click.argument('invalid_identifiers', type=click.File())
-@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits on the Wikidata sandbox item Q4115189.')
-def deprecate_cli(catalog, invalid_identifiers, sandbox):
-    """Deprecate invalid identifiers from existing Wikidata items.
-
-    INVALID_IDENTIFIERS must be a { QID: catalog_identifier } JSON file.
-    """
-    if sandbox:
-        LOGGER.info('Running on the Wikidata sandbox item ...')
-
-    delete_or_deprecate_identifiers('deprecate', json.load(
-        invalid_identifiers), catalog, sandbox)
 
 
 def add_identifiers(identifiers: dict, catalog: str, sandbox: bool) -> None:
@@ -448,6 +487,14 @@ def _check_for_same_value(
                 _reference(claim, stated_in, person_pid, person_tid)
                 return True
     return False
+
+
+def _get_works_args(catalog):
+    # Boolean to run IMDb-specific checks
+    is_imdb = catalog == IMDB
+    catalog_qid = target_database.get_catalog_qid(catalog)
+    person_pid = target_database.get_person_pid(catalog)
+    return catalog_qid, is_imdb, person_pid
 
 
 def _add(subject_item, predicate, value, stated_in, person_pid, person_tid):

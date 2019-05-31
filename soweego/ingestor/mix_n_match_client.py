@@ -113,20 +113,31 @@ CATALOG_ENTITY_URLS = {
     'entity', type=click.Choice(target_database.supported_entities())
 )
 @click.argument('confidence_range', type=(float, float))
-@click.argument('links', type=click.Path(exists=True, dir_okay=False))
-def cli(catalog, entity, confidence_range, links):
-    """Upload identifiers to the mix'n'match tool.
+@click.argument('matches', type=click.Path(exists=True, dir_okay=False))
+def cli(catalog, entity, confidence_range, matches):
+    """Upload matches to the Mix'n'match tool.
 
-    LINKS must be a CSV file path, with format:
-    QID, catalog_identifier, confidence_score.
+    CONFIDENCE_RANGE must be a pair of floats
+    that indicate the minimum and maximum confidence scores.
 
-    The CSV file can come compressed.
+    MATCHES must be a CSV file path.
+    Format: QID, catalog_identifier, confidence_score
+
+    The CSV file can be compressed.
+
+    Example:
+
+    echo Q446627,266995,0.666 > rhell.csv
+
+    python -m soweego ingest mnm discogs musician 0.3 0.7 rhell.csv
+
+    Result: see 'Latest catalogs' at https://tools.wmflabs.org/mix-n-match/
     """
     catalog_id = add_catalog(catalog, entity)
     if catalog_id is None:
         exit(1)
 
-    add_links(links, catalog_id, catalog, entity, confidence_range)
+    add_matches(matches, catalog_id, catalog, entity, confidence_range)
     activate_catalog(catalog_id, catalog, entity)
 
 
@@ -194,7 +205,7 @@ def _set_catalog_fields(db_entity, name_field, catalog, entity):
     db_entity.search_wp = SEARCH_WP_FIELD
 
 
-def add_links(file_path, catalog_id, catalog, entity, confidence_range):
+def add_matches(file_path, catalog_id, catalog, entity, confidence_range):
     success = True  # Flag to log that everything went fine
     url_prefix = CATALOG_ENTITY_URLS.get(f'{catalog}_{entity}')
     if url_prefix is None:
