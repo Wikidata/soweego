@@ -13,6 +13,7 @@ import gzip
 import logging
 import os
 import shutil
+import warnings
 import xml.etree.ElementTree as et
 from datetime import date, datetime
 from typing import Iterable, Tuple
@@ -38,6 +39,7 @@ from soweego.importer.models.discogs_entity import (
 )
 
 LOGGER = logging.getLogger(__name__)
+warnings.filterwarnings("ignore", message=".*rebuilding table to add column FTS_DOC_ID.*")
 
 DUMP_BASE_URL = 'https://discogs-data.s3-us-west-2.amazonaws.com/'
 DUMP_LIST_URL_TEMPLATE = DUMP_BASE_URL + '?delimiter=/&prefix=data/{}/'
