@@ -3,6 +3,7 @@
 
 """Dump extractor abstract class"""
 import logging
+import warnings
 from typing import Iterable
 
 __author__ = 'Marco Fossati'
@@ -11,15 +12,16 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
-
 LOGGER = logging.getLogger(__name__)
+warnings.filterwarnings("ignore",
+                        message=".*rebuilding table to add column FTS_DOC_ID.*")
 
 
 class BaseDumpExtractor:
     """Defines where to download a certain dump and how to post-process it."""
 
     def extract_and_populate(
-        self, dump_file_paths: Iterable[str], resolve: bool
+            self, dump_file_paths: Iterable[str], resolve: bool
     ):
         """Extract relevant data and populate SQL Alchemy entities accordingly.
 
