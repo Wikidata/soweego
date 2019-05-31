@@ -23,8 +23,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
-@click.argument('entity', type=click.Choice(constants.SUPPORTED_ENTITIES))
 @click.argument('catalog', type=click.Choice(constants.TARGET_CATALOGS))
+@click.argument('entity', type=click.Choice(constants.SUPPORTED_ENTITIES))
 @click.option(
     '--wikidata-dump/--no-wikidata-dump',
     default=False,
@@ -62,7 +62,8 @@ LOGGER = logging.getLogger(__name__)
     help="Default: '%swikidata_entities.json'" % constants.SHARED_FOLDER,
 )
 def check_existence_cli(
-    entity, catalog, wikidata_dump, upload, sandbox, cache, deprecated, wikidata
+        catalog, entity, wikidata_dump, upload, sandbox, cache, deprecated,
+        wikidata
 ):
     """Check the existence of identifier statements.
 
@@ -100,7 +101,6 @@ def check_existence_cli(
 
 
 def check_existence(entity, catalog, wikidata_cache=None):
-
     if wikidata_cache is None:
         wikidata = {}
 
@@ -119,8 +119,8 @@ def check_existence(entity, catalog, wikidata_cache=None):
         for target_id in identifiers:
             results = (
                 session.query(entity)
-                .filter(entity.catalog_id == target_id)
-                .all()
+                    .filter(entity.catalog_id == target_id)
+                    .all()
             )
             if not results:
                 LOGGER.info(
@@ -135,8 +135,8 @@ def check_existence(entity, catalog, wikidata_cache=None):
 
 
 @click.command()
-@click.argument('entity', type=click.Choice(constants.SUPPORTED_ENTITIES))
 @click.argument('catalog', type=click.Choice(constants.TARGET_CATALOGS))
+@click.argument('entity', type=click.Choice(constants.SUPPORTED_ENTITIES))
 @click.option(
     '--wikidata-dump/--no-wikidata-dump',
     default=False,
@@ -188,16 +188,16 @@ def check_existence(entity, catalog, wikidata_cache=None):
     help="Default: '%swikidata_links.json'" % constants.SHARED_FOLDER,
 )
 def check_links_cli(
-    entity,
-    catalog,
-    wikidata_dump,
-    upload,
-    sandbox,
-    cache,
-    deprecated,
-    ext_ids,
-    urls,
-    wikidata,
+        catalog,
+        entity,
+        wikidata_dump,
+        upload,
+        sandbox,
+        cache,
+        deprecated,
+        ext_ids,
+        urls,
+        wikidata,
 ):
     """Check the validity of identifier statements based on the available links.
 
@@ -286,7 +286,8 @@ def check_links(entity, catalog, wikidata_cache=None):
     )
 
     LOGGER.info(
-        'Validation completed. %d %s IDs to be deprecated, %d external IDs to be added, %d URL statements to be added',
+        'Validation completed. %d %s IDs to be deprecated, %d external IDs to '
+        'be added, %d URL statements to be added',
         len(to_deprecate),
         catalog,
         len(ext_ids_to_add),
@@ -297,8 +298,8 @@ def check_links(entity, catalog, wikidata_cache=None):
 
 
 @click.command()
-@click.argument('entity', type=click.Choice(constants.SUPPORTED_ENTITIES))
 @click.argument('catalog', type=click.Choice(constants.TARGET_CATALOGS))
+@click.argument('entity', type=click.Choice(constants.SUPPORTED_ENTITIES))
 @click.option(
     '--wikidata-dump/--no-wikidata-dump',
     default=False,
@@ -343,15 +344,15 @@ def check_links(entity, catalog, wikidata_cache=None):
     help="Default: '%swikidata_metadata.json'" % constants.SHARED_FOLDER,
 )
 def check_metadata_cli(
-    entity,
-    catalog,
-    wikidata_dump,
-    upload,
-    sandbox,
-    cache,
-    deprecated,
-    added,
-    wikidata,
+        catalog,
+        entity,
+        wikidata_dump,
+        upload,
+        sandbox,
+        cache,
+        deprecated,
+        added,
+        wikidata,
 ):
     """Check the validity of identifier statements based on the availability
     of the following metadata: birth/death date, birth/death place, gender.
@@ -457,7 +458,8 @@ def _load_wikidata_cache(file_handle):
 def _assess(criterion, source, target_generator, to_deprecate, to_add):
     LOGGER.info('Starting check against target %s ...', criterion)
     target = _consume_target_generator(target_generator)
-    # Large loop size = # given Wikidata class instances with identifiers, e.g., 80k musicians
+    # Large loop size = # given Wikidata class instances with identifiers,
+    # e.g., 80k musicians
     for qid, data in source.items():
         source_data = data.get(criterion)
         if not source_data:
@@ -466,7 +468,8 @@ def _assess(criterion, source, target_generator, to_deprecate, to_add):
             )
             continue
         identifiers = data[keys.TID]
-        # 1 or tiny loop size = # of identifiers per Wikidata item (should always be 1)
+        # 1 or tiny loop size = # of identifiers per Wikidata item (should
+        # always be 1)
         for target_id in identifiers:
             if target_id in target.keys():
                 target_data = target.get(target_id)
@@ -481,7 +484,8 @@ def _assess(criterion, source, target_generator, to_deprecate, to_add):
                 extra = target_data.difference(source_data)
                 if not shared:
                     LOGGER.debug(
-                        'No shared %s between %s and %s. The identifier statement will be deprecated',
+                        'No shared %s between %s and %s. The identifier '
+                        'statement will be deprecated',
                         criterion,
                         qid,
                         target_id,
@@ -507,7 +511,8 @@ def _assess(criterion, source, target_generator, to_deprecate, to_add):
                 else:
                     LOGGER.debug('%s has no extra %s', target_id, criterion)
     LOGGER.info(
-        'Check against target %s completed: %d IDs to be deprecated, %d statements to be added',
+        'Check against target %s completed: %d IDs to be deprecated, '
+        '%d statements to be added',
         criterion,
         len(to_deprecate),
         len(to_add),
