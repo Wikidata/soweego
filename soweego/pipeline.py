@@ -6,7 +6,7 @@ import click
 from soweego.commons import target_database
 from soweego.commons.db_manager import DBManager
 from soweego.importer.importer import check_links_cli, import_cli
-from soweego.linker import baseline, classify, evaluate, train
+from soweego.linker import classify, evaluate, train
 from soweego.validator.checks import (
     check_existence_cli,
     check_links_cli,
@@ -98,9 +98,6 @@ def _linker(target: str, upload: bool):
         _invoke_no_exit(train.cli, ['slp', target, target_type])
         _invoke_no_exit(
             classify.cli, ['slp', target, target_type, upload_option]
-        )
-        _invoke_no_exit(
-            baseline.cli, [target, target_type, '-s', 'all', upload_option]
         )
 
 
