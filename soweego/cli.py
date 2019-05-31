@@ -24,7 +24,7 @@ from soweego.wikidata import cli as wikidata_cli
 
 CLI_COMMANDS = {
     'importer': importer_cli.cli,
-    'ingestor': ingestor_cli.cli,
+    'ingest': ingestor_cli.cli,
     'linker': linker_cli.cli,
     'validator': validator_cli.cli,
     'wikidata': wikidata_cli.cli,
