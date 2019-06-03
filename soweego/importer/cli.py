@@ -18,5 +18,5 @@ CLI_COMMANDS = {'import': import_cli, 'check_links': check_links_cli}
 
 @click.group(name='importer', commands=CLI_COMMANDS)
 @click.pass_context
-def cli(ctx):
+def cli(_):
     """Import target dumps into the database."""

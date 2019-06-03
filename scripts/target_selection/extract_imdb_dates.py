@@ -1,7 +1,8 @@
 # coding: utf-8
-import json
 import csv
 import gzip
+import json
+
 dates = {}
 with gzip.open('name.basics.tsv.gz', 'rt') as i:
     no_nascita = 0

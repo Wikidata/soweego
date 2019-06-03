@@ -20,6 +20,8 @@ BASE = declarative_base()
 
 
 class BaseLinkEntity(AbstractConcreteBase, BASE):
+    """Describes the basic structure of a entity containing links"""
+
     __tablename__ = None
     internal_id = Column(
         Integer, unique=True, primary_key=True, autoincrement=True

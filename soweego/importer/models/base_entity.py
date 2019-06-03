@@ -20,6 +20,8 @@ BASE = declarative_base()
 
 
 class BaseEntity(AbstractConcreteBase, BASE):
+    """Each database entity should conform with this interface"""
+
     __tablename__ = None
     internal_id = Column(
         Integer, unique=True, primary_key=True, autoincrement=True
@@ -58,6 +60,8 @@ class BaseEntity(AbstractConcreteBase, BASE):
 
 
 class BaseRelationship(AbstractConcreteBase, BASE):
+    """Each database relationship should conform with this interface"""
+
     __tablename__ = None
     internal_id = Column(
         Integer, unique=True, primary_key=True, autoincrement=True
