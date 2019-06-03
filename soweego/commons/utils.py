@@ -72,3 +72,12 @@ def initialize_classifier(classifier, dataset, **kwargs):
 
     LOGGER.info('Model initialized: %s', model)
     return model
+
+
+def count_num_lines_in_file(file_) -> int:
+    # count number of rows and go back to
+    # the beginning of file
+    n_rows = len(file_.readlines())
+    file_.seek(0)
+
+    return n_rows

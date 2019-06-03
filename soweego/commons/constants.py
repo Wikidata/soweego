@@ -12,8 +12,6 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 from typing import TypeVar
 
 from soweego.commons import keys
-from soweego.importer.discogs_dump_extractor import DiscogsDumpExtractor
-from soweego.importer.imdb_dump_extractor import ImdbDumpExtractor
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.base_link_entity import BaseLinkEntity
 from soweego.importer.models.base_nlp_entity import BaseNlpEntity
@@ -45,7 +43,6 @@ from soweego.importer.models.musicbrainz_entity import (
     MusicbrainzReleaseGroupEntity,
     MusicbrainzReleaseGroupLinkEntity,
 )
-from soweego.importer.musicbrainz_dump_extractor import MusicBrainzDumpExtractor
 from soweego.wikidata import vocabulary
 
 # Wikidata items & properties regexes
@@ -75,13 +72,6 @@ SUPPORTED_ENTITIES = {
 # Target catalogs imported into the internal DB
 # DB entity Python types for typed function signatures
 DB_ENTITY = TypeVar('DB_ENTITY', BaseEntity, BaseLinkEntity, BaseNlpEntity)
-
-# Dump extractors
-DUMP_EXTRACTOR = {
-    'discogs': DiscogsDumpExtractor,
-    'musicbrainz': MusicBrainzDumpExtractor,
-    'imdb': ImdbDumpExtractor,
-}
 
 # DB entities and their Wikidata class QID
 TARGET_CATALOGS = {

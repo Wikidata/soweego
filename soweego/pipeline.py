@@ -51,12 +51,12 @@ LOGGER = logging.getLogger(__name__)
     help="default: None",
 )
 def cli(
-    target: str,
-    validator: bool,
-    importer: bool,
-    linker: bool,
-    upload: bool,
-    credentials_path: str,
+        target: str,
+        validator: bool,
+        importer: bool,
+        linker: bool,
+        upload: bool,
+        credentials_path: str,
 ):
     """Executes importer/linker and optionally validator for a target"""
 
@@ -102,6 +102,9 @@ def _linker(target: str, upload: bool):
         _invoke_no_exit(
             classify.cli, ['slp', target, target_type, upload_option]
         )
+        _invoke_no_exit(
+            baseline.cli, [target, target_type, '-s', 'all', upload_option]
+        )
 
 
 def _validator(target: str, upload: bool):
@@ -111,11 +114,11 @@ def _validator(target: str, upload: bool):
     for entity_type in target_database.supported_entities_for_target(target):
         LOGGER.info("Running validator for target %s %s", target, entity_type)
         _invoke_no_exit(
-            check_existence_cli, [entity_type, target, upload_option]
+            check_existence_cli, [target, entity_type, upload_option]
         )
-        _invoke_no_exit(check_links_cli, [entity_type, target, upload_option])
+        _invoke_no_exit(check_links_cli, [target, entity_type, upload_option])
         _invoke_no_exit(
-            check_metadata_cli, [entity_type, target, upload_option]
+            check_metadata_cli, [target, entity_type, upload_option]
         )
 
 
