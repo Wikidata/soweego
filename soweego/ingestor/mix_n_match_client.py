@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 """A client that uploads non-confident links
-to the Mix'n'match database for curation.
+to the `Mix'n'match <https://meta.wikimedia.org/wiki/Mix%27n%27match/Manual>`_ tool for curation.
 
 It inserts data in the ``catalog`` and ``entry`` tables of the ``s51434__mixnmatch_p``
-database located in ToolsDB under the Wikimedia Toolforge infrastructure.
-See https://wikitech.wikimedia.org/wiki/Help:Toolforge/Database#Connecting_to_the_database_replicas
+database located in `ToolsDB <https://wikitech.wikimedia.org/wiki/Help:Toolforge/Database#User_databases>`_ under the Wikimedia `Toolforge <https://wikitech.wikimedia.org/wiki/Portal:Toolforge>`_ infrastructure.
+See `how to connect <https://wikitech.wikimedia.org/wiki/Help:Toolforge/Database#Connecting_to_the_database_replicas>`_.
 """
 
 __author__ = 'Marco Fossati'
@@ -18,6 +18,7 @@ __copyright__ = 'Copyleft 2019, Hjfocs'
 import logging
 from datetime import datetime
 from sys import exit
+from typing import Tuple
 
 import click
 import requests
@@ -141,7 +142,17 @@ def cli(catalog, entity, confidence_range, matches):
     activate_catalog(catalog_id, catalog, entity)
 
 
-def add_catalog(catalog, entity):
+def add_catalog(catalog: str, entity: str) -> int:
+    """Add or update a catalog.
+
+    :param catalog: ``{'discogs', 'imdb', 'musicbrainz', 'twitter'}``.
+      A supported catalog
+    :param entity: ``{'actor', 'band', 'director', 'musician', 'producer',
+      'writer', 'audiovisual_work', 'musical_work'}``.
+      A supported entity
+    :return: the catalog *id* field of the *catalog* table
+      in the *s51434__mixnmatch_p* Toolforge database
+    """
     name_field = f'{catalog.title()} {entity}'
 
     session = DBManager(MNM_DB).new_session()
@@ -187,25 +198,22 @@ def add_catalog(catalog, entity):
     return catalog_id
 
 
-def _set_catalog_fields(db_entity, name_field, catalog, entity):
-    db_entity.name = name_field
-    db_entity.active = 1
-    db_entity.note = NOTE_FIELD
-    db_entity.type = CATALOG_TYPES.get(catalog, '')
-    db_entity.source_item = int(
-        target_database.get_catalog_qid(catalog).lstrip('Q')
-    )
-    entity_type = ENTITY_TYPES.get(entity)
-    if entity_type is PERSON:
-        wd_prop = target_database.get_person_pid(catalog)
-    # Handling other values is not required, since click.Choice already does the job
-    elif entity_type is WORK:
-        wd_prop = target_database.get_work_pid(catalog)
-    db_entity.wd_prop = int(wd_prop.lstrip('P'))
-    db_entity.search_wp = SEARCH_WP_FIELD
+def add_matches(file_path: str, catalog_id: int, catalog: str, entity: str, confidence_range: Tuple[float, float]) -> None:
+    """Add or update matches to an existing catalog.
+    Curated matches found in the catalog are kept as is.
 
-
-def add_matches(file_path, catalog_id, catalog, entity, confidence_range):
+    :param file_path: path to a file with matches
+    :param catalog_id: the catalog *id* field of the *catalog* table
+      in the *s51434__mixnmatch_p* Toolforge database
+    :param catalog: ``{'discogs', 'imdb', 'musicbrainz', 'twitter'}``.
+      A supported catalog
+    :param entity: ``{'actor', 'band', 'director', 'musician', 'producer',
+      'writer', 'audiovisual_work', 'musical_work'}``.
+      A supported entity
+    :param confidence_range: a pair of floats indicating
+      the minimum and maximum confidence scores of matches
+      that will be added/updated.
+    """
     success = True  # Flag to log that everything went fine
     url_prefix = CATALOG_ENTITY_URLS.get(f'{catalog}_{entity}')
     if url_prefix is None:
@@ -349,21 +357,17 @@ def add_matches(file_path, catalog_id, catalog, entity, confidence_range):
         )
 
 
-def _set_entry_fields(
-    db_entity, catalog_id, qid, tid, url, class_qid, confidence_score
-):
-    db_entity.catalog = catalog_id
-    db_entity.q = int(qid.lstrip('Q'))
-    db_entity.ext_id = tid
-    db_entity.ext_name = tid
-    db_entity.ext_url = url
-    db_entity.type = class_qid
-    db_entity.ext_desc = EXT_DESC_FIELD.format(confidence_score)
-    db_entity.user = USER_FIELD
-    db_entity.timestamp = datetime.now().strftime(TIMESTAMP_FORMAT)
+def activate_catalog(catalog_id: int, catalog: str, entity: str) -> None:
+    """Activate a catalog.
 
-
-def activate_catalog(catalog_id, catalog, entity):
+    :param catalog_id: the catalog *id* field of the *catalog* table
+      in the *s51434__mixnmatch_p* Toolforge database
+    :param catalog: ``{'discogs', 'imdb', 'musicbrainz', 'twitter'}``.
+      A supported catalog
+    :param entity: ``{'actor', 'band', 'director', 'musician', 'producer',
+      'writer', 'audiovisual_work', 'musical_work'}``.
+      A supported entity
+    """
     MNM_API_ACTIVATION_PARAMS['catalog'] = catalog_id
     activated = requests.get(MNM_API_URL, params=MNM_API_ACTIVATION_PARAMS)
 
@@ -405,3 +409,35 @@ def activate_catalog(catalog_id, catalog, entity):
             catalog_id,
             activated.status_code,
         )
+
+
+def _set_catalog_fields(db_entity, name_field, catalog, entity):
+    db_entity.name = name_field
+    db_entity.active = 1
+    db_entity.note = NOTE_FIELD
+    db_entity.type = CATALOG_TYPES.get(catalog, '')
+    db_entity.source_item = int(
+        target_database.get_catalog_qid(catalog).lstrip('Q')
+    )
+    entity_type = ENTITY_TYPES.get(entity)
+    if entity_type is PERSON:
+        wd_prop = target_database.get_person_pid(catalog)
+    # Handling other values is not required, since click.Choice already does the job
+    elif entity_type is WORK:
+        wd_prop = target_database.get_work_pid(catalog)
+    db_entity.wd_prop = int(wd_prop.lstrip('P'))
+    db_entity.search_wp = SEARCH_WP_FIELD
+
+
+def _set_entry_fields(
+    db_entity, catalog_id, qid, tid, url, class_qid, confidence_score
+):
+    db_entity.catalog = catalog_id
+    db_entity.q = int(qid.lstrip('Q'))
+    db_entity.ext_id = tid
+    db_entity.ext_name = tid
+    db_entity.ext_url = url
+    db_entity.type = class_qid
+    db_entity.ext_desc = EXT_DESC_FIELD.format(confidence_score)
+    db_entity.user = USER_FIELD
+    db_entity.timestamp = datetime.now().strftime(TIMESTAMP_FORMAT)
