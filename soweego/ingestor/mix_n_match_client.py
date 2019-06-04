@@ -16,8 +16,8 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2019, Hjfocs'
 
 import logging
+import sys
 from datetime import datetime
-from sys import exit
 from typing import Tuple
 
 import click
@@ -136,7 +136,7 @@ def cli(catalog, entity, confidence_range, matches):
     """
     catalog_id = add_catalog(catalog, entity)
     if catalog_id is None:
-        exit(1)
+        sys.exit(1)
 
     add_matches(matches, catalog_id, catalog, entity, confidence_range)
     activate_catalog(catalog_id, catalog, entity)
@@ -215,113 +215,36 @@ def add_matches(file_path: str, catalog_id: int, catalog: str, entity: str, conf
       that will be added/updated.
     """
     success = True  # Flag to log that everything went fine
-    url_prefix = CATALOG_ENTITY_URLS.get(f'{catalog}_{entity}')
-    if url_prefix is None:
-        LOGGER.debug('URL not available for %s %s', catalog, entity)
-    # Set human as default when the relevant class QID
-    # is not an instance-of (P31) value
-    if SUPPORTED_ENTITIES.get(entity) == keys.CLASS_QUERY:
-        class_qid = target_database.get_class_qid(catalog, entity)
-    else:
-        class_qid = HUMAN_QID
-
-    links = read_csv(file_path, names=INPUT_CSV_HEADER)
-    # Filter links above threshold,
-    # sort by confidence in ascending order,
-    # drop duplicate TIDs,
-    # keep the duplicate with the best score (last one)
-    links = (
-        links[
-            (links[keys.CONFIDENCE] >= confidence_range[0])
-            & (links[keys.CONFIDENCE] <= confidence_range[1])
-        ]
-        .sort_values(keys.CONFIDENCE)
-        .drop_duplicates(keys.TID, keep='last')
-    )
+    class_qid, url_prefix = _handle_metadata(catalog, entity)
+    matches = _handle_matches(file_path, confidence_range)
 
     LOGGER.info(
-        "Starting import of %s %s links (catalog ID: %d) into the mix'n'match DB ...",
+        "Starting import of %s %s matches (catalog ID: %d) into the mix'n'match DB ...",
         catalog,
         entity,
         catalog_id,
     )
+
     start = datetime.now()
     session = DBManager(MNM_DB).new_session()
-    curated = []
 
-    # Note that the session is kept open after these operations
-    try:
-        curated = session.query(mix_n_match.MnMEntry.ext_id).filter(
-            mix_n_match.MnMEntry.catalog == catalog_id,
-            mix_n_match.MnMEntry.user != 0,
-        )
-        # Result is a tuple: (tid,)
-        curated = [res[0] for res in curated]
+    # Note that the session is kept open after this operation
+    curated, success = _sync_matches(session, catalog_id, success)
 
-        n_deleted = (
-            session.query(mix_n_match.MnMEntry)
-            .filter(
-                mix_n_match.MnMEntry.catalog == catalog_id,
-                mix_n_match.MnMEntry.user == 0,
-            )
-            .delete(synchronize_session=False)
-        )
-
-        session.commit()
-        session.expunge_all()
-
-        LOGGER.info(
-            'Kept %d curated links, deleted %d remaining links',
-            len(curated),
-            n_deleted,
-        )
-    except SQLAlchemyError as error:
-        LOGGER.error(
-            "Failed query of existing links due to %s. "
-            "You can enable the debug log with the CLI option "
-            "'-l soweego.ingestor DEBUG' for more details",
-            error.__class__.__name__,
-        )
-        LOGGER.debug(error)
-
-        session.rollback()
-        success = False
-
-    # Filter curated links:
+    # Filter curated matches:
     # rows with tids that are NOT (~) in curated tids
-    links = links[~links[keys.TID].isin(curated)]
+    matches = matches[~matches[keys.TID].isin(curated)]
 
-    n_links = len(links)
-    links_reader = links.itertuples(index=False, name=None)
-
+    n_matches = len(matches)
+    matches_reader = matches.itertuples(index=False, name=None)
     batch = []
 
     try:
-        for qid, tid, score in tqdm(links_reader, total=n_links):
-            url = '' if url_prefix is None else url_prefix + tid
-
-            db_entity = mix_n_match.MnMEntry()
-            _set_entry_fields(
-                db_entity, catalog_id, qid, tid, url, class_qid, score
-            )
-            batch.append(db_entity)
-
-            if len(batch) >= COMMIT_EVERY:
-                LOGGER.info(
-                    'Adding batch of %d %s %s links, this may take a while ...',
-                    COMMIT_EVERY,
-                    catalog,
-                    entity,
-                )
-                session.bulk_save_objects(batch)
-                session.commit()
-
-                # Clear session & batch entities
-                session.expunge_all()
-                batch.clear()
+        _import_matches(batch, catalog, catalog_id, class_qid, entity, matches_reader, n_matches,
+                        session, url_prefix)
 
         LOGGER.info(
-            'Adding last batch of %d %s %s links, this may take a while ...',
+            'Adding last batch of %d %s %s matches, this may take a while ...',
             len(batch),
             catalog,
             entity,
@@ -347,14 +270,116 @@ def add_matches(file_path: str, catalog_id: int, catalog: str, entity: str, conf
     if success:
         end = datetime.now()
         LOGGER.info(
-            'Import of %s %s links (catalog ID: %d) completed in %s. '
-            'Total links: %d',
+            'Import of %s %s matches (catalog ID: %d) completed in %s. '
+            'Total matches: %d',
             catalog,
             entity,
             catalog_id,
             end - start,
-            n_links,
+            n_matches,
         )
+
+
+def _import_matches(batch, catalog, catalog_id, class_qid, entity, links_reader, n_links,
+                    session, url_prefix):
+    for qid, tid, score in tqdm(links_reader, total=n_links):
+        url = '' if url_prefix is None else url_prefix + tid
+
+        db_entity = mix_n_match.MnMEntry()
+        _set_entry_fields(
+            db_entity, catalog_id, qid, tid, url, class_qid, score
+        )
+        batch.append(db_entity)
+
+        if len(batch) >= COMMIT_EVERY:
+            LOGGER.info(
+                'Adding batch of %d %s %s matches, this may take a while ...',
+                COMMIT_EVERY,
+                catalog,
+                entity,
+            )
+            session.bulk_save_objects(batch)
+            session.commit()
+
+            # Clear session & batch entities
+            session.expunge_all()
+            batch.clear()
+
+
+def _sync_matches(session, catalog_id, success):
+    curated = []
+    try:
+        curated = session.query(mix_n_match.MnMEntry.ext_id).filter(
+            mix_n_match.MnMEntry.catalog == catalog_id,
+            mix_n_match.MnMEntry.user != 0,
+        )
+        # Result is a tuple: (tid,)
+        curated = [res[0] for res in curated]
+
+        n_deleted = _delete_non_curated_matches(catalog_id, session)
+
+        session.commit()
+        session.expunge_all()
+
+        LOGGER.info(
+            'Kept %d curated matches, deleted %d remaining matches',
+            len(curated),
+            n_deleted,
+        )
+    except SQLAlchemyError as error:
+        LOGGER.error(
+            "Failed query of existing matches due to %s. "
+            "You can enable the debug log with the CLI option "
+            "'-l soweego.ingestor DEBUG' for more details",
+            error.__class__.__name__,
+        )
+        LOGGER.debug(error)
+
+        session.rollback()
+        success = False
+    return curated, success
+
+
+def _delete_non_curated_matches(catalog_id, session):
+    n_deleted = (
+        session.query(mix_n_match.MnMEntry)
+            .filter(
+            mix_n_match.MnMEntry.catalog == catalog_id,
+            mix_n_match.MnMEntry.user == 0,
+        )
+            .delete(synchronize_session=False)
+    )
+    return n_deleted
+
+
+def _handle_matches(file_path, confidence_range):
+    links = read_csv(file_path, names=INPUT_CSV_HEADER)
+    # Filter links above threshold,
+    # sort by confidence in ascending order,
+    # drop duplicate TIDs,
+    # keep the duplicate with the best score (last one)
+    links = (
+        links[
+            (links[keys.CONFIDENCE] >= confidence_range[0])
+            & (links[keys.CONFIDENCE] <= confidence_range[1])
+            ]
+            .sort_values(keys.CONFIDENCE)
+            .drop_duplicates(keys.TID, keep='last')
+    )
+    return links
+
+
+def _handle_metadata(catalog, entity):
+    url_prefix = CATALOG_ENTITY_URLS.get(f'{catalog}_{entity}')
+    if url_prefix is None:
+        LOGGER.debug('URL not available for %s %s', catalog, entity)
+    # Set human as default when the relevant class QID
+    # is not an instance-of (P31) value
+    if SUPPORTED_ENTITIES.get(entity) == keys.CLASS_QUERY:
+        class_qid = target_database.get_class_qid(catalog, entity)
+    else:
+        class_qid = HUMAN_QID
+    return class_qid, url_prefix
 
 
 def activate_catalog(catalog_id: int, catalog: str, entity: str) -> None:
