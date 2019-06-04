@@ -19,6 +19,8 @@ Are you a Wikidata item? **soweego** is the only robot that lets you shake hands
    :maxdepth: 2
    :caption: Contents:
 
+   ingestor
+
 
 Indices and tables
 ==================
