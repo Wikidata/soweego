@@ -62,8 +62,7 @@ LOGGER = logging.getLogger(__name__)
     help="Default: '%swikidata_entities.json'" % constants.SHARED_FOLDER,
 )
 def check_existence_cli(
-        catalog, entity, wikidata_dump, upload, sandbox, cache, deprecated,
-        wikidata
+    catalog, entity, wikidata_dump, upload, sandbox, cache, deprecated, wikidata
 ):
     """Check the existence of identifier statements.
 
@@ -119,8 +118,8 @@ def check_existence(entity, catalog, wikidata_cache=None):
         for target_id in identifiers:
             results = (
                 session.query(entity)
-                    .filter(entity.catalog_id == target_id)
-                    .all()
+                .filter(entity.catalog_id == target_id)
+                .all()
             )
             if not results:
                 LOGGER.info(
@@ -188,16 +187,16 @@ def check_existence(entity, catalog, wikidata_cache=None):
     help="Default: '%swikidata_links.json'" % constants.SHARED_FOLDER,
 )
 def check_links_cli(
-        catalog,
-        entity,
-        wikidata_dump,
-        upload,
-        sandbox,
-        cache,
-        deprecated,
-        ext_ids,
-        urls,
-        wikidata,
+    catalog,
+    entity,
+    wikidata_dump,
+    upload,
+    sandbox,
+    cache,
+    deprecated,
+    ext_ids,
+    urls,
+    wikidata,
 ):
     """Check the validity of identifier statements based on the available links.
 
@@ -344,15 +343,15 @@ def check_links(entity, catalog, wikidata_cache=None):
     help="Default: '%swikidata_metadata.json'" % constants.SHARED_FOLDER,
 )
 def check_metadata_cli(
-        catalog,
-        entity,
-        wikidata_dump,
-        upload,
-        sandbox,
-        cache,
-        deprecated,
-        added,
-        wikidata,
+    catalog,
+    entity,
+    wikidata_dump,
+    upload,
+    sandbox,
+    cache,
+    deprecated,
+    added,
+    wikidata,
 ):
     """Check the validity of identifier statements based on the availability
     of the following metadata: birth/death date, birth/death place, gender.
@@ -529,7 +528,9 @@ def _consume_target_generator(target_generator):
     return target
 
 
-def _upload_links(catalog, entity, to_deprecate, urls_to_add, ext_ids_to_add, sandbox):
+def _upload_links(
+    catalog, entity, to_deprecate, urls_to_add, ext_ids_to_add, sandbox
+):
     catalog_qid = _upload(catalog, entity, to_deprecate, urls_to_add, sandbox)
     LOGGER.info('Starting addition of external IDs to Wikidata ...')
     wikidata_bot.add_people_statements(ext_ids_to_add, catalog_qid, sandbox)
@@ -538,8 +539,9 @@ def _upload_links(catalog, entity, to_deprecate, urls_to_add, ext_ids_to_add, sa
 def _upload(catalog, entity, to_deprecate, to_add, sandbox):
     catalog_qid = target_database.get_catalog_qid(catalog)
     LOGGER.info('Starting deprecation of %s IDs ...', catalog)
-    wikidata_bot.delete_or_deprecate_identifiers('deprecate', catalog, entity, to_deprecate,
-                                                 sandbox)
+    wikidata_bot.delete_or_deprecate_identifiers(
+        'deprecate', catalog, entity, to_deprecate, sandbox
+    )
     LOGGER.info('Starting addition of statements to Wikidata ...')
     wikidata_bot.add_people_statements(to_add, catalog_qid, sandbox)
     return catalog_qid

@@ -185,7 +185,13 @@ def add_catalog(catalog: str, entity: str) -> int:
     return catalog_id
 
 
-def add_matches(file_path: str, catalog_id: int, catalog: str, entity: str, confidence_range: Tuple[float, float]) -> None:
+def add_matches(
+    file_path: str,
+    catalog_id: int,
+    catalog: str,
+    entity: str,
+    confidence_range: Tuple[float, float],
+) -> None:
     """Add or update matches to an existing catalog.
     Curated matches found in the catalog are kept as is.
 
@@ -227,8 +233,17 @@ def add_matches(file_path: str, catalog_id: int, catalog: str, entity: str, conf
     batch = []
 
     try:
-        _import_matches(batch, catalog, catalog_id, class_qid, entity, matches_reader, n_matches,
-                        session, url_prefix)
+        _import_matches(
+            batch,
+            catalog,
+            catalog_id,
+            class_qid,
+            entity,
+            matches_reader,
+            n_matches,
+            session,
+            url_prefix,
+        )
 
         LOGGER.info(
             'Adding last batch of %d %s %s matches, this may take a while ...',
@@ -267,8 +282,17 @@ def add_matches(file_path: str, catalog_id: int, catalog: str, entity: str, conf
         )
 
 
-def _import_matches(batch, catalog, catalog_id, class_qid, entity, links_reader, n_links,
-                    session, url_prefix):
+def _import_matches(
+    batch,
+    catalog,
+    catalog_id,
+    class_qid,
+    entity,
+    links_reader,
+    n_links,
+    session,
+    url_prefix,
+):
     for qid, tid, score in tqdm(links_reader, total=n_links):
         url = '' if url_prefix is None else url_prefix + tid
 
@@ -330,11 +354,11 @@ def _sync_matches(session, catalog_id, success):
 def _delete_non_curated_matches(catalog_id, session):
     n_deleted = (
         session.query(mix_n_match.MnMEntry)
-            .filter(
+        .filter(
             mix_n_match.MnMEntry.catalog == catalog_id,
             mix_n_match.MnMEntry.user == 0,
         )
-            .delete(synchronize_session=False)
+        .delete(synchronize_session=False)
     )
     return n_deleted
 
@@ -349,9 +373,9 @@ def _handle_matches(file_path, confidence_range):
         links[
             (links[keys.CONFIDENCE] >= confidence_range[0])
             & (links[keys.CONFIDENCE] <= confidence_range[1])
-            ]
-            .sort_values(keys.CONFIDENCE)
-            .drop_duplicates(keys.TID, keep='last')
+        ]
+        .sort_values(keys.CONFIDENCE)
+        .drop_duplicates(keys.TID, keep='last')
     )
     return links
 

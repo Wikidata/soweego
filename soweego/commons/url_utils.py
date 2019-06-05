@@ -64,27 +64,27 @@ def validate(url):
     ipv6_re = r'\[[0-9a-f:\.]+\]'
     # Host patterns
     hostname_re = (
-            r'[a-z' + ul + r'0-9](?:[a-z' + ul + r'0-9-]{0,61}[a-z' + ul + r'0-9])?'
+        r'[a-z' + ul + r'0-9](?:[a-z' + ul + r'0-9-]{0,61}[a-z' + ul + r'0-9])?'
     )
     # Max length for domain name labels is 63 characters per RFC 1034 sec. 3.1
     domain_re = r'(?:\.(?!-)[a-z' + ul + r'0-9-]{1,63}(?<!-))*'
     # Top-level domain pattern
     tld_re = (
-            r'\.'  # Dot
-            r'(?!-)'  # Can't start with a dash
-            r'(?:[a-z' + ul + '-]{2,63}'  # Domain label
-                              r'|xn--[a-z0-9]{1,59})'  # Or punycode label
-                              r'(?<!-)'  # Can't end with a dash
-                              r'\.?'  # May have a trailing dot
+        r'\.'  # Dot
+        r'(?!-)'  # Can't start with a dash
+        r'(?:[a-z' + ul + '-]{2,63}'  # Domain label
+        r'|xn--[a-z0-9]{1,59})'  # Or punycode label
+        r'(?<!-)'  # Can't end with a dash
+        r'\.?'  # May have a trailing dot
     )
     host_re = '(' + hostname_re + domain_re + tld_re + '|localhost)'
     final_regex = re.compile(
         r'^((?:[a-z0-9\.\-\+]*)://)?'  # Scheme is optional
         r'(?:[^\s:@/]+(?::[^\s:@/]*)?@)?'  # user:pass authentication
         r'(?:' + ipv4_re + '|' + ipv6_re + '|' + host_re + ')'
-                                                           r'(?::\d{2,5})?'  # Port
-                                                           r'(?:[/?#][^\s]*)?'  # Resource path
-                                                           r'\Z',
+        r'(?::\d{2,5})?'  # Port
+        r'(?:[/?#][^\s]*)?'  # Resource path
+        r'\Z',
         re.IGNORECASE,
     )
     valid_url = re.search(final_regex, url)
@@ -222,9 +222,9 @@ def get_external_id_from_url(url, ext_id_pids_to_urls):
                     formatter_url,
                 )
                 url_fragment = (
-                    url[len(before): -len(after)]
+                    url[len(before) : -len(after)]
                     if len(after)
-                    else url[len(before):]
+                    else url[len(before) :]
                 )
                 if not formatter_regex:
                     LOGGER.debug(

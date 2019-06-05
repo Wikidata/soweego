@@ -68,9 +68,16 @@ SUPPORTED_TARGETS = target_database.supported_targets() ^ {TWITTER}
 
 @click.command()
 @click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
-@click.argument('entity', type=click.Choice(target_database.supported_entities()))
+@click.argument(
+    'entity', type=click.Choice(target_database.supported_entities())
+)
 @click.argument('invalid_identifiers', type=click.File())
-@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits on the Wikidata sandbox item Q4115189.')
+@click.option(
+    '-s',
+    '--sandbox',
+    is_flag=True,
+    help='Perform all edits on the Wikidata sandbox item Q4115189.',
+)
 def delete_cli(catalog, entity, invalid_identifiers, sandbox):
     """Delete invalid identifiers.
 
@@ -80,15 +87,23 @@ def delete_cli(catalog, entity, invalid_identifiers, sandbox):
     if sandbox:
         LOGGER.info('Running on the Wikidata sandbox item ...')
 
-    delete_or_deprecate_identifiers('delete', catalog, entity, json.load(
-        invalid_identifiers), sandbox)
+    delete_or_deprecate_identifiers(
+        'delete', catalog, entity, json.load(invalid_identifiers), sandbox
+    )
 
 
 @click.command()
 @click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
-@click.argument('entity', type=click.Choice(target_database.supported_entities()))
+@click.argument(
+    'entity', type=click.Choice(target_database.supported_entities())
+)
 @click.argument('invalid_identifiers', type=click.File())
-@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits on the Wikidata sandbox item Q4115189.')
+@click.option(
+    '-s',
+    '--sandbox',
+    is_flag=True,
+    help='Perform all edits on the Wikidata sandbox item Q4115189.',
+)
 def deprecate_cli(catalog, entity, invalid_identifiers, sandbox):
     """Deprecate invalid identifiers.
 
@@ -98,15 +113,23 @@ def deprecate_cli(catalog, entity, invalid_identifiers, sandbox):
     if sandbox:
         LOGGER.info('Running on the Wikidata sandbox item ...')
 
-    delete_or_deprecate_identifiers('deprecate', catalog, entity, json.load(
-        invalid_identifiers), sandbox)
+    delete_or_deprecate_identifiers(
+        'deprecate', catalog, entity, json.load(invalid_identifiers), sandbox
+    )
 
 
 @click.command()
 @click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
-@click.argument('entity', type=click.Choice(target_database.supported_entities()))
+@click.argument(
+    'entity', type=click.Choice(target_database.supported_entities())
+)
 @click.argument('identifiers', type=click.File())
-@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits on the Wikidata sandbox item Q4115189.')
+@click.option(
+    '-s',
+    '--sandbox',
+    is_flag=True,
+    help='Perform all edits on the Wikidata sandbox item Q4115189.',
+)
 def identifiers_cli(catalog, entity, identifiers, sandbox):
     """Add identifiers.
 
@@ -136,7 +159,12 @@ def identifiers_cli(catalog, entity, identifiers, sandbox):
 @click.command()
 @click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
 @click.argument('statements', type=click.File())
-@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits on the Wikidata sandbox item Q4115189.')
+@click.option(
+    '-s',
+    '--sandbox',
+    is_flag=True,
+    help='Perform all edits on the Wikidata sandbox item Q4115189.',
+)
 def people_cli(catalog, statements, sandbox):
     """Add statements to Wikidata people.
 
@@ -165,9 +193,7 @@ def people_cli(catalog, statements, sandbox):
     for statement in statements:
         person, predicate, value = statement.rstrip().split(',')
         if sandbox:
-            _add_or_reference(
-                vocabulary.SANDBOX_1, predicate, value, stated_in
-            )
+            _add_or_reference(vocabulary.SANDBOX_1, predicate, value, stated_in)
         else:
             _add_or_reference(person, predicate, value, stated_in)
 
@@ -175,7 +201,12 @@ def people_cli(catalog, statements, sandbox):
 @click.command()
 @click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
 @click.argument('statements', type=click.File())
-@click.option('-s', '--sandbox', is_flag=True, help='Perform all edits on the Wikidata sandbox item Q4115189.')
+@click.option(
+    '-s',
+    '--sandbox',
+    is_flag=True,
+    help='Perform all edits on the Wikidata sandbox item Q4115189.',
+)
 def works_cli(catalog, statements, sandbox):
     """Add statements to Wikidata works.
 
@@ -204,15 +235,30 @@ def works_cli(catalog, statements, sandbox):
     for statement in statements:
         work, predicate, person, person_tid = statement.rstrip().split(',')
         if sandbox:
-            _add_or_reference_works(vocabulary.SANDBOX_1, predicate,
-                                    person, catalog_qid, person_pid,
-                                    person_tid, is_imdb)
+            _add_or_reference_works(
+                vocabulary.SANDBOX_1,
+                predicate,
+                person,
+                catalog_qid,
+                person_pid,
+                person_tid,
+                is_imdb,
+            )
         else:
-            _add_or_reference_works(work, predicate, person, catalog_qid,
-                                    person_pid, person_tid, is_imdb)
+            _add_or_reference_works(
+                work,
+                predicate,
+                person,
+                catalog_qid,
+                person_pid,
+                person_tid,
+                is_imdb,
+            )
 
 
-def add_identifiers(identifiers: dict, catalog: str, entity: str, sandbox: bool) -> None:
+def add_identifiers(
+    identifiers: dict, catalog: str, entity: str, sandbox: bool
+) -> None:
     """Add identifier statements to existing Wikidata items.
 
     :param identifiers: a ``{QID: catalog_identifier}`` dictionary
@@ -227,18 +273,23 @@ def add_identifiers(identifiers: dict, catalog: str, entity: str, sandbox: bool)
     catalog_qid = target_database.get_catalog_qid(catalog)
     catalog_pid = target_database.get_catalog_pid(catalog, entity)
     for qid, tid in identifiers.items():
-        LOGGER.info('Processing %s match: %s -> %s',
-                    catalog, qid, tid)
+        LOGGER.info('Processing %s match: %s -> %s', catalog, qid, tid)
         if sandbox:
             LOGGER.debug(
-                'Using Wikidata sandbox item %s as subject, instead of %s', vocabulary.SANDBOX_1, qid)
-            _add_or_reference(vocabulary.SANDBOX_1, catalog_pid,
-                              tid, catalog_qid)
+                'Using Wikidata sandbox item %s as subject, instead of %s',
+                vocabulary.SANDBOX_1,
+                qid,
+            )
+            _add_or_reference(
+                vocabulary.SANDBOX_1, catalog_pid, tid, catalog_qid
+            )
         else:
             _add_or_reference(qid, catalog_pid, tid, catalog_qid)
 
 
-def add_people_statements(statements: Iterable, catalog: str, sandbox: bool) -> None:
+def add_people_statements(
+    statements: Iterable, catalog: str, sandbox: bool
+) -> None:
     """Add statements to existing Wikidata people.
 
     Statements typically come from validation criteria 2 or 3
@@ -261,9 +312,7 @@ def add_people_statements(statements: Iterable, catalog: str, sandbox: bool) -> 
                 vocabulary.SANDBOX_1, predicate, value, catalog_qid
             )
         else:
-            _add_or_reference(
-                subject, predicate, value, catalog_qid
-            )
+            _add_or_reference(subject, predicate, value, catalog_qid)
 
 
 def add_works_statements(
@@ -289,18 +338,29 @@ def add_works_statements(
         )
         if sandbox:
             _add_or_reference_works(
-                vocabulary.SANDBOX_1, predicate, person, catalog_qid,
-                person_pid, person_tid, is_imdb=is_imdb
+                vocabulary.SANDBOX_1,
+                predicate,
+                person,
+                catalog_qid,
+                person_pid,
+                person_tid,
+                is_imdb=is_imdb,
             )
         else:
             _add_or_reference_works(
-                work, predicate, person, catalog_qid,
-                person_pid, person_tid, is_imdb=is_imdb
+                work,
+                predicate,
+                person,
+                catalog_qid,
+                person_pid,
+                person_tid,
+                is_imdb=is_imdb,
             )
 
 
-def delete_or_deprecate_identifiers(action: str, catalog: str, entity: str, invalid: dict,
-                                    sandbox: bool) -> None:
+def delete_or_deprecate_identifiers(
+    action: str, catalog: str, entity: str, invalid: dict, sandbox: bool
+) -> None:
     """Delete or deprecate invalid identifier statements
     from existing Wikidata items.
 
@@ -326,20 +386,25 @@ def delete_or_deprecate_identifiers(action: str, catalog: str, entity: str, inva
     for tid, qids in invalid.items():
         for qid in qids:
             LOGGER.info(
-                'Will %s %s identifier: %s -> %s',
-                action,
-                catalog,
-                tid,
-                qid,
+                'Will %s %s identifier: %s -> %s', action, catalog, tid, qid
             )
             if sandbox:
-                _delete_or_deprecate(action, vocabulary.SANDBOX_1, tid, catalog, catalog_pid)
+                _delete_or_deprecate(
+                    action, vocabulary.SANDBOX_1, tid, catalog, catalog_pid
+                )
             else:
                 _delete_or_deprecate(action, qid, tid, catalog, catalog_pid)
 
 
-def _add_or_reference_works(work: str, predicate: str, person: str, stated_in: str, person_pid: str, person_tid: str,
-                            is_imdb=False) -> None:
+def _add_or_reference_works(
+    work: str,
+    predicate: str,
+    person: str,
+    stated_in: str,
+    person_pid: str,
+    person_tid: str,
+    is_imdb=False,
+) -> None:
     # Parse value into an item in case of QID
     qid = search(QID_REGEX, person)
     if not qid:
@@ -367,8 +432,15 @@ def _add_or_reference_works(work: str, predicate: str, person: str, stated_in: s
     # IMDB-specific check: claims with same object item -> add reference
     if is_imdb:
         for pred in vocabulary.MOVIE_PIDS:
-            if _check_for_same_value(claims, work, pred, person, stated_in, person_pid=person_pid,
-                                     person_tid=person_tid):
+            if _check_for_same_value(
+                claims,
+                work,
+                pred,
+                person,
+                stated_in,
+                person_pid=person_pid,
+                person_tid=person_tid,
+            ):
                 return
 
     _handle_addition(
@@ -404,14 +476,30 @@ def _add_or_reference(
     # Handle case-insensitive IDs: Facebook, Twitter
     # See https://www.wikidata.org/wiki/Topic:Unym71ais48bt6ih
     case_insensitive = predicate in (
-        vocabulary.FACEBOOK_PID, vocabulary.TWITTER_USERNAME_PID)
+        vocabulary.FACEBOOK_PID,
+        vocabulary.TWITTER_USERNAME_PID,
+    )
 
-    _handle_addition(claims, subject_item, predicate, value,
-                     stated_in, case_insensitive=case_insensitive)
+    _handle_addition(
+        claims,
+        subject_item,
+        predicate,
+        value,
+        stated_in,
+        case_insensitive=case_insensitive,
+    )
 
 
-def _handle_addition(claims, subject_item, predicate, value, stated_in, case_insensitive=False, person_pid=None,
-                     person_tid=None):
+def _handle_addition(
+    claims,
+    subject_item,
+    predicate,
+    value,
+    stated_in,
+    case_insensitive=False,
+    person_pid=None,
+    person_tid=None,
+):
     given_predicate_claims = claims.get(predicate)
     subject_qid = subject_item.getID()
 
@@ -608,8 +696,5 @@ def _delete_or_deprecate(action, qid, tid, catalog, catalog_pid) -> None:
                 )
             LOGGER.debug('%s claim: %s', action.title() + 'd', claim.toJSON())
     LOGGER.info(
-        '%s %s identifier statement from %s',
-        action.title() + 'd',
-        catalog,
-        qid,
+        '%s %s identifier statement from %s', action.title() + 'd', catalog, qid
     )
