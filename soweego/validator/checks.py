@@ -93,7 +93,7 @@ def check_existence_cli(
         LOGGER.info('Wikidata metadata dumped to %s', wikidata.name)
 
     if upload:
-        _upload_links(catalog, invalid, None, None, sandbox)
+        _upload_links(catalog, entity, invalid, None, None, sandbox)
 
     invalid = {target_id: list(qids) for target_id, qids in invalid.items()}
     json.dump(invalid, deprecated, indent=2)
@@ -238,7 +238,7 @@ def check_links_cli(
         LOGGER.info('Wikidata links dumped to %s', wikidata.name)
     if upload:
         _upload_links(
-            catalog, to_deprecate, urls_to_add, ext_ids_to_add, sandbox
+            catalog, entity, to_deprecate, urls_to_add, ext_ids_to_add, sandbox
         )
 
     json.dump(
@@ -391,7 +391,7 @@ def check_metadata_cli(
         )
         LOGGER.info('Wikidata metadata dumped to %s', wikidata.name)
     if upload:
-        _upload(catalog, to_deprecate, to_add, sandbox)
+        _upload(catalog, entity, to_deprecate, to_add, sandbox)
 
     if to_deprecate:
         json.dump(
@@ -529,18 +529,17 @@ def _consume_target_generator(target_generator):
     return target
 
 
-def _upload_links(catalog, to_deprecate, urls_to_add, ext_ids_to_add, sandbox):
-    catalog_qid = _upload(catalog, to_deprecate, urls_to_add, sandbox)
+def _upload_links(catalog, entity, to_deprecate, urls_to_add, ext_ids_to_add, sandbox):
+    catalog_qid = _upload(catalog, entity, to_deprecate, urls_to_add, sandbox)
     LOGGER.info('Starting addition of external IDs to Wikidata ...')
     wikidata_bot.add_people_statements(ext_ids_to_add, catalog_qid, sandbox)
 
 
-def _upload(catalog, to_deprecate, to_add, sandbox):
+def _upload(catalog, entity, to_deprecate, to_add, sandbox):
     catalog_qid = target_database.get_catalog_qid(catalog)
     LOGGER.info('Starting deprecation of %s IDs ...', catalog)
-    wikidata_bot.delete_or_deprecate_identifiers(
-        'deprecate', to_deprecate, catalog, sandbox
-    )
+    wikidata_bot.delete_or_deprecate_identifiers('deprecate', catalog, entity, to_deprecate,
+                                                 sandbox)
     LOGGER.info('Starting addition of statements to Wikidata ...')
     wikidata_bot.add_people_statements(to_add, catalog_qid, sandbox)
     return catalog_qid
