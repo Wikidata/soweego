@@ -78,19 +78,6 @@ CATALOG_TYPES = {
     keys.TWITTER: SOCIAL,
 }
 
-PERSON = 'person'
-WORK = 'work'
-ENTITY_TYPES = {
-    keys.ACTOR: PERSON,
-    keys.BAND: PERSON,
-    keys.DIRECTOR: PERSON,
-    keys.MUSICIAN: PERSON,
-    keys.PRODUCER: PERSON,
-    keys.WRITER: PERSON,
-    keys.MUSICAL_WORK: WORK,
-    keys.AUDIOVISUAL_WORK: WORK,
-}
-
 CATALOG_ENTITY_URLS = {
     f'{keys.DISCOGS}_{keys.MUSICIAN}': DISCOGS_PERSON_URL,
     f'{keys.DISCOGS}_{keys.BAND}': DISCOGS_PERSON_URL,
@@ -444,12 +431,7 @@ def _set_catalog_fields(db_entity, name_field, catalog, entity):
     db_entity.source_item = int(
         target_database.get_catalog_qid(catalog).lstrip('Q')
     )
-    entity_type = ENTITY_TYPES.get(entity)
-    if entity_type is PERSON:
-        wd_prop = target_database.get_person_pid(catalog)
-    # Handling other values is not required, since click.Choice already does the job
-    elif entity_type is WORK:
-        wd_prop = target_database.get_work_pid(catalog)
+    wd_prop = target_database.get_catalog_pid(catalog, entity)
     db_entity.wd_prop = int(wd_prop.lstrip('P'))
     db_entity.search_wp = SEARCH_WP_FIELD
 
