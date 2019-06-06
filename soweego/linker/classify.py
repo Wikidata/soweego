@@ -147,7 +147,7 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
         wd_chunks = pd.read_pickle(complete_wd_path)
         target_chunks = pd.read_pickle(complete_target_path)
 
-        # remove duplicate entries from target_chunks
+        # remove duplicate entries from concatenated target_chunks
         target_chunks = target_chunks[~target_chunks.index.duplicated()]
 
         _add_missing_feature_columns(classifier, fvectors)
