@@ -33,6 +33,7 @@ from soweego.commons import (
 from soweego.commons.logging import log_dataframe_info
 from soweego.linker import classifiers, neural_networks
 from soweego.linker.feature_extraction import (
+    CompareTokens,
     DateCompare,
     ExactList,
     OccupationQidSet,
@@ -181,11 +182,16 @@ def extract_features(
     if in_both_datasets(keys.NAME):
         compare.add(ExactList(keys.NAME, keys.NAME, label='name_exact'))
 
-    # Feature 2: exact match on URLs
     if in_both_datasets(keys.URL):
+        # Feature 2: exact match on URLs
         compare.add(ExactList(keys.URL, keys.URL, label='url_exact'))
 
-    # Feature 3: dates
+        # Feature 3: match on URL tokens
+        compare.add(CompareTokens(keys.URL_TOKENS, keys.URL_TOKENS,
+                                  label='url_tokens',
+                                  stopwords=text_utils.STOPWORDS_URL_TOKENS))
+
+    # Feature 4: dates
     if in_both_datasets(keys.DATE_OF_BIRTH):
         compare.add(
             DateCompare(
@@ -199,7 +205,7 @@ def extract_features(
             )
         )
 
-    # Feature 4: Levenshtein distance on name tokens
+    # Feature 5: Levenshtein distance on name tokens
     if in_both_datasets(keys.NAME_TOKENS):
         compare.add(
             StringList(
@@ -225,7 +231,7 @@ def extract_features(
             )
         )
 
-    # Feature 7: cosine similarity on descriptions
+    # Feature 8: cosine similarity on descriptions
     if in_both_datasets(keys.DESCRIPTION):
         compare.add(
             StringList(
@@ -237,7 +243,7 @@ def extract_features(
             )
         )
 
-    # Feature 8: occupation QIDs
+    # Feature 9: occupation QIDs
     occupations_col_name = vocabulary.LINKER_PIDS[vocabulary.OCCUPATION]
     if in_both_datasets(occupations_col_name):
         compare.add(
@@ -248,6 +254,7 @@ def extract_features(
             )
         )
 
+    # Feature 10: genre similar tokens
     if in_both_datasets(keys.GENRES):
         # Feature 9: genre similar tokens
         compare.add(
@@ -256,9 +263,14 @@ def extract_features(
             )
         )
 
+    # calculate feature vectors
     feature_vectors = compare.compute(
         candidate_pairs, wikidata, target
-    ).drop_duplicates()
+    )
+
+    # drop duplicate FV
+    feature_vectors = feature_vectors[~feature_vectors.index.duplicated()]
+
     pd.to_pickle(feature_vectors, path_io)
 
     LOGGER.info("Features dumped to '%s'", path_io)

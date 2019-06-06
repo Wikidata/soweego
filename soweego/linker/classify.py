@@ -147,6 +147,9 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
         wd_chunks = pd.read_pickle(complete_wd_path)
         target_chunks = pd.read_pickle(complete_target_path)
 
+        # remove duplicate entries from concatenated target_chunks
+        target_chunks = target_chunks[~target_chunks.index.duplicated()]
+
         _add_missing_feature_columns(classifier, fvectors)
 
         predictions = (
@@ -168,7 +171,11 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
                 _one_when_wikidata_link_correct, axis=1, args=(target_chunks,)
             )
 
-        yield predictions[predictions >= threshold].drop_duplicates()
+        # get all 'confident' predictions
+        above_threshold = predictions[predictions >= threshold]
+
+        # yield only those predictions which are not duplicate
+        yield above_threshold[~above_threshold.index.duplicated()]
 
     else:
 
@@ -270,7 +277,11 @@ def execute(catalog, entity, model, name_rule, threshold, dir_io):
 
             LOGGER.info('Chunk %d classified', i)
 
-            yield predictions[predictions >= threshold].drop_duplicates()
+            # get all 'confident' predictions
+            above_threshold = predictions[predictions >= threshold]
+
+            # yield only those predictions which are not duplicate
+            yield above_threshold[~above_threshold.index.duplicated()]
 
         # dump all processed chunks as pickled files
         all_feature_vectors.to_pickle(complete_fv_path)
@@ -295,9 +306,11 @@ def _zero_when_different_names(prediction, wikidata, target):
 
 
 def _one_when_wikidata_link_correct(prediction, target):
+
     qid, tid = prediction.name
 
     urls = target.loc[tid][keys.URL]
+
     if urls:
         for u in urls:
             if u:

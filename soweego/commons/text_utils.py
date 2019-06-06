@@ -39,6 +39,9 @@ BAND_NAME_LOW_SCORE_WORDS = frozenset(
     ).splitlines()
 )
 
+STOPWORDS_URL_TOKENS = frozenset(
+    str(get_data('soweego.commons.resources', 'urls_stop_words.txt'), 'utf8').splitlines())
+
 # Latin alphabet diacritics and Russian
 ASCII_TRANSLATION_TABLE = str.maketrans(
     {

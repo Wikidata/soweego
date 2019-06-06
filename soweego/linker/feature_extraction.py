@@ -118,7 +118,8 @@ class StringList(BaseCompareFeature):
         if len(source_column) != len(target_column):
             raise ValueError('Columns must have the same length')
         if len(source_column) == len(target_column) == 0:
-            LOGGER.warning("Can't compute cosine similarity, columns are empty")
+            LOGGER.warning(
+                "Can't compute cosine similarity, columns are empty")
             return pd.Series(np.nan)
 
         # This algorithm requires strings as input, but lists are expected
@@ -166,7 +167,7 @@ class StringList(BaseCompareFeature):
             return cosine
 
         return _metric_sparse_cosine(
-            vectors[: len(source_column)], vectors[len(source_column) :]
+            vectors[: len(source_column)], vectors[len(source_column):]
         )
 
 
@@ -370,7 +371,8 @@ class SimilarTokens(BaseCompareFeature):
             )
 
         return fillna(
-            concatenated.apply(intersection_percentage_size), self.missing_value
+            concatenated.apply(
+                intersection_percentage_size), self.missing_value
         )
 
 
@@ -466,6 +468,90 @@ class OccupationQidSet(BaseCompareFeature):
         return fillna(
             concatenated.apply(check_occupation_equality), self.missing_value
         )
+
+
+class CompareTokens(BaseCompareFeature):
+    name = 'compare_tokens'
+    description = 'Compares lists of tokens, potentially taking into account stopwords.'
+
+    def __init__(self,
+                 left_on, right_on,
+                 agree_value=1.0,
+                 disagree_value=0.0,
+                 missing_value=constants.FEATURE_MISSING_VALUE,
+                 label: str = None,
+                 stopwords: Set = None):
+        super(CompareTokens, self).__init__(left_on, right_on, label=label)
+
+        self.agree_value = agree_value
+        self.disagree_value = disagree_value
+        self.missing_value = missing_value
+        self.stopwords = stopwords
+
+    def _flatten_tokens(self, list_to_flatten: List) -> List:
+        """
+        takes a possibly nested List as `list_to_flatten`
+        and returns all elements in a flat array
+        """
+
+        to_process = [list_to_flatten]
+        result = []
+
+        while len(to_process) != 0:
+            current = to_process.pop()
+
+            for child in current:
+                if isinstance(child, List):
+                    to_process.append(child)
+                else:
+                    result.append(child)
+
+        return result
+
+    def _compute_vectorized(self, source_column: pd.Series, target_column: pd.Series) -> pd.Series:
+
+        # concatenate columns for easier processing. Here each element in
+        # the columns is a set of tokens
+        concatenated = pd.Series(list(zip(source_column, target_column)))
+
+        def compare_apply(pair: Tuple[List[str], List[str]]) -> float:
+            """
+            Compare how many tokens have the source and target columns in
+            common after removing stopwords tokens (if any)
+            """
+
+            if _pair_has_any_null(pair):
+                LOGGER.debug(
+                    "Can't compare, the pair contains null values: %s", pair)
+                return np.nan
+
+            # first we clean a bit the pair
+            # make all lowercase and split on possible spaces
+            # also reshape result into a list (flatten)
+            pair = [self._flatten_tokens([el.lower().split()
+                                          for el in p])
+                    for p in pair]
+
+            s_item, t_item = pair
+
+            # finally convert to sets
+            s_item = set(s_item)
+            t_item = set(t_item)
+
+            if self.stopwords:
+                s_item -= self.stopwords
+                t_item -= self.stopwords
+
+            min_length = min(len(s_item), len(t_item))
+            n_shared_items = len(s_item & t_item)
+
+            # prevent division by 0
+            if min_length != 0:
+                return n_shared_items / min_length
+            else:
+                return np.nan
+
+        return fillna(concatenated.apply(compare_apply), self.missing_value)
 
 
 def _pair_has_any_null(pair):
