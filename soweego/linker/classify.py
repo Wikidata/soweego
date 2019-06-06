@@ -311,9 +311,6 @@ def _one_when_wikidata_link_correct(prediction, target):
 
     urls = target.loc[tid][keys.URL]
 
-    # if isinstance(urls, pd.Series) and len(urls) > 0:
-    #     urls = list(urls)[0]
-
     if urls:
         for u in urls:
             if u:
