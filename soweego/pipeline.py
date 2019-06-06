@@ -128,4 +128,3 @@ def _invoke_no_exit(function: Callable, args: list):
     except SystemExit:
         LOGGER.debug(mem_top())
         LOGGER.debug(objgraph.show_most_common_types())
-        pass
