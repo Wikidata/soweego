@@ -13,6 +13,19 @@ __copyright__ = 'Copyleft 2019, Hjfocs'
 from soweego.commons import constants, keys
 from soweego.wikidata import vocabulary
 
+PERSON = 'person'
+WORK = 'work'
+ENTITY_TYPES = {
+    keys.ACTOR: PERSON,
+    keys.BAND: PERSON,
+    keys.DIRECTOR: PERSON,
+    keys.MUSICIAN: PERSON,
+    keys.PRODUCER: PERSON,
+    keys.WRITER: PERSON,
+    keys.MUSICAL_WORK: WORK,
+    keys.AUDIOVISUAL_WORK: WORK,
+}
+
 
 def supported_targets():
     return constants.TARGET_CATALOGS.keys()
@@ -64,3 +77,15 @@ def get_work_pid(catalog):
 
 def get_catalog_qid(target):
     return vocabulary.CATALOG_MAPPING.get(target)[keys.CATALOG_QID]
+
+
+def get_catalog_pid(target, entity):
+    entity_type = ENTITY_TYPES.get(entity)
+    if entity_type is PERSON:
+        return get_person_pid(target)
+    elif entity_type is WORK:
+        return get_work_pid(target)
+    else:
+        err_msg = f'Bad entity: {entity}. It should be one of {set(ENTITY_TYPES.keys())}'
+        LOGGER.critical(err_msg)
+        raise ValueError(err_msg)
