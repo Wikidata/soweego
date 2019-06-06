@@ -101,17 +101,17 @@ def cli(
         target, target_type, model_path, name_rule, threshold, dir_io
     ):
         if upload:
-            _upload(chunk, target, sandbox)
+            _upload(chunk, target, target_type, sandbox)
 
         chunk.to_csv(results_path, mode='a', header=False)
 
     LOGGER.info('Classification complete')
 
 
-def _upload(predictions, catalog, sandbox):
+def _upload(predictions, catalog, entity, sandbox):
     links = dict(predictions.to_dict().keys())
     LOGGER.info('Starting addition of links to Wikidata ...')
-    wikidata_bot.add_identifiers(links, catalog, sandbox)
+    wikidata_bot.add_identifiers(links, catalog, entity, sandbox)
 
 
 def execute(catalog, entity, model, name_rule, threshold, dir_io):

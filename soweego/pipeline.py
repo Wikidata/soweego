@@ -53,12 +53,12 @@ LOGGER = logging.getLogger(__name__)
     help="default: None",
 )
 def cli(
-        target: str,
-        validator: bool,
-        importer: bool,
-        linker: bool,
-        upload: bool,
-        credentials_path: str,
+    target: str,
+    validator: bool,
+    importer: bool,
+    linker: bool,
+    upload: bool,
+    credentials_path: str,
 ):
     """Executes importer/linker and optionally validator for a target"""
 
@@ -128,4 +128,3 @@ def _invoke_no_exit(function: Callable, args: list):
     except SystemExit:
         LOGGER.debug(mem_top())
         LOGGER.debug(objgraph.show_most_common_types())
-        pass
