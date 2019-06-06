@@ -4,6 +4,8 @@ import logging
 from typing import Callable
 
 import click
+import objgraph
+from mem_top import mem_top
 
 from soweego.commons import target_database
 from soweego.commons.db_manager import DBManager
@@ -102,9 +104,6 @@ def _linker(target: str, upload: bool):
         _invoke_no_exit(
             classify.cli, ['slp', target, target_type, upload_option]
         )
-        _invoke_no_exit(
-            baseline.cli, [target, target_type, '-s', 'all', upload_option]
-        )
 
 
 def _validator(target: str, upload: bool):
@@ -127,4 +126,6 @@ def _invoke_no_exit(function: Callable, args: list):
     try:
         function(args)
     except SystemExit:
+        LOGGER.debug(mem_top())
+        LOGGER.debug(objgraph.show_most_common_types())
         pass
