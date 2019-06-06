@@ -1,5 +1,6 @@
 """Module to run full soweego pipeline"""
 
+import gc
 import logging
 from typing import Callable
 
@@ -53,12 +54,12 @@ LOGGER = logging.getLogger(__name__)
     help="default: None",
 )
 def cli(
-    target: str,
-    validator: bool,
-    importer: bool,
-    linker: bool,
-    upload: bool,
-    credentials_path: str,
+        target: str,
+        validator: bool,
+        importer: bool,
+        linker: bool,
+        upload: bool,
+        credentials_path: str,
 ):
     """Executes importer/linker and optionally validator for a target"""
 
@@ -126,5 +127,6 @@ def _invoke_no_exit(function: Callable, args: list):
     try:
         function(args)
     except SystemExit:
-        LOGGER.debug(mem_top())
-        LOGGER.debug(objgraph.show_most_common_types())
+        LOGGER.debug("GC collect %s", gc.collect())
+        LOGGER.debug("memtop: %s", mem_top())
+        LOGGER.debug("objgraph: %s", objgraph.show_most_common_types())
