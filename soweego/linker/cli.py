@@ -7,7 +7,7 @@ CLI_COMMANDS = {
     'train': train.cli,
     'classify': classify.cli,
     'evaluate': evaluate.cli,
-    'extract_': baseline.extract_available_matches_in_target
+    'extract_matches': baseline.extract_available_matches_in_target,
 }
 
 
@@ -15,4 +15,3 @@ CLI_COMMANDS = {
 @click.pass_context
 def cli(ctx):
     """Link Wikidata items to target catalog identifiers."""
-    pass
