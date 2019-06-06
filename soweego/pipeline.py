@@ -127,6 +127,7 @@ def _invoke_no_exit(function: Callable, args: list):
     try:
         function(args)
     except SystemExit:
-        LOGGER.debug("GC collect %s", gc.collect())
-        LOGGER.debug("memtop: %s", mem_top())
-        LOGGER.debug("objgraph: %s", objgraph.show_most_common_types())
+        pass
+    LOGGER.debug("GC collect %s\n" % gc.collect())
+    LOGGER.debug("memtop: %\n" % mem_top())
+    LOGGER.debug("objgraph: %s\n" % objgraph.show_growth())

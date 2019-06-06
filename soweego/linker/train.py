@@ -17,6 +17,7 @@ import sys
 
 import click
 import pandas as pd
+from keras import backend as K
 from pandas import MultiIndex, concat
 from sklearn.externals import joblib
 from sklearn.model_selection import GridSearchCV
@@ -81,6 +82,8 @@ def cli(ctx, classifier, target, target_type, tune, k_folds, dir_io):
         dir_io, constants.LINKER_MODEL % (target, target_type, classifier)
     )
     joblib.dump(model, outfile)
+
+    K.clear_session()
     LOGGER.info("%s model dumped to '%s'", classifier, outfile)
 
 

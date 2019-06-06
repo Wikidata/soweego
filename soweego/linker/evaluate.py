@@ -17,6 +17,7 @@ from collections import defaultdict
 
 import click
 import recordlinkage as rl
+from keras import backend as K
 from numpy import mean, std
 from pandas import concat
 from sklearn.externals import joblib
@@ -292,6 +293,7 @@ def average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
         model.fit(training, positive_samples_index & training.index)
 
         preds = model.predict(test)
+        K.clear_session()
 
         p, r, f, _ = _compute_performance(
             positive_samples_index & test.index, preds, len(test)

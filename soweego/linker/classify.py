@@ -16,6 +16,7 @@ import re
 import click
 import pandas as pd
 import recordlinkage as rl
+from keras import backend as K
 from numpy import full, nan
 from pandas import DataFrame
 from sklearn.externals import joblib
@@ -104,6 +105,8 @@ def cli(
             _upload(chunk, target, target_type, sandbox)
 
         chunk.to_csv(results_path, mode='a', header=False)
+
+    K.clear_session()
 
     LOGGER.info('Classification complete')
 
