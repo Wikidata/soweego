@@ -479,8 +479,8 @@ class CompareTokens(BaseCompareFeature):
                  agree_value=1.0,
                  disagree_value=0.0,
                  missing_value=constants.FEATURE_MISSING_VALUE,
-                 label=None,
-                 stopwords=None):
+                 label: str = None,
+                 stopwords: Set = None):
         super(CompareTokens, self).__init__(left_on, right_on, label=label)
 
         self.agree_value = agree_value
@@ -488,7 +488,7 @@ class CompareTokens(BaseCompareFeature):
         self.missing_value = missing_value
         self.stopwords = stopwords
 
-    def _flatten_tokens(self, list_to_flatten: List):
+    def _flatten_tokens(self, list_to_flatten: List) -> List:
         """
         takes a possibly nested List as `list_to_flatten`
         and returns all elements in a flat array
@@ -508,13 +508,13 @@ class CompareTokens(BaseCompareFeature):
 
         return result
 
-    def _compute_vectorized(self, source_column: pd.Series, target_column: pd.Series):
+    def _compute_vectorized(self, source_column: pd.Series, target_column: pd.Series) -> pd.Series:
 
         # concatenate columns for easier processing. Here each element in
         # the columns is a set of tokens
         concatenated = pd.Series(list(zip(source_column, target_column)))
 
-        def compare_apply(pair: Tuple[List[str], List[str]]):
+        def compare_apply(pair: Tuple[List[str], List[str]]) -> float:
             """
             Compare how many tokens have the source and target columns in
             common after removing stopwords tokens (if any)
