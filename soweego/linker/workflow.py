@@ -187,9 +187,14 @@ def extract_features(
         compare.add(ExactList(keys.URL, keys.URL, label='url_exact'))
 
         # Feature 3: match on URL tokens
-        compare.add(CompareTokens(keys.URL_TOKENS, keys.URL_TOKENS,
-                                  label='url_tokens',
-                                  stopwords=text_utils.STOPWORDS_URL_TOKENS))
+        compare.add(
+            CompareTokens(
+                keys.URL_TOKENS,
+                keys.URL_TOKENS,
+                label='url_tokens',
+                stopwords=text_utils.STOPWORDS_URL_TOKENS,
+            )
+        )
 
     # Feature 4: dates
     if in_both_datasets(keys.DATE_OF_BIRTH):
@@ -264,9 +269,7 @@ def extract_features(
         )
 
     # calculate feature vectors
-    feature_vectors = compare.compute(
-        candidate_pairs, wikidata, target
-    )
+    feature_vectors = compare.compute(candidate_pairs, wikidata, target)
 
     # drop duplicate FV
     feature_vectors = feature_vectors[~feature_vectors.index.duplicated()]

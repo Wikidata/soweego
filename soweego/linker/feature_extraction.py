@@ -118,8 +118,7 @@ class StringList(BaseCompareFeature):
         if len(source_column) != len(target_column):
             raise ValueError('Columns must have the same length')
         if len(source_column) == len(target_column) == 0:
-            LOGGER.warning(
-                "Can't compute cosine similarity, columns are empty")
+            LOGGER.warning("Can't compute cosine similarity, columns are empty")
             return pd.Series(np.nan)
 
         # This algorithm requires strings as input, but lists are expected
@@ -167,7 +166,7 @@ class StringList(BaseCompareFeature):
             return cosine
 
         return _metric_sparse_cosine(
-            vectors[: len(source_column)], vectors[len(source_column):]
+            vectors[: len(source_column)], vectors[len(source_column) :]
         )
 
 
@@ -371,8 +370,7 @@ class SimilarTokens(BaseCompareFeature):
             )
 
         return fillna(
-            concatenated.apply(
-                intersection_percentage_size), self.missing_value
+            concatenated.apply(intersection_percentage_size), self.missing_value
         )
 
 
@@ -472,15 +470,20 @@ class OccupationQidSet(BaseCompareFeature):
 
 class CompareTokens(BaseCompareFeature):
     name = 'compare_tokens'
-    description = 'Compares lists of tokens, potentially taking into account stopwords.'
+    description = (
+        'Compares lists of tokens, potentially taking into account stopwords.'
+    )
 
-    def __init__(self,
-                 left_on, right_on,
-                 agree_value=1.0,
-                 disagree_value=0.0,
-                 missing_value=constants.FEATURE_MISSING_VALUE,
-                 label: str = None,
-                 stopwords: Set = None):
+    def __init__(
+        self,
+        left_on,
+        right_on,
+        agree_value=1.0,
+        disagree_value=0.0,
+        missing_value=constants.FEATURE_MISSING_VALUE,
+        label: str = None,
+        stopwords: Set = None,
+    ):
         super(CompareTokens, self).__init__(left_on, right_on, label=label)
 
         self.agree_value = agree_value
@@ -508,7 +511,9 @@ class CompareTokens(BaseCompareFeature):
 
         return result
 
-    def _compute_vectorized(self, source_column: pd.Series, target_column: pd.Series) -> pd.Series:
+    def _compute_vectorized(
+        self, source_column: pd.Series, target_column: pd.Series
+    ) -> pd.Series:
 
         # concatenate columns for easier processing. Here each element in
         # the columns is a set of tokens
@@ -522,15 +527,17 @@ class CompareTokens(BaseCompareFeature):
 
             if _pair_has_any_null(pair):
                 LOGGER.debug(
-                    "Can't compare, the pair contains null values: %s", pair)
+                    "Can't compare, the pair contains null values: %s", pair
+                )
                 return np.nan
 
             # first we clean a bit the pair
             # make all lowercase and split on possible spaces
             # also reshape result into a list (flatten)
-            pair = [self._flatten_tokens([el.lower().split()
-                                          for el in p])
-                    for p in pair]
+            pair = [
+                self._flatten_tokens([el.lower().split() for el in p])
+                for p in pair
+            ]
 
             s_item, t_item = pair
 
