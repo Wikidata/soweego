@@ -45,7 +45,7 @@ LOGGER = logging.getLogger(__name__)
 class MusicBrainzDumpExtractor(BaseDumpExtractor):
     """Defines where to download Musicbrainz dump and how to post-process it"""
 
-    _sqlalchemy_commit_every = 1_000_000
+    _sqlalchemy_commit_every = 100_000
 
     def get_dump_download_urls(self) -> Iterable[str]:
         base_url = 'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport'

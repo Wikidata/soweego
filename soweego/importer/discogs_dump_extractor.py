@@ -57,7 +57,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
     valid_links = 0
     dead_links = 0
 
-    _sqlalchemy_commit_every = 1_000_000
+    _sqlalchemy_commit_every = 100_000
 
     def get_dump_download_urls(self) -> Iterable[str]:
         urls = []
