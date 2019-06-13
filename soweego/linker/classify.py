@@ -104,6 +104,7 @@ def cli(
         if upload:
             _upload(chunk, target, target_type, sandbox)
 
+        os.makedirs(os.path.dirname(results_path), exist_ok=True)
         chunk.to_csv(results_path, mode='a', header=False)
 
     K.clear_session()

@@ -28,7 +28,8 @@ done
 shift "$((OPTIND - 1))"
 
 
-#Creates the shared folder if it not exists
+# Resets shared folder
+rm DOCKER_SHARED_FOLDER
 mkdir -p DOCKER_SHARED_FOLDER
 
 # Reset and update the project source code

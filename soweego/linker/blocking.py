@@ -85,6 +85,7 @@ def full_text_query_block(
         samples_index.to_series().sample(5),
     )
 
+    os.makedirs(os.path.dirname(samples_path), exist_ok=True)
     pd.to_pickle(samples_index, samples_path)
     LOGGER.info(
         "%s %s samples index chunk %d dumped to '%s'",

@@ -207,24 +207,25 @@ NAME_FIELDS = (
 
 # File names & folders
 SHARED_FOLDER = '/app/shared/'
-WD_TRAINING_SET = 'wikidata_%s_%s_training_set.jsonl.gz'
-WD_CLASSIFICATION_SET = 'wikidata_%s_%s_classification_set.jsonl.gz'
-SAMPLES = '%s_%s_%s_samples%02d.pkl.gz'
-FEATURES = '%s_%s_%s_features%02d.pkl.gz'
-LINKER_MODEL = '%s_%s_%s_model.pkl'
-LINKER_NESTED_CV_BEST_MODEL = '%s_%s_%s_best_model_k%02d.pkl'
-LINKER_RESULT = '%s_%s_%s_linker_result.csv.gz'
-LINKER_EVALUATION_PREDICTIONS = '%s_%s_%s_linker_evaluation_predictions.csv.gz'
-LINKER_PERFORMANCE = '%s_%s_%s_linker_performance.txt'
-NEURAL_NETWORK_CHECKPOINT_MODEL = '%s_best_checkpoint_model.hdf5'
-COMPLETE_FEATURE_VECTORS = '%s_%s_%s_complete_feature_vectors.pkl.gz'
-COMPLETE_WIKIDATA_CHUNKS = '%s_%s_%s_complete_wikidata_chunks.pkl.gz'
-COMPLETE_TARGET_CHUNKS = '%s_%s_%s_complete_target_chunks.pkl.gz'
+WD_TRAINING_SET = 'wikidata/wikidata_%s_%s_training_set.jsonl.gz'
+WD_CLASSIFICATION_SET = 'wikidata/wikidata_%s_%s_classification_set.jsonl.gz'
+SAMPLES = 'samples/%s_%s_%s_samples%02d.pkl.gz'
+FEATURES = 'features/%s_%s_%s_features%02d.pkl.gz'
+LINKER_MODEL = 'models/%s_%s_%s_model.pkl'
+LINKER_NESTED_CV_BEST_MODEL = '%models/s_%s_%s_best_model_k%02d.pkl'
+LINKER_RESULT = 'results/%s_%s_%s_linker_result.csv.gz'
+LINKER_EVALUATION_PREDICTIONS = 'results/%s_%s_%s_linker_evaluation_predictions.csv.gz'
+LINKER_PERFORMANCE = 'results/%s_%s_%s_linker_performance.txt'
+NEURAL_NETWORK_CHECKPOINT_MODEL = 'best_model_checkpoint/%s_best_checkpoint_model.hdf5'
+COMPLETE_FEATURE_VECTORS = 'features/%s_%s_%s_complete_feature_vectors.pkl.gz'
+COMPLETE_WIKIDATA_CHUNKS = 'wikidata/%s_%s_%s_complete_wikidata_chunks.pkl.gz'
+COMPLETE_TARGET_CHUNKS = 'samples/%s_%s_%s_complete_target_chunks.pkl.gz'
 COMPLETE_POSITIVE_SAMPLES_INDEX = (
-    '%s_%s_%s_complete_positive_samples_index.pkl.gz'
+    'samples/%s_%s_%s_complete_positive_samples_index.pkl.gz'
 )
 WIKIDATA_API_SESSION = 'wiki_api_session.pkl'
 WORKS_BY_PEOPLE_STATEMENTS = '%s_works_by_%s_statements.csv'
+TENSOR_BOARD = 'tensor_board/'
 
 CLASSIFIERS = {
     'naive_bayes': keys.NAIVE_BAYES,
