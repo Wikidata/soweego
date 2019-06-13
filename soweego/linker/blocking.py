@@ -4,7 +4,6 @@
 """Set of techniques to index record pairs (read blocking)."""
 import logging
 import os
-from multiprocessing import Pool
 from typing import Iterable, Tuple
 
 import pandas as pd
@@ -21,12 +20,11 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
-
 LOGGER = logging.getLogger(__name__)
 
 
 def train_test_block(
-    wikidata_df: pd.DataFrame, target_df: pd.DataFrame
+        wikidata_df: pd.DataFrame, target_df: pd.DataFrame
 ) -> pd.MultiIndex:
     blocking_column = keys.TID
 
@@ -44,12 +42,12 @@ def train_test_block(
 
 
 def full_text_query_block(
-    goal: str,
-    catalog: str,
-    wikidata_series: pd.Series,
-    chunk_number: int,
-    target_entity: constants.DB_ENTITY,
-    dir_io: str,
+        goal: str,
+        catalog: str,
+        wikidata_series: pd.Series,
+        chunk_number: int,
+        target_entity: constants.DB_ENTITY,
+        dir_io: str,
 ) -> pd.MultiIndex:
     handle_goal(goal)
     samples_path = os.path.join(
@@ -101,14 +99,14 @@ def full_text_query_block(
 
 
 def _multiprocessing_series_iterator(
-    wikidata_series: pd.Series, target_entity: constants.DB_ENTITY
+        wikidata_series: pd.Series, target_entity: constants.DB_ENTITY
 ) -> Iterable[Tuple[str, str, constants.DB_ENTITY]]:
     for qids, terms in wikidata_series.items():
         yield qids, terms, target_entity
 
 
 def fulltext_search(
-    qid_terms_target: Tuple[str, list, constants.DB_ENTITY]
+        qid_terms_target: Tuple[str, list, constants.DB_ENTITY]
 ) -> Iterable[Tuple[str, str]]:
     qid, terms, target_entity = qid_terms_target
     tids = list(
@@ -121,16 +119,9 @@ def fulltext_search(
 
 
 def _extract_target_candidates(
-    wikidata_series: pd.Series, target_entity: constants.DB_ENTITY
+        wikidata_series: pd.Series, target_entity: constants.DB_ENTITY
 ):
-    with Pool() as pool:
-        for res in tqdm(
-            pool.imap_unordered(
-                fulltext_search,
-                _multiprocessing_series_iterator(
-                    wikidata_series, target_entity
-                ),
-            ),
-            total=len(wikidata_series),
-        ):
-            yield from res
+    for t in tqdm(
+            _multiprocessing_series_iterator(wikidata_series, target_entity),
+            total=len(wikidata_series)):
+        yield from fulltext_search(t)
