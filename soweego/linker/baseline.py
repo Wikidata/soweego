@@ -74,7 +74,7 @@ WD_IO_FILENAME = 'wikidata_%s_dataset.jsonl.gz'
     help="default: '%s" % constants.SHARED_FOLDER,
 )
 def cli(
-    target, target_type, strategy, check_dates, upload, sandbox, output_dir
+        target, target_type, strategy, check_dates, upload, sandbox, output_dir
 ):
     """Rule-based matching strategies.
 
@@ -97,7 +97,8 @@ def cli(
     wd_io_path = path.join(output_dir, WD_IO_FILENAME % target)
     if not path.exists(wd_io_path):
         qids = data_gathering.gather_qids(
-            target_type, target, target_database.get_person_pid(target)
+            target_type, target,
+            target_database.get_catalog_pid(target, target_type)
         )
         url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
         with gzip.open(wd_io_path, 'wt') as wd_io:
@@ -114,7 +115,7 @@ def cli(
 
     target_entity = target_database.get_main_entity(target, target_type)
     target_link_entity = target_database.get_link_entity(target, target_type)
-    target_pid = target_database.get_person_pid(target)
+    target_pid = target_database.get_catalog_pid(target, target_type)
 
     result = None
 
@@ -196,20 +197,20 @@ def cli(
     help="default: '%s" % constants.SHARED_FOLDER,
 )
 def extract_available_matches_in_target(
-    target, target_type, upload, sandbox, output_dir
+        target, target_type, upload, sandbox, output_dir
 ):
     """"""
     target_link_entity = target_database.get_link_entity(target, target_type)
-    target_pid = target_database.get_person_pid(target)
+    target_pid = target_database.get_catalog_pid(target, target_type)
 
     def result_generator(target_link_entity, target_pid):
         if target_link_entity:
             for r in data_gathering.tokens_fulltext_search(
-                target_link_entity,
-                True,
-                ('wikidata',),
-                where_clause=target_link_entity.is_wiki == 1,
-                limit=1_000_000_000,
+                    target_link_entity,
+                    True,
+                    ('wikidata',),
+                    where_clause=target_link_entity.is_wiki == 1,
+                    limit=1_000_000_000,
             ):
                 qid = re.search(r"(Q\d+)$", r.url).groups()[0]
                 if qid:
@@ -228,14 +229,14 @@ def extract_available_matches_in_target(
 
 
 def _write_or_upload_result(
-    strategy,
-    target,
-    target_type,
-    result: Iterable,
-    output_dir: str,
-    filename: str,
-    upload: bool,
-    sandbox: bool,
+        strategy,
+        target,
+        target_type,
+        result: Iterable,
+        output_dir: str,
+        filename: str,
+        upload: bool,
+        sandbox: bool,
 ):
     if upload:
         wikidata_bot.add_people_statements(
@@ -257,10 +258,10 @@ def _write_or_upload_result(
 
 
 def perfect_name_match(
-    source_dataset,
-    target_entity: BaseEntity,
-    target_pid: str,
-    compare_dates: bool,
+        source_dataset,
+        target_entity: BaseEntity,
+        target_pid: str,
+        compare_dates: bool,
 ) -> Iterable[Tuple[str, str, str]]:
     """Given a dictionary ``{string: identifier}``, a Base Entity and a PID,
     match perfect strings and return a dataset ``[(source_id, PID, target_id), ...]``.
@@ -282,14 +283,14 @@ def perfect_name_match(
         if len(bucket) >= bucket_size or missing < bucket_size:
             missing -= len(bucket)
             for res in data_gathering.perfect_name_search_bucket(
-                target_entity, bucket_names
+                    target_entity, bucket_names
             ):
                 for en in bucket:
                     # wikidata entities have a list of names
                     for name in en[keys.NAME]:
                         if name.lower() == res.name.lower():
                             if not compare_dates or birth_death_date_match(
-                                res, en
+                                    res, en
                             ):
                                 yield (en[keys.QID], target_pid, res.catalog_id)
             bucket.clear()
@@ -297,7 +298,7 @@ def perfect_name_match(
 
 
 def similar_name_tokens_match(
-    source, target, target_pid: str, compare_dates: bool
+        source, target, target_pid: str, compare_dates: bool
 ) -> Iterable[Tuple[str, str, str]]:
     """Given a dictionary ``{string: identifier}``, a BaseEntity and a tokenization function and a PID,
     match similar tokens and return a dataset ``[(source_id, PID, target_id), ...]``.
@@ -322,7 +323,7 @@ def similar_name_tokens_match(
             # NOTICE: sets of size 1 are always exluded
             # Looks for sets equal or bigger containing our tokens
             for res in data_gathering.tokens_fulltext_search(
-                target, True, tokenized
+                    target, True, tokenized
             ):
                 if not compare_dates or birth_death_date_match(res, entity):
                     yield (qid, target_pid, res.catalog_id)
@@ -330,7 +331,7 @@ def similar_name_tokens_match(
             # Looks for sets contained in our set of tokens
             where_clause = target.catalog_id.notin_(to_exclude)
             for res in data_gathering.tokens_fulltext_search(
-                target, False, tokenized, where_clause=where_clause
+                    target, False, tokenized, where_clause=where_clause
             ):
                 res_tokenized = set(res.name_tokens.split())
                 if len(res_tokenized) > 1 and res_tokenized.issubset(tokenized):
@@ -339,7 +340,7 @@ def similar_name_tokens_match(
 
 
 def similar_link_tokens_match(
-    source, target, target_pid: str
+        source, target, target_pid: str
 ) -> Iterable[Tuple[str, str, str]]:
     """Given a dictionary ``{string: identifier}``, a BaseEntity and a tokenization function and a PID,
     match similar tokens and return a dataset ``[(source_id, PID, target_id), ...]``.
@@ -369,18 +370,18 @@ def similar_link_tokens_match(
                 # NOTICE: sets of size 1 are always excluded
                 # Looks for sets equal or bigger containing our tokens
                 for res in data_gathering.tokens_fulltext_search(
-                    target, True, tokenized
+                        target, True, tokenized
                 ):
                     yield (qid, target_pid, res.catalog_id)
                     to_exclude.add(res.catalog_id)
                 # Looks for sets contained in our set of tokens
                 where_clause = target.catalog_id.notin_(to_exclude)
                 for res in data_gathering.tokens_fulltext_search(
-                    target, False, tokenized, where_clause
+                        target, False, tokenized, where_clause
                 ):
                     res_tokenized = set(res.url_tokens.split())
                     if len(res_tokenized) > 1 and res_tokenized.issubset(
-                        tokenized
+                            tokenized
                     ):
                         yield (qid, target_pid, res.catalog_id)
             except ProgrammingError as ex:
@@ -389,7 +390,8 @@ def similar_link_tokens_match(
 
 
 def compare_dates_on_common_precision(
-    common_precision: int, date_elements1: Iterable, date_elements2: Iterable
+        common_precision: int, date_elements1: Iterable,
+        date_elements2: Iterable
 ) -> bool:
     # safety check
     if common_precision < 9:
@@ -401,7 +403,7 @@ def compare_dates_on_common_precision(
 
 
 def date_equals(
-    born: datetime, born_precision: int, date_prec: Iterable
+        born: datetime, born_precision: int, date_prec: Iterable
 ) -> bool:
     """Given a target date, its precision and a Wikidata date like ["1743-00-00T00:00:00Z", 9],
     tells if they're equal
@@ -417,18 +419,18 @@ def date_equals(
 
 
 def birth_death_date_match(
-    target_entity: BaseEntity, wikidata_entity: dict
+        target_entity: BaseEntity, wikidata_entity: dict
 ) -> bool:
     """Given a wikidata json and a BaseEntity, checks born/death dates and tells if they match"""
     for date_prec in wikidata_entity.get('born', []):
         if date_equals(
-            target_entity.born, target_entity.born_precision, date_prec
+                target_entity.born, target_entity.born_precision, date_prec
         ):
             return True
 
     for date_prec in wikidata_entity.get('died', []):
         if date_equals(
-            target_entity.died, target_entity.died_precision, date_prec
+                target_entity.died, target_entity.died_precision, date_prec
         ):
             return True
 
