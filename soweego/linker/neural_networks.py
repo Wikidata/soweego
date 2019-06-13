@@ -30,17 +30,20 @@ class _BaseNN(KerasAdapter, BaseClassifier):
     """
 
     def _fit(
-            self,
-            features,
-            answers,
-            batch_size=constants.BATCH_SIZE,
-            epochs=constants.EPOCHS,
-            validation_split=constants.VALIDATION_SPLIT,
+        self,
+        features,
+        answers,
+        batch_size=constants.BATCH_SIZE,
+        epochs=constants.EPOCHS,
+        validation_split=constants.VALIDATION_SPLIT,
     ):
-        tensor_path = os.path.join(constants.SHARED_FOLDER,
-                                   constants.TENSOR_BOARD)
-        model_path = os.path.join(constants.SHARED_FOLDER,
-                                  constants.NEURAL_NETWORK_CHECKPOINT_MODEL % self.__class__.__name__, )
+        tensor_path = os.path.join(
+            constants.SHARED_FOLDER, constants.TENSOR_BOARD
+        )
+        model_path = os.path.join(
+            constants.SHARED_FOLDER,
+            constants.NEURAL_NETWORK_CHECKPOINT_MODEL % self.__class__.__name__,
+        )
         os.makedirs(os.path.dirname(tensor_path), exist_ok=True)
         os.makedirs(os.path.dirname(model_path), exist_ok=True)
 
@@ -57,10 +60,7 @@ class _BaseNN(KerasAdapter, BaseClassifier):
                     verbose=2,
                     restore_best_weights=True,
                 ),
-                ModelCheckpoint(
-                    model_path,
-                    save_best_only=True,
-                ),
+                ModelCheckpoint(model_path, save_best_only=True),
                 TensorBoard(log_dir=tensor_path),
             ],
         )

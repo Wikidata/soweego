@@ -90,8 +90,8 @@ def cli(ctx, classifier, target, target_type, tune, k_folds, dir_io):
 
 def execute(classifier, catalog, entity, tune, k, dir_io, **kwargs):
     if tune and classifier in (
-            keys.SINGLE_LAYER_PERCEPTRON,
-            keys.MULTI_LAYER_PERCEPTRON,
+        keys.SINGLE_LAYER_PERCEPTRON,
+        keys.MULTI_LAYER_PERCEPTRON,
     ):
         # TODO make Keras work with GridSearchCV
         raise NotImplementedError(
@@ -115,7 +115,7 @@ def execute(classifier, catalog, entity, tune, k, dir_io, **kwargs):
 
 
 def _grid_search(
-        k, feature_vectors, positive_samples_index, classifier, **kwargs
+    k, feature_vectors, positive_samples_index, classifier, **kwargs
 ):
     k_fold, target = utils.prepare_stratified_k_fold(
         k, feature_vectors, positive_samples_index
@@ -144,8 +144,8 @@ def build_dataset(goal, catalog, entity, dir_io):
     # check if files exists for these paths. If yes then just return them
     # instead of recomputing
     if all(
-            os.path.isfile(p)
-            for p in [feature_vectors_fpath, positive_samples_index_fpath]
+        os.path.isfile(p)
+        for p in [feature_vectors_fpath, positive_samples_index_fpath]
     ):
         LOGGER.info('Using cached version of the %s set', goal)
 
