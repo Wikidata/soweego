@@ -62,7 +62,7 @@ def build_wikidata(goal, catalog, entity, dir_io):
             % goal
         )
 
-    catalog_pid = target_database.get_person_pid(catalog)
+    catalog_pid = target_database.get_catalog_pid(catalog, entity)
 
     if os.path.exists(wd_io_path):
         LOGGER.info(
@@ -127,7 +127,7 @@ def build_target(goal, catalog, entity, qids_and_tids):
         data_gathering.gather_target_ids(
             entity,
             catalog,
-            target_database.get_person_pid(catalog),
+            target_database.get_catalog_pid(catalog, entity),
             qids_and_tids,
         )
 
@@ -149,7 +149,7 @@ def _get_tids(qids_and_tids):
 
 
 def preprocess(
-    goal: str, wikidata_reader: JsonReader, target_reader: JsonReader
+        goal: str, wikidata_reader: JsonReader, target_reader: JsonReader
 ) -> Tuple[
     Generator[pd.DataFrame, None, None], Generator[pd.DataFrame, None, None]
 ]:
@@ -161,10 +161,10 @@ def preprocess(
 
 
 def extract_features(
-    candidate_pairs: pd.MultiIndex,
-    wikidata: pd.DataFrame,
-    target: pd.DataFrame,
-    path_io: str,
+        candidate_pairs: pd.MultiIndex,
+        wikidata: pd.DataFrame,
+        target: pd.DataFrame,
+        path_io: str,
 ) -> pd.DataFrame:
     LOGGER.info('Extracting features ...')
 
@@ -298,7 +298,8 @@ def init_model(classifier, *args, **kwargs):
         model = neural_networks.MultiLayerPerceptron(*args, **kwargs)
 
     else:
-        err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
+        err_msg = f"""Unsupported classifier: {classifier}. It should be one of
+                    {set(constants.CLASSIFIERS)}"""
         LOGGER.critical(err_msg)
         raise ValueError(err_msg)
 
