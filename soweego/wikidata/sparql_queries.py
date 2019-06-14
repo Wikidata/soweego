@@ -238,7 +238,7 @@ def run_query(
         return _parse_query_result(
             keys.DATASET, _run_paged_query(result_per_page, query)
         )
-    elif what == keys.METADATA:
+    elif what == keys.BIODATA:
         # TODO implement metadata query
         raise NotImplementedError
     else:
