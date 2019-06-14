@@ -87,21 +87,21 @@ def _lookup_label(item_value):
 
 
 def _process_bucket(
-        bucket,
-        request_params,
-        url_pids,
-        ext_id_pids_to_urls,
-        qids_and_tids,
-        no_labels_count,
-        no_aliases_count,
-        no_descriptions_count,
-        no_sitelinks_count,
-        no_links_count,
-        no_ext_ids_count,
-        no_claims_count,
-        needs_occupation,
-        needs_genre,
-        needs_publication_date,
+    bucket,
+    request_params,
+    url_pids,
+    ext_id_pids_to_urls,
+    qids_and_tids,
+    no_labels_count,
+    no_aliases_count,
+    no_descriptions_count,
+    no_sitelinks_count,
+    no_links_count,
+    no_ext_ids_count,
+    no_claims_count,
+    needs_occupation,
+    needs_genre,
+    needs_publication_date,
 ) -> List[Dict]:
     """
     This function will be consumed by the `get_data_for_linker`
@@ -209,13 +209,13 @@ def _process_bucket(
 
 
 def get_data_for_linker(
-        catalog: str,
-        entity_type: str,
-        qids: set,
-        url_pids: set,
-        ext_id_pids_to_urls: dict,
-        fileout: TextIO,
-        qids_and_tids: dict,
+    catalog: str,
+    entity_type: str,
+    qids: set,
+    url_pids: set,
+    ext_id_pids_to_urls: dict,
+    fileout: TextIO,
+    qids_and_tids: dict,
 ) -> None:
     no_labels_count = 0
     no_aliases_count = 0
@@ -265,7 +265,7 @@ def get_data_for_linker(
         # `processed_bucket` will be a list of dicts, where each dict
         # is a processed entity from the bucket
         for processed_bucket in pool.imap_unordered(
-                pool_function, tqdm(qid_buckets, total=len(qid_buckets))
+            pool_function, tqdm(qid_buckets, total=len(qid_buckets))
         ):
             # join results into a string so that we can write them to
             # the dump file
@@ -321,7 +321,7 @@ def get_metadata(qids: set) -> Generator[tuple, None, None]:
 
 
 def get_links(
-        qids: set, url_pids: set, ext_id_pids_to_urls: dict
+    qids: set, url_pids: set, ext_id_pids_to_urls: dict
 ) -> Generator[tuple, None, None]:
     """Get sitelinks and third-party links for each Wikidata item in the given set.
 
@@ -436,7 +436,7 @@ def _return_third_party_urls(qid, claims, url_pids, no_count):
 
 
 def _return_claims_for_linker(
-        qid, claims, no_count, needs_occupation, needs_genre, needs_publication_date
+    qid, claims, no_count, needs_occupation, needs_genre, needs_publication_date
 ):
     to_return = defaultdict(set)
     expected_pids = set(vocabulary.LINKER_PIDS.keys())
@@ -582,7 +582,7 @@ def _yield_ext_id_links(ext_id_pids_to_urls, claims, qid, no_ext_ids_count):
 
 
 def _yield_expected_values(
-        qid, claims, expected_pids, count, include_pid=False
+    qid, claims, expected_pids, count, include_pid=False
 ):
     available = expected_pids.intersection(claims.keys())
     if not available:
@@ -630,7 +630,7 @@ def _get_authentication_token(session: requests.Session) -> str:
 
 
 def _do_bot_login(
-        session: requests.Session, token: str, bot_password: str
+    session: requests.Session, token: str, bot_password: str
 ) -> bool:
     """
     Tries to login with a session, given token and password. Returns a boolean
@@ -746,7 +746,9 @@ def get_authenticated_session():
                 raise AssertionError(msg)
 
         except KeyError:
-            LOGGER.info('No password found in file, proceeding with an unauthenticated session')
+            LOGGER.info(
+                'No password found in file, proceeding with an unauthenticated session'
+            )
 
             global BUCKET_SIZE
             BUCKET_SIZE = 50
