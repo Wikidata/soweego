@@ -710,9 +710,9 @@ def _get_bot_password_from_file() -> str:
     May raise a :py:class:`KeyError` exception if the key is not present.
     """
 
-    return json.loads(
-        get_data(*constants.CREDENTIALS_LOCATION)
-    )[keys.WIKIDATA_BOT_PASSWORD]
+    return json.loads(get_data(*constants.CREDENTIALS_LOCATION))[
+        keys.WIKIDATA_BOT_PASSWORD
+    ]
 
 
 @lru_cache()
