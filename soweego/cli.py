@@ -26,7 +26,7 @@ CLI_COMMANDS = {
     'importer': importer_cli.cli,
     'ingest': ingestor_cli.cli,
     'linker': linker_cli.cli,
-    'validator': validator_cli.cli,
+    'sync': validator_cli.cli,
     'wikidata': wikidata_cli.cli,
     'run': pipeline_cli.cli,
 }
@@ -45,7 +45,7 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 )
 @click.pass_context
 def cli(ctx, log_level):
-    """Link Wikidata items to trusted external catalogs."""
+    """Link Wikidata to large catalogs."""
 
     commons.logging.setup()
     for module, level in log_level:

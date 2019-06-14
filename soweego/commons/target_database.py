@@ -69,11 +69,11 @@ def get_class_qid(target, entity):
     return constants.TARGET_CATALOGS[target][entity][keys.CLASS_QID]
 
 
-def _get_person_pid(catalog):
+def get_person_pid(catalog):
     return vocabulary.CATALOG_MAPPING.get(catalog)[keys.PERSON_PID]
 
 
-def _get_work_pid(catalog):
+def get_work_pid(catalog):
     return vocabulary.CATALOG_MAPPING.get(catalog)[keys.WORK_PID]
 
 
@@ -84,9 +84,9 @@ def get_catalog_qid(target):
 def get_catalog_pid(target, entity):
     entity_type = ENTITY_TYPES.get(entity)
     if entity_type is PERSON:
-        return _get_person_pid(target)
+        return get_person_pid(target)
     elif entity_type is WORK:
-        return _get_work_pid(target)
+        return get_work_pid(target)
     else:
         err_msg = f"""Bad entity: {entity}. It should be one of {set(
             ENTITY_TYPES.keys())}"""
