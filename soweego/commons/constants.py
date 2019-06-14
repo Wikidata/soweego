@@ -46,7 +46,9 @@ from soweego.importer.models.musicbrainz_entity import (
 from soweego.wikidata import vocabulary
 
 # As per https://meta.wikimedia.org/wiki/User-Agent_policy
-HTTP_USER_AGENT = 'soweego/1.0 ([[:m:Grants:Project/Hjfocs/soweego]]; [[:m:User:Hjfocs]])'
+HTTP_USER_AGENT = (
+    'soweego/1.0 ([[:m:Grants:Project/Hjfocs/soweego]]; [[:m:User:Hjfocs]])'
+)
 
 # Wikidata items & properties regexes
 QID_REGEX = r'Q\d+'
