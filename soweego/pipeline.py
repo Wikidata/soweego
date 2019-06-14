@@ -14,9 +14,9 @@ from soweego.importer.importer import check_links_cli as validate_links
 from soweego.importer.importer import import_cli
 from soweego.linker import classify, evaluate, train
 from soweego.validator.checks import (
-    check_existence_cli,
-    check_links_cli,
-    check_metadata_cli,
+    dead_ids_cli,
+    links_cli,
+    bio_cli,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -114,11 +114,11 @@ def _validator(target: str, upload: bool):
     for entity_type in target_database.supported_entities_for_target(target):
         LOGGER.info("Running validator for target %s %s", target, entity_type)
         _invoke_no_exit(
-            check_existence_cli, [target, entity_type, upload_option]
+            dead_ids_cli, [target, entity_type, upload_option]
         )
-        _invoke_no_exit(check_links_cli, [target, entity_type, upload_option])
+        _invoke_no_exit(links_cli, [target, entity_type, upload_option])
         _invoke_no_exit(
-            check_metadata_cli, [target, entity_type, upload_option]
+            bio_cli, [target, entity_type, upload_option]
         )
 
 
