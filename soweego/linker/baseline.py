@@ -97,7 +97,9 @@ def cli(
     wd_io_path = path.join(output_dir, WD_IO_FILENAME % target)
     if not path.exists(wd_io_path):
         qids = data_gathering.gather_qids(
-            target_type, target, target_database.get_person_pid(target)
+            target_type,
+            target,
+            target_database.get_catalog_pid(target, target_type),
         )
         url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
         with gzip.open(wd_io_path, 'wt') as wd_io:
@@ -114,7 +116,7 @@ def cli(
 
     target_entity = target_database.get_main_entity(target, target_type)
     target_link_entity = target_database.get_link_entity(target, target_type)
-    target_pid = target_database.get_person_pid(target)
+    target_pid = target_database.get_catalog_pid(target, target_type)
 
     result = None
 
@@ -200,7 +202,7 @@ def extract_available_matches_in_target(
 ):
     """"""
     target_link_entity = target_database.get_link_entity(target, target_type)
-    target_pid = target_database.get_person_pid(target)
+    target_pid = target_database.get_catalog_pid(target, target_type)
 
     def result_generator(target_link_entity, target_pid):
         if target_link_entity:

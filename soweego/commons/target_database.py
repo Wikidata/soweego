@@ -9,6 +9,7 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2019, Hjfocs'
 
+import logging
 
 from soweego.commons import constants, keys
 from soweego.wikidata import vocabulary
@@ -25,6 +26,7 @@ ENTITY_TYPES = {
     keys.MUSICAL_WORK: WORK,
     keys.AUDIOVISUAL_WORK: WORK,
 }
+LOGGER = logging.getLogger(__name__)
 
 
 def supported_targets():
@@ -67,11 +69,11 @@ def get_class_qid(target, entity):
     return constants.TARGET_CATALOGS[target][entity][keys.CLASS_QID]
 
 
-def get_person_pid(catalog):
+def _get_person_pid(catalog):
     return vocabulary.CATALOG_MAPPING.get(catalog)[keys.PERSON_PID]
 
 
-def get_work_pid(catalog):
+def _get_work_pid(catalog):
     return vocabulary.CATALOG_MAPPING.get(catalog)[keys.WORK_PID]
 
 
@@ -82,10 +84,11 @@ def get_catalog_qid(target):
 def get_catalog_pid(target, entity):
     entity_type = ENTITY_TYPES.get(entity)
     if entity_type is PERSON:
-        return get_person_pid(target)
+        return _get_person_pid(target)
     elif entity_type is WORK:
-        return get_work_pid(target)
+        return _get_work_pid(target)
     else:
-        err_msg = f'Bad entity: {entity}. It should be one of {set(ENTITY_TYPES.keys())}'
+        err_msg = f"""Bad entity: {entity}. It should be one of {set(
+            ENTITY_TYPES.keys())}"""
         LOGGER.critical(err_msg)
         raise ValueError(err_msg)

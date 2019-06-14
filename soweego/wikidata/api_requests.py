@@ -622,7 +622,7 @@ def _get_authentication_token(session: requests.Session) -> str:
             'type': 'login',
             'format': 'json',
         },
-        headers={'User-Agent': constants.HTTP_USER_AGENT}
+        headers={'User-Agent': constants.HTTP_USER_AGENT},
     ).json()
 
     return token_request['query']['tokens']['logintoken']
@@ -647,7 +647,7 @@ def _do_bot_login(
             'lgtoken': token,
             'format': 'json',
         },
-        headers={'User-Agent': constants.HTTP_USER_AGENT}
+        headers={'User-Agent': constants.HTTP_USER_AGENT},
     ).json()
 
     lg_success = login_r['login']['result'] != 'Failed'

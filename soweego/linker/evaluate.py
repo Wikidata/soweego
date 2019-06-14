@@ -197,6 +197,7 @@ def cli(
         fscore_std,
     )
 
+    os.makedirs(os.path.dirname(predictions_fileout), exist_ok=True)
     predictions.to_series().to_csv(predictions_fileout, header=False)
     with open(performance_fileout, 'w') as fout:
         fout.write(

@@ -560,7 +560,7 @@ def make_request(query, response_format=DEFAULT_RESPONSE_FORMAT):
         params={'query': query},
         headers={
             'Accept': response_format,
-            'User-Agent': constants.HTTP_USER_AGENT
+            'User-Agent': constants.HTTP_USER_AGENT,
         },
     )
     log_request_data(response, LOGGER)

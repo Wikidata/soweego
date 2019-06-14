@@ -24,7 +24,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def train_test_block(
-        wikidata_df: pd.DataFrame, target_df: pd.DataFrame
+    wikidata_df: pd.DataFrame, target_df: pd.DataFrame
 ) -> pd.MultiIndex:
     blocking_column = keys.TID
 
@@ -42,12 +42,12 @@ def train_test_block(
 
 
 def full_text_query_block(
-        goal: str,
-        catalog: str,
-        wikidata_series: pd.Series,
-        chunk_number: int,
-        target_entity: constants.DB_ENTITY,
-        dir_io: str,
+    goal: str,
+    catalog: str,
+    wikidata_series: pd.Series,
+    chunk_number: int,
+    target_entity: constants.DB_ENTITY,
+    dir_io: str,
 ) -> pd.MultiIndex:
     handle_goal(goal)
     samples_path = os.path.join(
@@ -85,6 +85,7 @@ def full_text_query_block(
         samples_index.to_series().sample(5),
     )
 
+    os.makedirs(os.path.dirname(samples_path), exist_ok=True)
     pd.to_pickle(samples_index, samples_path)
     LOGGER.info(
         "%s %s samples index chunk %d dumped to '%s'",
@@ -99,14 +100,14 @@ def full_text_query_block(
 
 
 def _multiprocessing_series_iterator(
-        wikidata_series: pd.Series, target_entity: constants.DB_ENTITY
+    wikidata_series: pd.Series, target_entity: constants.DB_ENTITY
 ) -> Iterable[Tuple[str, str, constants.DB_ENTITY]]:
     for qids, terms in wikidata_series.items():
         yield qids, terms, target_entity
 
 
 def fulltext_search(
-        qid_terms_target: Tuple[str, list, constants.DB_ENTITY]
+    qid_terms_target: Tuple[str, list, constants.DB_ENTITY]
 ) -> Iterable[Tuple[str, str]]:
     qid, terms, target_entity = qid_terms_target
     tids = list(
@@ -119,9 +120,10 @@ def fulltext_search(
 
 
 def _extract_target_candidates(
-        wikidata_series: pd.Series, target_entity: constants.DB_ENTITY
+    wikidata_series: pd.Series, target_entity: constants.DB_ENTITY
 ):
     for t in tqdm(
-            _multiprocessing_series_iterator(wikidata_series, target_entity),
-            total=len(wikidata_series)):
+        _multiprocessing_series_iterator(wikidata_series, target_entity),
+        total=len(wikidata_series),
+    ):
         yield from fulltext_search(t)

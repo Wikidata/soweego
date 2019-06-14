@@ -81,6 +81,7 @@ def cli(ctx, classifier, target, target_type, tune, k_folds, dir_io):
     outfile = os.path.join(
         dir_io, constants.LINKER_MODEL % (target, target_type, classifier)
     )
+    os.makedirs(os.path.dirname(outfile), exist_ok=True)
     joblib.dump(model, outfile)
 
     K.clear_session()
@@ -132,7 +133,6 @@ def _grid_search(
 
 
 def build_dataset(goal, catalog, entity, dir_io):
-
     feature_vectors_fpath = os.path.join(
         dir_io, constants.COMPLETE_FEATURE_VECTORS % (catalog, entity, goal)
     )
@@ -147,7 +147,6 @@ def build_dataset(goal, catalog, entity, dir_io):
         os.path.isfile(p)
         for p in [feature_vectors_fpath, positive_samples_index_fpath]
     ):
-
         LOGGER.info('Using cached version of the %s set', goal)
 
         feature_vectors = pd.read_pickle(feature_vectors_fpath)
