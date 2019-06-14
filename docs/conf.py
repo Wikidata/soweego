@@ -58,3 +58,7 @@ html_static_path = ['_static']
 
 
 # -- Extension configuration -------------------------------------------------
+
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None)
+}
