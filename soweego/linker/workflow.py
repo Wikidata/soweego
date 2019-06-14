@@ -62,7 +62,7 @@ def build_wikidata(goal, catalog, entity, dir_io):
             % goal
         )
 
-    catalog_pid = target_database.get_person_pid(catalog)
+    catalog_pid = target_database.get_catalog_pid(catalog, entity)
 
     if os.path.exists(wd_io_path):
         LOGGER.info(
@@ -85,6 +85,7 @@ def build_wikidata(goal, catalog, entity, dir_io):
             qids = data_gathering.gather_qids(entity, catalog, catalog_pid)
 
         url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
+        os.makedirs(os.path.dirname(wd_io_path), exist_ok=True)
         with gzip.open(wd_io_path, 'wt') as wd_io:
             api_requests.get_data_for_linker(
                 catalog,
@@ -127,7 +128,7 @@ def build_target(goal, catalog, entity, qids_and_tids):
         data_gathering.gather_target_ids(
             entity,
             catalog,
-            target_database.get_person_pid(catalog),
+            target_database.get_catalog_pid(catalog, entity),
             qids_and_tids,
         )
 
@@ -274,6 +275,7 @@ def extract_features(
     # drop duplicate FV
     feature_vectors = feature_vectors[~feature_vectors.index.duplicated()]
 
+    os.makedirs(os.path.dirname(path_io), exist_ok=True)
     pd.to_pickle(feature_vectors, path_io)
 
     LOGGER.info("Features dumped to '%s'", path_io)
@@ -298,7 +300,8 @@ def init_model(classifier, *args, **kwargs):
         model = neural_networks.MultiLayerPerceptron(*args, **kwargs)
 
     else:
-        err_msg = f'Unsupported classifier: {classifier}. It should be one of {set(constants.CLASSIFIERS)}'
+        err_msg = f"""Unsupported classifier: {classifier}. It should be one of
+                    {set(constants.CLASSIFIERS)}"""
         LOGGER.critical(err_msg)
         raise ValueError(err_msg)
 
