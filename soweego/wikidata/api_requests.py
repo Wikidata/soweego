@@ -622,6 +622,7 @@ def _get_authentication_token(session: requests.Session) -> str:
             'type': 'login',
             'format': 'json',
         },
+        headers={'User-Agent': constants.HTTP_USER_AGENT}
     ).json()
 
     return token_request['query']['tokens']['logintoken']
@@ -646,6 +647,7 @@ def _do_bot_login(
             'lgtoken': token,
             'format': 'json',
         },
+        headers={'User-Agent': constants.HTTP_USER_AGENT}
     ).json()
 
     lg_success = login_r['login']['result'] != 'Failed'
@@ -672,6 +674,7 @@ def _load_cached_bot_session(dump_path: str) -> requests.Session:
         res = session.get(
             WIKIDATA_API_URL,
             params={'action': 'query', 'assert': 'user', 'format': 'json'},
+            headers={'User-Agent': constants.HTTP_USER_AGENT},
         )
 
         # if the assert query failed then it means
@@ -762,7 +765,11 @@ def _make_request(bucket, params):
 
     while True:
         try:
-            response = session.get(WIKIDATA_API_URL, params=params)
+            response = session.get(
+                WIKIDATA_API_URL,
+                params=params,
+                headers={'User-Agent': constants.HTTP_USER_AGENT},
+            )
             log_request_data(response, LOGGER)
         except ChunkedEncodingError:
             LOGGER.warning(
