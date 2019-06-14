@@ -43,10 +43,7 @@ LOGGER = logging.getLogger(__name__)
     'entity', type=click.Choice(target_database.supported_entities())
 )
 @click.option(
-    '-u',
-    '--upload',
-    is_flag=True,
-    help='Upload statements to Wikidata.',
+    '-u', '--upload', is_flag=True, help='Upload statements to Wikidata.'
 )
 @click.option(
     '-s',
@@ -95,7 +92,9 @@ def works_people_cli(catalog, entity, upload, sandbox, dir_io):
         wikidata_bot.add_works_statements(to_upload, catalog, sandbox)
 
 
-def generate_statements(catalog: str, entity: str, bucket_size: int = 5000) -> Iterator[Tuple]:
+def generate_statements(
+    catalog: str, entity: str, bucket_size: int = 5000
+) -> Iterator[Tuple]:
     """Generate statements about works by people.
 
     **How it works:**
@@ -130,9 +129,7 @@ def generate_statements(catalog: str, entity: str, bucket_size: int = 5000) -> I
     # Make buckets for target queries:
     # more queries, but more efficient ones
     total_queries, works_buckets, people_buckets = _prepare_target_queries(
-        bucket_size,
-        works_inverted,
-        people_inverted
+        bucket_size, works_inverted, people_inverted
     )
 
     # Target side
@@ -142,15 +139,27 @@ def generate_statements(catalog: str, entity: str, bucket_size: int = 5000) -> I
     )
 
     yield from _gather_target_data(
-        catalog, entity, total_queries, works_buckets,
-        works_inverted, people_buckets, people_inverted
+        catalog,
+        entity,
+        total_queries,
+        works_buckets,
+        works_inverted,
+        people_buckets,
+        people_inverted,
     )
 
     LOGGER.info('Queries done, statements generated')
 
 
-def _gather_target_data(catalog, entity, total_queries, works_buckets,
-                        works_inverted, people_buckets, people_inverted):
+def _gather_target_data(
+    catalog,
+    entity,
+    total_queries,
+    works_buckets,
+    works_inverted,
+    people_buckets,
+    people_inverted,
+):
     claim_pid = vocabulary.WORKS_BY_PEOPLE_MAPPING[catalog][entity]
     db_entity = target_database.get_relationship_entity(catalog, entity)
     session = DBManager().connect_to_db()
@@ -158,7 +167,7 @@ def _gather_target_data(catalog, entity, total_queries, works_buckets,
     # Leverage works-people relationships
     try:
         for works, people in tqdm(
-                product(works_buckets, people_buckets), total=total_queries
+            product(works_buckets, people_buckets), total=total_queries
         ):
             works_to_people = session.query(db_entity).filter(
                 and_(
@@ -169,10 +178,10 @@ def _gather_target_data(catalog, entity, total_queries, works_buckets,
 
             for result in works_to_people:
                 yield works_inverted[
-                          result.from_catalog_id
-                      ], claim_pid, people_inverted[
-                          result.to_catalog_id
-                      ], result.to_catalog_id
+                    result.from_catalog_id
+                ], claim_pid, people_inverted[
+                    result.to_catalog_id
+                ], result.to_catalog_id
     except SQLAlchemyError as error:
         LOGGER.error(
             "Failed query of works-people relationships due to %s. "

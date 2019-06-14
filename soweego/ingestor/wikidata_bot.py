@@ -602,10 +602,16 @@ def _parse_value(value):
     try:
         date_value = date.fromisoformat(value)
         # Precision hack: it's a year if both month and day are 1
-        precision = vocabulary.YEAR if date_value.month == 1 and date_value.day == 1 else vocabulary.DAY
+        precision = (
+            vocabulary.YEAR
+            if date_value.month == 1 and date_value.day == 1
+            else vocabulary.DAY
+        )
         return pywikibot.WbTime(
-            date_value.year, date_value.month, date_value.day,
-            precision=precision
+            date_value.year,
+            date_value.month,
+            date_value.day,
+            precision=precision,
         )
     # Otherwise return the value as is
     except ValueError:
