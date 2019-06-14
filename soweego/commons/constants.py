@@ -217,9 +217,13 @@ FEATURES = 'features/%s_%s_%s_features%02d.pkl.gz'
 LINKER_MODEL = 'models/%s_%s_%s_model.pkl'
 LINKER_NESTED_CV_BEST_MODEL = '%models/s_%s_%s_best_model_k%02d.pkl'
 LINKER_RESULT = 'results/%s_%s_%s_linker_result.csv.gz'
-LINKER_EVALUATION_PREDICTIONS = 'results/%s_%s_%s_linker_evaluation_predictions.csv.gz'
+LINKER_EVALUATION_PREDICTIONS = (
+    'results/%s_%s_%s_linker_evaluation_predictions.csv.gz'
+)
 LINKER_PERFORMANCE = 'results/%s_%s_%s_linker_performance.txt'
-NEURAL_NETWORK_CHECKPOINT_MODEL = 'best_model_checkpoint/%s_best_checkpoint_model.hdf5'
+NEURAL_NETWORK_CHECKPOINT_MODEL = (
+    'best_model_checkpoint/%s_best_checkpoint_model.hdf5'
+)
 COMPLETE_FEATURE_VECTORS = 'features/%s_%s_%s_complete_feature_vectors.pkl.gz'
 COMPLETE_WIKIDATA_CHUNKS = 'wikidata/%s_%s_%s_complete_wikidata_chunks.pkl.gz'
 COMPLETE_TARGET_CHUNKS = 'samples/%s_%s_%s_complete_target_chunks.pkl.gz'

@@ -150,7 +150,7 @@ def _get_tids(qids_and_tids):
 
 
 def preprocess(
-        goal: str, wikidata_reader: JsonReader, target_reader: JsonReader
+    goal: str, wikidata_reader: JsonReader, target_reader: JsonReader
 ) -> Tuple[
     Generator[pd.DataFrame, None, None], Generator[pd.DataFrame, None, None]
 ]:
@@ -162,10 +162,10 @@ def preprocess(
 
 
 def extract_features(
-        candidate_pairs: pd.MultiIndex,
-        wikidata: pd.DataFrame,
-        target: pd.DataFrame,
-        path_io: str,
+    candidate_pairs: pd.MultiIndex,
+    wikidata: pd.DataFrame,
+    target: pd.DataFrame,
+    path_io: str,
 ) -> pd.DataFrame:
     LOGGER.info('Extracting features ...')
 

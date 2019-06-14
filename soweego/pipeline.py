@@ -54,12 +54,12 @@ LOGGER = logging.getLogger(__name__)
     help="default: None",
 )
 def cli(
-        target: str,
-        validator: bool,
-        importer: bool,
-        linker: bool,
-        upload: bool,
-        credentials_path: str,
+    target: str,
+    validator: bool,
+    importer: bool,
+    linker: bool,
+    upload: bool,
+    credentials_path: str,
 ):
     """Executes importer/linker and optionally validator for a target"""
 
