@@ -38,6 +38,8 @@ LINK_ENTITY = 'link_entity'
 NLP_ENTITY = 'nlp_entity'
 RELATIONSHIP_ENTITY = 'relationship_entity'
 
+WIKIDATA_BOT_PASSWORD = 'WIKIDATA_BOT_PASSWORD'
+
 # Importer & internal DB
 LAST_MODIFIED = 'last-modified'
 PROD_DB = 'PROD_DB'

@@ -711,8 +711,8 @@ def _get_bot_password_from_file() -> str:
     """
 
     return json.loads(
-        get_data('soweego.importer.resources', 'db_credentials.json')
-    )['WIKIDATA_BOT_PASSWORD']
+        get_data(*constants.CREDENTIALS_LOCATION)
+    )[keys.WIKIDATA_BOT_PASSWORD]
 
 
 @lru_cache()

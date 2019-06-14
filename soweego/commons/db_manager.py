@@ -19,6 +19,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import configure_mappers, session, sessionmaker
 from sqlalchemy.pool import NullPool
 
+from soweego.commons.constants import CREDENTIALS_LOCATION
 from soweego.commons import keys
 from soweego.commons import localizations as loc
 
@@ -86,7 +87,7 @@ class DBManager:
             return DBManager.__credentials
         else:
             return json.loads(
-                get_data('soweego.importer.resources', 'db_credentials.json')
+                get_data(*CREDENTIALS_LOCATION)
             )
 
     @staticmethod
