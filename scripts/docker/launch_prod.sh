@@ -2,7 +2,7 @@
 
 source .env
 
-credentials_path="soweego/importer/resources/db_credentials.json"
+credentials_path="soweego/importer/resources/credentials.json"
 
 PROGNAME=$0
 
