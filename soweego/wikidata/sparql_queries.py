@@ -13,13 +13,11 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import json
 import logging
-import os
 import time
 from csv import DictReader
 from re import search
 from typing import Generator, Set
 
-import click
 from requests import get
 
 from soweego.commons import constants, keys
@@ -134,46 +132,6 @@ SUPERCLASSES_OF_QID = (
     + ITEM_BINDING
     + ' . }'
 )
-
-
-@click.command()
-@click.argument('ontology_class')
-@click.argument('identifier_property')
-@click.option('-p', '--results-per-page', default=1000, help='Default: 1000.')
-@click.option(
-    '-o',
-    '--outdir',
-    type=click.Path(),
-    default='output',
-    help="Default: 'output'.",
-)
-def identifier_class_based_query_cli(
-    ontology_class, identifier_property, results_per_page, outdir
-):
-    """Run a paged SPARQL query against the Wikidata endpoint to get items and external catalog
-    identifiers. Dump the result into a JSONlines file.
-
-    IDENTIFIER_PROPERTY must be a Wikidata property identifier like 'P1953' (Discogs artist ID).
-
-    ONTOLOGY_CLASS must be a Wikidata ontology class like 'Q5' (human).
-
-    Use '-p 0' to switch paging off.
-    """
-    with open(
-        os.path.join(outdir, 'class_based_identifier_query_result.jsonl'),
-        'w',
-        1,
-    ) as outfile:
-        _dump_result(
-            identifier_class_based_query(
-                ontology_class, identifier_property, results_per_page
-            ),
-            outfile,
-        )
-        LOGGER.info(
-            "Class-based identifier query result dumped as JSON lines to '%s'",
-            outfile.name,
-        )
 
 
 def run_query(
@@ -351,19 +309,6 @@ def _get_valid_pid(result):
     return pid
 
 
-def identifier_class_based_query(
-    ontology_class, identifier_property, results_per_page
-):
-    query = IDENTIFIER_QUERY_TEMPLATE % (
-        vocabulary.INSTANCE_OF,
-        ontology_class,
-        identifier_property,
-    )
-    return _parse_query_result(
-        keys.IDENTIFIER, _run_paged_query(results_per_page, query)
-    )
-
-
 def _parse_query_result(query_type, result_set):
     # Paranoid checks for malformed results:
     # it should never happen, but it actually does
@@ -453,102 +398,6 @@ def _run_paged_query(result_per_page, query):
             pages += 1
 
 
-@click.command()
-@click.argument('identifier_property')
-@click.argument('occupation_class')
-@click.option('-p', '--results-per-page', default=1000, help='default: 1000')
-@click.option(
-    '-o',
-    '--outdir',
-    type=click.Path(),
-    default='output',
-    help="default: 'output'",
-)
-def identifier_occupation_based_query_cli(
-    identifier_property, occupation_class, results_per_page, outdir
-):
-    """Run a paged SPARQL query against the Wikidata endpoint to get items and external catalog
-    identifiers. Dump the result into a JSONlines file.
-
-    IDENTIFIER_PROPERTY must be a Wikidata property identifier like 'P1953' (Discogs artist ID).
-
-    OCCUPATION_CLASS must be a Wikidata ontology class like 'Q639669' (musician).
-
-    Use '-p 0' to switch paging off.
-    """
-    with open(
-        os.path.join(outdir, 'occupation_based_identifier_query_result.jsonl'),
-        'w',
-        1,
-    ) as outfile:
-        _dump_result(
-            identifier_occupation_based_query(
-                occupation_class, identifier_property, results_per_page
-            ),
-            outfile,
-        )
-        LOGGER.info(
-            "Occupation-based identifier query result dumped as JSON lines to '%s'",
-            outfile.name,
-        )
-
-
-def identifier_occupation_based_query(
-    occupation_class, identifier_property, results_per_page
-):
-    query = IDENTIFIER_QUERY_TEMPLATE % (
-        vocabulary.OCCUPATION,
-        occupation_class,
-        identifier_property,
-    )
-    return _parse_query_result(
-        keys.IDENTIFIER, _run_paged_query(results_per_page, query)
-    )
-
-
-@click.command()
-@click.argument('items_file', type=click.File())
-@click.argument('condition_pattern')
-@click.option('-b', '--bucket-size', default=500, help='Default: 500.')
-@click.option(
-    '-o',
-    '--outdir',
-    type=click.Path(),
-    default='output',
-    help="Default: 'output'.",
-)
-def values_query(items_file, condition_pattern, bucket_size, outdir):
-    """Run a SPARQL query against the Wikidata endpoint using buckets of item values
-    and dump the result into a JSONlines file.
-
-    CONSTRAINT must be a property + value pattern like 'wdt:P434 ?musicbrainz'.
-    """
-    entities = ['wd:%s' % l.rstrip() for l in items_file.readlines()]
-    buckets = [
-        entities[i * bucket_size : (i + 1) * bucket_size]
-        for i in range(0, int((len(entities) / bucket_size + 1)))
-    ]
-    with open(
-        os.path.join(outdir, 'values_query_result.jsonl'), 'w', 1
-    ) as outfile:
-        for bucket in buckets:
-            query = VALUES_QUERY_TEMPLATE % (
-                ' '.join(bucket),
-                condition_pattern,
-            )
-            result_set = make_request(query)
-            if not result_set:
-                LOGGER.warning('Skipping bucket that went wrong')
-                continue
-            if result_set == 'empty':
-                LOGGER.warning('Skipping bucket with no results')
-                continue
-            _dump_result(result_set, outfile)
-        LOGGER.info(
-            "Values query result dumped as JSON lines to '%s'", outfile.name
-        )
-
-
 def _dump_result(result_set, outfile):
     for row in result_set:
         outfile.write(json.dumps(row, ensure_ascii=False) + '\n')
@@ -610,38 +459,6 @@ def make_request(query, response_format=DEFAULT_RESPONSE_FORMAT):
         query,
     )
     return None
-
-
-def query_info_for(qids_bucket, properties):
-    """Given a list of wikidata entities returns a query for getting some external ids"""
-
-    query = """SELECT * WHERE{ VALUES ?id { %s } """ % ' '.join(qids_bucket)
-    for i in properties:
-        query += """OPTIONAL { ?id wdt:%s ?%s . } """ % (i, i)
-    query += """}"""
-    return query
-
-
-def query_wikipedia_articles_for(qids_bucket):
-    """Given a list of wikidata entities returns a query for getting wikidata articles"""
-
-    query = """SELECT * WHERE{ VALUES ?id { %s } """ % ' '.join(qids_bucket)
-    query += """OPTIONAL { ?article schema:about ?id . }"""
-    query += """}"""
-    return query
-
-
-def query_birth_death(qids_bucket):
-    """Given a list of wikidata entities returns a query for getting their birth and death dates"""
-
-    query = (
-        """SELECT ?id ?birth ?b_precision ?death ?d_precision WHERE{ VALUES ?id { %s } """
-        % ' '.join(qids_bucket)
-    )
-    query += """?id p:P569 ?b. ?b psv:P569 ?t1 . ?t1 wikibase:timePrecision ?b_precision . ?t1 wikibase:timeValue ?birth . OPTIONAL { ?id p:P570 ?d . ?d psv:P570 ?t2 . ?t2 wikibase:timePrecision ?d_precision . ?t2 wikibase:timeValue ?death . }"""
-    query += """}"""
-
-    return query
 
 
 def get_subclasses_of_qid(QID: str) -> Set[str]:
