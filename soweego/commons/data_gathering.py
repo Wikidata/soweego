@@ -30,13 +30,13 @@ from soweego.wikidata import api_requests, sparql_queries, vocabulary
 LOGGER = logging.getLogger(__name__)
 
 
-def gather_target_metadata(entity, catalog):
+def gather_target_biodata(entity, catalog):
     LOGGER.info(
         'Gathering %s birth/death dates/places and gender metadata ...', catalog
     )
     db_entity = target_database.get_main_entity(catalog, entity)
-    # Base metadata
-    query_fields = _build_metadata_query_fields(db_entity, entity, catalog)
+    # Base biodata
+    query_fields = _build_biodata_query_fields(db_entity, entity, catalog)
 
     session = DBManager.connect_to_db()
     query = session.query(*query_fields).filter(
@@ -47,7 +47,7 @@ def gather_target_metadata(entity, catalog):
         raw_result = _run_query(query, catalog, entity)
         if raw_result is None:
             return None
-        result = _parse_target_metadata_query_result(raw_result)
+        result = _parse_target_biodata_query_result(raw_result)
         session.commit()
     except:
         session.rollback()
@@ -282,8 +282,8 @@ def _run_query(query, catalog, entity_type, page=1000):
     return query.yield_per(page).enable_eagerloads(False)
 
 
-def _build_metadata_query_fields(entity, entity_type, catalog):
-    # Base metadata
+def _build_biodata_query_fields(entity, entity_type, catalog):
+    # Base biographical data
     query_fields = [
         entity.catalog_id,
         entity.born,
@@ -291,7 +291,7 @@ def _build_metadata_query_fields(entity, entity_type, catalog):
         entity.died,
         entity.died_precision,
     ]
-    # Check additional metadata
+    # Check additional data
     if hasattr(entity, 'gender'):
         query_fields.append(entity.gender)
     else:
@@ -311,25 +311,23 @@ def _build_metadata_query_fields(entity, entity_type, catalog):
     return query_fields
 
 
-def _parse_target_metadata_query_result(result_set):
+def _parse_target_biodata_query_result(result_set):
     for result in result_set:
         identifier = result.catalog_id
         born = result.born
         if born:
             # Default date precision when not available: 9 (year)
             born_precision = getattr(result, 'born_precision', 9)
-            date_of_birth = f'{born}/{born_precision}'
-            yield identifier, vocabulary.DATE_OF_BIRTH, date_of_birth
+            yield identifier, vocabulary.DATE_OF_BIRTH, f'{born}/{born_precision}'
         else:
             LOGGER.debug('%s: no birth date available', identifier)
         died = result.died
         if died:
             died_precision = getattr(result, 'died_precision', 9)
-            date_of_death = f'{died}/{died_precision}'
-            yield identifier, vocabulary.DATE_OF_DEATH, date_of_death
+            yield identifier, vocabulary.DATE_OF_DEATH, f'{died}/{died_precision}'
         else:
             LOGGER.debug('%s: no death date available', identifier)
-        if hasattr(result, 'gender'):
+        if hasattr(result, 'gender') and result.gender is not None:
             yield identifier, vocabulary.SEX_OR_GENDER, result.gender
         else:
             LOGGER.debug('%s: no gender available', identifier)
@@ -404,18 +402,39 @@ def _get_catalog_constants(catalog):
     return catalog_constants
 
 
-def gather_wikidata_metadata(wikidata):
+def gather_wikidata_biodata(wikidata):
     LOGGER.info(
-        'Gathering Wikidata birth/death dates/places and gender metadata from the Web API. This will take a while ...'
+        'Gathering Wikidata birth/death dates/places and gender data from the Web API. This will take a while ...'
     )
     total = 0
     # Generator of generators
-    for entity in api_requests.get_metadata(wikidata.keys()):
+    for entity in api_requests.get_biodata(wikidata.keys()):
         for qid, pid, value in entity:
             parsed = api_requests.parse_wikidata_value(value)
-            if not wikidata[qid].get('metadata'):
-                wikidata[qid]['metadata'] = set()
-            wikidata[qid]['metadata'].add((pid, parsed))
+            if not wikidata[qid].get(keys.BIODATA):
+                wikidata[qid][keys.BIODATA] = set()
+            # `parsed` is a set of labels if the value is a QID
+            # see api_requests.parse_wikidata_value
+            if isinstance(parsed, set):
+                # The English label for gender should be enough
+                gender = parsed & {keys.MALE, keys.FEMALE}
+                if gender:
+                    wikidata[qid][keys.BIODATA].add((pid, gender.pop()))
+                else:
+                    # Add a (pid, label) tuple for each element
+                    # for better recall
+                    for element in parsed:
+                        wikidata[qid][keys.BIODATA].add((pid, element))
+            # `parsed` is a tuple (timestamp, precision) id the value is a date
+            elif isinstance(parsed, tuple):
+                timestamp, precision = parsed[0], parsed[1]
+                # Get rid of time, useless
+                timestamp = timestamp.split('T')[0]
+                wikidata[qid][keys.BIODATA].add(
+                    (pid, f'{timestamp}/{precision}')
+                )
+            else:
+                wikidata[qid][keys.BIODATA].add((pid, parsed))
             total += 1
     LOGGER.info('Got %d statements', total)
 
@@ -429,9 +448,9 @@ def gather_wikidata_links(wikidata, url_pids, ext_id_pids_to_urls):
         wikidata.keys(), url_pids, ext_id_pids_to_urls
     ):
         for qid, url in generator:
-            if not wikidata[qid].get('links'):
-                wikidata[qid]['links'] = set()
-            wikidata[qid]['links'].add(url)
+            if not wikidata[qid].get(keys.LINKS):
+                wikidata[qid][keys.LINKS] = set()
+            wikidata[qid][keys.LINKS].add(url)
             total += 1
     LOGGER.info('Got %d links', total)
 
@@ -470,7 +489,9 @@ def gather_target_ids(entity, catalog, catalog_pid, aggregated):
     LOGGER.info(
         'Gathering Wikidata %s items with %s identifiers ...', entity, catalog
     )
+
     query_type = keys.IDENTIFIER, constants.SUPPORTED_ENTITIES.get(entity)
+
     for qid, target_id in sparql_queries.run_query(
         query_type,
         target_database.get_class_qid(catalog, entity),
@@ -480,6 +501,7 @@ def gather_target_ids(entity, catalog, catalog_pid, aggregated):
         if not aggregated.get(qid):
             aggregated[qid] = {keys.TID: set()}
         aggregated[qid][keys.TID].add(target_id)
+
     LOGGER.info('Got %d %s identifiers', len(aggregated), catalog)
 
 
@@ -502,11 +524,11 @@ def gather_qids(entity, catalog, catalog_pid):
     return qids
 
 
-def extract_ids_from_urls(to_add, ext_id_pids_to_urls):
+def extract_ids_from_urls(to_be_added, ext_id_pids_to_urls):
     LOGGER.info('Starting extraction of IDs from target links to be added ...')
     ext_ids_to_add = []
     urls_to_add = []
-    for qid, urls in to_add.items():
+    for qid, urls in to_be_added.items():
         for url in urls:
             ext_id, pid = url_utils.get_external_id_from_url(
                 url, ext_id_pids_to_urls
