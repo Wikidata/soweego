@@ -306,7 +306,7 @@ def get_biodata(qids: set) -> Generator[tuple, None, None]:
         if not entities:
             LOGGER.warning(
                 'Skipping unexpected JSON response with no entities: %s',
-                response_body
+                response_body,
             )
             continue
 

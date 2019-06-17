@@ -644,7 +644,7 @@ def _compare_dates(wd, target):
         if None in (wd_val, t_val):
             LOGGER.warning(
                 'Skipping unexpected %s date pair with missing value(s)',
-                (wd_elem, t_elem)
+                (wd_elem, t_elem),
             )
             continue
 
