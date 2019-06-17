@@ -211,6 +211,9 @@ def tokenize(url, domain_only=False) -> set:
 def get_external_id_from_url(url, ext_id_pids_to_urls):
     LOGGER.debug('Trying to extract an identifier from URL <%s>', url)
     url = url.rstrip('/')
+    # Always use HTTPS
+    if not url.startswith('https'):
+        url = url.replace('http', 'https')
     for pid, formatters in ext_id_pids_to_urls.items():
         for formatter_url, formatter_regex in formatters.items():
             before, _, after = formatter_url.partition('$1')
@@ -255,7 +258,7 @@ def get_external_id_from_url(url, ext_id_pids_to_urls):
                     ext_id,
                 )
                 return ext_id, pid
-    LOGGER.debug('Could not extract any identifier from URL <%s>', url)
+    LOGGER.debug('Could not extract any identifier from cleaned URL <%s>', url)
     return None, None
 
 

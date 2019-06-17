@@ -293,8 +293,8 @@ def add_people_statements(
     """Add statements to existing Wikidata people.
 
     Statements typically come from validation criteria 2 or 3
-    as per :func:`soweego.validator.checks.check_links` and
-    :func:`soweego.validator.checks.check_metadata`.
+    as per :func:`soweego.validator.checks.links` and
+    :func:`soweego.validator.checks.bio`.
 
     :param statements: iterable of (subject, predicate, value) triples
     :param catalog: ``{'discogs', 'imdb', 'musicbrainz', 'twitter'}``.
@@ -365,11 +365,11 @@ def delete_or_deprecate_identifiers(
     from existing Wikidata items.
 
     Deletion candidates come from validation criterion 1
-    as per :func:`soweego.validator.checks.check_existence`.
+    as per :func:`soweego.validator.checks.dead_ids`.
 
     Deprecation candidates come from validation criteria 2 or 3
-    as per :func:`soweego.validator.checks.check_links` and
-    :func:`soweego.validator.checks.check_metadata`.
+    as per :func:`soweego.validator.checks.links` and
+    :func:`soweego.validator.checks.bio`.
 
     :param action: {'delete', 'deprecate'}
     :param catalog: ``{'discogs', 'imdb', 'musicbrainz', 'twitter'}``.
@@ -594,15 +594,26 @@ def _check_for_same_value(
 
 
 def _parse_value(value):
-    # Parse value into an item in case of QID
+    # Build an item in case of QID
     value_is_qid = search(QID_REGEX, value)
     if value_is_qid:
         return pywikibot.ItemPage(REPO, value_is_qid.group())
+    # Try to build a date
     try:
         date_value = date.fromisoformat(value)
-        return pywikibot.WbTime(
-            date_value.year, date_value.month, date_value.day
+        # Precision hack: it's a year if both month and day are 1
+        precision = (
+            vocabulary.YEAR
+            if date_value.month == 1 and date_value.day == 1
+            else vocabulary.DAY
         )
+        return pywikibot.WbTime(
+            date_value.year,
+            date_value.month,
+            date_value.day,
+            precision=precision,
+        )
+    # Otherwise return the value as is
     except ValueError:
         return value
 

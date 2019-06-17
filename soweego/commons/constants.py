@@ -64,7 +64,7 @@ SUPPORTED_QUERY_SELECTORS = (
     keys.IDENTIFIER,
     keys.LINKS,
     keys.DATASET,
-    keys.METADATA,
+    keys.BIODATA,
 )
 
 SUPPORTED_ENTITIES = {

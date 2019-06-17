@@ -53,7 +53,9 @@ HOST = 'HOST'
 IDENTIFIER = 'identifier'
 LINKS = 'links'
 DATASET = 'dataset'
-METADATA = 'metadata'
+BIODATA = 'biodata'
+FEMALE = 'female'
+MALE = 'male'
 
 # SPARQL queries
 CLASS_QUERY = 'class_query'

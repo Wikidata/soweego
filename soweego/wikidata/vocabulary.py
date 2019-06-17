@@ -161,7 +161,7 @@ URL_PIDS = set(
     ]
 )
 
-# Validator metadata & linker properties: gender, birth/death date/place
+# Validator biographical data & linker properties: gender, birth/death date/place
 SEX_OR_GENDER = 'P21'
 PLACE_OF_BIRTH = 'P19'
 PLACE_OF_DEATH = 'P20'
@@ -169,7 +169,7 @@ DATE_OF_BIRTH = 'P569'
 DATE_OF_DEATH = 'P570'
 PUBLICATION_DATE = 'P577'
 GENRE = 'P136'
-METADATA_PIDS = {
+BIODATA_PIDS = {
     SEX_OR_GENDER,
     PLACE_OF_BIRTH,
     PLACE_OF_DEATH,
