@@ -629,7 +629,7 @@ def _compare_dates(wd, target):
     shared_dates, extra_dates = set(), set()
 
     for wd_elem, t_elem in zip_longest(wd, target):
-        # Skip pair with None
+        # Skip pair with None elements
         if None in (wd_elem, t_elem):
             continue
 
@@ -638,6 +638,14 @@ def _compare_dates(wd, target):
 
         # Don't compare birth with death dates
         if wd_pid != t_pid:
+            continue
+
+        # Skip unexpected None values
+        if None in (wd_val, t_val):
+            LOGGER.warning(
+                'Skipping unexpected %s date pair with missing value(s)',
+                (wd_elem, t_elem)
+            )
             continue
 
         wd_timestamp, wd_precision = wd_val.split('/')
@@ -672,7 +680,7 @@ def _match_dates_by_precision(
     if index is None:
         LOGGER.info(
             "Won't try to match date pair %s: too low or too high precision",
-            (wd_timestamp, t_timestamp),
+            (wd_elem, t_elem),
         )
         return None, None
 
@@ -687,7 +695,7 @@ def _match_dates_by_precision(
         )
         shared = wd_elem
     else:
-        LOGGER.info('Target has an extra date: %s', t_timestamp)
+        LOGGER.debug('Target has an extra date: %s', t_timestamp)
         # Output dates in ISO format
         # t_elem[0] is the PID
         extra = (t_elem[0], t_timestamp)
