@@ -18,7 +18,8 @@ import pickle
 from collections import defaultdict
 from functools import lru_cache, partial
 from multiprocessing.pool import Pool
-from typing import Dict, Generator, List, TextIO
+from pkgutil import get_data
+from typing import Dict, Generator, List, TextIO, Tuple
 from urllib.parse import urlunsplit
 
 import requests
@@ -688,6 +689,34 @@ def _load_cached_bot_session(dump_path: str) -> requests.Session:
         return session
 
 
+def _authenticate_session(bot_password) -> Tuple[bool, str, requests.Session]:
+    """
+    Creates an authenticated session using the given password
+    """
+
+    session = requests.Session()  # to automatically manage cookies
+
+    # get token
+    token = _get_authentication_token(session)
+
+    # do login
+    lg_success, lg_message = _do_bot_login(session, token, bot_password)
+
+    return lg_success, lg_message, session
+
+
+def _get_bot_password_from_file() -> str:
+    """
+    Get the password for the wikidata bot from the `db_credentials.json` file.
+
+    May raise a :py:class:`KeyError` exception if the key is not present.
+    """
+
+    return json.loads(get_data(*constants.CREDENTIALS_LOCATION))[
+        keys.WIKIDATA_BOT_PASSWORD
+    ]
+
+
 @lru_cache()
 def get_authenticated_session():
     """
@@ -705,54 +734,33 @@ def get_authenticated_session():
     except (FileNotFoundError, AssertionError):
         LOGGER.info('Obtaining new authenticated session')
 
-        # The first thing we need to do is for the user to input
-        # the password. This will be asked for interactively.
-        # If no password is provided then we don't login, and
-        # proceed.
+        try:
+            # Try to load the password from file and create
+            # an authenticated session with it
+            success, msg, session = _authenticate_session(
+                _get_bot_password_from_file()
+            )
 
-        print('\n----- Authentication for the bot required -----')
-        print(
-            'Please input the password to authenticate the bot, or leave blank if '
-            "you don't want to authenticate"
-        )
+            # If we weren't able to login then it must mean that
+            # the password we have in file is not correct.
+            # Execution should not proceed
+            if not success:
+                raise AssertionError(msg)
 
-        while True:
-            bot_password = input('Password: ')
+        except KeyError:
+            LOGGER.info(
+                'No password found in file, proceeding with an unauthenticated session'
+            )
 
-            session = requests.Session()  # to automatically manage cookies
+            global BUCKET_SIZE
+            BUCKET_SIZE = 50
 
-            if bot_password == '':
-                # maximum bucket size when unauthenticated is 50
-                LOGGER.info(
-                    'No password provided so unauthenticated session will be used '
-                    'for this execution.'
-                )
-
-                global BUCKET_SIZE
-                BUCKET_SIZE = 50
-
-                # we return the session at once since we don't
-                # want to persist an unauthenticated session to disk
-                return session
-
-            # get token
-            token = _get_authentication_token(session)
-
-            # do login
-            lg_success, lg_message = _do_bot_login(session, token, bot_password)
-
-            # if login successful then break, else try again
-            if lg_success:
-                print('Success!\n')
-                break
-
-            else:
-                print("\nCouldn't login. Possibly the password is wrong.")
-                print('Reason given by server: ', lg_message)
-                print('Please try again ..')
+            # we return the session at once since we don't
+            # want to persist an unauthenticated session to disk
+            return requests.Session()
 
         with open(wiki_api_dump_path, 'wb') as file:
-            LOGGER.info('Persisting session to disk')
+            LOGGER.info('Authentication successful, persisting session to disk')
             pickle.dump(session, file)
 
         return session

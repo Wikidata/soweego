@@ -45,6 +45,10 @@ from soweego.importer.models.musicbrainz_entity import (
 )
 from soweego.wikidata import vocabulary
 
+CREDENTIALS_MODULE = 'soweego.importer.resources'
+CREDENTIALS_FILENAME = 'credentials.json'
+CREDENTIALS_LOCATION = (CREDENTIALS_MODULE, CREDENTIALS_FILENAME)
+
 # As per https://meta.wikimedia.org/wiki/User-Agent_policy
 HTTP_USER_AGENT = (
     'soweego/1.0 ([[:m:Grants:Project/Hjfocs/soweego]]; [[:m:User:Hjfocs]])'

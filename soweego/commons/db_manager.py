@@ -21,6 +21,7 @@ from sqlalchemy.pool import NullPool
 
 from soweego.commons import keys
 from soweego.commons import localizations as loc
+from soweego.commons.constants import CREDENTIALS_LOCATION
 
 BASE = declarative_base()
 LOGGER = logging.getLogger(__name__)
@@ -85,9 +86,7 @@ class DBManager:
         if DBManager.__credentials:
             return DBManager.__credentials
         else:
-            return json.loads(
-                get_data('soweego.importer.resources', 'db_credentials.json')
-            )
+            return json.loads(get_data(*CREDENTIALS_LOCATION))
 
     @staticmethod
     def set_credentials_from_path(path: str):

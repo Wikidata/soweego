@@ -16,7 +16,7 @@ EOF
 }
 
 export DOCKER_SHARED_FOLDER="/tmp/soweego_shared/"
-export CREDENTIALS_PATH="soweego/importer/resources/db_credentials.json"
+export CREDENTIALS_PATH="soweego/importer/resources/credentials.json"
 
 while getopts :s:c: o; do
   case $o in
