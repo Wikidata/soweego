@@ -290,14 +290,26 @@ def get_data_for_linker(
 
 def get_biodata(qids: set) -> Generator[tuple, None, None]:
     no_claims_count = 0
-
     qid_buckets, request_params = _prepare_request(qids, 'claims')
+
     for bucket in qid_buckets:
         response_body = _make_request(bucket, request_params)
+
+        # Skip failed API request
         if not response_body:
             continue
-        for qid in response_body['entities']:
-            claims = response_body['entities'][qid].get('claims')
+
+        entities = response_body.get('entities')
+        # Skip unexpected JSON response
+        if not entities:
+            LOGGER.warning(
+                'Skipping unexpected JSON response with no entities: %s',
+                response_body
+            )
+            continue
+
+        for qid in entities:
+            claims = entities[qid].get('claims')
             if not claims:
                 LOGGER.info('Skipping QID with no claims: %s', qid)
                 no_claims_count += 1
