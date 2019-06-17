@@ -232,6 +232,8 @@ def get_data_for_linker(
     # we need to get the occupations
     if catalog in constants.REQUIRE_OCCUPATION.keys():
         needs_occupation = entity_type in constants.REQUIRE_OCCUPATION[catalog]
+    else:
+        needs_occupation = False
     needs_genre = entity_type in constants.REQUIRE_GENRE
     needs_publication_date = entity_type in constants.REQUIRE_PUBLICATION_DATE
 
