@@ -7,7 +7,7 @@ import click
 import iso8601
 
 from soweego.wikidata.sparql_queries import (
-    make_request,
+    _make_request,
 )
 
 
@@ -71,7 +71,7 @@ def get_links_for_sample(sample_path, url_formatters, output):
 
     for bucket in buckets:
         # Downloads the first bucket
-        result = make_request(
+        result = _make_request(
             query_info_for(bucket, [k for k, v in formatters_dict.items()])
         )
         for id_row in result:
@@ -110,7 +110,7 @@ def get_sitelinks_for_sample(sample_path, output):
 
     for bucket in buckets:
         # Downloads the first bucket
-        result = make_request(query_wikipedia_articles_for(bucket))
+        result = _make_request(query_wikipedia_articles_for(bucket))
         for article_row in result:
             site_url = trim_first_last_characters(article_row['?article'])
             entity_id = get_wikidata_id_from_uri(article_row['?id'])
@@ -131,7 +131,7 @@ def get_birth_death_dates_for_sample(sample_path, output):
     filepath = os.path.join(output, 'sample_dates.json')
 
     for bucket in buckets:
-        result = make_request(query_birth_death(bucket))
+        result = _make_request(query_birth_death(bucket))
         for date_row in result:
             qid = get_wikidata_id_from_uri(date_row['?id'])
             # creates the combination of all birth dates strings and all death dates strings
@@ -171,7 +171,7 @@ def get_url_formatters_for_properties(property_mapping_path, output):
         query = (
             """SELECT * WHERE { wd:%s wdt:P1630 ?formatterUrl . }""" % prop_id
         )
-        for r in make_request(query):
+        for r in _make_request(query):
             formatters[prop_id] = r['?formatterUrl']
 
     json.dump(formatters, open(filepath, 'w'), indent=2, ensure_ascii=False)

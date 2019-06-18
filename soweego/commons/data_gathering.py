@@ -457,10 +457,10 @@ def gather_wikidata_links(wikidata, url_pids, ext_id_pids_to_urls):
 
 def gather_relevant_pids():
     url_pids = set()
-    for result in sparql_queries.url_pids_query():
+    for result in sparql_queries.url_pids():
         url_pids.add(result)
     ext_id_pids_to_urls = defaultdict(dict)
-    for result in sparql_queries.external_id_pids_and_urls_query():
+    for result in sparql_queries.external_id_pids_and_urls():
         for pid, formatters in result.items():
             for formatter_url, formatter_regex in formatters.items():
                 if formatter_regex:
