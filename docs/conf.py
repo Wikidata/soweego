@@ -60,7 +60,7 @@ html_static_path = ['_static']
 # -- Extension configuration -------------------------------------------------
 
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3', None),
-    'pandas': ('http://pandas.pydata.org/pandas-docs/dev', None),
-    'sklearn': ('http://scikit-learn.org/stable', None),
+    'python': ('https://docs.python.org/3/', None),
+    'pandas': ('https://pandas.pydata.org/pandas-docs/stable/', None),
+    'sklearn': ('https://scikit-learn.org/stable/', None),
 }
