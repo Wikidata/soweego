@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Set of specific requests for the Wikidata API:
-https://www.wikidata.org/w/api.php
-"""
+"""Set of specific Web API requests for Wikidata data collection."""
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -19,7 +17,7 @@ from collections import defaultdict
 from functools import lru_cache, partial
 from multiprocessing.pool import Pool
 from pkgutil import get_data
-from typing import Dict, Generator, List, TextIO, Tuple
+from typing import Dict, Iterator, List, TextIO, Set, Tuple
 from urllib.parse import urlunsplit
 
 import requests
@@ -34,6 +32,234 @@ LOGGER = logging.getLogger(__name__)
 
 WIKIDATA_API_URL = 'https://www.wikidata.org/w/api.php'
 BUCKET_SIZE = 500
+
+
+def get_biodata(qids: Set[str]) -> Iterator[Tuple[str, str, str]]:
+    """Collect biographical data from a given set of Wikidata items.
+
+    :param qids: a set of QIDs
+    :return: the generator yielding ``(QID, PID, value)`` triples
+    """
+    no_claims_count = 0
+    qid_buckets, request_params = _prepare_request(qids, 'claims')
+
+    for bucket in qid_buckets:
+        response_body = _make_request(bucket, request_params)
+
+        # Skip failed API request
+        if not response_body:
+            continue
+
+        entities = response_body.get('entities')
+        # Skip unexpected JSON response
+        if not entities:
+            LOGGER.warning(
+                'Skipping unexpected JSON response with no entities: %s',
+                response_body,
+            )
+            continue
+
+        for qid in entities:
+            claims = entities[qid].get('claims')
+            if not claims:
+                LOGGER.info('Skipping QID with no claims: %s', qid)
+                no_claims_count += 1
+                continue
+
+            yield from _yield_expected_values(
+                qid,
+                claims,
+                vocabulary.BIODATA_PIDS,
+                no_claims_count,
+                include_pid=True,
+            )
+
+    LOGGER.info(
+        'Got %d QIDs with no %s claims',
+        no_claims_count,
+        vocabulary.BIODATA_PIDS,
+    )
+
+
+def get_links(
+    qids: set, url_pids: set, ext_id_pids_to_urls: dict
+) -> Iterator[Tuple]:
+    """Get sitelinks and third-party links for each Wikidata item in the given set.
+
+    :param qids: set of Wikidata QIDs
+    :type qids: set
+    :param url_pids: set of Wikidata PIDs having a URL as expected value
+    :type url_pids: set
+    :param ext_id_pids_to_urls: a dictionary ``{external_ID_PID: {formatter_URL: formatter_regex}}``
+    :type ext_id_pids_to_urls: dict
+    :return: a generator yielding ``QID, URL`` tuples
+    :rtype: Generator[tuple, None, None]
+    """
+    no_sitelinks_count = 0
+    no_links_count = 0
+    no_ext_ids_count = 0
+
+    qid_buckets, request_params = _prepare_request(qids, 'sitelinks|claims')
+    for bucket in qid_buckets:
+        response_body = _make_request(bucket, request_params)
+        if not response_body:
+            continue
+        for qid in response_body['entities']:
+            entity = response_body['entities'][qid]
+            # Sitelinks
+            yield _yield_sitelinks(entity, qid, no_sitelinks_count)
+
+            claims = entity.get('claims')
+            if claims:
+                # Third-party links
+                yield _yield_expected_values(
+                    qid, claims, url_pids, no_links_count
+                )
+                # External ID links
+                yield _yield_ext_id_links(
+                    ext_id_pids_to_urls, claims, qid, no_ext_ids_count
+                )
+            else:
+                LOGGER.warning('No claims for QID %s', qid)
+
+    LOGGER.info(
+        'QIDs: got %d with no sitelinks, %d with no third-party links, %d with no external ID links',
+        no_sitelinks_count,
+        no_links_count,
+        no_ext_ids_count,
+    )
+
+
+def get_data_for_linker(
+    catalog: str,
+    entity_type: str,
+    qids: set,
+    url_pids: set,
+    ext_id_pids_to_urls: dict,
+    fileout: TextIO,
+    qids_and_tids: dict,
+) -> None:
+    no_labels_count = 0
+    no_aliases_count = 0
+    no_descriptions_count = 0
+    no_sitelinks_count = 0
+    no_links_count = 0
+    no_ext_ids_count = 0
+    no_claims_count = 0
+
+    qid_buckets, request_params = _prepare_request(
+        qids, 'labels|aliases|descriptions|sitelinks|claims'
+    )
+
+    # check if for this specific catalog
+    # we need to get the occupations
+    if catalog in constants.REQUIRE_OCCUPATION.keys():
+        needs_occupation = entity_type in constants.REQUIRE_OCCUPATION[catalog]
+    else:
+        needs_occupation = False
+    needs_genre = entity_type in constants.REQUIRE_GENRE
+    needs_publication_date = entity_type in constants.REQUIRE_PUBLICATION_DATE
+
+    # create a partial function. Here all parameters, except
+    # for the actual `bucket` are given to `_process_bucket`.
+    # This means that when we call `pool_function` we only need
+    # to give it one parameter, which is the bucket.
+    # This is done so that we can easily map the list of
+    # buckets with this function using `multiprocessing.Pool`
+    pool_function = partial(
+        _process_bucket,
+        request_params=request_params,
+        url_pids=url_pids,
+        ext_id_pids_to_urls=ext_id_pids_to_urls,
+        qids_and_tids=qids_and_tids,
+        no_labels_count=no_labels_count,
+        no_aliases_count=no_aliases_count,
+        no_descriptions_count=no_descriptions_count,
+        no_sitelinks_count=no_sitelinks_count,
+        no_links_count=no_links_count,
+        no_ext_ids_count=no_ext_ids_count,
+        no_claims_count=no_claims_count,
+        needs_occupation=needs_occupation,
+        needs_genre=needs_genre,
+        needs_publication_date=needs_publication_date,
+    )
+
+    # create a pool of threads and map the list of buckets using `pool_function`
+    with Pool() as pool:
+        # `processed_bucket` will be a list of dicts, where each dict
+        # is a processed entity from the bucket
+        for processed_bucket in pool.imap_unordered(
+            pool_function, tqdm(qid_buckets, total=len(qid_buckets))
+        ):
+            # join results into a string so that we can write them to
+            # the dump file
+            to_write = ''.join(
+                json.dumps(result, ensure_ascii=False) + '\n'
+                for result in processed_bucket
+            )
+
+            fileout.write(to_write)
+            fileout.flush()
+
+    LOGGER.info(
+        'QIDs: got %d with no labels, %d with no aliases, %d with no descriptions, %d with no sitelinks, %d with no third-party links, %d with no external ID links, %d with no expected claims',
+        no_labels_count,
+        no_aliases_count,
+        no_descriptions_count,
+        no_sitelinks_count,
+        no_links_count,
+        no_ext_ids_count,
+        no_claims_count,
+    )
+
+
+@lru_cache()
+def get_authenticated_session():
+    """
+    Returns the token to be used for authentication.
+    If token is not valid then a new one will be generated
+    """
+
+    wiki_api_dump_path = os.path.join(
+        constants.SHARED_FOLDER, constants.WIKIDATA_API_SESSION
+    )
+
+    try:
+        return _load_cached_bot_session(wiki_api_dump_path)
+
+    except (FileNotFoundError, AssertionError):
+        LOGGER.info('Obtaining new authenticated session')
+
+        try:
+            # Try to load the password from file and create
+            # an authenticated session with it
+            success, msg, session = _authenticate_session(
+                _get_bot_password_from_file()
+            )
+
+            # If we weren't able to login then it must mean that
+            # the password we have in file is not correct.
+            # Execution should not proceed
+            if not success:
+                raise AssertionError(msg)
+
+        except KeyError:
+            LOGGER.info(
+                'No password found in file, proceeding with an unauthenticated session'
+            )
+
+            global BUCKET_SIZE
+            BUCKET_SIZE = 50
+
+            # we return the session at once since we don't
+            # want to persist an unauthenticated session to disk
+            return requests.Session()
+
+        with open(wiki_api_dump_path, 'wb') as file:
+            LOGGER.info('Authentication successful, persisting session to disk')
+            pickle.dump(session, file)
+
+        return session
 
 
 # Values: plain strings (includes URLs), monolingual strings,
@@ -86,6 +312,8 @@ def _lookup_label(item_value):
     return _return_monolingual_strings(item_value, labels)
 
 
+# This function will be consumed by `get_data_for_linker`:
+# it enables parallel rocessing for Wikidata buckets
 def _process_bucket(
     bucket,
     request_params,
@@ -103,11 +331,6 @@ def _process_bucket(
     needs_genre,
     needs_publication_date,
 ) -> List[Dict]:
-    """
-    This function will be consumed by the `get_data_for_linker`
-    function in this module. It allows the buckets coming from
-    wikidata to be processed in parallel.
-    """
     response_body = _make_request(bucket, request_params)
 
     # If there is no response then
@@ -206,181 +429,6 @@ def _process_bucket(
         bucket_results.append(to_write)
 
     return bucket_results
-
-
-def get_data_for_linker(
-    catalog: str,
-    entity_type: str,
-    qids: set,
-    url_pids: set,
-    ext_id_pids_to_urls: dict,
-    fileout: TextIO,
-    qids_and_tids: dict,
-) -> None:
-    no_labels_count = 0
-    no_aliases_count = 0
-    no_descriptions_count = 0
-    no_sitelinks_count = 0
-    no_links_count = 0
-    no_ext_ids_count = 0
-    no_claims_count = 0
-
-    qid_buckets, request_params = _prepare_request(
-        qids, 'labels|aliases|descriptions|sitelinks|claims'
-    )
-
-    # check if for this specific catalog
-    # we need to get the occupations
-    if catalog in constants.REQUIRE_OCCUPATION.keys():
-        needs_occupation = entity_type in constants.REQUIRE_OCCUPATION[catalog]
-    else:
-        needs_occupation = False
-    needs_genre = entity_type in constants.REQUIRE_GENRE
-    needs_publication_date = entity_type in constants.REQUIRE_PUBLICATION_DATE
-
-    # create a partial function. Here all parameters, except
-    # for the actual `bucket` are given to `_process_bucket`.
-    # This means that when we call `pool_function` we only need
-    # to give it one parameter, which is the bucket.
-    # This is done so that we can easily map the list of
-    # buckets with this function using `multiprocessing.Pool`
-    pool_function = partial(
-        _process_bucket,
-        request_params=request_params,
-        url_pids=url_pids,
-        ext_id_pids_to_urls=ext_id_pids_to_urls,
-        qids_and_tids=qids_and_tids,
-        no_labels_count=no_labels_count,
-        no_aliases_count=no_aliases_count,
-        no_descriptions_count=no_descriptions_count,
-        no_sitelinks_count=no_sitelinks_count,
-        no_links_count=no_links_count,
-        no_ext_ids_count=no_ext_ids_count,
-        no_claims_count=no_claims_count,
-        needs_occupation=needs_occupation,
-        needs_genre=needs_genre,
-        needs_publication_date=needs_publication_date,
-    )
-
-    # create a pool of threads and map the list of buckets using `pool_function`
-    with Pool() as pool:
-        # `processed_bucket` will be a list of dicts, where each dict
-        # is a processed entity from the bucket
-        for processed_bucket in pool.imap_unordered(
-            pool_function, tqdm(qid_buckets, total=len(qid_buckets))
-        ):
-            # join results into a string so that we can write them to
-            # the dump file
-            to_write = ''.join(
-                json.dumps(result, ensure_ascii=False) + '\n'
-                for result in processed_bucket
-            )
-
-            fileout.write(to_write)
-            fileout.flush()
-
-    LOGGER.info(
-        'QIDs: got %d with no labels, %d with no aliases, %d with no descriptions, %d with no sitelinks, %d with no third-party links, %d with no external ID links, %d with no expected claims',
-        no_labels_count,
-        no_aliases_count,
-        no_descriptions_count,
-        no_sitelinks_count,
-        no_links_count,
-        no_ext_ids_count,
-        no_claims_count,
-    )
-
-
-def get_biodata(qids: set) -> Generator[tuple, None, None]:
-    no_claims_count = 0
-    qid_buckets, request_params = _prepare_request(qids, 'claims')
-
-    for bucket in qid_buckets:
-        response_body = _make_request(bucket, request_params)
-
-        # Skip failed API request
-        if not response_body:
-            continue
-
-        entities = response_body.get('entities')
-        # Skip unexpected JSON response
-        if not entities:
-            LOGGER.warning(
-                'Skipping unexpected JSON response with no entities: %s',
-                response_body,
-            )
-            continue
-
-        for qid in entities:
-            claims = entities[qid].get('claims')
-            if not claims:
-                LOGGER.info('Skipping QID with no claims: %s', qid)
-                no_claims_count += 1
-                continue
-            # Remember this yields a generator of generators
-            # see https://stackoverflow.com/questions/6503079/understanding-nested-yield-return-in-python#6503192
-            yield _yield_expected_values(
-                qid,
-                claims,
-                vocabulary.BIODATA_PIDS,
-                no_claims_count,
-                include_pid=True,
-            )
-
-    LOGGER.info(
-        'Got %d QIDs with no %s claims',
-        no_claims_count,
-        vocabulary.BIODATA_PIDS,
-    )
-
-
-def get_links(
-    qids: set, url_pids: set, ext_id_pids_to_urls: dict
-) -> Generator[tuple, None, None]:
-    """Get sitelinks and third-party links for each Wikidata item in the given set.
-
-    :param qids: set of Wikidata QIDs
-    :type qids: set
-    :param url_pids: set of Wikidata PIDs having a URL as expected value
-    :type url_pids: set
-    :param ext_id_pids_to_urls: a dictionary ``{external_ID_PID: {formatter_URL: formatter_regex}}``
-    :type ext_id_pids_to_urls: dict
-    :return: a generator yielding ``QID, URL`` tuples
-    :rtype: Generator[tuple, None, None]
-    """
-    no_sitelinks_count = 0
-    no_links_count = 0
-    no_ext_ids_count = 0
-
-    qid_buckets, request_params = _prepare_request(qids, 'sitelinks|claims')
-    for bucket in qid_buckets:
-        response_body = _make_request(bucket, request_params)
-        if not response_body:
-            continue
-        for qid in response_body['entities']:
-            entity = response_body['entities'][qid]
-            # Sitelinks
-            yield _yield_sitelinks(entity, qid, no_sitelinks_count)
-
-            claims = entity.get('claims')
-            if claims:
-                # Third-party links
-                yield _yield_expected_values(
-                    qid, claims, url_pids, no_links_count
-                )
-                # External ID links
-                yield _yield_ext_id_links(
-                    ext_id_pids_to_urls, claims, qid, no_ext_ids_count
-                )
-            else:
-                LOGGER.warning('No claims for QID %s', qid)
-
-    LOGGER.info(
-        'QIDs: got %d with no sitelinks, %d with no third-party links, %d with no external ID links',
-        no_sitelinks_count,
-        no_links_count,
-        no_ext_ids_count,
-    )
 
 
 def _return_monolingual_strings(qid, strings):
@@ -727,55 +775,6 @@ def _get_bot_password_from_file() -> str:
     return json.loads(get_data(*constants.CREDENTIALS_LOCATION))[
         keys.WIKIDATA_BOT_PASSWORD
     ]
-
-
-@lru_cache()
-def get_authenticated_session():
-    """
-    Returns the token to be used for authentication.
-    If token is not valid then a new one will be generated
-    """
-
-    wiki_api_dump_path = os.path.join(
-        constants.SHARED_FOLDER, constants.WIKIDATA_API_SESSION
-    )
-
-    try:
-        return _load_cached_bot_session(wiki_api_dump_path)
-
-    except (FileNotFoundError, AssertionError):
-        LOGGER.info('Obtaining new authenticated session')
-
-        try:
-            # Try to load the password from file and create
-            # an authenticated session with it
-            success, msg, session = _authenticate_session(
-                _get_bot_password_from_file()
-            )
-
-            # If we weren't able to login then it must mean that
-            # the password we have in file is not correct.
-            # Execution should not proceed
-            if not success:
-                raise AssertionError(msg)
-
-        except KeyError:
-            LOGGER.info(
-                'No password found in file, proceeding with an unauthenticated session'
-            )
-
-            global BUCKET_SIZE
-            BUCKET_SIZE = 50
-
-            # we return the session at once since we don't
-            # want to persist an unauthenticated session to disk
-            return requests.Session()
-
-        with open(wiki_api_dump_path, 'wb') as file:
-            LOGGER.info('Authentication successful, persisting session to disk')
-            pickle.dump(session, file)
-
-        return session
 
 
 def _make_request(bucket, params):
