@@ -35,7 +35,7 @@ BUCKET_SIZE = 500
 
 
 def get_biodata(qids: Set[str]) -> Iterator[Tuple[str, str, str]]:
-    """Collect biographical data from a given set of Wikidata items.
+    """Collect biographical data for a given set of Wikidata items.
 
     :param qids: a set of QIDs
     :return: the generator yielding ``(QID, PID, value)`` triples
@@ -44,19 +44,9 @@ def get_biodata(qids: Set[str]) -> Iterator[Tuple[str, str, str]]:
     qid_buckets, request_params = _prepare_request(qids, 'claims')
 
     for bucket in qid_buckets:
-        response_body = _make_request(bucket, request_params)
+        entities = _sanity_check(bucket, request_params)
 
-        # Skip failed API request
-        if not response_body:
-            continue
-
-        entities = response_body.get('entities')
-        # Skip unexpected JSON response
-        if not entities:
-            LOGGER.warning(
-                'Skipping unexpected JSON response with no entities: %s',
-                response_body,
-            )
+        if entities is None:
             continue
 
         for qid in entities:
@@ -81,31 +71,31 @@ def get_biodata(qids: Set[str]) -> Iterator[Tuple[str, str, str]]:
     )
 
 
-def get_links(
-    qids: set, url_pids: set, ext_id_pids_to_urls: dict
-) -> Iterator[Tuple]:
-    """Get sitelinks and third-party links for each Wikidata item in the given set.
+def get_links(qids: Set[str], url_pids: Set[str], ext_id_pids_to_urls: Dict) -> Iterator[Tuple]:
+    """Collect sitelinks and third-party links
+    for a given set of Wikidata items.
 
-    :param qids: set of Wikidata QIDs
-    :type qids: set
-    :param url_pids: set of Wikidata PIDs having a URL as expected value
-    :type url_pids: set
-    :param ext_id_pids_to_urls: a dictionary ``{external_ID_PID: {formatter_URL: formatter_regex}}``
-    :type ext_id_pids_to_urls: dict
-    :return: a generator yielding ``QID, URL`` tuples
-    :rtype: Generator[tuple, None, None]
+    :param qids: a set of QIDs
+    :param url_pids: a set of PIDs holding URL values.
+      Returned by :py:func:`soweego.wikidata.sparql_queries.url_pids`
+    :param ext_id_pids_to_urls: a
+      ``{PID: {formatter_URL: formatter_regex} }`` dict.
+      Returned by
+      :py:func:`soweego.wikidata.sparql_queries.external_id_pids_and_urls`
+    :return: the generator yielding ``(QID, URL)`` pairs
     """
-    no_sitelinks_count = 0
-    no_links_count = 0
-    no_ext_ids_count = 0
-
+    no_sitelinks_count, no_links_count, no_ext_ids_count = 0, 0, 0
     qid_buckets, request_params = _prepare_request(qids, 'sitelinks|claims')
+
     for bucket in qid_buckets:
-        response_body = _make_request(bucket, request_params)
-        if not response_body:
+        entities = _sanity_check(bucket, request_params)
+
+        if entities is None:
             continue
-        for qid in response_body['entities']:
-            entity = response_body['entities'][qid]
+
+        for qid in entities:
+            entity = entities[qid]
+
             # Sitelinks
             yield _yield_sitelinks(entity, qid, no_sitelinks_count)
 
@@ -115,15 +105,18 @@ def get_links(
                 yield _yield_expected_values(
                     qid, claims, url_pids, no_links_count
                 )
+
                 # External ID links
                 yield _yield_ext_id_links(
                     ext_id_pids_to_urls, claims, qid, no_ext_ids_count
                 )
             else:
-                LOGGER.warning('No claims for QID %s', qid)
+                LOGGER.info('No claims for QID %s', qid)
 
     LOGGER.info(
-        'QIDs: got %d with no sitelinks, %d with no third-party links, %d with no external ID links',
+        'QIDs: got %d with no sitelinks, '
+        '%d with no third-party links, '
+        '%d with no external ID links',
         no_sitelinks_count,
         no_links_count,
         no_ext_ids_count,
@@ -131,67 +124,75 @@ def get_links(
 
 
 def get_data_for_linker(
-    catalog: str,
-    entity_type: str,
-    qids: set,
-    url_pids: set,
-    ext_id_pids_to_urls: dict,
-    fileout: TextIO,
-    qids_and_tids: dict,
+        catalog: str,
+        entity: str,
+        qids: Set[str],
+        url_pids: Set[str],
+        ext_id_pids_to_urls: Dict,
+        qids_and_tids: Dict,
+        fileout: TextIO
 ) -> None:
-    no_labels_count = 0
-    no_aliases_count = 0
-    no_descriptions_count = 0
-    no_sitelinks_count = 0
-    no_links_count = 0
-    no_ext_ids_count = 0
-    no_claims_count = 0
+    """Collect relevant data for linking Wikidata to a given catalog.
+    Dump the result to a given output stream.
 
+    This function uses multithreaded parallel processing.
+
+    :param catalog: ``{'discogs', 'imdb', 'musicbrainz'}``.
+      A supported catalog
+    :param entity: ``{'actor', 'band', 'director', 'musician', 'producer',
+      'writer', 'audiovisual_work', 'musical_work'}``.
+      A supported entity
+    :param qids: a set of QIDs
+    :param url_pids: a set of PIDs holding URL values.
+      Returned by :py:func:`soweego.wikidata.sparql_queries.url_pids`
+    :param ext_id_pids_to_urls: a
+      ``{PID: {formatter_URL: formatter_regex} }`` dict.
+      Returned by
+      :py:func:`soweego.wikidata.sparql_queries.external_id_pids_and_urls`
+    :param fileout: a file stream open for writing
+    :param qids_and_tids: a ``{QID: {'tid': {catalog_ID_set} }`` dict.
+      Populated by
+      :py:func:`soweego.commons.data_gathering.gather_target_ids`
+    """
     qid_buckets, request_params = _prepare_request(
         qids, 'labels|aliases|descriptions|sitelinks|claims'
     )
 
-    # check if for this specific catalog
-    # we need to get the occupations
+    # Catalog-specific data needs
     if catalog in constants.REQUIRE_OCCUPATION.keys():
-        needs_occupation = entity_type in constants.REQUIRE_OCCUPATION[catalog]
+        needs_occupation = entity in constants.REQUIRE_OCCUPATION[catalog]
     else:
         needs_occupation = False
-    needs_genre = entity_type in constants.REQUIRE_GENRE
-    needs_publication_date = entity_type in constants.REQUIRE_PUBLICATION_DATE
+    needs_genre = entity in constants.REQUIRE_GENRE
+    needs_publication_date = entity in constants.REQUIRE_PUBLICATION_DATE
 
-    # create a partial function. Here all parameters, except
-    # for the actual `bucket` are given to `_process_bucket`.
-    # This means that when we call `pool_function` we only need
-    # to give it one parameter, which is the bucket.
-    # This is done so that we can easily map the list of
-    # buckets with this function using `multiprocessing.Pool`
+    # Initialize 7 counters to 0
+    counters = tuple([0] * 7)
+
+    # Create a partial function where all parameters
+    # but the data bucket are passed to `_process_bucket`,
+    # so that we only pass the data bucket
+    # when we call `pool_function`.
+    # In this way, it becomes trivial to use
+    # `multiprocessing.Pool` map functions, like `imap_unordered`
     pool_function = partial(
         _process_bucket,
         request_params=request_params,
         url_pids=url_pids,
         ext_id_pids_to_urls=ext_id_pids_to_urls,
         qids_and_tids=qids_and_tids,
-        no_labels_count=no_labels_count,
-        no_aliases_count=no_aliases_count,
-        no_descriptions_count=no_descriptions_count,
-        no_sitelinks_count=no_sitelinks_count,
-        no_links_count=no_links_count,
-        no_ext_ids_count=no_ext_ids_count,
-        no_claims_count=no_claims_count,
-        needs_occupation=needs_occupation,
-        needs_genre=needs_genre,
-        needs_publication_date=needs_publication_date,
+        needs=(needs_occupation, needs_genre, needs_publication_date),
+        counters=counters,
     )
 
-    # create a pool of threads and map the list of buckets using `pool_function`
+    # Create a pool of threads and map the list of buckets via `pool_function`
     with Pool() as pool:
         # `processed_bucket` will be a list of dicts, where each dict
         # is a processed entity from the bucket
         for processed_bucket in pool.imap_unordered(
             pool_function, tqdm(qid_buckets, total=len(qid_buckets))
         ):
-            # join results into a string so that we can write them to
+            # Join results into a string so that we can write them to
             # the dump file
             to_write = ''.join(
                 json.dumps(result, ensure_ascii=False) + '\n'
@@ -202,14 +203,11 @@ def get_data_for_linker(
             fileout.flush()
 
     LOGGER.info(
-        'QIDs: got %d with no labels, %d with no aliases, %d with no descriptions, %d with no sitelinks, %d with no third-party links, %d with no external ID links, %d with no expected claims',
-        no_labels_count,
-        no_aliases_count,
-        no_descriptions_count,
-        no_sitelinks_count,
-        no_links_count,
-        no_ext_ids_count,
-        no_claims_count,
+        'QIDs: got %d with no labels, '
+        '%d with no aliases, %d with no descriptions, %d with no sitelinks, '
+        '%d with no third-party links, %d with no external ID links, '
+        '%d with no expected claims',
+        *counters
     )
 
 
@@ -294,6 +292,24 @@ def parse_wikidata_value(value):
     return None
 
 
+def _sanity_check(bucket, request_params):
+    response_body = _make_request(bucket, request_params)
+    # Failed API request
+    if not response_body:
+        return None
+
+    entities = response_body.get('entities')
+    # Unexpected JSON response
+    if not entities:
+        LOGGER.warning(
+            'Skipping unexpected JSON response with no entities: %s',
+            response_body,
+        )
+        return None
+
+    return entities
+
+
 def _lookup_label(item_value):
     request_params = {
         'action': 'wbgetentities',
@@ -313,24 +329,15 @@ def _lookup_label(item_value):
 
 
 # This function will be consumed by `get_data_for_linker`:
-# it enables parallel rocessing for Wikidata buckets
-def _process_bucket(
-    bucket,
-    request_params,
-    url_pids,
-    ext_id_pids_to_urls,
-    qids_and_tids,
-    no_labels_count,
-    no_aliases_count,
-    no_descriptions_count,
-    no_sitelinks_count,
-    no_links_count,
-    no_ext_ids_count,
-    no_claims_count,
-    needs_occupation,
-    needs_genre,
-    needs_publication_date,
-) -> List[Dict]:
+# it enables parallel processing for Wikidata buckets
+def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_and_tids,
+                    needs, counters) -> List[Dict]:
+    (
+        no_labels_count, no_aliases_count, no_descriptions_count,
+        no_sitelinks_count, no_links_count, no_ext_ids_count, no_claims_count
+    ) = counters
+    needs_occupation, needs_genre, needs_publication_date = needs
+
     response_body = _make_request(bucket, request_params)
 
     # If there is no response then
@@ -339,7 +346,7 @@ def _process_bucket(
     if not response_body:
         return []
 
-        # Each bucket is composed of different entities.
+    # Each bucket is composed of different entities.
     # In this list we'll keep track of the results
     # when processing each of them
     bucket_results = []
@@ -425,7 +432,7 @@ def _process_bucket(
             )
         )
 
-        # add result to `bucket_results`
+        # Add result to `bucket_results`
         bucket_results.append(to_write)
 
     return bucket_results
