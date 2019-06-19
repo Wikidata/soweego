@@ -17,7 +17,7 @@ from collections import defaultdict
 from functools import lru_cache, partial
 from multiprocessing.pool import Pool
 from pkgutil import get_data
-from typing import Dict, Iterator, List, TextIO, Set, Tuple
+from typing import Dict, Iterator, List, TextIO, Set, Tuple, Union
 from urllib.parse import urlunsplit
 
 import requests
@@ -212,49 +212,63 @@ def get_data_for_linker(
 
 
 @lru_cache()
-def get_authenticated_session():
-    """
-    Returns the token to be used for authentication.
-    If token is not valid then a new one will be generated
-    """
+def build_session() -> requests.Session:
+    """Build the HTTP session for interaction with the Wikidata API.
 
-    wiki_api_dump_path = os.path.join(
+    Log in if credentials are found,
+    otherwise go ahead with an unauthenticated session.
+    If a previously cached session has expired, build a new one.
+
+    :rtype: :py:class:`requests.Session`
+    :return: the HTTP session to interact with the Wikidata API
+    """
+    session_dump_path = os.path.join(
         constants.SHARED_FOLDER, constants.WIKIDATA_API_SESSION
     )
 
     try:
-        return _load_cached_bot_session(wiki_api_dump_path)
+        return _load_cached_session(session_dump_path)
 
     except (FileNotFoundError, AssertionError):
-        LOGGER.info('Obtaining new authenticated session')
-
+        LOGGER.debug('Logging into the Wikidata API ...')
         try:
-            # Try to load the password from file and create
-            # an authenticated session with it
-            success, msg, session = _authenticate_session(
-                _get_bot_password_from_file()
-            )
+            # Try to login by loading credentials from file
+            success, err_msg, session = _login(*_get_credentials_from_file())
 
-            # If we weren't able to login then it must mean that
-            # the password we have in file is not correct.
-            # Execution should not proceed
+            # Login failed: wrong user and/or password.
+            # Stop execution
             if not success:
-                raise AssertionError(msg)
+                raise AssertionError(err_msg)
 
-        except KeyError:
-            LOGGER.info(
-                'No password found in file, proceeding with an unauthenticated session'
-            )
+        except (FileNotFoundError, KeyError) as error:
+            if isinstance(error, FileNotFoundError):
+                LOGGER.info(
+                    "Credentials file not found, "
+                    "won't log into the Wikidata API. "
+                    "Please put '%s' in the '%s' module "
+                    "if you want to log in next time",
+                    constants.CREDENTIALS_FILENAME,
+                    constants.CREDENTIALS_MODULE
+                )
+            elif isinstance(error, KeyError):
+                LOGGER.info(
+                    "No %s found in the credentials file, "
+                    "won't log into the Wikidata API. "
+                    "Please add it to '%s' in the '%s' module "
+                    "if you want to log in next time",
+                    error,
+                    constants.CREDENTIALS_FILENAME,
+                    constants.CREDENTIALS_MODULE
+                )
 
             global BUCKET_SIZE
             BUCKET_SIZE = 50
 
-            # we return the session at once since we don't
-            # want to persist an unauthenticated session to disk
+            # Don't persist an unauthenticated session
             return requests.Session()
 
-        with open(wiki_api_dump_path, 'wb') as file:
-            LOGGER.info('Authentication successful, persisting session to disk')
+        with open(session_dump_path, 'wb') as file:
+            LOGGER.debug('Login successful, persisting session to disk ...')
             pickle.dump(session, file)
 
         return session
@@ -332,35 +346,35 @@ def _lookup_label(item_value):
 # it enables parallel processing for Wikidata buckets
 def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_and_tids,
                     needs, counters) -> List[Dict]:
+    # Unpack tuple parameters
     (
         no_labels_count, no_aliases_count, no_descriptions_count,
         no_sitelinks_count, no_links_count, no_ext_ids_count, no_claims_count
     ) = counters
     needs_occupation, needs_genre, needs_publication_date = needs
 
-    response_body = _make_request(bucket, request_params)
+    entities = _sanity_check(bucket, request_params)
 
-    # If there is no response then
-    # we treat it as if there were no entities in
-    # the bucket, and return an empty list
-    if not response_body:
+    # If the sanity check went wrong,
+    # we treat the bucket as if there were no entities,
+    # and return an empty list
+    if entities is None:
         return []
 
-    # Each bucket is composed of different entities.
-    # In this list we'll keep track of the results
-    # when processing each of them
-    bucket_results = []
+    result = []
 
-    for qid in response_body['entities']:
-        to_write = {}
+    for qid in entities:
+        processed = {}
 
-        # Stick target ids if given
+        # Stick target IDs if given
         if qids_and_tids:
             tids = qids_and_tids.get(qid)
             if tids:
-                to_write[keys.TID] = list(tids[keys.TID])
+                processed[keys.TID] = list(tids[keys.TID])
 
-        entity = response_body['entities'][qid]
+        entity = entities[qid]
+
+        # Claims
         claims = entity.get('claims')
         if not claims:
             LOGGER.info('Skipping QID with no claims: %s', qid)
@@ -373,24 +387,24 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
             LOGGER.info('Skipping QID with no labels: %s', qid)
             no_labels_count += 1
             continue
-        to_write[keys.QID] = qid
-        to_write[keys.NAME] = _return_monolingual_strings(qid, labels)
+        processed[keys.QID] = qid
+        processed[keys.NAME] = _return_monolingual_strings(qid, labels)
 
         # Aliases
         aliases = entity.get('aliases')
         if aliases:
             # Merge them into labels
-            to_write[keys.NAME].update(_return_aliases(qid, aliases))
+            processed[keys.NAME].update(_return_aliases(qid, aliases))
         else:
             LOGGER.debug('%s has no aliases', qid)
             no_aliases_count += 1
         # Convert set to list for JSON serialization
-        to_write[keys.NAME] = list(to_write[keys.NAME])
+        processed[keys.NAME] = list(processed[keys.NAME])
 
         # Descriptions
         descriptions = entity.get('descriptions')
         if descriptions:
-            to_write[keys.DESCRIPTION] = list(
+            processed[keys.DESCRIPTION] = list(
                 _return_monolingual_strings(qid, descriptions)
             )
         else:
@@ -400,28 +414,28 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
         # Sitelinks
         sitelinks = entity.get('sitelinks')
         if sitelinks:
-            to_write[keys.URL] = _return_sitelinks(sitelinks)
+            processed[keys.URL] = _return_sitelinks(sitelinks)
         else:
             LOGGER.debug('%s has no sitelinks', qid)
-            to_write[keys.URL] = set()
+            processed[keys.URL] = set()
             no_sitelinks_count += 1
 
         # Third-party URLs
-        to_write[keys.URL].update(
+        processed[keys.URL].update(
             _return_third_party_urls(qid, claims, url_pids, no_links_count)
         )
 
         # External ID URLs
-        to_write[keys.URL].update(
+        processed[keys.URL].update(
             _return_ext_id_urls(
                 qid, claims, ext_id_pids_to_urls, no_ext_ids_count
             )
         )
         # Convert set to list for JSON serialization
-        to_write[keys.URL] = list(to_write[keys.URL])
+        processed[keys.URL] = list(processed[keys.URL])
 
         # Expected claims
-        to_write.update(
+        processed.update(
             _return_claims_for_linker(
                 qid,
                 claims,
@@ -432,10 +446,9 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
             )
         )
 
-        # Add result to `bucket_results`
-        bucket_results.append(to_write)
+        result.append(processed)
 
-    return bucket_results
+    return result
 
 
 def _return_monolingual_strings(qid, strings):
@@ -443,8 +456,10 @@ def _return_monolingual_strings(qid, strings):
     # language-agnostic feature extraction.
     # See soweego.linker.workflow#extract_features
     to_return = set()
+
     for data in strings.values():
         string = data.get('value')
+
         if not string:
             LOGGER.warning(
                 'Skipping malformed monolingual string with no value for %s: %s',
@@ -452,7 +467,9 @@ def _return_monolingual_strings(qid, strings):
                 data,
             )
             continue
+
         to_return.add(string)
+
     return to_return
 
 
@@ -461,9 +478,11 @@ def _return_aliases(qid, aliases):
     # language-agnostic feature extraction.
     # See soweego.linker.workflow#extract_features
     to_return = set()
+
     for values in aliases.values():
         for data in values:
             alias = data.get('value')
+
             if not alias:
                 LOGGER.warning(
                     'Skipping malformed alias with no value for %s: %s',
@@ -471,20 +490,25 @@ def _return_aliases(qid, aliases):
                     data,
                 )
                 continue
+
             to_return.add(alias)
+
     return to_return
 
 
 def _return_sitelinks(sitelinks):
     to_return = set()
+
     for site, data in sitelinks.items():
         to_return.add(_build_sitelink_url(site, data['title']))
+
     return to_return
 
 
 def _return_third_party_urls(qid, claims, url_pids, no_count):
     to_return = set()
     available = url_pids.intersection(claims.keys())
+
     if available:
         LOGGER.debug(
             'Available third-party URL PIDs for %s: %s', qid, available
@@ -492,15 +516,20 @@ def _return_third_party_urls(qid, claims, url_pids, no_count):
         for pid in available:
             for pid_claim in claims[pid]:
                 value = _extract_value_from_claim(pid_claim, pid, qid)
+
                 if not value:
                     continue
+
                 parsed_value = parse_wikidata_value(value)
+
                 if not parsed_value:
                     continue
+
                 to_return.add(parsed_value)
     else:
         LOGGER.debug('No third-party URLs for %s', qid)
         no_count += 1
+
     return to_return
 
 
@@ -525,12 +554,13 @@ def _return_claims_for_linker(
         expected_pids.remove(vocabulary.PUBLICATION_DATE)
 
     available = expected_pids.intersection(claims.keys())
+
     if available:
         LOGGER.debug('Available claim PIDs for %s: %s', qid, available)
         for pid in available:
             for pid_claim in claims[pid]:
-
                 value = _extract_value_from_claim(pid_claim, pid, qid)
+
                 if not value:
                     continue
 
@@ -552,7 +582,6 @@ def _return_claims_for_linker(
                     # so we add it to `to_return` and continue,
                     # since we don't need to extract labels
                     parsed_value = value.get('id')
-
                 else:
                     parsed_value = parse_wikidata_value(value)
 
@@ -561,63 +590,41 @@ def _return_claims_for_linker(
 
                 if isinstance(parsed_value, set):  # Labels
                     to_return[pid_label].update(parsed_value)
-
                 else:
                     to_return[pid_label].add(parsed_value)
 
     else:
         LOGGER.debug('No %s expected claims for %s', expected_pids, qid)
         no_count += 1
+
     return {field: list(values) for field, values in to_return.items()}
 
 
 def _return_ext_id_urls(qid, claims, ext_id_pids_to_urls, no_count):
     to_return = set()
     available = set(ext_id_pids_to_urls.keys()).intersection(claims.keys())
+
     if available:
         LOGGER.debug('Available external ID PIDs for %s: %s', qid, available)
         for pid in available:
             for pid_claim in claims[pid]:
                 ext_id = _extract_value_from_claim(pid_claim, pid, qid)
+
                 if not ext_id:
                     continue
+
                 for formatter_url in ext_id_pids_to_urls[pid]:
                     to_return.add(formatter_url.replace('$1', ext_id))
     else:
         LOGGER.debug('No external ID links for %s', qid)
         no_count += 1
+
     return to_return
-
-
-def _yield_monolingual_strings(qid, strings, string_type):
-    for language_code, data in strings.items():
-        string = data.get('value')
-        if not string:
-            LOGGER.warning(
-                'Skipping malformed monolingual string with no value for %s: %s',
-                qid,
-                data,
-            )
-            continue
-        yield qid, language_code, string, string_type
-
-
-def _yield_aliases(qid, aliases):
-    for language_code, values in aliases.items():
-        for data in values:
-            alias = data.get('value')
-            if not alias:
-                LOGGER.warning(
-                    'Skipping malformed alias with no value for %s: %s',
-                    qid,
-                    data,
-                )
-                continue
-            yield qid, language_code, alias, keys.ALIAS
 
 
 def _yield_sitelinks(entity, qid, no_sitelinks_count):
     sitelinks = entity.get('sitelinks')
+
     if not sitelinks:
         LOGGER.debug('No sitelinks for %s', qid)
         no_sitelinks_count += 1
@@ -632,6 +639,7 @@ def _yield_ext_id_links(ext_id_pids_to_urls, claims, qid, no_ext_ids_count):
     available_ext_id_pids = set(ext_id_pids_to_urls.keys()).intersection(
         claims.keys()
     )
+
     if not available_ext_id_pids:
         LOGGER.debug('No external identifier links for %s', qid)
         no_ext_ids_count += 1
@@ -644,8 +652,10 @@ def _yield_ext_id_links(ext_id_pids_to_urls, claims, qid, no_ext_ids_count):
         for pid in available_ext_id_pids:
             for pid_claim in claims[pid]:
                 ext_id = _extract_value_from_claim(pid_claim, pid, qid)
+
                 if not ext_id:
                     continue
+
                 for formatter_url in ext_id_pids_to_urls[pid]:
                     yield qid, formatter_url.replace('$1', ext_id)
 
@@ -654,6 +664,7 @@ def _yield_expected_values(
     qid, claims, expected_pids, count, include_pid=False
 ):
     available = expected_pids.intersection(claims.keys())
+
     if not available:
         LOGGER.debug('No %s expected claims for %s', expected_pids, qid)
         count += 1
@@ -662,8 +673,10 @@ def _yield_expected_values(
         for pid in available:
             for pid_claim in claims[pid]:
                 value = _extract_value_from_claim(pid_claim, pid, qid)
+
                 if not value:
                     continue
+
                 if include_pid:
                     yield qid, pid, value
                 else:
@@ -680,11 +693,10 @@ def _prepare_request(qids, props):
     return qid_buckets, request_params
 
 
-def _get_authentication_token(session: requests.Session) -> str:
-    """
-    Using a session instance, get a token we can use for authentication
-    """
-    token_request = session.get(
+# API login step 1:
+# get the login token, using the given HTTP session
+def _get_login_token(session: requests.Session) -> str:
+    token_response = session.get(
         WIKIDATA_API_URL,
         params={
             'action': 'query',
@@ -695,103 +707,86 @@ def _get_authentication_token(session: requests.Session) -> str:
         headers={'User-Agent': constants.HTTP_USER_AGENT},
     ).json()
 
-    return token_request['query']['tokens']['logintoken']
+    return token_response['query']['tokens']['logintoken']
 
 
-def _do_bot_login(
-    session: requests.Session, token: str, bot_password: str
-) -> bool:
-    """
-    Tries to login with a session, given token and password. Returns a boolean
-    stating whether the login was successful or not.
-
-    Cookies for authentication are automatically saved into the session.
-    """
-
-    login_r = session.post(
+# API login step 2:
+# actual login with the given token and password,
+# using the given HTTP session.
+# Return whether the login was successful or not,
+# and an eventual error message from the server.
+# Cookies for authentication are automatically saved into the session.
+def _actual_login(session: requests.Session, user: str, password: str, token: str) -> Tuple[bool, str]:
+    login_response = session.post(
         WIKIDATA_API_URL,
         data={
             'action': 'login',
-            'lgname': 'Soweego bot',
-            'lgpassword': bot_password,
+            'lgname': user,
+            'lgpassword': password,
             'lgtoken': token,
             'format': 'json',
         },
         headers={'User-Agent': constants.HTTP_USER_AGENT},
     ).json()
 
-    lg_success = login_r['login']['result'] != 'Failed'
+    success = login_response['login']['result'] != 'Failed'
 
-    # message is None when login is successful
-    lg_message = login_r['login'].get('reason', None)
+    # None in case of successful login
+    err_msg = login_response['login'].get('reason')
 
-    return lg_success, lg_message
+    return success, err_msg
 
 
-def _load_cached_bot_session(dump_path: str) -> requests.Session:
-    """
-    Loads the pickled bot session checks if it is valid and returns session.
-
-    Raises `AssertionError` if session is not valid
-    Raises `FileNotFoundError` if path doesn't exist
-    """
-
+# Load the pickled bot session, check if it's valid,
+# then return the session or raise `AssertionError`.
+# Raise `FileNotFoundError` if the pickle file doesn't exist
+def _load_cached_session(dump_path: str) -> requests.Session:
     with open(dump_path, 'rb') as file:
-        LOGGER.debug('Previously authenticated session exists')
+        LOGGER.debug('Loading authenticated session ...')
         session = pickle.load(file)
 
-        # check if session is still valid
-        res = session.get(
+        # Check if the session is still valid
+        assert_response = session.get(
             WIKIDATA_API_URL,
-            params={'action': 'query', 'assert': 'user', 'format': 'json'},
+            params={
+                'action': 'query',
+                'assert': 'user',
+                'format': 'json'
+            },
             headers={'User-Agent': constants.HTTP_USER_AGENT},
         )
 
-        # if the assert query failed then it means
+        # If the assert request failed,
         # we need to renew the session
-        if 'error' in res.json().keys():
-            LOGGER.info('Session has expired and must be renewed')
+        if 'error' in assert_response.json().keys():
+            LOGGER.info('The session has expired and will be renewed')
             raise AssertionError
 
         return session
 
 
-def _authenticate_session(bot_password) -> Tuple[bool, str, requests.Session]:
-    """
-    Creates an authenticated session using the given password
-    """
+def _login(user: str, password: str) -> Tuple[bool, str, requests.Session]:
+    session = requests.Session()  # To automatically manage cookies
+    token = _get_login_token(session)
+    success, err_msg = _actual_login(session, user, password, token)
 
-    session = requests.Session()  # to automatically manage cookies
-
-    # get token
-    token = _get_authentication_token(session)
-
-    # do login
-    lg_success, lg_message = _do_bot_login(session, token, bot_password)
-
-    return lg_success, lg_message, session
+    return success, err_msg, session
 
 
-def _get_bot_password_from_file() -> str:
-    """
-    Get the password for the wikidata bot from the `db_credentials.json` file.
-
-    May raise a :py:class:`KeyError` exception if the key is not present.
-    """
-
-    return json.loads(get_data(*constants.CREDENTIALS_LOCATION))[
-        keys.WIKIDATA_BOT_PASSWORD
-    ]
+# Raise `FileNotFoundError` if the JSON file is not there
+# Raise `KeyError` if credential keys are not in the JSON file
+def _get_credentials_from_file() -> Tuple[Union[str, None], Union[str, None]]:
+    credentials = json.loads(get_data(*constants.CREDENTIALS_LOCATION))
+    return credentials[keys.WIKIDATA_API_USER], credentials[keys.WIKIDATA_API_PASSWORD]
 
 
 def _make_request(bucket, params):
     params['ids'] = '|'.join(bucket)
-    connection_is_ok = True
-
     session = requests.Session()
-    session.cookies = get_authenticated_session().cookies
+    session.cookies = build_session().cookies
 
     while True:
+        response = None
         try:
             response = session.get(
                 WIKIDATA_API_URL,
@@ -806,9 +801,11 @@ def _make_request(bucket, params):
             connection_is_ok = False
         else:
             connection_is_ok = True
+
         if connection_is_ok:
             break
-    if not response.ok:
+
+    if not response.ok or response is None:
         LOGGER.warning(
             'Skipping failed %s to the Wikidata API. Reason: %d %s - Full URL: %s',
             response.request.method,
@@ -817,6 +814,7 @@ def _make_request(bucket, params):
             response.request.url,
         )
         return None
+
     LOGGER.debug(
         'Successful %s to the Wikidata API. Status code: %d',
         response.request.method,
