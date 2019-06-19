@@ -49,5 +49,5 @@ def cli(ctx, log_level):
     for module, level in log_level:
         commons.logging.set_log_level(module, level)
 
-    # setup bot authentication
-    wikidata.api_requests.get_authenticated_session()
+    # HTTP session for the Wikidata API
+    wikidata.api_requests.build_session()
