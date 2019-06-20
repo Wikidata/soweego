@@ -33,7 +33,7 @@ for b in buckets:
     r = requests.get("https://www.wikidata.org/w/api.php", params=dati).json()
     print('Call to API success: ', r.get('success'))
     if not r.get('entities'):
-        print (r)
+        print(r)
         continue
     for qid in r['entities']:
         entity = r['entities'][qid]
@@ -53,8 +53,12 @@ for qid in ids_labels:
     for lang in ids_labels[qid]:
         v[ids_labels[qid][lang]].append(lang)
     qid_labels[qid] = v
-json.dump(qid_labels, open(WD + SAMPLE + '_qid_labels.json', 'w'),
-          indent=2, ensure_ascii=False)
+json.dump(
+    qid_labels,
+    open(WD + SAMPLE + '_qid_labels.json', 'w'),
+    indent=2,
+    ensure_ascii=False,
+)
 
 # Wikidata sample, labels
 label_qid = {}
@@ -64,5 +68,9 @@ for qid in qid_labels.keys():
         for l in labels:
             label_qid[l.lower()] = qid
 # Better sample with labels as keys
-json.dump(label_qid, open(WD + SAMPLE + '_labels.json', 'w'),
-          indent=2, ensure_ascii=False)
+json.dump(
+    label_qid,
+    open(WD + SAMPLE + '_labels.json', 'w'),
+    indent=2,
+    ensure_ascii=False,
+)

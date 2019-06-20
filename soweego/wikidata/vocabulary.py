@@ -89,36 +89,79 @@ CATALOG_MAPPING = {
     keys.DISCOGS: {
         keys.CATALOG_QID: DISCOGS_QID,
         keys.PERSON_PID: DISCOGS_ARTIST_PID,
-        keys.WORK_PID: DISCOGS_MASTER_PID
+        keys.WORK_PID: DISCOGS_MASTER_PID,
     },
     keys.IMDB: {
         keys.CATALOG_QID: IMDB_QID,
         keys.PERSON_PID: IMDB_PID,
-        keys.WORK_PID: IMDB_PID
+        keys.WORK_PID: IMDB_PID,
     },
     keys.MUSICBRAINZ: {
         keys.CATALOG_QID: MUSICBRAINZ_QID,
         keys.PERSON_PID: MUSICBRAINZ_ARTIST_PID,
-        keys.WORK_PID: MUSICBRAINZ_RELEASE_GROUP_PID
+        keys.WORK_PID: MUSICBRAINZ_RELEASE_GROUP_PID,
     },
     keys.TWITTER: {
         keys.CATALOG_QID: TWITTER_QID,
-        keys.PERSON_PID: TWITTER_USERNAME_PID
-    }
+        keys.PERSON_PID: TWITTER_USERNAME_PID,
+    },
 }
 
 # Properties with URL data type, from SPARQL query:
 # SELECT ?property WHERE { ?property a wikibase:Property ; wikibase:propertyType wikibase:Url . }
-URL_PIDS = set([
-    'P854', 'P855', 'P856', 'P953', 'P963', 'P968', 'P973', 'P1019', 'P1065',
-    'P1324', 'P1325', 'P1348', 'P1401', 'P1421', 'P1482', 'P1581', 'P1613',
-    'P1628', 'P1709', 'P1713', 'P1896', 'P1957', 'P1991', 'P2035', 'P2078',
-    'P2235', 'P2236', 'P2488', 'P2520', 'P2649', 'P2699', 'P2888', 'P3254',
-    'P3268', 'P3950', 'P4001', 'P4238', 'P4570', 'P4656', 'P4765', 'P4945',
-    'P4997', 'P5178', 'P5195', 'P5282', 'P5305', 'P5715'
-])
+URL_PIDS = set(
+    [
+        'P854',
+        'P855',
+        'P856',
+        'P953',
+        'P963',
+        'P968',
+        'P973',
+        'P1019',
+        'P1065',
+        'P1324',
+        'P1325',
+        'P1348',
+        'P1401',
+        'P1421',
+        'P1482',
+        'P1581',
+        'P1613',
+        'P1628',
+        'P1709',
+        'P1713',
+        'P1896',
+        'P1957',
+        'P1991',
+        'P2035',
+        'P2078',
+        'P2235',
+        'P2236',
+        'P2488',
+        'P2520',
+        'P2649',
+        'P2699',
+        'P2888',
+        'P3254',
+        'P3268',
+        'P3950',
+        'P4001',
+        'P4238',
+        'P4570',
+        'P4656',
+        'P4765',
+        'P4945',
+        'P4997',
+        'P5178',
+        'P5195',
+        'P5282',
+        'P5305',
+        'P5715',
+    ]
+)
 
-# Validator metadata & linker properties: gender, birth/death date/place
+# Validator biographical data & linker properties: gender, birth/death date/place
 SEX_OR_GENDER = 'P21'
 PLACE_OF_BIRTH = 'P19'
 PLACE_OF_DEATH = 'P20'
@@ -126,9 +169,12 @@ DATE_OF_BIRTH = 'P569'
 DATE_OF_DEATH = 'P570'
 PUBLICATION_DATE = 'P577'
 GENRE = 'P136'
-METADATA_PIDS = {
-    SEX_OR_GENDER, PLACE_OF_BIRTH,
-    PLACE_OF_DEATH, DATE_OF_BIRTH, DATE_OF_DEATH
+BIODATA_PIDS = {
+    SEX_OR_GENDER,
+    PLACE_OF_BIRTH,
+    PLACE_OF_DEATH,
+    DATE_OF_BIRTH,
+    DATE_OF_DEATH,
 }
 
 # Additional linker properties
@@ -149,7 +195,7 @@ LINKER_PIDS = {
     PSEUDONYM: keys.PSEUDONYM,
     OCCUPATION: keys.OCCUPATIONS,
     GENRE: keys.GENRES,
-    PUBLICATION_DATE: keys.DATE_OF_BIRTH
+    PUBLICATION_DATE: keys.DATE_OF_BIRTH,
 }
 
 # Generic property for work -> person
@@ -200,7 +246,7 @@ DATE_PRECISION = {
     DAY: 'day',
     HOUR: 'hour',
     MINUTE: 'minute',
-    SECOND: 'second'
+    SECOND: 'second',
 }
 
 # This dictionary provides mappings between the professions
@@ -241,24 +287,18 @@ IMDB_PROFESSIONS_MAPPING = {
     'talent_agent': TALENT_AGENT_QID,
     'transportation_department': DRIVER_QID,
     'visual_effects': VISUAL_EFFECTS_ARTIST_QID,
-    'writer': SCREENWRITER_QID
+    'writer': SCREENWRITER_QID,
 }
 
 # Used to populate statements on works
 WORKS_BY_PEOPLE_MAPPING = {
-    keys.DISCOGS: {
-        keys.BAND: PERFORMER,
-        keys.MUSICIAN: PERFORMER
-    },
+    keys.DISCOGS: {keys.BAND: PERFORMER, keys.MUSICIAN: PERFORMER},
     keys.IMDB: {
         keys.ACTOR: PARTICIPANT,
         keys.DIRECTOR: PARTICIPANT,
         keys.MUSICIAN: PARTICIPANT,
         keys.PRODUCER: PARTICIPANT,
-        keys.WRITER: PARTICIPANT
+        keys.WRITER: PARTICIPANT,
     },
-    keys.MUSICBRAINZ: {
-        keys.BAND: PERFORMER,
-        keys.MUSICIAN: PERFORMER
-    }
+    keys.MUSICBRAINZ: {keys.BAND: PERFORMER, keys.MUSICIAN: PERFORMER},
 }

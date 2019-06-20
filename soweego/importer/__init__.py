@@ -1,1 +1,1 @@
-from soweego.importer import cli
+"""Importer module - Generic service for dump updating/importing"""

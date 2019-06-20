@@ -27,10 +27,10 @@ RELEASE_ARTIST_RELATIONSHIP = "musicbrainz_release_group_artist_relationship"
 
 
 class MusicbrainzArtistEntity(BaseEntity):
+    """Describes a musician in Musicbrainz"""
+
     __tablename__ = ARTIST_TABLE
-    __mapper_args__ = {
-        'polymorphic_identity': __tablename__,
-        'concrete': True}
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
     gender = Column(String(10))
     birth_place = Column(String(255), nullable=True)
@@ -38,52 +38,52 @@ class MusicbrainzArtistEntity(BaseEntity):
 
 
 class MusicbrainzBandEntity(BaseEntity):
+    """Describes a musical group in Musicbrainz"""
+
     __tablename__ = BAND_TABLE
-    __mapper_args__ = {
-        'polymorphic_identity': __tablename__,
-        'concrete': True}
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
     birth_place = Column(String(255), nullable=True)
     death_place = Column(String(255), nullable=True)
 
 
 class MusicbrainzArtistLinkEntity(BaseLinkEntity):
+    """Describes a musician web link in Musicbrainz"""
+
     __tablename__ = ARTIST_LINK_TABLE
-    __mapper_args__ = {
-        'polymorphic_identity': __tablename__,
-        'concrete': True}
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
 class MusicbrainzBandLinkEntity(BaseLinkEntity):
+    """Describes a musical group web link in Musicbrainz"""
+
     __tablename__ = BAND_LINK_TABLE
-    __mapper_args__ = {
-        'polymorphic_identity': __tablename__,
-        'concrete': True}
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
 class MusicbrainzReleaseGroupLinkEntity(BaseLinkEntity):
+    """Describes a master release web link in Musicbrainz"""
+
     __tablename__ = RELEASE_GROUP_LINK_ENTITY
-    __mapper_args__ = {
-        'polymorphic_identity': __tablename__,
-        'concrete': True}
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
 class MusicbrainzReleaseGroupEntity(BaseEntity):
+    """Describes a master release in Musicbrainz"""
+
     __tablename__ = RELEASE_GROUP_ENTITY
-    __mapper_args__ = {
-        'polymorphic_identity': __tablename__,
-        'concrete': True}
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
 # NOTICE: both catalog_ids of this entity can be both in Artist and Band table
 
 
 class MusicBrainzArtistBandRelationship(BaseRelationship):
+    """Describes a relationship between an artist and a group in Musicbrainz"""
+
     __tablename__ = ARTIST_BAND_RELATIONSHIP_TABLE
 
-    __mapper_args__ = {
-        'polymorphic_identity': __tablename__,
-        'concrete': True}
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
     def __repr__(self):
         return super().__repr__()
@@ -91,11 +91,12 @@ class MusicBrainzArtistBandRelationship(BaseRelationship):
 
 # NOTICE: artist could be in artist or band table
 class MusicBrainzReleaseGroupArtistRelationship(BaseRelationship):
+    """Describes a relationship between a master release and a group/artist
+    in Musicbrainz """
+
     __tablename__ = RELEASE_ARTIST_RELATIONSHIP
 
-    __mapper_args__ = {
-        'polymorphic_identity': __tablename__,
-        'concrete': True}
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
     def __repr__(self):
         return super().__repr__()

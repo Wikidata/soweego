@@ -41,44 +41,115 @@ FORMATTER_REGEX_BINDING = '?formatter_regex'
 
 URL_PID_TERMS = ' '.join(['wdt:%s' % pid for pid in vocabulary.URL_PIDS])
 
-IDENTIFIER_QUERY_TEMPLATE = 'SELECT DISTINCT ' + ITEM_BINDING + ' ' + IDENTIFIER_BINDING + \
-    ' WHERE { ' + ITEM_BINDING + \
-    ' wdt:%s/wdt:P279* wd:%s ; wdt:%s ' + IDENTIFIER_BINDING + ' . }'
-LINKS_QUERY_TEMPLATE = 'SELECT DISTINCT ' + ITEM_BINDING + ' ' + LINK_BINDING + \
-    ' WHERE { VALUES ' + PROPERTY_BINDING + ' { ' + URL_PID_TERMS + ' } . ' + ITEM_BINDING + ' wdt:%s/wdt:P279* wd:%s ; wdt:%s ' + IDENTIFIER_BINDING + \
-    ' ; ' + PROPERTY_BINDING + ' ' + LINK_BINDING + ' . }'
-DATASET_QUERY_TEMPLATE = 'SELECT DISTINCT ' + ITEM_BINDING + \
-    ' WHERE { ' + ITEM_BINDING + ' wdt:%s/wdt:P279* wd:%s . FILTER NOT EXISTS { ' + \
-    ITEM_BINDING + ' wdt:%s ' + IDENTIFIER_BINDING + ' . } . }'
+IDENTIFIER_QUERY_TEMPLATE = (
+    'SELECT DISTINCT '
+    + ITEM_BINDING
+    + ' '
+    + IDENTIFIER_BINDING
+    + ' WHERE { '
+    + ITEM_BINDING
+    + ' wdt:%s/wdt:P279* wd:%s ; wdt:%s '
+    + IDENTIFIER_BINDING
+    + ' . }'
+)
+LINKS_QUERY_TEMPLATE = (
+    'SELECT DISTINCT '
+    + ITEM_BINDING
+    + ' '
+    + LINK_BINDING
+    + ' WHERE { VALUES '
+    + PROPERTY_BINDING
+    + ' { '
+    + URL_PID_TERMS
+    + ' } . '
+    + ITEM_BINDING
+    + ' wdt:%s/wdt:P279* wd:%s ; wdt:%s '
+    + IDENTIFIER_BINDING
+    + ' ; '
+    + PROPERTY_BINDING
+    + ' '
+    + LINK_BINDING
+    + ' . }'
+)
+DATASET_QUERY_TEMPLATE = (
+    'SELECT DISTINCT '
+    + ITEM_BINDING
+    + ' WHERE { '
+    + ITEM_BINDING
+    + ' wdt:%s/wdt:P279* wd:%s . FILTER NOT EXISTS { '
+    + ITEM_BINDING
+    + ' wdt:%s '
+    + IDENTIFIER_BINDING
+    + ' . } . }'
+)
 
-VALUES_QUERY_TEMPLATE = 'SELECT * WHERE { VALUES ' + \
-    ITEM_BINDING + ' { %s } . ' + ITEM_BINDING + ' %s }'
-CATALOG_QID_QUERY_TEMPLATE = 'SELECT ' + ITEM_BINDING + \
-    ' WHERE { wd:%s wdt:P1629 ' + ITEM_BINDING + ' . }'
+VALUES_QUERY_TEMPLATE = (
+    'SELECT * WHERE { VALUES '
+    + ITEM_BINDING
+    + ' { %s } . '
+    + ITEM_BINDING
+    + ' %s }'
+)
+CATALOG_QID_QUERY_TEMPLATE = (
+    'SELECT '
+    + ITEM_BINDING
+    + ' WHERE { wd:%s wdt:P1629 '
+    + ITEM_BINDING
+    + ' . }'
+)
 
-PROPERTIES_WITH_URL_DATATYPE_QUERY = 'SELECT ' + PROPERTY_BINDING + \
-    ' WHERE { ' + PROPERTY_BINDING + \
-    ' a wikibase:Property ; wikibase:propertyType wikibase:Url . }'
+PROPERTIES_WITH_URL_DATATYPE_QUERY = (
+    'SELECT '
+    + PROPERTY_BINDING
+    + ' WHERE { '
+    + PROPERTY_BINDING
+    + ' a wikibase:Property ; wikibase:propertyType wikibase:Url . }'
+)
 URL_PIDS_QUERY = 'SELECT ?property WHERE { ?property a wikibase:Property ; wikibase:propertyType wikibase:Url . }'
-EXT_ID_PIDS_AND_URLS_QUERY = 'SELECT * WHERE { ' + PROPERTY_BINDING + \
-    ' a wikibase:Property ; wikibase:propertyType wikibase:ExternalId ; wdt:P1630 ' + \
-    FORMATTER_URL_BINDING + \
-    ' . OPTIONAL { ' + PROPERTY_BINDING + ' wdt:P1793 ' + \
-    FORMATTER_REGEX_BINDING + ' . } . }'
+EXT_ID_PIDS_AND_URLS_QUERY = (
+    'SELECT * WHERE { '
+    + PROPERTY_BINDING
+    + ' a wikibase:Property ; wikibase:propertyType wikibase:ExternalId ; wdt:P1630 '
+    + FORMATTER_URL_BINDING
+    + ' . OPTIONAL { '
+    + PROPERTY_BINDING
+    + ' wdt:P1793 '
+    + FORMATTER_REGEX_BINDING
+    + ' . } . }'
+)
 
-SUBCLASSES_OF_QID = ('SELECT DISTINCT ' + ITEM_BINDING + ' WHERE { '
-                     + ITEM_BINDING + ' wdt:P279* wd:%s . }')
+SUBCLASSES_OF_QID = (
+    'SELECT DISTINCT '
+    + ITEM_BINDING
+    + ' WHERE { '
+    + ITEM_BINDING
+    + ' wdt:P279* wd:%s . }'
+)
 
-SUPERCLASSES_OF_QID = ('SELECT DISTINCT ' + ITEM_BINDING + ' WHERE { '
-                       + ' wd:%s wdt:P279* ' + ITEM_BINDING + ' . }')
+SUPERCLASSES_OF_QID = (
+    'SELECT DISTINCT '
+    + ITEM_BINDING
+    + ' WHERE { '
+    + ' wd:%s wdt:P279* '
+    + ITEM_BINDING
+    + ' . }'
+)
 
 
 @click.command()
 @click.argument('ontology_class')
 @click.argument('identifier_property')
 @click.option('-p', '--results-per-page', default=1000, help='Default: 1000.')
-@click.option('-o', '--outdir', type=click.Path(), default='output', help="Default: 'output'.")
-def identifier_class_based_query_cli(ontology_class, identifier_property, results_per_page, outdir):
+@click.option(
+    '-o',
+    '--outdir',
+    type=click.Path(),
+    default='output',
+    help="Default: 'output'.",
+)
+def identifier_class_based_query_cli(
+    ontology_class, identifier_property, results_per_page, outdir
+):
     """Run a paged SPARQL query against the Wikidata endpoint to get items and external catalog
     identifiers. Dump the result into a JSONlines file.
 
@@ -88,14 +159,26 @@ def identifier_class_based_query_cli(ontology_class, identifier_property, result
 
     Use '-p 0' to switch paging off.
     """
-    with open(os.path.join(outdir, 'class_based_identifier_query_result.jsonl'), 'w', 1) as outfile:
-        _dump_result(identifier_class_based_query(
-            ontology_class, identifier_property, results_per_page), outfile)
+    with open(
+        os.path.join(outdir, 'class_based_identifier_query_result.jsonl'),
+        'w',
+        1,
+    ) as outfile:
+        _dump_result(
+            identifier_class_based_query(
+                ontology_class, identifier_property, results_per_page
+            ),
+            outfile,
+        )
         LOGGER.info(
-            "Class-based identifier query result dumped as JSON lines to '%s'", outfile.name)
+            "Class-based identifier query result dumped as JSON lines to '%s'",
+            outfile.name,
+        )
 
 
-def run_query(query_type: tuple, class_qid: str, catalog_pid: str, result_per_page: int) -> Generator:
+def run_query(
+    query_type: tuple, class_qid: str, catalog_pid: str, result_per_page: int
+) -> Generator:
     """Run a filled SPARQL query template against the Wikidata endpoint with eventual paging.
 
     :param query_type: pair with one of ``identifier``, ``links``, ``dataset``, ``metadata``, and either ``class`` or ``occupation``
@@ -113,30 +196,61 @@ def run_query(query_type: tuple, class_qid: str, catalog_pid: str, result_per_pa
 
     if how not in constants.SUPPORTED_QUERY_TYPES:
         LOGGER.critical(
-            'Bad query type: %s. It should be one of %s', how, constants.SUPPORTED_QUERY_TYPES)
-        raise ValueError('Bad query type: %s. It should be one of %s' %
-                         (how, constants.SUPPORTED_QUERY_TYPES))
+            'Bad query type: %s. It should be one of %s',
+            how,
+            constants.SUPPORTED_QUERY_TYPES,
+        )
+        raise ValueError(
+            'Bad query type: %s. It should be one of %s'
+            % (how, constants.SUPPORTED_QUERY_TYPES)
+        )
 
     if what == keys.IDENTIFIER:
-        query = IDENTIFIER_QUERY_TEMPLATE % (vocabulary.INSTANCE_OF, class_qid, catalog_pid) if how == keys.CLASS_QUERY else IDENTIFIER_QUERY_TEMPLATE % (
-            vocabulary.OCCUPATION, class_qid, catalog_pid)
-        return _parse_query_result(keys.IDENTIFIER, _run_paged_query(result_per_page, query))
+        query = (
+            IDENTIFIER_QUERY_TEMPLATE
+            % (vocabulary.INSTANCE_OF, class_qid, catalog_pid)
+            if how == keys.CLASS_QUERY
+            else IDENTIFIER_QUERY_TEMPLATE
+            % (vocabulary.OCCUPATION, class_qid, catalog_pid)
+        )
+        return _parse_query_result(
+            keys.IDENTIFIER, _run_paged_query(result_per_page, query)
+        )
     elif what == keys.LINKS:
-        query = LINKS_QUERY_TEMPLATE % (vocabulary.INSTANCE_OF, class_qid, catalog_pid) if how == keys.CLASS_QUERY else LINKS_QUERY_TEMPLATE % (
-            vocabulary.OCCUPATION, class_qid, catalog_pid)
-        return _parse_query_result(keys.LINKS, _run_paged_query(result_per_page, query))
+        query = (
+            LINKS_QUERY_TEMPLATE
+            % (vocabulary.INSTANCE_OF, class_qid, catalog_pid)
+            if how == keys.CLASS_QUERY
+            else LINKS_QUERY_TEMPLATE
+            % (vocabulary.OCCUPATION, class_qid, catalog_pid)
+        )
+        return _parse_query_result(
+            keys.LINKS, _run_paged_query(result_per_page, query)
+        )
     elif what == keys.DATASET:
-        query = DATASET_QUERY_TEMPLATE % (vocabulary.INSTANCE_OF, class_qid, catalog_pid) if how == keys.CLASS_QUERY else DATASET_QUERY_TEMPLATE % (
-            vocabulary.OCCUPATION, class_qid, catalog_pid)
-        return _parse_query_result(keys.DATASET, _run_paged_query(result_per_page, query))
-    elif what == keys.METADATA:
+        query = (
+            DATASET_QUERY_TEMPLATE
+            % (vocabulary.INSTANCE_OF, class_qid, catalog_pid)
+            if how == keys.CLASS_QUERY
+            else DATASET_QUERY_TEMPLATE
+            % (vocabulary.OCCUPATION, class_qid, catalog_pid)
+        )
+        return _parse_query_result(
+            keys.DATASET, _run_paged_query(result_per_page, query)
+        )
+    elif what == keys.BIODATA:
         # TODO implement metadata query
         raise NotImplementedError
     else:
-        LOGGER.critical('Bad query type: %s. It should be one of %s',
-                        what, constants.SUPPORTED_QUERY_SELECTORS)
-        raise ValueError('Bad query type: %s. It should be one of %s' % (
-            what, constants.SUPPORTED_QUERY_SELECTORS))
+        LOGGER.critical(
+            'Bad query type: %s. It should be one of %s',
+            what,
+            constants.SUPPORTED_QUERY_SELECTORS,
+        )
+        raise ValueError(
+            'Bad query type: %s. It should be one of %s'
+            % (what, constants.SUPPORTED_QUERY_SELECTORS)
+        )
 
 
 def catalog_qid_query(catalog_pid):
@@ -161,45 +275,59 @@ def url_pids_query():
 
 def external_id_pids_and_urls_query():
     LOGGER.info(
-        'Retrieving PIDs with external ID values, their formatter URLs and regexps')
+        'Retrieving PIDs with external ID values, their formatter URLs and regexps'
+    )
     result_set = make_request(
-        EXT_ID_PIDS_AND_URLS_QUERY, response_format=JSON_RESPONSE_FORMAT)
+        EXT_ID_PIDS_AND_URLS_QUERY, response_format=JSON_RESPONSE_FORMAT
+    )
     for result in result_set['results']['bindings']:
         formatter_url_dict = result.get(FORMATTER_URL_BINDING.lstrip('?'))
         if not formatter_url_dict:
             LOGGER.warning(
-                'Skipping malformed query result: no formatter URL binding in %s', result)
+                'Skipping malformed query result: no formatter URL binding in %s',
+                result,
+            )
             continue
         formatter_url = formatter_url_dict.get('value')
         if not formatter_url:
             LOGGER.warning(
-                'Skipping malformed query result: no formatter URL in %s', formatter_url_dict)
+                'Skipping malformed query result: no formatter URL in %s',
+                formatter_url_dict,
+            )
             continue
         formatter_regex_dict = result.get(FORMATTER_REGEX_BINDING.lstrip('?'))
         if formatter_regex_dict:
             formatter_regex = formatter_regex_dict.get('value')
             if not formatter_regex:
                 LOGGER.warning(
-                    'Skipping malformed query result: no formatter regex in %s', formatter_regex_dict)
+                    'Skipping malformed query result: no formatter regex in %s',
+                    formatter_regex_dict,
+                )
                 continue
         else:
             formatter_regex = None
-            LOGGER.debug(
-                'No formatter regex in %s', result)
+            LOGGER.debug('No formatter regex in %s', result)
         pid_uri_dict = result.get(PROPERTY_BINDING.lstrip('?'))
         if not pid_uri_dict:
             LOGGER.warning(
-                'Skipping malformed query result: no Wikidata property binding in %s', result)
+                'Skipping malformed query result: no Wikidata property binding in %s',
+                result,
+            )
             continue
         pid_uri = pid_uri_dict.get('value')
         if not pid_uri:
             LOGGER.warning(
-                'Skipping malformed query result: no Wikidata property in %s', pid_uri_dict)
+                'Skipping malformed query result: no Wikidata property in %s',
+                pid_uri_dict,
+            )
             continue
         pid = search(constants.PID_REGEX, pid_uri)
         if not pid:
             LOGGER.warning(
-                'Skipping malformed query result: invalid Wikidata property URI %s in %s', pid_uri, result)
+                'Skipping malformed query result: invalid Wikidata property URI %s in %s',
+                pid_uri,
+                result,
+            )
             continue
         yield {pid.group(): {formatter_url: formatter_regex}}
 
@@ -208,20 +336,32 @@ def _get_valid_pid(result):
     pid_uri = result.get(PROPERTY_BINDING)
     if not pid_uri:
         LOGGER.warning(
-            'Skipping malformed query result: no Wikidata property in %s', result)
+            'Skipping malformed query result: no Wikidata property in %s',
+            result,
+        )
         return None
     pid = search(constants.PID_REGEX, pid_uri)
     if not pid:
         LOGGER.warning(
-            'Skipping malformed query result: invalid Wikidata property URI %s in %s', pid_uri, result)
+            'Skipping malformed query result: invalid Wikidata property URI %s in %s',
+            pid_uri,
+            result,
+        )
         return None
     return pid
 
 
-def identifier_class_based_query(ontology_class, identifier_property, results_per_page):
+def identifier_class_based_query(
+    ontology_class, identifier_property, results_per_page
+):
     query = IDENTIFIER_QUERY_TEMPLATE % (
-        vocabulary.INSTANCE_OF, ontology_class, identifier_property)
-    return _parse_query_result(keys.IDENTIFIER, _run_paged_query(results_per_page, query))
+        vocabulary.INSTANCE_OF,
+        ontology_class,
+        identifier_property,
+    )
+    return _parse_query_result(
+        keys.IDENTIFIER, _run_paged_query(results_per_page, query)
+    )
 
 
 def _parse_query_result(query_type, result_set):
@@ -238,7 +378,10 @@ def _parse_query_result(query_type, result_set):
 
         if identifier_or_link is None:
             LOGGER.warning(
-                'Skipping malformed query result: no %s in %s', to_be_logged, result)
+                'Skipping malformed query result: no %s in %s',
+                to_be_logged,
+                result,
+            )
             continue
 
         valid_qid = _get_valid_qid(result)
@@ -255,12 +398,16 @@ def _get_valid_qid(result):
     item_uri = result.get(ITEM_BINDING)
     if not item_uri:
         LOGGER.warning(
-            'Skipping malformed query result: no Wikidata item in %s', result)
+            'Skipping malformed query result: no Wikidata item in %s', result
+        )
         return None
     qid = search(constants.QID_REGEX, item_uri)
     if not qid:
         LOGGER.warning(
-            'Skipping malformed query result: invalid Wikidata item URI %s in %s', item_uri, result)
+            'Skipping malformed query result: invalid Wikidata item URI %s in %s',
+            item_uri,
+            result,
+        )
         return None
     return qid
 
@@ -278,18 +425,24 @@ def _run_paged_query(result_per_page, query):
         for result in result_set:
             yield result
     else:
-        LOGGER.info('Running paged query with %d results per page: %s',
-                    result_per_page, query)
+        LOGGER.info(
+            'Running paged query with %d results per page: %s',
+            result_per_page,
+            query,
+        )
         pages = 0
         while True:
             LOGGER.info('Page #%d', pages)
             query_builder = [query]
-            query_builder.append('OFFSET %d LIMIT %d' %
-                                 (result_per_page * pages, result_per_page))
+            query_builder.append(
+                'OFFSET %d LIMIT %d'
+                % (result_per_page * pages, result_per_page)
+            )
             result_set = make_request(' '.join(query_builder))
             if not result_set:
                 LOGGER.error(
-                    'Skipping page %d because the query went wrong', pages)
+                    'Skipping page %d because the query went wrong', pages
+                )
                 pages += 1
                 continue
             if result_set == 'empty':
@@ -304,8 +457,16 @@ def _run_paged_query(result_per_page, query):
 @click.argument('identifier_property')
 @click.argument('occupation_class')
 @click.option('-p', '--results-per-page', default=1000, help='default: 1000')
-@click.option('-o', '--outdir', type=click.Path(), default='output', help="default: 'output'")
-def identifier_occupation_based_query_cli(identifier_property, occupation_class, results_per_page, outdir):
+@click.option(
+    '-o',
+    '--outdir',
+    type=click.Path(),
+    default='output',
+    help="default: 'output'",
+)
+def identifier_occupation_based_query_cli(
+    identifier_property, occupation_class, results_per_page, outdir
+):
     """Run a paged SPARQL query against the Wikidata endpoint to get items and external catalog
     identifiers. Dump the result into a JSONlines file.
 
@@ -315,25 +476,47 @@ def identifier_occupation_based_query_cli(identifier_property, occupation_class,
 
     Use '-p 0' to switch paging off.
     """
-    with open(os.path.join(outdir, 'occupation_based_identifier_query_result.jsonl'), 'w', 1) as outfile:
-        _dump_result(identifier_occupation_based_query(
-            occupation_class, identifier_property, results_per_page), outfile)
+    with open(
+        os.path.join(outdir, 'occupation_based_identifier_query_result.jsonl'),
+        'w',
+        1,
+    ) as outfile:
+        _dump_result(
+            identifier_occupation_based_query(
+                occupation_class, identifier_property, results_per_page
+            ),
+            outfile,
+        )
         LOGGER.info(
-            "Occupation-based identifier query result dumped as JSON lines to '%s'", outfile.name)
+            "Occupation-based identifier query result dumped as JSON lines to '%s'",
+            outfile.name,
+        )
 
 
-def identifier_occupation_based_query(occupation_class, identifier_property, results_per_page):
+def identifier_occupation_based_query(
+    occupation_class, identifier_property, results_per_page
+):
     query = IDENTIFIER_QUERY_TEMPLATE % (
-        vocabulary.OCCUPATION, occupation_class, identifier_property)
-    return _parse_query_result(keys.IDENTIFIER, _run_paged_query(results_per_page, query))
+        vocabulary.OCCUPATION,
+        occupation_class,
+        identifier_property,
+    )
+    return _parse_query_result(
+        keys.IDENTIFIER, _run_paged_query(results_per_page, query)
+    )
 
 
 @click.command()
 @click.argument('items_file', type=click.File())
 @click.argument('condition_pattern')
 @click.option('-b', '--bucket-size', default=500, help='Default: 500.')
-@click.option('-o', '--outdir', type=click.Path(), default='output',
-              help="Default: 'output'.")
+@click.option(
+    '-o',
+    '--outdir',
+    type=click.Path(),
+    default='output',
+    help="Default: 'output'.",
+)
 def values_query(items_file, condition_pattern, bucket_size, outdir):
     """Run a SPARQL query against the Wikidata endpoint using buckets of item values
     and dump the result into a JSONlines file.
@@ -341,12 +524,18 @@ def values_query(items_file, condition_pattern, bucket_size, outdir):
     CONSTRAINT must be a property + value pattern like 'wdt:P434 ?musicbrainz'.
     """
     entities = ['wd:%s' % l.rstrip() for l in items_file.readlines()]
-    buckets = [entities[i*bucket_size:(i+1)*bucket_size]
-               for i in range(0, int((len(entities)/bucket_size+1)))]
-    with open(os.path.join(outdir, 'values_query_result.jsonl'), 'w', 1) as outfile:
+    buckets = [
+        entities[i * bucket_size : (i + 1) * bucket_size]
+        for i in range(0, int((len(entities) / bucket_size + 1)))
+    ]
+    with open(
+        os.path.join(outdir, 'values_query_result.jsonl'), 'w', 1
+    ) as outfile:
         for bucket in buckets:
             query = VALUES_QUERY_TEMPLATE % (
-                ' '.join(bucket), condition_pattern)
+                ' '.join(bucket),
+                condition_pattern,
+            )
             result_set = make_request(query)
             if not result_set:
                 LOGGER.warning('Skipping bucket that went wrong')
@@ -356,7 +545,8 @@ def values_query(items_file, condition_pattern, bucket_size, outdir):
                 continue
             _dump_result(result_set, outfile)
         LOGGER.info(
-            "Values query result dumped as JSON lines to '%s'", outfile.name)
+            "Values query result dumped as JSON lines to '%s'", outfile.name
+        )
 
 
 def _dump_result(result_set, outfile):
@@ -365,13 +555,21 @@ def _dump_result(result_set, outfile):
 
 
 def make_request(query, response_format=DEFAULT_RESPONSE_FORMAT):
-    response = get(WIKIDATA_SPARQL_ENDPOINT, params={
-        'query': query}, headers={'Accept': response_format})
+    response = get(
+        WIKIDATA_SPARQL_ENDPOINT,
+        params={'query': query},
+        headers={
+            'Accept': response_format,
+            'User-Agent': constants.HTTP_USER_AGENT,
+        },
+    )
     log_request_data(response, LOGGER)
 
     if response.ok:
         LOGGER.debug(
-            'Successful GET to the Wikidata SPARQL endpoint. Status code: %d', response.status_code)
+            'Successful GET to the Wikidata SPARQL endpoint. Status code: %d',
+            response.status_code,
+        )
         if response_format == JSON_RESPONSE_FORMAT:
             LOGGER.debug('Returning JSON results')
             return response.json()
@@ -393,8 +591,11 @@ def make_request(query, response_format=DEFAULT_RESPONSE_FORMAT):
         # arbitrary wait time (seconds)
         wait_time = 0.3
 
-        LOGGER.warning('Exceeded request API request limit. '
-                       'Will retry after %s seconds', wait_time)
+        LOGGER.warning(
+            'Exceeded request API request limit. '
+            'Will retry after %s seconds',
+            wait_time,
+        )
 
         # block the current thread for `wait_time`
         time.sleep(wait_time)
@@ -404,7 +605,10 @@ def make_request(query, response_format=DEFAULT_RESPONSE_FORMAT):
 
     LOGGER.warning(
         'The GET to the Wikidata SPARQL endpoint went wrong. Reason: %d %s - Query: %s',
-        response.status_code, response.reason, query)
+        response.status_code,
+        response.reason,
+        query,
+    )
     return None
 
 
@@ -430,8 +634,10 @@ def query_wikipedia_articles_for(qids_bucket):
 def query_birth_death(qids_bucket):
     """Given a list of wikidata entities returns a query for getting their birth and death dates"""
 
-    query = """SELECT ?id ?birth ?b_precision ?death ?d_precision WHERE{ VALUES ?id { %s } """ % ' '.join(
-        qids_bucket)
+    query = (
+        """SELECT ?id ?birth ?b_precision ?death ?d_precision WHERE{ VALUES ?id { %s } """
+        % ' '.join(qids_bucket)
+    )
     query += """?id p:P569 ?b. ?b psv:P569 ?t1 . ?t1 wikibase:timePrecision ?b_precision . ?t1 wikibase:timeValue ?birth . OPTIONAL { ?id p:P570 ?d . ?d psv:P570 ?t2 . ?t2 wikibase:timePrecision ?d_precision . ?t2 wikibase:timeValue ?death . }"""
     query += """}"""
 
@@ -450,8 +656,7 @@ def get_subclasses_of_qid(QID: str) -> Set[str]:
     # subclasses (?res is subclass of QID)
     result = make_request(SUBCLASSES_OF_QID % QID)
 
-    return set(_get_valid_qid(item).group()
-               for item in result)
+    return set(_get_valid_qid(item).group() for item in result)
 
 
 def get_superclasses_of_qid(QID: str) -> Set[str]:
@@ -466,5 +671,4 @@ def get_superclasses_of_qid(QID: str) -> Set[str]:
     # superclasses (QID is subclass or ?res)
     result = make_request(SUPERCLASSES_OF_QID % QID)
 
-    return set(_get_valid_qid(item).group()
-               for item in result)
+    return set(_get_valid_qid(item).group() for item in result)

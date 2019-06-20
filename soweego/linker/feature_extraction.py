@@ -11,7 +11,7 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import itertools
 import logging
-from multiprocessing import Manager, Process
+from multiprocessing import Manager
 from typing import List, Set, Tuple
 
 import jellyfish
@@ -23,7 +23,6 @@ from sklearn.feature_extraction.text import CountVectorizer
 
 from soweego.commons import constants, text_utils
 from soweego.wikidata import sparql_queries
-
 
 LOGGER = logging.getLogger(__name__)
 _threading_manager = Manager()
@@ -46,15 +45,17 @@ class StringList(BaseCompareFeature):
     name = 'string_list'
     description = 'Compare pairs of lists with string values'
 
-    def __init__(self,
-                 left_on,
-                 right_on,
-                 algorithm='levenshtein',
-                 threshold=None,
-                 missing_value=constants.FEATURE_MISSING_VALUE,
-                 analyzer=None,
-                 ngram_range=(2, 2),
-                 label=None):
+    def __init__(
+        self,
+        left_on,
+        right_on,
+        algorithm='levenshtein',
+        threshold=None,
+        missing_value=constants.FEATURE_MISSING_VALUE,
+        analyzer=None,
+        ngram_range=(2, 2),
+        label=None,
+    ):
         super(StringList, self).__init__(left_on, right_on, label=label)
         self.algorithm = algorithm
         self.threshold = threshold
@@ -69,8 +70,9 @@ class StringList(BaseCompareFeature):
             algorithm = self.cosine_similarity
         else:
             raise ValueError(
-                'Bad string similarity algorithm: %s. Please use one of %s' % (
-                    self.algorithm, ('levenshtein', 'cosine')))
+                'Bad string similarity algorithm: %s. Please use one of %s'
+                % (self.algorithm, ('levenshtein', 'cosine'))
+            )
 
         compared = algorithm(source_column, target_column)
         compared_filled = fillna(compared, self.missing_value)
@@ -88,7 +90,9 @@ class StringList(BaseCompareFeature):
         def _levenshtein_apply(pair):
             if _pair_has_any_null(pair):
                 LOGGER.debug(
-                    "Can't compute Levenshtein distance, the pair contains null values: %s", pair)
+                    "Can't compute Levenshtein distance, the pair contains null values: %s",
+                    pair,
+                )
                 return np.nan
 
             scores = []
@@ -97,8 +101,9 @@ class StringList(BaseCompareFeature):
             for source in source_values:
                 for target in target_values:
                     try:
-                        score = 1 - jellyfish.levenshtein_distance(source, target) \
-                            / np.max([len(source), len(target)])
+                        score = 1 - jellyfish.levenshtein_distance(
+                            source, target
+                        ) / np.max([len(source), len(target)])
                         scores.append(score)
                     except TypeError:
                         if pd.isnull(source) or pd.isnull(target):
@@ -113,13 +118,14 @@ class StringList(BaseCompareFeature):
         if len(source_column) != len(target_column):
             raise ValueError('Columns must have the same length')
         if len(source_column) == len(target_column) == 0:
-            LOGGER.warning(
-                "Can't compute cosine similarity, columns are empty")
+            LOGGER.warning("Can't compute cosine similarity, columns are empty")
             return pd.Series(np.nan)
 
         # This algorithm requires strings as input, but lists are expected
-        source_column, target_column = source_column.str.join(
-            ' '), target_column.str.join(' ')
+        source_column, target_column = (
+            source_column.str.join(' '),
+            target_column.str.join(' '),
+        )
 
         # No analyzer means input underwent commons.text_utils#tokenize
         if self.analyzer is None:
@@ -132,7 +138,10 @@ class StringList(BaseCompareFeature):
         # See https://scikit-learn.org/stable/modules/feature_extraction.html#limitations-of-the-bag-of-words-representation
         elif self.analyzer in ('word', 'char', 'char_wb'):
             vectorizer = CountVectorizer(
-                analyzer=self.analyzer, strip_accents='unicode', ngram_range=self.ngram_range)
+                analyzer=self.analyzer,
+                strip_accents='unicode',
+                ngram_range=self.ngram_range,
+            )
         else:
             err_msg = f"Bad text analyzer: {self.analyzer}. Please use one of 'soweego', 'word', 'char', 'char_wb'"
             LOGGER.critical(err_msg)
@@ -143,7 +152,10 @@ class StringList(BaseCompareFeature):
             vectors = vectorizer.fit_transform(data)
         except ValueError as ve:
             LOGGER.warning(
-                'Failed transforming text into vectors, reason: %s. Text: %s', ve, data)
+                'Failed transforming text into vectors, reason: %s. Text: %s',
+                ve,
+                data,
+            )
             return pd.Series(np.nan)
 
         def _metric_sparse_cosine(u, v):
@@ -153,15 +165,26 @@ class StringList(BaseCompareFeature):
             cosine = np.divide(ab, np.multiply(a, b)).A1
             return cosine
 
-        return _metric_sparse_cosine(vectors[:len(source_column)], vectors[len(source_column):])
+        return _metric_sparse_cosine(
+            vectors[: len(source_column)], vectors[len(source_column) :]
+        )
 
 
 class ExactList(BaseCompareFeature):
     name = 'exact_list'
-    description = 'Compare pairs of lists through exact match on each pair of elements.'
+    description = (
+        'Compare pairs of lists through exact match on each pair of elements.'
+    )
 
-    def __init__(self, left_on, right_on, agree_value=1.0, disagree_value=0.0,
-                 missing_value=constants.FEATURE_MISSING_VALUE, label=None):
+    def __init__(
+        self,
+        left_on,
+        right_on,
+        agree_value=1.0,
+        disagree_value=0.0,
+        missing_value=constants.FEATURE_MISSING_VALUE,
+        label=None,
+    ):
         super(ExactList, self).__init__(left_on, right_on, label=label)
         self.agree_value = agree_value
         self.disagree_value = disagree_value
@@ -173,7 +196,8 @@ class ExactList(BaseCompareFeature):
         def exact_apply(pair):
             if _pair_has_any_null(pair):
                 LOGGER.debug(
-                    "Can't compare, the pair contains null values: %s", pair)
+                    "Can't compare, the pair contains null values: %s", pair
+                )
                 return np.nan
 
             scores = []
@@ -200,11 +224,13 @@ class DateCompare(BaseCompareFeature):
     name = "date_compare"
     description = "Compares the date attribute of record pairs."
 
-    def __init__(self,
-                 left_on,
-                 right_on,
-                 missing_value=constants.FEATURE_MISSING_VALUE,
-                 label=None):
+    def __init__(
+        self,
+        left_on,
+        right_on,
+        missing_value=constants.FEATURE_MISSING_VALUE,
+        label=None,
+    ):
         super(DateCompare, self).__init__(left_on, right_on, label=label)
 
         self.missing_value = missing_value
@@ -225,7 +251,9 @@ class DateCompare(BaseCompareFeature):
 
             if _pair_has_any_null(pair):
                 LOGGER.debug(
-                    "Can't compare dates, one of the values is NaN. Pair: %s", pair)
+                    "Can't compare dates, one of the values is NaN. Pair: %s",
+                    pair,
+                )
                 return np.nan
 
             s_items, t_items = pair
@@ -237,9 +265,11 @@ class DateCompare(BaseCompareFeature):
 
                 # get precision number for both dates
                 s_precision = constants.PD_PERIOD_PRECISIONS.index(
-                    s_date.freq.name)
+                    s_date.freq.name
+                )
                 t_precision = constants.PD_PERIOD_PRECISIONS.index(
-                    t_date.freq.name)
+                    t_date.freq.name
+                )
 
                 # we choose to compare on the lowest precision
                 # since it's the maximum precision on which both
@@ -251,7 +281,9 @@ class DateCompare(BaseCompareFeature):
 
                 # now we loop through the possible `Period` attributes that we can compare
                 # and the precision that stands for said attribute
-                for min_required_prec, d_attr in enumerate(['year', 'month', 'day', 'hour', 'minute', 'second']):
+                for min_required_prec, d_attr in enumerate(
+                    ['year', 'month', 'day', 'hour', 'minute', 'second']
+                ):
 
                     # If both `s_date` and `t_date` have a precision which allows the
                     # current attribute to be compared then we do so. If the attribute
@@ -260,7 +292,9 @@ class DateCompare(BaseCompareFeature):
                     # precision attribute (ie, year) doesn't match then we say that
                     # the dates don't match at all (we don't check if higher precision
                     # attributes match)
-                    if lowest_prec >= min_required_prec and getattr(s_date, d_attr) == getattr(t_date, d_attr):
+                    if lowest_prec >= min_required_prec and getattr(
+                        s_date, d_attr
+                    ) == getattr(t_date, d_attr):
                         c_r += 1
                     else:
                         break
@@ -275,15 +309,26 @@ class DateCompare(BaseCompareFeature):
 
             return best
 
-        return fillna(concatenated.apply(check_date_equality), self.missing_value)
+        return fillna(
+            concatenated.apply(check_date_equality), self.missing_value
+        )
 
 
 class SimilarTokens(BaseCompareFeature):
     name = 'SimilarTokens'
-    description = 'Compare pairs of lists with string values based on shared tokens.'
+    description = (
+        'Compare pairs of lists with string values based on shared tokens.'
+    )
 
-    def __init__(self, left_on, right_on, agree_value=1.0, disagree_value=0.0,
-                 missing_value=constants.FEATURE_MISSING_VALUE, label=None):
+    def __init__(
+        self,
+        left_on,
+        right_on,
+        agree_value=1.0,
+        disagree_value=0.0,
+        missing_value=constants.FEATURE_MISSING_VALUE,
+        label=None,
+    ):
         super(SimilarTokens, self).__init__(left_on, right_on, label=label)
         self.agree_value = agree_value
         self.disagree_value = disagree_value
@@ -295,7 +340,9 @@ class SimilarTokens(BaseCompareFeature):
         def intersection_percentage_size(pair):
             if _pair_has_any_null(pair):
                 LOGGER.debug(
-                    "Can't compare Tokens, the pair contains null values: %s", pair)
+                    "Can't compare Tokens, the pair contains null values: %s",
+                    pair,
+                )
                 return np.nan
 
             source_labels, target_labels = pair
@@ -313,22 +360,25 @@ class SimilarTokens(BaseCompareFeature):
 
             # Penalize band stopwords
             count_low_score_words = len(
-                text_utils.BAND_NAME_LOW_SCORE_WORDS.intersection(intersection))
+                text_utils.BAND_NAME_LOW_SCORE_WORDS.intersection(intersection)
+            )
 
-            return (count_intersect - (count_low_score_words * 0.9)) / count_total if count_total > 0 else np.nan
+            return (
+                (count_intersect - (count_low_score_words * 0.9)) / count_total
+                if count_total > 0
+                else np.nan
+            )
 
-        return fillna(concatenated.apply(intersection_percentage_size), self.missing_value)
+        return fillna(
+            concatenated.apply(intersection_percentage_size), self.missing_value
+        )
 
 
 class OccupationQidSet(BaseCompareFeature):
     name = 'occupation_qid_set'
     description = 'Compare pairs of sets containing occupation QIDs.'
 
-    def __init__(self,
-                 left_on,
-                 right_on,
-                 missing_value=0.0,
-                 label=None):
+    def __init__(self, left_on, right_on, missing_value=0.0, label=None):
         super(OccupationQidSet, self).__init__(left_on, right_on, label=label)
 
         # declare that we want to use the global qid cache
@@ -380,7 +430,9 @@ class OccupationQidSet(BaseCompareFeature):
 
         return expanded_set
 
-    def _compute_vectorized(self, source_column: pd.Series, target_column: pd.Series):
+    def _compute_vectorized(
+        self, source_column: pd.Series, target_column: pd.Series
+    ):
 
         # we want to expand the target_column (add the
         # superclasses and subclasses of each occupation)
@@ -397,7 +449,9 @@ class OccupationQidSet(BaseCompareFeature):
             # explicitly check if set is empty
             if _pair_has_any_null(pair):
                 LOGGER.debug(
-                    "Can't compare occupations, either the Wikidata or Target value is null. Pair: %s", pair)
+                    "Can't compare occupations, either the Wikidata or Target value is null. Pair: %s",
+                    pair,
+                )
                 return np.nan
 
             s_item: Set
@@ -409,7 +463,102 @@ class OccupationQidSet(BaseCompareFeature):
 
             return n_shared_items / min_length
 
-        return fillna(concatenated.apply(check_occupation_equality), self.missing_value)
+        return fillna(
+            concatenated.apply(check_occupation_equality), self.missing_value
+        )
+
+
+class CompareTokens(BaseCompareFeature):
+    name = 'compare_tokens'
+    description = (
+        'Compares lists of tokens, potentially taking into account stopwords.'
+    )
+
+    def __init__(
+        self,
+        left_on,
+        right_on,
+        agree_value=1.0,
+        disagree_value=0.0,
+        missing_value=constants.FEATURE_MISSING_VALUE,
+        label: str = None,
+        stopwords: Set = None,
+    ):
+        super(CompareTokens, self).__init__(left_on, right_on, label=label)
+
+        self.agree_value = agree_value
+        self.disagree_value = disagree_value
+        self.missing_value = missing_value
+        self.stopwords = stopwords
+
+    def _flatten_tokens(self, list_to_flatten: List) -> List:
+        """
+        takes a possibly nested List as `list_to_flatten`
+        and returns all elements in a flat array
+        """
+
+        to_process = [list_to_flatten]
+        result = []
+
+        while len(to_process) != 0:
+            current = to_process.pop()
+
+            for child in current:
+                if isinstance(child, List):
+                    to_process.append(child)
+                else:
+                    result.append(child)
+
+        return result
+
+    def _compute_vectorized(
+        self, source_column: pd.Series, target_column: pd.Series
+    ) -> pd.Series:
+
+        # concatenate columns for easier processing. Here each element in
+        # the columns is a set of tokens
+        concatenated = pd.Series(list(zip(source_column, target_column)))
+
+        def compare_apply(pair: Tuple[List[str], List[str]]) -> float:
+            """
+            Compare how many tokens have the source and target columns in
+            common after removing stopwords tokens (if any)
+            """
+
+            if _pair_has_any_null(pair):
+                LOGGER.debug(
+                    "Can't compare, the pair contains null values: %s", pair
+                )
+                return np.nan
+
+            # first we clean a bit the pair
+            # make all lowercase and split on possible spaces
+            # also reshape result into a list (flatten)
+            pair = [
+                self._flatten_tokens([el.lower().split() for el in p])
+                for p in pair
+            ]
+
+            s_item, t_item = pair
+
+            # finally convert to sets
+            s_item = set(s_item)
+            t_item = set(t_item)
+
+            if self.stopwords:
+                s_item -= self.stopwords
+                t_item -= self.stopwords
+
+            min_length = min(len(s_item), len(t_item))
+            n_shared_items = len(s_item & t_item)
+
+            # prevent division by 0
+            if min_length != 0:
+                return n_shared_items / min_length
+            else:
+                return np.nan
+
+        return fillna(concatenated.apply(compare_apply), self.missing_value)
 
 
 def _pair_has_any_null(pair):

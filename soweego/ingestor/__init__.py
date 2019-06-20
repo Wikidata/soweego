@@ -1,1 +1,1 @@
-from soweego.ingestor import cli, wikidata_bot
+"""Take soweego output into Wikidata items."""

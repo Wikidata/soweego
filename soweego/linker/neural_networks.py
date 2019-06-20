@@ -23,9 +23,8 @@ with redirect_stderr(open(os.devnull, "w")):
     # saying which backend it is using. To avoid this behavior we
     # redirect stderr to `devnull` for the statements in this block.
     from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
-    from keras.layers import BatchNormalization, Dense, Dropout
+    from keras.layers import BatchNormalization, Dense
     from keras.models import Sequential
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -36,11 +35,24 @@ class _BaseNN(KerasAdapter, BaseClassifier):
     NN implementations.
     """
 
-    def _fit(self, features, answers,
-             batch_size=constants.BATCH_SIZE,
-             epochs=constants.EPOCHS,
-             validation_split=constants.VALIDATION_SPLIT
-             ):
+    def _fit(
+            self,
+            features,
+            answers,
+            batch_size=constants.BATCH_SIZE,
+            epochs=constants.EPOCHS,
+            validation_split=constants.VALIDATION_SPLIT,
+    ):
+        tensor_path = os.path.join(
+            constants.SHARED_FOLDER, constants.TENSOR_BOARD
+        )
+        model_path = os.path.join(
+            constants.SHARED_FOLDER,
+            constants.NEURAL_NETWORK_CHECKPOINT_MODEL % self.__class__.__name__,
+        )
+        os.makedirs(os.path.dirname(tensor_path), exist_ok=True)
+        os.makedirs(os.path.dirname(model_path), exist_ok=True)
+
         history = self.kernel.fit(
             x=features,
             y=answers,
@@ -48,17 +60,15 @@ class _BaseNN(KerasAdapter, BaseClassifier):
             batch_size=batch_size,
             epochs=epochs,
             callbacks=[
-                EarlyStopping(monitor='val_loss', patience=100,
-                              verbose=2, restore_best_weights=True),
-                ModelCheckpoint(
-                    os.path.join(
-                        constants.SHARED_FOLDER,
-                        constants.NEURAL_NETWORK_CHECKPOINT_MODEL % self.__class__.__name__
-                    ),
-                    save_best_only=True
+                EarlyStopping(
+                    monitor='val_loss',
+                    patience=100,
+                    verbose=2,
+                    restore_best_weights=True,
                 ),
-                TensorBoard(log_dir=constants.SHARED_FOLDER)
-            ]
+                ModelCheckpoint(model_path, save_best_only=True),
+                TensorBoard(log_dir=tensor_path),
+            ],
         )
         LOGGER.info('Fit parameters: %s', history.params)
 
@@ -74,11 +84,12 @@ class SingleLayerPerceptron(_BaseNN):
 
         model = Sequential()
         model.add(
-            Dense(1, input_dim=input_dim, activation=constants.ACTIVATION))
+            Dense(1, input_dim=input_dim, activation=constants.ACTIVATION)
+        )
         model.compile(
             optimizer=kwargs.get('optimizer', constants.OPTIMIZER),
             loss=constants.LOSS,
-            metrics=constants.METRICS
+            metrics=constants.METRICS,
         )
 
         self.kernel = model
@@ -90,19 +101,20 @@ class MultiLayerPerceptron(_BaseNN):
     def __init__(self, input_dimension):
         super(MultiLayerPerceptron, self).__init__()
 
-        model = Sequential([
-            Dense(128, input_dim=input_dimension, activation='relu'),
-            BatchNormalization(),
-            Dense(32, activation='relu'),
-            BatchNormalization(),
-            Dense(1, activation='sigmoid')
-
-        ])
+        model = Sequential(
+            [
+                Dense(128, input_dim=input_dimension, activation='relu'),
+                BatchNormalization(),
+                Dense(32, activation='relu'),
+                BatchNormalization(),
+                Dense(1, activation='sigmoid'),
+            ]
+        )
 
         model.compile(
             optimizer='adadelta',
             loss='binary_crossentropy',
-            metrics=['accuracy']
+            metrics=['accuracy'],
         )
 
         self.kernel = model

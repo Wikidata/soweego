@@ -19,25 +19,27 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import configure_mappers, session, sessionmaker
 from sqlalchemy.pool import NullPool
 
-from soweego.commons import constants, keys
+from soweego.commons import keys
 from soweego.commons import localizations as loc
+from soweego.commons.constants import CREDENTIALS_LOCATION
 
 BASE = declarative_base()
 LOGGER = logging.getLogger(__name__)
 
 
 # TODO this class should become a singleton
-class DBManager():
+class DBManager:
 
     """Exposes some primitives for the DB access"""
 
     __engine: Engine
     __credentials = None
 
-    def __init__(self):
+    def __init__(self, db_name=None):
         credentials = DBManager.get_credentials()
         db_engine = credentials[keys.DB_ENGINE]
-        db_name = credentials[keys.PROD_DB]
+        if db_name is None:
+            db_name = credentials[keys.PROD_DB]
         user = credentials[keys.USER]
         password = credentials[keys.PASSWORD]
         host = credentials[keys.HOST]
@@ -45,7 +47,9 @@ class DBManager():
             # Disable connection pooling, as per Wikimedia policy
             # https://wikitech.wikimedia.org/wiki/Help:Toolforge/Database#Connection_handling_policy
             self.__engine = create_engine(
-                f'{db_engine}://{user}:{password}@{host}/{db_name}', poolclass=NullPool)
+                f'{db_engine}://{user}:{password}@{host}/{db_name}',
+                poolclass=NullPool,
+            )
         except Exception as error:
             LOGGER.critical(loc.FAIL_CREATE_ENGINE, error)
 
@@ -61,13 +65,15 @@ class DBManager():
     def create(self, tables) -> None:
         """Create the tables (tables can be ORM entity instances or classes)"""
         configure_mappers()
-        BASE.metadata.create_all(self.__engine, tables=[
-                                 table.__table__ for table in tables])
+        BASE.metadata.create_all(
+            self.__engine, tables=[table.__table__ for table in tables]
+        )
 
     def drop(self, tables) -> None:
         """Drop the tables (table can be ORM entity instances or classes)"""
-        BASE.metadata.drop_all(self.__engine, tables=[
-                               table.__table__ for table in tables])
+        BASE.metadata.drop_all(
+            self.__engine, tables=[table.__table__ for table in tables]
+        )
 
     @staticmethod
     def connect_to_db():
@@ -80,8 +86,7 @@ class DBManager():
         if DBManager.__credentials:
             return DBManager.__credentials
         else:
-            return json.loads(
-                get_data('soweego.importer.resources', 'db_credentials.json'))
+            return json.loads(get_data(*CREDENTIALS_LOCATION))
 
     @staticmethod
     def set_credentials_from_path(path: str):

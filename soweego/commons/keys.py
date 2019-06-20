@@ -38,6 +38,8 @@ LINK_ENTITY = 'link_entity'
 NLP_ENTITY = 'nlp_entity'
 RELATIONSHIP_ENTITY = 'relationship_entity'
 
+WIKIDATA_BOT_PASSWORD = 'WIKIDATA_BOT_PASSWORD'
+
 # Importer & internal DB
 LAST_MODIFIED = 'last-modified'
 PROD_DB = 'PROD_DB'
@@ -51,13 +53,16 @@ HOST = 'HOST'
 IDENTIFIER = 'identifier'
 LINKS = 'links'
 DATASET = 'dataset'
-METADATA = 'metadata'
+BIODATA = 'biodata'
+FEMALE = 'female'
+MALE = 'male'
 
 # SPARQL queries
 CLASS_QUERY = 'class_query'
 OCCUPATION_QUERY = 'occupation_query'
 
 # Wikidata & target pandas.DataFrame column names
+CONFIDENCE = 'confidence'
 QID = 'qid'
 INTERNAL_ID = 'internal_id'
 CATALOG_ID = 'catalog_id'

@@ -10,16 +10,22 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, lenzi.edoardo'
 
 from sqlalchemy import Column, Date, Index, Integer, String, Text
-from sqlalchemy.ext.declarative import (AbstractConcreteBase, declarative_base,
-                                        declared_attr)
+from sqlalchemy.ext.declarative import (
+    AbstractConcreteBase,
+    declarative_base,
+    declared_attr,
+)
 
 BASE = declarative_base()
 
 
 class BaseEntity(AbstractConcreteBase, BASE):
+    """Each database entity should conform with this interface"""
+
     __tablename__ = None
-    internal_id = Column(Integer, unique=True,
-                         primary_key=True, autoincrement=True)
+    internal_id = Column(
+        Integer, unique=True, primary_key=True, autoincrement=True
+    )
     # Catalog identifier, indexed
     catalog_id = Column(String(50), nullable=False, index=True)
     # Full name
@@ -39,19 +45,27 @@ class BaseEntity(AbstractConcreteBase, BASE):
     @declared_attr
     def __table_args__(cls):
         return (
-            Index('ftix_name_tokens_%s' % cls.__tablename__,
-                  "name_tokens", mysql_prefix="FULLTEXT"),
-            {'mysql_charset': 'utf8mb4'}
+            Index(
+                'ftix_name_tokens_%s' % cls.__tablename__,
+                "name_tokens",
+                mysql_prefix="FULLTEXT",
+            ),
+            {'mysql_charset': 'utf8mb4'},
         )
 
     def __repr__(self) -> str:
-        return "<BaseEntity(catalog_id='{0}', name='{1}')>".format(self.catalog_id, self.name)
+        return "<BaseEntity(catalog_id='{0}', name='{1}')>".format(
+            self.catalog_id, self.name
+        )
 
 
 class BaseRelationship(AbstractConcreteBase, BASE):
+    """Each database relationship should conform with this interface"""
+
     __tablename__ = None
-    internal_id = Column(Integer, unique=True,
-                         primary_key=True, autoincrement=True)
+    internal_id = Column(
+        Integer, unique=True, primary_key=True, autoincrement=True
+    )
 
     from_catalog_id = Column(String(50), nullable=False, index=False)
     to_catalog_id = Column(String(50), nullable=False, index=False)
@@ -60,9 +74,14 @@ class BaseRelationship(AbstractConcreteBase, BASE):
     @declared_attr
     def __table_args__(cls):
         return (
-            Index('idx_catalog_ids_%s' % cls.__tablename__, 'from_catalog_id',
-                  'to_catalog_id', unique=True, mysql_using='hash'),
-            {'mysql_charset': 'utf8mb4'}
+            Index(
+                'idx_catalog_ids_%s' % cls.__tablename__,
+                'from_catalog_id',
+                'to_catalog_id',
+                unique=True,
+                mysql_using='hash',
+            ),
+            {'mysql_charset': 'utf8mb4'},
         )
 
     def __init__(self, from_catalog_id: str, to_catalog_id: str):
@@ -70,4 +89,6 @@ class BaseRelationship(AbstractConcreteBase, BASE):
         self.to_catalog_id = to_catalog_id
 
     def __repr__(self):
-        return '<BaseRelationship object({0} -> {1})>'.format(self.from_catalog_id, self.to_catalog_id)
+        return '<BaseRelationship object({0} -> {1})>'.format(
+            self.from_catalog_id, self.to_catalog_id
+        )
