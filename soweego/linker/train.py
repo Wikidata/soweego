@@ -228,25 +228,6 @@ def build_dataset(goal: str, catalog: str, entity: str, dir_io: str) -> Tuple[pd
     return feature_vectors, positive_samples_index
 
 
-def _build_positive_samples_index(wd_reader1):
-    LOGGER.info('Building positive samples index from Wikidata ...')
-    positive_samples = []
-    for chunk in wd_reader1:
-        # TODO don't wipe out QIDs with > 1 positive samples!
-        tids_series = chunk.set_index(keys.QID)[keys.TID].map(
-            lambda cell: cell[0] if isinstance(cell, list) else cell
-        )
-        positive_samples.append(tids_series)
-
-    positive_samples = concat(positive_samples)
-    positive_samples_index = MultiIndex.from_tuples(
-        zip(positive_samples.index, positive_samples),
-        names=[keys.QID, keys.TID],
-    )
-    LOGGER.info('Built positive samples index from Wikidata')
-    return positive_samples_index
-
-
 def _train(classifier, feature_vectors, positive_samples_index, **kwargs):
     model = utils.initialize_classifier(classifier, feature_vectors, **kwargs)
 

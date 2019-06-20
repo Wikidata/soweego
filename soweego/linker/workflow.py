@@ -152,7 +152,8 @@ def _get_tids(qids_and_tids):
 def preprocess(
         goal: str, wikidata_reader: JsonReader, target_reader: JsonReader
 ) -> Tuple[
-    Generator[pd.DataFrame, None, None], Generator[pd.DataFrame, None, None]
+    Generator[pd.DataFrame, None, None],
+    Generator[pd.DataFrame, None, None]
 ]:
     handle_goal(goal)
     return (
@@ -359,7 +360,7 @@ def preprocess_wikidata(goal: str, wikidata_reader: JsonReader) -> Generator[pd.
         yield chunk
 
 
-def preprocess_target(goal, target_reader):
+def preprocess_target(goal: str, target_reader: pd.DataFrame) -> pd.DataFrame:
     handle_goal(goal)
 
     LOGGER.info('Preprocessing target ...')
@@ -441,7 +442,7 @@ def preprocess_target(goal, target_reader):
     return target
 
 
-def _shared_preprocessing(df, will_handle_birth_date, will_handle_death_date):
+def _shared_preprocessing(df: pd.DataFrame, will_handle_birth_date: bool, will_handle_death_date: bool) -> pd.DataFrame:
     LOGGER.info('Normalizing fields with names ...')
     for column in constants.NAME_FIELDS:
         if df.get(column) is not None:
