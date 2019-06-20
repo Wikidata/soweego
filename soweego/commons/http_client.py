@@ -20,13 +20,12 @@ from tqdm import tqdm
 LOGGER = logging.getLogger(__name__)
 
 
-def http_call(base_url, method='GET', parameters=None, headers=list()):
+def http_call(base_url, method='GET', parameters=None):
     """Makes a generic HTTP call, returns the response"""
     if parameters is not None:
         params = urllib.parse.urlencode(parameters, doseq=True)
         base_url = '{0}?{1}'.format(base_url, params)
 
-    # TODO headers implementation
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     ssl._create_default_https_context = ssl._create_unverified_context
     req = urllib.request.Request(base_url, method=method)

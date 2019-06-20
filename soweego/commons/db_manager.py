@@ -27,9 +27,7 @@ BASE = declarative_base()
 LOGGER = logging.getLogger(__name__)
 
 
-# TODO this class should become a singleton
 class DBManager:
-
     """Exposes some primitives for the DB access"""
 
     __engine: Engine
