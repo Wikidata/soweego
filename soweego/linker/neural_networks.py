@@ -13,6 +13,7 @@ import logging
 import os
 from contextlib import redirect_stderr
 
+import pandas as pd
 from recordlinkage.adapters import KerasAdapter
 from recordlinkage.base import BaseClassifier
 
@@ -35,14 +36,24 @@ class _BaseNN(KerasAdapter, BaseClassifier):
     NN implementations.
     """
 
-    def _fit(
-            self,
-            features,
-            answers,
-            batch_size=constants.BATCH_SIZE,
-            epochs=constants.EPOCHS,
-            validation_split=constants.VALIDATION_SPLIT,
-    ):
+    def _fit(self,
+             features: pd.Series,
+             answers: pd.Series,
+             batch_size: int = constants.BATCH_SIZE,
+             epochs: int = constants.EPOCHS,
+             validation_split: float = constants.VALIDATION_SPLIT
+             ) -> None:
+        """
+        Trains the NN using the specified arguments
+
+        :param features: are the training points that will be fed to the network
+        :param answers: are the correct predictions for each training point
+        :param batch_size: t
+        :param epochs:
+        :param validation_split:
+        :return:
+        """
+
         tensor_path = os.path.join(
             constants.SHARED_FOLDER, constants.TENSOR_BOARD
         )
@@ -53,6 +64,7 @@ class _BaseNN(KerasAdapter, BaseClassifier):
         os.makedirs(os.path.dirname(tensor_path), exist_ok=True)
         os.makedirs(os.path.dirname(model_path), exist_ok=True)
 
+        # when fitting create a record of our training process
         history = self.kernel.fit(
             x=features,
             y=answers,
@@ -60,16 +72,18 @@ class _BaseNN(KerasAdapter, BaseClassifier):
             batch_size=batch_size,
             epochs=epochs,
             callbacks=[
-                EarlyStopping(
-                    monitor='val_loss',
-                    patience=100,
-                    verbose=2,
-                    restore_best_weights=True,
-                ),
+                EarlyStopping(monitor='val_loss',
+                              patience=100,
+                              verbose=2,
+                              restore_best_weights=True),
+
                 ModelCheckpoint(model_path, save_best_only=True),
+
                 TensorBoard(log_dir=tensor_path),
-            ],
+            ]
         )
+
+        # print parameters
         LOGGER.info('Fit parameters: %s', history.params)
 
     def __repr__(self):
