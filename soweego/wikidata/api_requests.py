@@ -21,7 +21,7 @@ from typing import Dict, Iterator, List, TextIO, Set, Tuple, Union
 from urllib.parse import urlunsplit
 
 import requests
-from requests.exceptions import ChunkedEncodingError
+from requests.exceptions import RequestException
 from tqdm import tqdm
 
 from soweego.commons import constants, keys
@@ -786,10 +786,17 @@ def _make_request(bucket, params):
                 headers={'User-Agent': constants.HTTP_USER_AGENT},
             )
             log_request_data(response, LOGGER)
-        except ChunkedEncodingError:
-            LOGGER.warning(
-                'Connection broken, retrying the request to the Wikidata API'
-            )
+        except (RequestException, Exception) as error:
+            if isinstance(error, RequestException):
+                LOGGER.warning(
+                    'Connection broken, retrying the request to the Wikidata API'
+                )
+            else:
+                LOGGER.error(
+                    'Unexpected error, retrying the request to '
+                    'the Wikidata API anyway. '
+                    'Reason: %s', error
+                )
             connection_is_ok = False
         else:
             connection_is_ok = True
