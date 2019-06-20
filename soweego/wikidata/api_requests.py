@@ -167,7 +167,7 @@ def get_data_for_linker(
     needs_publication_date = entity in constants.REQUIRE_PUBLICATION_DATE
 
     # Initialize 7 counters to 0
-    counters = tuple([0] * 7)
+    counters = [0] * 7
 
     # Create a partial function where all parameters
     # but the data bucket are passed to `_process_bucket`,
@@ -203,10 +203,9 @@ def get_data_for_linker(
             fileout.flush()
 
     LOGGER.info(
-        'QIDs: got %d with no labels, '
+        'QIDs: got %d with no expected claims, %d with no labels, '
         '%d with no aliases, %d with no descriptions, %d with no sitelinks, '
-        '%d with no third-party links, %d with no external ID links, '
-        '%d with no expected claims',
+        '%d with no third-party links, %d with no external ID links',
         *counters
     )
 
@@ -346,13 +345,6 @@ def _lookup_label(item_value):
 # it enables parallel processing for Wikidata buckets
 def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_and_tids,
                     needs, counters) -> List[Dict]:
-    # Unpack tuple parameters
-    (
-        no_labels_count, no_aliases_count, no_descriptions_count,
-        no_sitelinks_count, no_links_count, no_ext_ids_count, no_claims_count
-    ) = counters
-    needs_occupation, needs_genre, needs_publication_date = needs
-
     entities = _sanity_check(bucket, request_params)
 
     # If the sanity check went wrong,
@@ -378,14 +370,14 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
         claims = entity.get('claims')
         if not claims:
             LOGGER.info('Skipping QID with no claims: %s', qid)
-            no_claims_count += 1
+            counters[0] += 1
             continue
 
         # Labels
         labels = entity.get('labels')
         if not labels:
             LOGGER.info('Skipping QID with no labels: %s', qid)
-            no_labels_count += 1
+            counters[1] += 1
             continue
         processed[keys.QID] = qid
         processed[keys.NAME] = _return_monolingual_strings(qid, labels)
@@ -397,7 +389,7 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
             processed[keys.NAME].update(_return_aliases(qid, aliases))
         else:
             LOGGER.debug('%s has no aliases', qid)
-            no_aliases_count += 1
+            counters[2] += 1
         # Convert set to list for JSON serialization
         processed[keys.NAME] = list(processed[keys.NAME])
 
@@ -409,7 +401,7 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
             )
         else:
             LOGGER.debug('%s has no descriptions', qid)
-            no_descriptions_count += 1
+            counters[3] += 1
 
         # Sitelinks
         sitelinks = entity.get('sitelinks')
@@ -418,32 +410,23 @@ def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_
         else:
             LOGGER.debug('%s has no sitelinks', qid)
             processed[keys.URL] = set()
-            no_sitelinks_count += 1
+            counters[4] += 1
 
         # Third-party URLs
         processed[keys.URL].update(
-            _return_third_party_urls(qid, claims, url_pids, no_links_count)
+            _return_third_party_urls(qid, claims, url_pids, counters)
         )
 
         # External ID URLs
         processed[keys.URL].update(
-            _return_ext_id_urls(
-                qid, claims, ext_id_pids_to_urls, no_ext_ids_count
-            )
+            _return_ext_id_urls(qid, claims, ext_id_pids_to_urls, counters)
         )
         # Convert set to list for JSON serialization
         processed[keys.URL] = list(processed[keys.URL])
 
         # Expected claims
         processed.update(
-            _return_claims_for_linker(
-                qid,
-                claims,
-                no_claims_count,
-                needs_occupation,
-                needs_genre,
-                needs_publication_date,
-            )
+            _return_claims_for_linker(qid, claims, needs, counters)
         )
 
         result.append(processed)
@@ -505,7 +488,7 @@ def _return_sitelinks(sitelinks):
     return to_return
 
 
-def _return_third_party_urls(qid, claims, url_pids, no_count):
+def _return_third_party_urls(qid, claims, url_pids, counters):
     to_return = set()
     available = url_pids.intersection(claims.keys())
 
@@ -528,14 +511,14 @@ def _return_third_party_urls(qid, claims, url_pids, no_count):
                 to_return.add(parsed_value)
     else:
         LOGGER.debug('No third-party URLs for %s', qid)
-        no_count += 1
+        counters[5] += 1
 
     return to_return
 
 
-def _return_claims_for_linker(
-    qid, claims, no_count, needs_occupation, needs_genre, needs_publication_date
-):
+def _return_claims_for_linker(qid, claims, needs, counters):
+    # Unpack needs
+    needs_occupation, needs_genre, needs_publication_date = needs
     to_return = defaultdict(set)
     expected_pids = set(vocabulary.LINKER_PIDS.keys())
 
@@ -559,48 +542,57 @@ def _return_claims_for_linker(
         LOGGER.debug('Available claim PIDs for %s: %s', qid, available)
         for pid in available:
             for pid_claim in claims[pid]:
-                value = _extract_value_from_claim(pid_claim, pid, qid)
+                handled = _handle_expected_claims(
+                    expected_pids, qid, pid, pid_claim, to_return
+                )
 
-                if not value:
+                if not handled:
                     continue
-
-                pid_label = vocabulary.LINKER_PIDS.get(pid)
-
-                if not pid_label:
-                    LOGGER.critical(
-                        'PID label lookup failed: %s. The PID should be one of %s',
-                        pid,
-                        expected_pids,
-                    )
-                    raise ValueError(
-                        'PID label lookup failed: %s. The PID should be one of %s'
-                        % (pid, expected_pids)
-                    )
-
-                if pid == vocabulary.OCCUPATION:
-                    # for occupations we only need their QID
-                    # so we add it to `to_return` and continue,
-                    # since we don't need to extract labels
-                    parsed_value = value.get('id')
-                else:
-                    parsed_value = parse_wikidata_value(value)
-
-                if not parsed_value:
-                    continue
-
-                if isinstance(parsed_value, set):  # Labels
-                    to_return[pid_label].update(parsed_value)
-                else:
-                    to_return[pid_label].add(parsed_value)
 
     else:
         LOGGER.debug('No %s expected claims for %s', expected_pids, qid)
-        no_count += 1
+        counters[0] += 1
 
     return {field: list(values) for field, values in to_return.items()}
 
 
-def _return_ext_id_urls(qid, claims, ext_id_pids_to_urls, no_count):
+def _handle_expected_claims(expected_pids, qid, pid, pid_claim, to_return):
+    value = _extract_value_from_claim(pid_claim, pid, qid)
+    if not value:
+        return False
+
+    pid_label = vocabulary.LINKER_PIDS.get(pid)
+    if not pid_label:
+        LOGGER.critical(
+            'PID label lookup failed: %s. The PID should be one of %s',
+            pid,
+            expected_pids,
+        )
+        raise ValueError(
+            'PID label lookup failed: %s. The PID should be one of %s'
+            % (pid, expected_pids)
+        )
+
+    if pid == vocabulary.OCCUPATION:
+        # for occupations we only need their QID
+        # so we add it to `to_return` and continue,
+        # since we don't need to extract labels
+        parsed_value = value.get('id')
+    else:
+        parsed_value = parse_wikidata_value(value)
+
+    if not parsed_value:
+        return False
+
+    if isinstance(parsed_value, set):  # Labels
+        to_return[pid_label].update(parsed_value)
+    else:
+        to_return[pid_label].add(parsed_value)
+
+    return True
+
+
+def _return_ext_id_urls(qid, claims, ext_id_pids_to_urls, counters):
     to_return = set()
     available = set(ext_id_pids_to_urls.keys()).intersection(claims.keys())
 
@@ -617,7 +609,7 @@ def _return_ext_id_urls(qid, claims, ext_id_pids_to_urls, no_count):
                     to_return.add(formatter_url.replace('$1', ext_id))
     else:
         LOGGER.debug('No external ID links for %s', qid)
-        no_count += 1
+        counters[6] += 1
 
     return to_return
 
