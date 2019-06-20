@@ -14,7 +14,7 @@ import json
 import logging
 import re
 from collections import defaultdict
-from typing import Iterable
+from typing import Iterable, Tuple
 
 import regex
 from pandas import read_sql
@@ -30,7 +30,16 @@ from soweego.wikidata import api_requests, sparql_queries, vocabulary
 LOGGER = logging.getLogger(__name__)
 
 
-def gather_target_biodata(entity, catalog):
+def gather_target_biodata(entity: str, catalog: str) -> Iterable[
+    Tuple[str, str, str]]:
+    """
+    Retrieves all the instances of the given entity and returns them as an
+    iterable of wikidata statements
+
+    :param entity: The entity type to scan
+    :param catalog: The catalog to which the entity belongs
+    :return: Iterable of wikidata statements of all the instances
+    """
     LOGGER.info(
         'Gathering %s birth/death dates/places and gender metadata ...', catalog
     )
@@ -58,11 +67,11 @@ def gather_target_biodata(entity, catalog):
 
 
 def tokens_fulltext_search(
-    target_entity: constants.DB_ENTITY,
-    boolean_mode: bool,
-    tokens: Iterable[str],
-    where_clause=None,
-    limit: int = 10,
+        target_entity: constants.DB_ENTITY,
+        boolean_mode: bool,
+        tokens: Iterable[str],
+        where_clause=None,
+        limit: int = 10,
 ) -> Iterable[constants.DB_ENTITY]:
     if issubclass(target_entity, models.base_entity.BaseEntity):
         column = target_entity.name_tokens
@@ -89,9 +98,9 @@ def tokens_fulltext_search(
         else:
             query = (
                 session.query(target_entity)
-                .filter(ft_search)
-                .filter(where_clause)
-                .limit(limit)
+                    .filter(ft_search)
+                    .filter(where_clause)
+                    .limit(limit)
             )
 
         count = query.count()
@@ -114,7 +123,7 @@ def tokens_fulltext_search(
 
 
 def name_fulltext_search(
-    target_entity: constants.DB_ENTITY, query: str
+        target_entity: constants.DB_ENTITY, query: str
 ) -> Iterable[constants.DB_ENTITY]:
     ft_search = target_entity.name.match(query)
 
@@ -131,14 +140,14 @@ def name_fulltext_search(
 
 
 def perfect_name_search(
-    target_entity: constants.DB_ENTITY, to_search: str
+        target_entity: constants.DB_ENTITY, to_search: str
 ) -> Iterable[constants.DB_ENTITY]:
     session = DBManager.connect_to_db()
     try:
         for r in (
-            session.query(target_entity)
-            .filter(target_entity.name == to_search)
-            .all()
+                session.query(target_entity)
+                        .filter(target_entity.name == to_search)
+                        .all()
         ):
             yield r
 
@@ -150,14 +159,14 @@ def perfect_name_search(
 
 
 def perfect_name_search_bucket(
-    target_entity: constants.DB_ENTITY, to_search: set
+        target_entity: constants.DB_ENTITY, to_search: set
 ) -> Iterable[constants.DB_ENTITY]:
     session = DBManager.connect_to_db()
     try:
         for r in (
-            session.query(target_entity)
-            .filter(target_entity.name.in_(to_search))
-            .all()
+                session.query(target_entity)
+                        .filter(target_entity.name.in_(to_search))
+                        .all()
         ):
             yield r
 
@@ -223,7 +232,7 @@ def _build_dataset_relevant_fields(base, link, nlp):
 
 
 def _dump_target_dataset_query_result(
-    result, relevant_fields, fileout, chunk_size=1000
+        result, relevant_fields, fileout, chunk_size=1000
 ):
     chunk = []
 
@@ -443,7 +452,7 @@ def gather_wikidata_links(wikidata, url_pids, ext_id_pids_to_urls):
     )
     total = 0
     for generator in api_requests.get_links(
-        wikidata.keys(), url_pids, ext_id_pids_to_urls
+            wikidata.keys(), url_pids, ext_id_pids_to_urls
     ):
         for qid, url in generator:
             if not wikidata[qid].get(keys.LINKS):
@@ -491,10 +500,10 @@ def gather_target_ids(entity, catalog, catalog_pid, aggregated):
     query_type = keys.IDENTIFIER, constants.SUPPORTED_ENTITIES.get(entity)
 
     for qid, target_id in sparql_queries.run_query(
-        query_type,
-        target_database.get_class_qid(catalog, entity),
-        catalog_pid,
-        0,
+            query_type,
+            target_database.get_class_qid(catalog, entity),
+            catalog_pid,
+            0,
     ):
         if not aggregated.get(qid):
             aggregated[qid] = {keys.TID: set()}
