@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Gather relevant Wikidata and target catalog data for matching and validation purposes."""
+"""Gather relevant Wikidata and target catalog data for matching and
+validation purposes. """
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -17,15 +18,13 @@ from collections import defaultdict
 from typing import Iterable, Tuple
 
 import regex
-from pandas import read_sql
-from sqlalchemy import or_
-from sqlalchemy.orm.query import Query
-
+from pandas import DataFrame, read_sql
 from soweego.commons import constants, keys, target_database, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer import models
-from soweego.linker import workflow
 from soweego.wikidata import api_requests, sparql_queries, vocabulary
+from sqlalchemy import or_
+from sqlalchemy.orm.query import Query
 
 LOGGER = logging.getLogger(__name__)
 
@@ -159,6 +158,12 @@ def name_fulltext_search(
 def perfect_name_search(
         target_entity: constants.DB_ENTITY, to_search: str
 ) -> Iterable[constants.DB_ENTITY]:
+    """
+    Strictly searches the given string in the name column of the given entity
+
+    :param target_entity: One among BaseEntity, BaseLinkEntity, BaseNlpEntity
+    :param to_search: String to find in the column
+    """
     session = DBManager.connect_to_db()
     try:
         for r in (
@@ -178,6 +183,12 @@ def perfect_name_search(
 def perfect_name_search_bucket(
         target_entity: constants.DB_ENTITY, to_search: set
 ) -> Iterable[constants.DB_ENTITY]:
+    """
+    Strictly searches a given set of strings in the entity's name column
+
+    :param target_entity: One among BaseEntity, BaseLinkEntity, BaseNlpEntity
+    :param to_search: Set of strings to search
+    """
     session = DBManager.connect_to_db()
     try:
         for r in (
@@ -194,8 +205,16 @@ def perfect_name_search_bucket(
         session.close()
 
 
-def gather_target_dataset(goal, entity_type, catalog, identifiers):
-    workflow.handle_goal(goal)
+def gather_target_dataset(entity_type: str, catalog: str,
+                          identifiers: set) -> DataFrame:
+    """
+    Dumps the whole data of the given entity into a Dataframe
+
+    :param entity_type: Entity type to dump
+    :param catalog: Catalog to which the entity type belongs
+    :param identifiers: catalog_ids of the records to dump
+    :return:
+    """
 
     base, link, nlp = (
         target_database.get_main_entity(catalog, entity_type),
@@ -203,7 +222,7 @@ def gather_target_dataset(goal, entity_type, catalog, identifiers):
         target_database.get_nlp_entity(catalog, entity_type),
     )
 
-    LOGGER.info('Gathering %s %s for the linker ...', catalog, goal)
+    LOGGER.info('Gathering %s %s for the linker ...', catalog)
 
     db_engine = DBManager().get_engine().execution_options(stream_results=True)
 
@@ -367,7 +386,13 @@ def _parse_target_biodata_query_result(result_set):
             LOGGER.debug('%s: no death place available', identifier)
 
 
-def gather_target_links(entity, catalog):
+def gather_target_links(entity: str, catalog: str) -> Iterable[Tuple[str, str]]:
+    """
+    Returns all the urls of a given entity and their owner's catalog id
+    :param entity: Entity type associated with a link entity
+    :param catalog: Catalog owning the entity type given
+    :return: Iterable of tuples (catalog_id, url)
+    """
     LOGGER.info('Gathering %s %s links ...', catalog, entity)
     link_entity = target_database.get_link_entity(catalog, entity)
 
@@ -428,7 +453,13 @@ def _get_catalog_constants(catalog):
     return catalog_constants
 
 
-def gather_wikidata_biodata(wikidata):
+def gather_wikidata_biodata(wikidata: dict):
+    """
+    Enriches wikidata dictionary with additional basic information.
+    Retrieves information trough :func:`soweego.api_requests.get_biodata`
+
+    :param wikidata: Dictionary {'QID':{'tid':'TID'}}
+    """
     LOGGER.info(
         'Gathering Wikidata birth/death dates/places and gender data from the Web API. This will take a while ...'
     )
@@ -463,9 +494,21 @@ def gather_wikidata_biodata(wikidata):
     LOGGER.info('Got %d statements', total)
 
 
-def gather_wikidata_links(wikidata, url_pids, ext_id_pids_to_urls):
+def gather_wikidata_links(wikidata: dict, url_pids: set,
+                          ext_id_pids_to_urls: defaultdict):
+    """
+    Enriches wikidata dictionary with url information.
+    Retrieves information trough :func:`soweego.api_requests.get_links`
+
+    :param wikidata: Dictionary {'QID':{'tid':'TID'}}
+    :param url_pids: set of
+    PIDs defining the URLs assertions to download
+    :param ext_id_pids_to_urls:
+    dictionary {'PID': {'URL FORMATTER': 'FORMATTER REGEX'}}
+    """
     LOGGER.info(
-        'Gathering Wikidata sitelinks, third-party links, and external identifier links from the Web API. This will take a while ...'
+        'Gathering Wikidata sitelinks, third-party links, and external '
+        'identifier links from the Web API. This will take a while ... '
     )
     total = 0
     for generator in api_requests.get_links(
@@ -476,6 +519,7 @@ def gather_wikidata_links(wikidata, url_pids, ext_id_pids_to_urls):
                 wikidata[qid][keys.LINKS] = set()
             wikidata[qid][keys.LINKS].add(url)
             total += 1
+
     LOGGER.info('Got %d links', total)
 
 
@@ -492,14 +536,17 @@ def gather_relevant_pids():
                         compiled_regex = re.compile(formatter_regex)
                     except re.error:
                         LOGGER.debug(
-                            "Using 'regex' third-party library. Formatter regex not supported by the 're' standard library: %s",
+                            "Using 'regex' third-party library. Formatter "
+                            "regex not supported by the 're' standard "
+                            "library: %s",
                             formatter_regex,
                         )
                         try:
                             compiled_regex = regex.compile(formatter_regex)
                         except regex.error:
                             LOGGER.debug(
-                                "Giving up. Formatter regex not supported by 'regex': %s",
+                                "Giving up. Formatter regex not supported by "
+                                "'regex': %s",
                                 formatter_regex,
                             )
                             compiled_regex = None
