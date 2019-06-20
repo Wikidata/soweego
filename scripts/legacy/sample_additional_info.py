@@ -7,10 +7,7 @@ import click
 import iso8601
 
 from soweego.wikidata.sparql_queries import (
-    make_request,
-    query_birth_death,
-    query_info_for,
-    query_wikipedia_articles_for,
+    _make_request,
 )
 
 
@@ -74,7 +71,7 @@ def get_links_for_sample(sample_path, url_formatters, output):
 
     for bucket in buckets:
         # Downloads the first bucket
-        result = make_request(
+        result = _make_request(
             query_info_for(bucket, [k for k, v in formatters_dict.items()])
         )
         for id_row in result:
@@ -113,7 +110,7 @@ def get_sitelinks_for_sample(sample_path, output):
 
     for bucket in buckets:
         # Downloads the first bucket
-        result = make_request(query_wikipedia_articles_for(bucket))
+        result = _make_request(query_wikipedia_articles_for(bucket))
         for article_row in result:
             site_url = trim_first_last_characters(article_row['?article'])
             entity_id = get_wikidata_id_from_uri(article_row['?id'])
@@ -134,7 +131,7 @@ def get_birth_death_dates_for_sample(sample_path, output):
     filepath = os.path.join(output, 'sample_dates.json')
 
     for bucket in buckets:
-        result = make_request(query_birth_death(bucket))
+        result = _make_request(query_birth_death(bucket))
         for date_row in result:
             qid = get_wikidata_id_from_uri(date_row['?id'])
             # creates the combination of all birth dates strings and all death dates strings
@@ -174,7 +171,39 @@ def get_url_formatters_for_properties(property_mapping_path, output):
         query = (
             """SELECT * WHERE { wd:%s wdt:P1630 ?formatterUrl . }""" % prop_id
         )
-        for r in make_request(query):
+        for r in _make_request(query):
             formatters[prop_id] = r['?formatterUrl']
 
     json.dump(formatters, open(filepath, 'w'), indent=2, ensure_ascii=False)
+
+
+def query_info_for(qids_bucket, properties):
+    """Given a list of wikidata entities returns a query for getting some external ids"""
+
+    query = """SELECT * WHERE{ VALUES ?id { %s } """ % ' '.join(qids_bucket)
+    for i in properties:
+        query += """OPTIONAL { ?id wdt:%s ?%s . } """ % (i, i)
+    query += """}"""
+    return query
+
+
+def query_wikipedia_articles_for(qids_bucket):
+    """Given a list of wikidata entities returns a query for getting wikidata articles"""
+
+    query = """SELECT * WHERE{ VALUES ?id { %s } """ % ' '.join(qids_bucket)
+    query += """OPTIONAL { ?article schema:about ?id . }"""
+    query += """}"""
+    return query
+
+
+def query_birth_death(qids_bucket):
+    """Given a list of wikidata entities returns a query for getting their birth and death dates"""
+
+    query = (
+        """SELECT ?id ?birth ?b_precision ?death ?d_precision WHERE{ VALUES ?id { %s } """
+        % ' '.join(qids_bucket)
+    )
+    query += """?id p:P569 ?b. ?b psv:P569 ?t1 . ?t1 wikibase:timePrecision ?b_precision . ?t1 wikibase:timeValue ?birth . OPTIONAL { ?id p:P570 ?d . ?d psv:P570 ?t2 . ?t2 wikibase:timePrecision ?d_precision . ?t2 wikibase:timeValue ?death . }"""
+    query += """}"""
+
+    return query

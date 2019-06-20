@@ -38,7 +38,9 @@ LINK_ENTITY = 'link_entity'
 NLP_ENTITY = 'nlp_entity'
 RELATIONSHIP_ENTITY = 'relationship_entity'
 
-WIKIDATA_BOT_PASSWORD = 'WIKIDATA_BOT_PASSWORD'
+# Web API bot login credentials
+WIKIDATA_API_USER = 'WIKIDATA_API_USER'
+WIKIDATA_API_PASSWORD = 'WIKIDATA_API_PASSWORD'
 
 # Importer & internal DB
 LAST_MODIFIED = 'last-modified'

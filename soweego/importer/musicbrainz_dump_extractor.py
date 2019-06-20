@@ -37,7 +37,7 @@ from soweego.importer.models.musicbrainz_entity import (
     MusicbrainzReleaseGroupEntity,
     MusicbrainzReleaseGroupLinkEntity,
 )
-from soweego.wikidata.sparql_queries import external_id_pids_and_urls_query
+from soweego.wikidata.sparql_queries import external_id_pids_and_urls
 
 LOGGER = logging.getLogger(__name__)
 
@@ -403,7 +403,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         artist_link = {}
 
         done = False
-        for result in external_id_pids_and_urls_query():
+        for result in external_id_pids_and_urls():
             if done:
                 break
             for pid, formatter in result.items():

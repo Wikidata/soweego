@@ -103,15 +103,8 @@ def cli(
         )
         url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
         with gzip.open(wd_io_path, 'wt') as wd_io:
-            get_data_for_linker(
-                target,
-                target_type,
-                qids,
-                url_pids,
-                ext_id_pids_to_urls,
-                wd_io,
-                None,
-            )
+            get_data_for_linker(target, target_type, qids, url_pids, ext_id_pids_to_urls,
+                                None, wd_io)
             LOGGER.info("Wikidata stream stored in %s" % wd_io_path)
 
     target_entity = target_database.get_main_entity(target, target_type)

@@ -21,6 +21,7 @@ Are you a Wikidata item? **soweego** is the only robot that lets you shake hands
 
    ingestor
    validator
+   wikidata
 
 
 Indices and tables
