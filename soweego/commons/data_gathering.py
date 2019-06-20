@@ -73,6 +73,17 @@ def tokens_fulltext_search(
         where_clause=None,
         limit: int = 10,
 ) -> Iterable[constants.DB_ENTITY]:
+    """
+    Performs a full text search on entity tokens field, if available.
+
+    :param target_entity: One among BaseEntity, BaseLinkEntity, BaseNlpEntity
+    :param boolean_mode: `Fulltext query docs
+    <https://mariadb.com/kb/en/library/full-text-index-overview/#types-of
+    -full-text-search>`_
+    :param tokens: Iterable of strings to search
+    :param where_clause: Valid sqlalchemy where clause
+    :param limit: Maximum number of results
+    """
     if issubclass(target_entity, models.base_entity.BaseEntity):
         column = target_entity.name_tokens
     elif issubclass(target_entity, models.base_link_entity.BaseLinkEntity):
