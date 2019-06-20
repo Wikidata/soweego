@@ -169,6 +169,14 @@ def get_data_for_linker(
     needs_publication_date = entity in constants.REQUIRE_PUBLICATION_DATE
 
     # Initialize 7 counters to 0
+    # Indices legend:
+    # 0 = claims
+    # 1 = labels
+    # 2 = aliases
+    # 3 = descriptions
+    # 4 = sitelinks
+    # 5 = third-party URLs
+    # 6 = third-party IDs
     counters = [0] * 7
 
     # Create a partial function where all parameters
