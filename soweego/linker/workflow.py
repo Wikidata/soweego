@@ -87,8 +87,15 @@ def build_wikidata(goal, catalog, entity, dir_io):
         url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
         os.makedirs(os.path.dirname(wd_io_path), exist_ok=True)
         with gzip.open(wd_io_path, 'wt') as wd_io:
-            api_requests.get_data_for_linker(catalog, entity, qids, url_pids,
-                                             ext_id_pids_to_urls, qids_and_tids, wd_io)
+            api_requests.get_data_for_linker(
+                catalog,
+                entity,
+                qids,
+                url_pids,
+                ext_id_pids_to_urls,
+                qids_and_tids,
+                wd_io,
+            )
 
     wd_df_reader = pd.read_json(wd_io_path, lines=True, chunksize=1000)
 

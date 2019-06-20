@@ -14,7 +14,7 @@ import time
 from csv import DictReader
 from random import random
 from re import search
-from typing import Set, Tuple, Iterator, Union, Dict
+from typing import Dict, Iterator, Set, Tuple, Union
 
 from requests import get
 
@@ -191,7 +191,10 @@ def external_id_pids_and_urls() -> Iterator[Dict]:
 
 
 def run_query(
-    query_type: Tuple[str, str], class_qid: str, catalog_pid: str, result_per_page: int
+    query_type: Tuple[str, str],
+    class_qid: str,
+    catalog_pid: str,
+    result_per_page: int,
 ) -> Iterator[Union[Tuple, str]]:
     """Run a filled SPARQL query template against the Wikidata endpoint
     with eventual paging.
@@ -228,7 +231,7 @@ def run_query(
             % (vocabulary.INSTANCE_OF, class_qid, catalog_pid)
             if how == keys.CLASS_QUERY
             else IDENTIFIER_TEMPLATE
-                 % (vocabulary.OCCUPATION, class_qid, catalog_pid)
+            % (vocabulary.OCCUPATION, class_qid, catalog_pid)
         )
         return _parse_query_result(
             keys.IDENTIFIER, _run_paged_query(result_per_page, query)
@@ -237,11 +240,10 @@ def run_query(
     # Items & links
     if what == keys.LINKS:
         query = (
-            LINKS_TEMPLATE
-            % (vocabulary.INSTANCE_OF, class_qid, catalog_pid)
+            LINKS_TEMPLATE % (vocabulary.INSTANCE_OF, class_qid, catalog_pid)
             if how == keys.CLASS_QUERY
             else LINKS_TEMPLATE
-                 % (vocabulary.OCCUPATION, class_qid, catalog_pid)
+            % (vocabulary.OCCUPATION, class_qid, catalog_pid)
         )
         return _parse_query_result(
             keys.LINKS, _run_paged_query(result_per_page, query)
@@ -254,7 +256,7 @@ def run_query(
             % (vocabulary.INSTANCE_OF, class_qid, catalog_pid)
             if how == keys.CLASS_QUERY
             else CLASSIFICATION_DATASET_TEMPLATE
-                 % (vocabulary.OCCUPATION, class_qid, catalog_pid)
+            % (vocabulary.OCCUPATION, class_qid, catalog_pid)
         )
         return _parse_query_result(
             keys.DATASET, _run_paged_query(result_per_page, query)
@@ -475,7 +477,7 @@ def _run_paged_query(result_per_page, query):
             LOGGER.info('Page #%d', pages)
             query_builder = [
                 query,
-                f'OFFSET {result_per_page * pages} LIMIT {result_per_page}'
+                f'OFFSET {result_per_page * pages} LIMIT {result_per_page}',
             ]
             result_set = _make_request(' '.join(query_builder))
 

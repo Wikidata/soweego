@@ -429,9 +429,7 @@ def gather_wikidata_biodata(wikidata):
             timestamp, precision = parsed[0], parsed[1]
             # Get rid of time, useless
             timestamp = timestamp.split('T')[0]
-            wikidata[qid][keys.BIODATA].add(
-                (pid, f'{timestamp}/{precision}')
-            )
+            wikidata[qid][keys.BIODATA].add((pid, f'{timestamp}/{precision}'))
         else:
             wikidata[qid][keys.BIODATA].add((pid, parsed))
         total += 1

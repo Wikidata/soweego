@@ -17,7 +17,7 @@ from collections import defaultdict
 from functools import lru_cache, partial
 from multiprocessing.pool import Pool
 from pkgutil import get_data
-from typing import Dict, Iterator, List, TextIO, Set, Tuple, Union
+from typing import Dict, Iterator, List, Set, TextIO, Tuple, Union
 from urllib.parse import urlunsplit
 
 import requests
@@ -71,7 +71,9 @@ def get_biodata(qids: Set[str]) -> Iterator[Tuple[str, str, str]]:
     )
 
 
-def get_links(qids: Set[str], url_pids: Set[str], ext_id_pids_to_urls: Dict) -> Iterator[Tuple]:
+def get_links(
+    qids: Set[str], url_pids: Set[str], ext_id_pids_to_urls: Dict
+) -> Iterator[Tuple]:
     """Collect sitelinks and third-party links
     for a given set of Wikidata items.
 
@@ -124,13 +126,13 @@ def get_links(qids: Set[str], url_pids: Set[str], ext_id_pids_to_urls: Dict) -> 
 
 
 def get_data_for_linker(
-        catalog: str,
-        entity: str,
-        qids: Set[str],
-        url_pids: Set[str],
-        ext_id_pids_to_urls: Dict,
-        qids_and_tids: Dict,
-        fileout: TextIO
+    catalog: str,
+    entity: str,
+    qids: Set[str],
+    url_pids: Set[str],
+    ext_id_pids_to_urls: Dict,
+    qids_and_tids: Dict,
+    fileout: TextIO,
 ) -> None:
     """Collect relevant data for linking Wikidata to a given catalog.
     Dump the result to a given output stream.
@@ -247,7 +249,7 @@ def build_session() -> requests.Session:
                     "Please put '%s' in the '%s' module "
                     "if you want to log in next time",
                     constants.CREDENTIALS_FILENAME,
-                    constants.CREDENTIALS_MODULE
+                    constants.CREDENTIALS_MODULE,
                 )
             elif isinstance(error, KeyError):
                 LOGGER.info(
@@ -257,7 +259,7 @@ def build_session() -> requests.Session:
                     "if you want to log in next time",
                     error,
                     constants.CREDENTIALS_FILENAME,
-                    constants.CREDENTIALS_MODULE
+                    constants.CREDENTIALS_MODULE,
                 )
 
             global BUCKET_SIZE
@@ -274,7 +276,7 @@ def build_session() -> requests.Session:
 
 
 def parse_value(
-        value: Union[str, Dict]
+    value: Union[str, Dict]
 ) -> Union[str, Tuple[str, str], Set[str], None]:
     """Parse a value returned by the Wikidata API into standard Python objects.
 
@@ -357,8 +359,15 @@ def _lookup_label(item_value):
 
 # This function will be consumed by `get_data_for_linker`:
 # it enables parallel processing for Wikidata buckets
-def _process_bucket(bucket, request_params, url_pids, ext_id_pids_to_urls, qids_and_tids,
-                    needs, counters) -> List[Dict]:
+def _process_bucket(
+    bucket,
+    request_params,
+    url_pids,
+    ext_id_pids_to_urls,
+    qids_and_tids,
+    needs,
+    counters,
+) -> List[Dict]:
     entities = _sanity_check(bucket, request_params)
 
     # If the sanity check went wrong,
@@ -722,7 +731,9 @@ def _get_login_token(session: requests.Session) -> str:
 # Return whether the login was successful or not,
 # and an eventual error message from the server.
 # Cookies for authentication are automatically saved into the session.
-def _actual_login(session: requests.Session, user: str, password: str, token: str) -> Tuple[bool, str]:
+def _actual_login(
+    session: requests.Session, user: str, password: str, token: str
+) -> Tuple[bool, str]:
     login_response = session.post(
         WIKIDATA_API_URL,
         data={
@@ -754,11 +765,7 @@ def _load_cached_session(dump_path: str) -> requests.Session:
         # Check if the session is still valid
         assert_response = session.get(
             WIKIDATA_API_URL,
-            params={
-                'action': 'query',
-                'assert': 'user',
-                'format': 'json'
-            },
+            params={'action': 'query', 'assert': 'user', 'format': 'json'},
             headers={'User-Agent': constants.HTTP_USER_AGENT},
         )
 
@@ -783,7 +790,10 @@ def _login(user: str, password: str) -> Tuple[bool, str, requests.Session]:
 # Raise `KeyError` if credential keys are not in the JSON file
 def _get_credentials_from_file() -> Tuple[Union[str, None], Union[str, None]]:
     credentials = json.loads(get_data(*constants.CREDENTIALS_LOCATION))
-    return credentials[keys.WIKIDATA_API_USER], credentials[keys.WIKIDATA_API_PASSWORD]
+    return (
+        credentials[keys.WIKIDATA_API_USER],
+        credentials[keys.WIKIDATA_API_PASSWORD],
+    )
 
 
 def _make_request(bucket, params):
@@ -809,7 +819,8 @@ def _make_request(bucket, params):
                 LOGGER.error(
                     'Unexpected error, retrying the request to '
                     'the Wikidata API anyway. '
-                    'Reason: %s', error
+                    'Reason: %s',
+                    error,
                 )
             connection_is_ok = False
         else:
