@@ -295,7 +295,7 @@ def get_biodata(qids: set) -> Generator[tuple, None, None]:
     no_claims_count = 0
     qid_buckets, request_params = _prepare_request(qids, 'claims')
 
-    for bucket in qid_buckets:
+    for bucket in tqdm(qid_buckets):
         response_body = _make_request(bucket, request_params)
 
         # Skip failed API request
@@ -353,7 +353,7 @@ def get_links(
     no_ext_ids_count = 0
 
     qid_buckets, request_params = _prepare_request(qids, 'sitelinks|claims')
-    for bucket in qid_buckets:
+    for bucket in tqdm(qid_buckets):
         response_body = _make_request(bucket, request_params)
         if not response_body:
             continue
