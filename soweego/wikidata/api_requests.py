@@ -273,9 +273,23 @@ def build_session() -> requests.Session:
         return session
 
 
-# Values: plain strings (includes URLs), monolingual strings,
-# birth/death dates, QIDs (gender, birth/death places)
-def parse_wikidata_value(value):
+def parse_value(
+        value: Union[str, Dict]
+) -> Union[str, Tuple[str, str], Set[str], None]:
+    """Parse a value returned by the Wikidata API into standard Python objects.
+
+    The parser supports the following Wikidata
+    `data types <https://www.wikidata.org/wiki/Special:ListDatatypes>`_:
+
+    - string > *str*
+    - URL > *str*
+    - monolingual text > *str*
+    - time > *tuple* ``(time, precision)``
+    - item > *set* ``{item_labels}``
+
+    :param value: a data value from a call to the Wikidata API
+    :return: the parsed Python object, or ``None`` if parsing failed
+    """
     # Plain string
     if isinstance(value, str):
         return value
@@ -503,7 +517,7 @@ def _return_third_party_urls(qid, claims, url_pids, counters):
                 if not value:
                     continue
 
-                parsed_value = parse_wikidata_value(value)
+                parsed_value = parse_value(value)
 
                 if not parsed_value:
                     continue
@@ -579,7 +593,7 @@ def _handle_expected_claims(expected_pids, qid, pid, pid_claim, to_return):
         # since we don't need to extract labels
         parsed_value = value.get('id')
     else:
-        parsed_value = parse_wikidata_value(value)
+        parsed_value = parse_value(value)
 
     if not parsed_value:
         return False

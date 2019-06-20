@@ -409,11 +409,11 @@ def gather_wikidata_biodata(wikidata):
     total = 0
 
     for qid, pid, value in api_requests.get_biodata(wikidata.keys()):
-        parsed = api_requests.parse_wikidata_value(value)
+        parsed = api_requests.parse_value(value)
         if not wikidata[qid].get(keys.BIODATA):
             wikidata[qid][keys.BIODATA] = set()
         # `parsed` is a set of labels if the value is a QID
-        # see api_requests.parse_wikidata_value
+        # see api_requests.parse_value
         if isinstance(parsed, set):
             # The English label for gender should be enough
             gender = parsed & {keys.MALE, keys.FEMALE}
