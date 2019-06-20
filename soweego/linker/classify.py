@@ -170,12 +170,14 @@ def execute(catalog: str,
 
         _add_missing_feature_columns(classifier, feature_vectors)
 
-        predictions = (
+        predictions: pd.Series = (
             classifier.predict(feature_vectors)
             if isinstance(classifier, rl.SVMClassifier)
             else classifier.prob(feature_vectors)
         )
 
+        # If `name_rule==True` then we will zero all predictions
+        # for pairs whose names are not exactly the same
         # See https://stackoverflow.com/a/18317089/10719765
         if name_rule:
             LOGGER.info('Applying full names rule ...')
@@ -185,6 +187,10 @@ def execute(catalog: str,
                 args=(wd_chunk, target_chunk),
             )
 
+        # Check if any of the entities coming from the target catalog
+        # have a wikidata URL. If yes then we already know to which
+        # entity they should be mapped. Raise the prediction to `1`
+        # if the mapping correct
         if target_chunk.get(keys.URL) is not None:
             predictions = pd.DataFrame(predictions).apply(
                 _one_when_wikidata_link_correct,
@@ -201,7 +207,7 @@ def execute(catalog: str,
         yield above_threshold[~above_threshold.index.duplicated()]
 
 
-def _zero_when_different_names(prediction, wikidata, target):
+def _zero_when_different_names(prediction: pd.Series, wikidata: pd.DataFrame, target: pd.DataFrame) -> float:
     wd_names, target_names = set(), set()
     qid, tid = prediction.name
     for column in constants.NAME_FIELDS:
@@ -217,7 +223,7 @@ def _zero_when_different_names(prediction, wikidata, target):
     return 0.0 if wd_names.isdisjoint(target_names) else prediction[0]
 
 
-def _one_when_wikidata_link_correct(prediction, target):
+def _one_when_wikidata_link_correct(prediction: pd.DataFrame, target: pd.DataFrame) -> float:
     qid, tid = prediction.name
 
     urls = target.loc[tid][keys.URL]
@@ -237,7 +243,7 @@ def _one_when_wikidata_link_correct(prediction, target):
     return prediction[0]
 
 
-def _add_missing_feature_columns(classifier, feature_vectors):
+def _add_missing_feature_columns(classifier, feature_vectors: pd.DataFrame):
     if isinstance(classifier, rl.NaiveBayesClassifier):
         expected_features = len(classifier.kernel._binarizers)
 
