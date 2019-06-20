@@ -120,8 +120,12 @@ def _upload(predictions, catalog, entity, sandbox):
     wikidata_bot.add_identifiers(links, catalog, entity, sandbox)
 
 
-def execute(catalog: str, entity: str, model: str, name_rule: bool, threshold: float, dir_io: str) -> Generator[
-    pd.Series, None, None]:
+def execute(catalog: str,
+            entity: str,
+            model: str,
+            name_rule: bool,
+            threshold: float,
+            dir_io: str) -> Generator[pd.Series, None, None]:
     classifier = joblib.load(model)
 
     wd_reader = workflow.build_wikidata(

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """Training set construction for supervised linking."""
-from typing import Tuple, Dict
+from typing import Dict, Tuple
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -10,10 +10,8 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
-import gzip
 import logging
 import os
-import pickle
 import sys
 
 import click
