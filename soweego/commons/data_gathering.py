@@ -136,6 +136,12 @@ def tokens_fulltext_search(
 def name_fulltext_search(
         target_entity: constants.DB_ENTITY, query: str
 ) -> Iterable[constants.DB_ENTITY]:
+    """
+    Performs a fulltext query against target_entity name field
+
+    :param target_entity: One among BaseEntity, BaseLinkEntity, BaseNlpEntity
+    :param query: Text to search in name column
+    """
     ft_search = target_entity.name.match(query)
 
     session = DBManager.connect_to_db()
