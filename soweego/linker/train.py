@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """Training set construction for supervised linking."""
+from typing import Tuple, Dict
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -18,7 +19,7 @@ import sys
 import click
 import pandas as pd
 from keras import backend as K
-from pandas import MultiIndex, concat
+from pandas import concat, MultiIndex
 from sklearn.externals import joblib
 from sklearn.model_selection import GridSearchCV
 
@@ -66,16 +67,18 @@ LOGGER = logging.getLogger(__name__)
 def cli(ctx, classifier, target, target_type, tune, k_folds, dir_io):
     """Train a probabilistic linker."""
     kwargs = utils.handle_extra_cli_args(ctx.args)
+    # the above will return None only if args are provided and badly formatted
+    # if no args are provided then `kwargs` will be an empty dict
     if kwargs is None:
         sys.exit(1)
 
     model = execute(
-        constants.CLASSIFIERS[classifier],
-        target,
-        target_type,
-        tune,
-        k_folds,
-        dir_io,
+        classifier=constants.CLASSIFIERS[classifier],
+        catalog=target,
+        entity=target_type,
+        tune=tune,
+        k=k_folds,
+        dir_io=dir_io,
         **kwargs,
     )
     outfile = os.path.join(
@@ -88,10 +91,27 @@ def cli(ctx, classifier, target, target_type, tune, k_folds, dir_io):
     LOGGER.info("%s model dumped to '%s'", classifier, outfile)
 
 
-def execute(classifier, catalog, entity, tune, k, dir_io, **kwargs):
+def execute(classifier: str, catalog: str, entity: str, tune: bool, k: int, dir_io: str, **kwargs):
+    """
+    Execute the actual training
+
+    :param classifier: The name of the classifier. Possible values are
+        defined in :const:`soweego.commons.constants.CLASSIFIERS`
+    :param catalog: The name of the catalog we want to train on. Possible
+        values are defined in :const:`soweego.commons.constants.TARGET_CATALOGS`
+    :param entity: The name of the entity, for the catalog, that we want to train on.
+        These are also defined in :const:`soweego.commons.constants.TARGET_CATALOGS`
+    :param tune: Whether to run grid search for hyperparameters tuning or not.
+    :param k: Number of folds for hyperparameters tuning. This is only used when
+        `tune=True`
+    :param dir_io: Input/Output directory where working files will be saved.
+    :param kwargs: extra kwargs that will be passed to the grid search and model
+        initialization
+    :return: The trained model
+    """
     if tune and classifier in (
-        keys.SINGLE_LAYER_PERCEPTRON,
-        keys.MULTI_LAYER_PERCEPTRON,
+            keys.SINGLE_LAYER_PERCEPTRON,
+            keys.MULTI_LAYER_PERCEPTRON,
     ):
         # TODO make Keras work with GridSearchCV
         raise NotImplementedError(
@@ -107,6 +127,8 @@ def execute(classifier, catalog, entity, tune, k, dir_io, **kwargs):
             k, feature_vectors, positive_samples_index, classifier, **kwargs
         )
         # TODO find a way to avoid retraining: pass _grid_search.best_estimator_ to recordlinkage classifiers. See 'refit' param in https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html#sklearn.model_selection.GridSearchCV
+
+        # return the trained model using the best hyperparameters
         return _train(
             classifier, feature_vectors, positive_samples_index, **best_params
         )
@@ -115,8 +137,12 @@ def execute(classifier, catalog, entity, tune, k, dir_io, **kwargs):
 
 
 def _grid_search(
-    k, feature_vectors, positive_samples_index, classifier, **kwargs
-):
+        k: int,
+        feature_vectors: pd.DataFrame,
+        positive_samples_index: pd.MultiIndex,
+        classifier: str,
+        **kwargs
+) -> Dict:
     k_fold, target = utils.prepare_stratified_k_fold(
         k, feature_vectors, positive_samples_index
     )
@@ -132,7 +158,20 @@ def _grid_search(
     return grid_search.best_params_
 
 
-def build_dataset(goal, catalog, entity, dir_io):
+def build_dataset(goal: str, catalog: str, entity: str, dir_io: str) -> Tuple[pd.DataFrame, pd.MultiIndex]:
+    """
+    Creates a dataset for `goal`.
+
+    :param goal: Can be `evaluate` or `train`. Specifies for what end we want
+        to use the dataset.
+    :param catalog: The external catalog we want to get data for.
+    :param entity: The entity in the specified catalog we want to get data for.
+    :param dir_io: Input/Output directory where working files will be saved.
+    :return: Tuple where the first element is a :class:`pandas.DataFrame` representing
+        the features extracted for a given (*QID*, *TID*) pair. The second element of the
+        Tuple is a :class:`pandas.MultiIndex`, which represents which (*QID*, *TID*) pairs
+        are positive samples (so, which pairs are really the same entity)
+    """
     feature_vectors_fpath = os.path.join(
         dir_io, constants.COMPLETE_FEATURE_VECTORS % (catalog, entity, goal)
     )
@@ -142,10 +181,10 @@ def build_dataset(goal, catalog, entity, dir_io):
     )
 
     # check if files exists for these paths. If yes then just return them
-    # instead of recomputing
+    # instead of recomputing from scratch
     if all(
-        os.path.isfile(p)
-        for p in [feature_vectors_fpath, positive_samples_index_fpath]
+            os.path.isfile(p)
+            for p in [feature_vectors_fpath, positive_samples_index_fpath]
     ):
         LOGGER.info('Using cached version of the %s set', goal)
 
@@ -157,6 +196,8 @@ def build_dataset(goal, catalog, entity, dir_io):
 
         return feature_vectors, positive_samples_index
 
+    # if the files above do not exist then build the dataset from
+    # scratch
     wd_reader = workflow.build_wikidata(goal, catalog, entity, dir_io)
     wd_generator = workflow.preprocess_wikidata(goal, wd_reader)
 
