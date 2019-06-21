@@ -5,7 +5,7 @@
 import logging
 import os
 import re
-from typing import Generator
+from typing import Iterator
 
 import click
 import pandas as pd
@@ -127,7 +127,7 @@ def execute(
     name_rule: bool,
     threshold: float,
     dir_io: str,
-) -> Generator[pd.Series, None, None]:
+) -> Iterator[pd.Series]:
     classifier = joblib.load(model)
 
     wd_reader = workflow.build_wikidata(
