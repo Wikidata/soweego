@@ -55,7 +55,7 @@ class _BaseNN(KerasAdapter, BaseClassifier):
         """
 
         tensor_path = os.path.join(
-            constants.SHARED_FOLDER, constants.TENSOR_BOARD
+            constants.SHARED_FOLDER, constants.TENSOR_BOARD_FOLDER
         )
         model_path = os.path.join(
             constants.SHARED_FOLDER,
