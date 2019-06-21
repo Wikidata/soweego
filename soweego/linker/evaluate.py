@@ -190,13 +190,7 @@ def _run_single(classifier, catalog, entity, k_folds, kwargs, performance_out,
         **kwargs,
     )
 
-    LOGGER.info(
-        'Evaluation done. '
-        'Precision: %s; '
-        'recall: %s; '
-        'F-score: %s',
-        precision, recall, fscore
-    )
+    LOGGER.info('Evaluation done.')
 
     predictions.to_series().to_csv(predictions_out, header=False)
     with open(performance_out, 'w') as out:
@@ -274,14 +268,14 @@ def _compute_performance(test_index, predictions, test_vectors_size):
     )
     precision = rl.precision(test_index, predictions)
     recall = rl.recall(test_index, predictions)
-    fscore = rl.fscore(confusion_matrix)
+    f_score = rl.fscore(confusion_matrix)
 
     LOGGER.info(
-        'Precision: %f - Recall: %f - F-score: %f', precision, recall, fscore
+        'Precision: %f - Recall: %f - F-score: %f', precision, recall, f_score
     )
     LOGGER.info('Confusion matrix: %s', confusion_matrix)
 
-    return precision, recall, fscore, confusion_matrix
+    return precision, recall, f_score, confusion_matrix
 
 
 def _nested_k_fold_with_grid_search(
