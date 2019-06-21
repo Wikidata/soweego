@@ -17,6 +17,7 @@ import click
 import pandas as pd
 from keras import backend as K
 from pandas import MultiIndex, concat
+from typing import Tuple
 from sklearn.externals import joblib
 from sklearn.model_selection import GridSearchCV
 
