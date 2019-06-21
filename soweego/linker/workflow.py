@@ -15,7 +15,7 @@ import json
 import logging
 import os
 from multiprocessing import cpu_count
-from typing import Generator, Tuple
+from typing import Iterator, Tuple
 
 import pandas as pd
 import recordlinkage as rl
@@ -154,7 +154,7 @@ def _get_tids(qids_and_tids):
 def preprocess(
     goal: str, wikidata_reader: JsonReader, target_reader: JsonReader
 ) -> Tuple[
-    Generator[pd.DataFrame, None, None], Generator[pd.DataFrame, None, None]
+    Iterator[pd.DataFrame], Iterator[pd.DataFrame]
 ]:
     handle_goal(goal)
     return (
@@ -312,7 +312,7 @@ def init_model(classifier, *args, **kwargs):
 
 def preprocess_wikidata(
     goal: str, wikidata_reader: JsonReader
-) -> Generator[pd.DataFrame, None, None]:
+) -> Iterator[pd.DataFrame]:
     handle_goal(goal)
 
     LOGGER.info('Preprocessing Wikidata ...')
