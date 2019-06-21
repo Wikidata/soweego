@@ -9,6 +9,7 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+import os
 from typing import TypeVar
 
 from soweego.commons import keys
@@ -214,31 +215,45 @@ NAME_FIELDS = (
     keys.REAL_NAME,
 )
 
-# File names & folders
+# Folders
 SHARED_FOLDER = '/app/shared/'
-WD_TRAINING_SET = 'wikidata/wikidata_%s_%s_training_set.jsonl.gz'
-WD_CLASSIFICATION_SET = 'wikidata/wikidata_%s_%s_classification_set.jsonl.gz'
-SAMPLES = 'samples/%s_%s_%s_samples%02d.pkl.gz'
-FEATURES = 'features/%s_%s_%s_features%02d.pkl.gz'
-LINKER_MODEL = 'models/%s_%s_%s_model.pkl'
-LINKER_NESTED_CV_BEST_MODEL = '%models/s_%s_%s_best_model_k%02d.pkl'
-LINKER_RESULT = 'results/%s_%s_%s_linker_result.csv.gz'
-LINKER_EVALUATION_PREDICTIONS = (
-    'results/%s_%s_%s_linker_evaluation_predictions.csv.gz'
-)
-LINKER_PERFORMANCE = 'results/%s_%s_%s_linker_performance.txt'
-NEURAL_NETWORK_CHECKPOINT_MODEL = (
-    'best_model_checkpoint/%s_best_checkpoint_model.hdf5'
-)
-COMPLETE_FEATURE_VECTORS = 'features/%s_%s_%s_complete_feature_vectors.pkl.gz'
-COMPLETE_WIKIDATA_CHUNKS = 'wikidata/%s_%s_%s_complete_wikidata_chunks.pkl.gz'
-COMPLETE_TARGET_CHUNKS = 'samples/%s_%s_%s_complete_target_chunks.pkl.gz'
-COMPLETE_POSITIVE_SAMPLES_INDEX = (
-    'samples/%s_%s_%s_complete_positive_samples_index.pkl.gz'
-)
+WD_FOLDER = 'wikidata'
+SAMPLES_FOLDER = 'samples'
+FEATURES_FOLDERS = 'features'
+MODELS_FOLDER = 'models'
+RESULTS_FOLDER = 'results'
+NN_CHECKPOINT_FOLDER = 'best_model_checkpoint'
+TENSOR_BOARD_FOLDER = 'tensor_board'
+
+# File names
+NN_CHECKPOINT_FILENAME = '%s_best_checkpoint_model.hdf5'
+EVALUATION_PERFORMANCE_FILENAME = '{}_{}_{}_linker_performance.txt'
+EVALUATION_PREDICTIONS_FILENAME = '{}_{}_{}_linker_evaluation_predictions.csv.gz'
+RESULT_FILENAME = '%s_%s_%s_linker_result.csv.gz'
+NESTED_CV_BEST_MODEL_FILENAME = '{}_{}_{}_best_model_k{:02}.pkl'
+MODEL_FILENAME = '%s_%s_%s_model.pkl'
+FEATURES_FILENAME = '%s_%s_%s_features%02d.pkl.gz'
+SAMPLES_FILENAME = '%s_%s_%s_samples%02d.pkl.gz'
+WD_CLASSIFICATION_SET_FILENAME = 'wikidata_%s_%s_classification_set.jsonl.gz'
+WD_TRAINING_SET_FILENAME = 'wikidata_%s_%s_training_set.jsonl.gz'
+
+# Paths
+WD_TRAINING_SET = os.path.join(WD_FOLDER, WD_TRAINING_SET_FILENAME)
+WD_CLASSIFICATION_SET = os.path.join(WD_FOLDER, WD_CLASSIFICATION_SET_FILENAME)
+SAMPLES = os.path.join(SAMPLES_FOLDER, SAMPLES_FILENAME)
+FEATURES = os.path.join(FEATURES_FOLDERS, FEATURES_FILENAME)
+LINKER_MODEL = os.path.join(MODELS_FOLDER, MODEL_FILENAME)
+LINKER_NESTED_CV_BEST_MODEL = os.path.join(MODELS_FOLDER,
+                                           NESTED_CV_BEST_MODEL_FILENAME)
+LINKER_RESULT = os.path.join(RESULTS_FOLDER, RESULT_FILENAME)
+LINKER_EVALUATION_PREDICTIONS = os.path.join(RESULTS_FOLDER,
+                                             EVALUATION_PREDICTIONS_FILENAME)
+LINKER_PERFORMANCE = os.path.join(RESULTS_FOLDER,
+                                  EVALUATION_PERFORMANCE_FILENAME)
+NEURAL_NETWORK_CHECKPOINT_MODEL = os.path.join(NN_CHECKPOINT_FOLDER,
+                                               NN_CHECKPOINT_FILENAME)
 WIKIDATA_API_SESSION = 'wd_api_session.pkl'
 WORKS_BY_PEOPLE_STATEMENTS = '%s_works_by_%s_statements.csv'
-TENSOR_BOARD = 'tensor_board/'
 
 CLASSIFIERS = {
     'naive_bayes': keys.NAIVE_BAYES,
