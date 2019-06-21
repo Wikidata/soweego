@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Gather relevant Wikidata and target catalog data for matching and
-validation purposes. """
+"""Gather relevant Wikidata and target catalog data for matching and validation purposes."""
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -15,31 +14,23 @@ import json
 import logging
 import re
 from collections import defaultdict
-from typing import Iterable, Tuple
+from typing import Iterable
 
 import regex
-from pandas import read_sql, DataFrame
+from pandas import read_sql
 from sqlalchemy import or_
 from sqlalchemy.orm.query import Query
 
 from soweego.commons import constants, keys, target_database, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer import models
+from soweego.linker import workflow
 from soweego.wikidata import api_requests, sparql_queries, vocabulary
 
 LOGGER = logging.getLogger(__name__)
 
 
-def gather_target_biodata(entity: str, catalog: str) -> Iterable[
-    Tuple[str, str, str]]:
-    """
-    Retrieves all the instances of the given entity and returns them as an
-    iterable of wikidata statements
-
-    :param entity: The entity type to scan
-    :param catalog: The catalog to which the entity belongs
-    :return: Iterable of wikidata statements of all the instances
-    """
+def gather_target_biodata(entity, catalog):
     LOGGER.info(
         'Gathering %s birth/death dates/places and gender metadata ...', catalog
     )
@@ -67,23 +58,12 @@ def gather_target_biodata(entity: str, catalog: str) -> Iterable[
 
 
 def tokens_fulltext_search(
-        target_entity: constants.DB_ENTITY,
-        boolean_mode: bool,
-        tokens: Iterable[str],
-        where_clause=None,
-        limit: int = 10,
+    target_entity: constants.DB_ENTITY,
+    boolean_mode: bool,
+    tokens: Iterable[str],
+    where_clause=None,
+    limit: int = 10,
 ) -> Iterable[constants.DB_ENTITY]:
-    """
-    Performs a full text search on entity tokens field, if available.
-
-    :param target_entity: One among BaseEntity, BaseLinkEntity, BaseNlpEntity
-    :param boolean_mode: `Fulltext query docs
-    <https://mariadb.com/kb/en/library/full-text-index-overview/#types-of
-    -full-text-search>`_
-    :param tokens: Iterable of strings to search
-    :param where_clause: Valid sqlalchemy where clause
-    :param limit: Maximum number of results
-    """
     if issubclass(target_entity, models.base_entity.BaseEntity):
         column = target_entity.name_tokens
     elif issubclass(target_entity, models.base_link_entity.BaseLinkEntity):
@@ -109,9 +89,9 @@ def tokens_fulltext_search(
         else:
             query = (
                 session.query(target_entity)
-                    .filter(ft_search)
-                    .filter(where_clause)
-                    .limit(limit)
+                .filter(ft_search)
+                .filter(where_clause)
+                .limit(limit)
             )
 
         count = query.count()
@@ -134,14 +114,8 @@ def tokens_fulltext_search(
 
 
 def name_fulltext_search(
-        target_entity: constants.DB_ENTITY, query: str
+    target_entity: constants.DB_ENTITY, query: str
 ) -> Iterable[constants.DB_ENTITY]:
-    """
-    Performs a fulltext query against target_entity name field
-
-    :param target_entity: One among BaseEntity, BaseLinkEntity, BaseNlpEntity
-    :param query: Text to search in name column
-    """
     ft_search = target_entity.name.match(query)
 
     session = DBManager.connect_to_db()
@@ -157,20 +131,14 @@ def name_fulltext_search(
 
 
 def perfect_name_search(
-        target_entity: constants.DB_ENTITY, to_search: str
+    target_entity: constants.DB_ENTITY, to_search: str
 ) -> Iterable[constants.DB_ENTITY]:
-    """
-    Strictly searches the given string in the name column of the given entity
-
-    :param target_entity: One among BaseEntity, BaseLinkEntity, BaseNlpEntity
-    :param to_search: String to find in the column
-    """
     session = DBManager.connect_to_db()
     try:
         for r in (
-                session.query(target_entity)
-                        .filter(target_entity.name == to_search)
-                        .all()
+            session.query(target_entity)
+            .filter(target_entity.name == to_search)
+            .all()
         ):
             yield r
 
@@ -182,20 +150,14 @@ def perfect_name_search(
 
 
 def perfect_name_search_bucket(
-        target_entity: constants.DB_ENTITY, to_search: set
+    target_entity: constants.DB_ENTITY, to_search: set
 ) -> Iterable[constants.DB_ENTITY]:
-    """
-    Strictly searches a given set of strings in the entity's name column
-
-    :param target_entity: One among BaseEntity, BaseLinkEntity, BaseNlpEntity
-    :param to_search: Set of strings to search
-    """
     session = DBManager.connect_to_db()
     try:
         for r in (
-                session.query(target_entity)
-                        .filter(target_entity.name.in_(to_search))
-                        .all()
+            session.query(target_entity)
+            .filter(target_entity.name.in_(to_search))
+            .all()
         ):
             yield r
 
@@ -206,16 +168,8 @@ def perfect_name_search_bucket(
         session.close()
 
 
-def gather_target_dataset(entity_type: str, catalog: str,
-                          identifiers: set) -> DataFrame:
-    """
-    Dumps the whole data of the given entity into a Dataframe
-
-    :param entity_type: Entity type to dump
-    :param catalog: Catalog to which the entity type belongs
-    :param identifiers: catalog_ids of the records to dump
-    :return:
-    """
+def gather_target_dataset(goal, entity_type, catalog, identifiers):
+    workflow.handle_goal(goal)
 
     base, link, nlp = (
         target_database.get_main_entity(catalog, entity_type),
@@ -223,7 +177,7 @@ def gather_target_dataset(entity_type: str, catalog: str,
         target_database.get_nlp_entity(catalog, entity_type),
     )
 
-    LOGGER.info('Gathering %s %s for the linker ...', catalog)
+    LOGGER.info('Gathering %s %s for the linker ...', catalog, goal)
 
     db_engine = DBManager().get_engine().execution_options(stream_results=True)
 
@@ -269,7 +223,7 @@ def _build_dataset_relevant_fields(base, link, nlp):
 
 
 def _dump_target_dataset_query_result(
-        result, relevant_fields, fileout, chunk_size=1000
+    result, relevant_fields, fileout, chunk_size=1000
 ):
     chunk = []
 
@@ -387,13 +341,7 @@ def _parse_target_biodata_query_result(result_set):
             LOGGER.debug('%s: no death place available', identifier)
 
 
-def gather_target_links(entity: str, catalog: str) -> Iterable[Tuple[str, str]]:
-    """
-    Returns all the urls of a given entity and their owner's catalog id
-    :param entity: Entity type associated with a link entity
-    :param catalog: Catalog owning the entity type given
-    :return: Iterable of tuples (catalog_id, url)
-    """
+def gather_target_links(entity, catalog):
     LOGGER.info('Gathering %s %s links ...', catalog, entity)
     link_entity = target_database.get_link_entity(catalog, entity)
 
@@ -454,86 +402,63 @@ def _get_catalog_constants(catalog):
     return catalog_constants
 
 
-def gather_wikidata_biodata(wikidata: dict):
-    """
-    Enriches wikidata dictionary with additional basic information.
-    Retrieves information trough :func:`soweego.api_requests.get_biodata`
-
-    :param wikidata: Dictionary {'QID':{'tid':'TID'}}
-    """
+def gather_wikidata_biodata(wikidata):
     LOGGER.info(
-        'Gathering Wikidata birth/death dates/places and gender data from the '
-        'Web API. This will take a while ... '
+        'Gathering Wikidata birth/death dates/places and gender data from the Web API. This will take a while ...'
     )
     total = 0
-    # Generator of generators
-    for entity in api_requests.get_biodata(wikidata.keys()):
-        for qid, pid, value in entity:
-            parsed = api_requests.parse_wikidata_value(value)
-            if not wikidata[qid].get(keys.BIODATA):
-                wikidata[qid][keys.BIODATA] = set()
-            # `parsed` is a set of labels if the value is a QID
-            # see api_requests.parse_wikidata_value
-            if isinstance(parsed, set):
-                # The English label for gender should be enough
-                gender = parsed & {keys.MALE, keys.FEMALE}
-                if gender:
-                    wikidata[qid][keys.BIODATA].add((pid, gender.pop()))
-                else:
-                    # Add a (pid, label) tuple for each element
-                    # for better recall
-                    for element in parsed:
-                        wikidata[qid][keys.BIODATA].add((pid, element))
-            # `parsed` is a tuple (timestamp, precision) id the value is a date
-            elif isinstance(parsed, tuple):
-                timestamp, precision = parsed[0], parsed[1]
-                # Get rid of time, useless
-                timestamp = timestamp.split('T')[0]
-                wikidata[qid][keys.BIODATA].add(
-                    (pid, f'{timestamp}/{precision}')
-                )
+
+    for qid, pid, value in api_requests.get_biodata(wikidata.keys()):
+        parsed = api_requests.parse_value(value)
+        if not wikidata[qid].get(keys.BIODATA):
+            wikidata[qid][keys.BIODATA] = set()
+        # `parsed` is a set of labels if the value is a QID
+        # see api_requests.parse_value
+        if isinstance(parsed, set):
+            # The English label for gender should be enough
+            gender = parsed & {keys.MALE, keys.FEMALE}
+            if gender:
+                wikidata[qid][keys.BIODATA].add((pid, gender.pop()))
             else:
-                wikidata[qid][keys.BIODATA].add((pid, parsed))
-            total += 1
+                # Add a (pid, label) tuple for each element
+                # for better recall
+                for element in parsed:
+                    wikidata[qid][keys.BIODATA].add((pid, element))
+        # `parsed` is a tuple (timestamp, precision) id the value is a date
+        elif isinstance(parsed, tuple):
+            timestamp, precision = parsed[0], parsed[1]
+            # Get rid of time, useless
+            timestamp = timestamp.split('T')[0]
+            wikidata[qid][keys.BIODATA].add((pid, f'{timestamp}/{precision}'))
+        else:
+            wikidata[qid][keys.BIODATA].add((pid, parsed))
+        total += 1
 
     LOGGER.info('Got %d statements', total)
 
 
-def gather_wikidata_links(wikidata: dict, url_pids: set,
-                          ext_id_pids_to_urls: defaultdict):
-    """
-    Enriches wikidata dictionary with url information.
-    Retrieves information trough :func:`soweego.api_requests.get_links`
-
-    :param wikidata: Dictionary {'QID':{'tid':'TID'}}
-    :param url_pids: set of
-    PIDs defining the URLs assertions to download
-    :param ext_id_pids_to_urls:
-    dictionary {'PID': {'URL FORMATTER': 'FORMATTER REGEX'}}
-    """
+def gather_wikidata_links(wikidata, url_pids, ext_id_pids_to_urls):
     LOGGER.info(
-        'Gathering Wikidata sitelinks, third-party links, and external '
-        'identifier links from the Web API. This will take a while ... '
+        'Gathering Wikidata sitelinks, third-party links, and external identifier links from the Web API. This will take a while ...'
     )
     total = 0
     for generator in api_requests.get_links(
-            wikidata.keys(), url_pids, ext_id_pids_to_urls
+        wikidata.keys(), url_pids, ext_id_pids_to_urls
     ):
         for qid, url in generator:
             if not wikidata[qid].get(keys.LINKS):
                 wikidata[qid][keys.LINKS] = set()
             wikidata[qid][keys.LINKS].add(url)
             total += 1
-
     LOGGER.info('Got %d links', total)
 
 
 def gather_relevant_pids():
     url_pids = set()
-    for result in sparql_queries.url_pids_query():
+    for result in sparql_queries.url_pids():
         url_pids.add(result)
     ext_id_pids_to_urls = defaultdict(dict)
-    for result in sparql_queries.external_id_pids_and_urls_query():
+    for result in sparql_queries.external_id_pids_and_urls():
         for pid, formatters in result.items():
             for formatter_url, formatter_regex in formatters.items():
                 if formatter_regex:
@@ -541,17 +466,14 @@ def gather_relevant_pids():
                         compiled_regex = re.compile(formatter_regex)
                     except re.error:
                         LOGGER.debug(
-                            "Using 'regex' third-party library. Formatter "
-                            "regex not supported by the 're' standard "
-                            "library: %s",
+                            "Using 'regex' third-party library. Formatter regex not supported by the 're' standard library: %s",
                             formatter_regex,
                         )
                         try:
                             compiled_regex = regex.compile(formatter_regex)
                         except regex.error:
                             LOGGER.debug(
-                                "Giving up. Formatter regex not supported by "
-                                "'regex': %s",
+                                "Giving up. Formatter regex not supported by 'regex': %s",
                                 formatter_regex,
                             )
                             compiled_regex = None
@@ -569,10 +491,10 @@ def gather_target_ids(entity, catalog, catalog_pid, aggregated):
     query_type = keys.IDENTIFIER, constants.SUPPORTED_ENTITIES.get(entity)
 
     for qid, target_id in sparql_queries.run_query(
-            query_type,
-            target_database.get_class_qid(catalog, entity),
-            catalog_pid,
-            0,
+        query_type,
+        target_database.get_class_qid(catalog, entity),
+        catalog_pid,
+        0,
     ):
         if not aggregated.get(qid):
             aggregated[qid] = {keys.TID: set()}

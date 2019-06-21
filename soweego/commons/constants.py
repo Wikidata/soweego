@@ -236,7 +236,7 @@ COMPLETE_TARGET_CHUNKS = 'samples/%s_%s_%s_complete_target_chunks.pkl.gz'
 COMPLETE_POSITIVE_SAMPLES_INDEX = (
     'samples/%s_%s_%s_complete_positive_samples_index.pkl.gz'
 )
-WIKIDATA_API_SESSION = 'wiki_api_session.pkl'
+WIKIDATA_API_SESSION = 'wd_api_session.pkl'
 WORKS_BY_PEOPLE_STATEMENTS = '%s_works_by_%s_statements.csv'
 TENSOR_BOARD = 'tensor_board/'
 

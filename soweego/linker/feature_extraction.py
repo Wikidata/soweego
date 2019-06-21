@@ -417,8 +417,8 @@ class OccupationQidSet(BaseCompareFeature):
             else:
 
                 # get subclasses and superclasses
-                subclasses = sparql_queries.get_subclasses_of_qid(qid)
-                superclasses = sparql_queries.get_superclasses_of_qid(qid)
+                subclasses = sparql_queries.subclasses_of(qid)
+                superclasses = sparql_queries.superclasses_of(qid)
 
                 joined = subclasses | superclasses
 

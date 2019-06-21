@@ -2,6 +2,21 @@
 # -*- coding: utf-8 -*-
 
 """Supervised linking."""
+import logging
+import os
+import re
+from typing import Iterator
+
+import click
+import pandas as pd
+import recordlinkage as rl
+from keras import backend as K
+from numpy import full, nan
+from sklearn.externals import joblib
+
+from soweego.commons import constants, data_gathering, keys, target_database
+from soweego.ingestor import wikidata_bot
+from soweego.linker import blocking, classifiers, neural_networks, workflow
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -9,21 +24,6 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
-import logging
-import os
-import re
-
-import click
-import pandas as pd
-import recordlinkage as rl
-from keras import backend as K
-from numpy import full, nan
-from pandas import DataFrame
-from sklearn.externals import joblib
-
-from soweego.commons import constants, data_gathering, keys, target_database
-from soweego.ingestor import wikidata_bot
-from soweego.linker import blocking, classifiers, neural_networks, workflow
 
 LOGGER = logging.getLogger(__name__)
 
@@ -91,10 +91,13 @@ def cli(
         LOGGER.critical('File does not exist - ' + err_msg)
         raise FileNotFoundError(err_msg)
 
-    # If results path exists then delete it. If not new we results
+    # If results path exists then delete it. If not, new we results
     # will just be appended to an old results file.
     if os.path.isfile(results_path):
         os.remove(results_path)
+
+    # ensure we have a dir to place the results
+    os.makedirs(os.path.dirname(results_path), exist_ok=True)
 
     rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
 
@@ -104,7 +107,6 @@ def cli(
         if upload:
             _upload(chunk, target, target_type, sandbox)
 
-        os.makedirs(os.path.dirname(results_path), exist_ok=True)
         chunk.to_csv(results_path, mode='a', header=False)
 
     K.clear_session()
@@ -118,179 +120,84 @@ def _upload(predictions, catalog, entity, sandbox):
     wikidata_bot.add_identifiers(links, catalog, entity, sandbox)
 
 
-def execute(catalog, entity, model, name_rule, threshold, dir_io):
-    complete_fv_path = os.path.join(
-        dir_io,
-        constants.COMPLETE_FEATURE_VECTORS
-        % (catalog, entity, 'classification'),
-    )
-    complete_wd_path = os.path.join(
-        dir_io,
-        constants.COMPLETE_WIKIDATA_CHUNKS
-        % (catalog, entity, 'classification'),
-    )
-    complete_target_path = os.path.join(
-        dir_io,
-        constants.COMPLETE_TARGET_CHUNKS % (catalog, entity, 'classification'),
-    )
-
+def execute(
+    catalog: str,
+    entity: str,
+    model: str,
+    name_rule: bool,
+    threshold: float,
+    dir_io: str,
+) -> Iterator[pd.Series]:
     classifier = joblib.load(model)
 
-    # check if files exists for these paths. If yes then just
-    # preprocess them in chunks instead of recomputing
-    if all(
-        os.path.isfile(p)
-        for p in [complete_fv_path, complete_wd_path, complete_target_path]
-    ):
+    wd_reader = workflow.build_wikidata(
+        'classification', catalog, entity, dir_io
+    )
+    wd_generator = workflow.preprocess_wikidata('classification', wd_reader)
 
-        LOGGER.info(
-            'Using previously cached version of the classification dataset'
+    for i, wd_chunk in enumerate(wd_generator, 1):
+        # TODO Also consider blocking on URLs
+
+        samples = blocking.full_text_query_block(
+            'classification',
+            catalog,
+            wd_chunk[keys.NAME_TOKENS],
+            i,
+            target_database.get_main_entity(catalog, entity),
+            dir_io,
         )
 
-        fvectors = pd.read_pickle(complete_fv_path)
-        wd_chunks = pd.read_pickle(complete_wd_path)
-        target_chunks = pd.read_pickle(complete_target_path)
+        # Build target chunk based on samples
+        target_reader = data_gathering.gather_target_dataset(
+            'classification',
+            entity,
+            catalog,
+            set(samples.get_level_values(keys.TID)),
+        )
 
-        # remove duplicate entries from concatenated target_chunks
-        target_chunks = target_chunks[~target_chunks.index.duplicated()]
+        # Preprocess target chunk
+        target_chunk = workflow.preprocess_target(
+            'classification', target_reader
+        )
 
-        _add_missing_feature_columns(classifier, fvectors)
+        # get features
+        features_path = os.path.join(
+            dir_io, constants.FEATURES % (catalog, entity, 'classification', i)
+        )
+
+        feature_vectors = workflow.extract_features(
+            samples, wd_chunk, target_chunk, features_path
+        )
+
+        _add_missing_feature_columns(classifier, feature_vectors)
 
         predictions = (
-            classifier.predict(fvectors)
+            classifier.predict(feature_vectors)
             if isinstance(classifier, rl.SVMClassifier)
-            else classifier.prob(fvectors)
+            else classifier.prob(feature_vectors)
         )
 
+        # See https://stackoverflow.com/a/18317089/10719765
         if name_rule:
             LOGGER.info('Applying full names rule ...')
-            predictions = DataFrame(predictions).apply(
+            predictions = pd.DataFrame(predictions).apply(
                 _zero_when_different_names,
                 axis=1,
-                args=(wd_chunks, target_chunks),
+                args=(wd_chunk, target_chunk),
             )
 
-        if target_chunks.get(keys.URL) is not None:
-            predictions = DataFrame(predictions).apply(
-                _one_when_wikidata_link_correct, axis=1, args=(target_chunks,)
+        if target_chunk.get(keys.URL) is not None:
+            predictions = pd.DataFrame(predictions).apply(
+                _one_when_wikidata_link_correct, axis=1, args=(target_chunk,)
             )
+
+        LOGGER.info('Chunk %d classified', i)
 
         # get all 'confident' predictions
         above_threshold = predictions[predictions >= threshold]
 
         # yield only those predictions which are not duplicate
         yield above_threshold[~above_threshold.index.duplicated()]
-
-    else:
-
-        LOGGER.info(
-            'Cached version of the classification dataset not found. '
-            'Creating it from scratch.'
-        )
-
-        wd_reader = workflow.build_wikidata(
-            'classification', catalog, entity, dir_io
-        )
-        wd_generator = workflow.preprocess_wikidata('classification', wd_reader)
-
-        all_feature_vectors, all_wd_chunks, all_target_chunks = None, None, None
-
-        for i, wd_chunk in enumerate(wd_generator, 1):
-            # TODO Also consider blocking on URLs
-
-            samples = blocking.full_text_query_block(
-                'classification',
-                catalog,
-                wd_chunk[keys.NAME_TOKENS],
-                i,
-                target_database.get_main_entity(catalog, entity),
-                dir_io,
-            )
-
-            # Build target chunk based on samples
-            target_reader = data_gathering.gather_target_dataset(
-                'classification',
-                entity,
-                catalog,
-                set(samples.get_level_values(keys.TID)),
-            )
-
-            # Preprocess target chunk
-            target_chunk = workflow.preprocess_target(
-                'classification', target_reader
-            )
-
-            features_path = os.path.join(
-                dir_io,
-                constants.FEATURES % (catalog, entity, 'classification', i),
-            )
-
-            feature_vectors = workflow.extract_features(
-                samples, wd_chunk, target_chunk, features_path
-            )
-
-            # keep features before '_add_missing_feature_columns', which may
-            # change depending on the classifier.
-            # we keep all as a single pd.Dataframe
-
-            # if one is None then all are None
-            if all_feature_vectors is None:
-
-                # if they're None set their values to be
-                # the pd.Dataframe corresponding to the current chunk
-                all_feature_vectors = feature_vectors
-                all_wd_chunks = wd_chunk
-                all_target_chunks = target_chunk
-
-            else:
-                # if they're not None then just add the new chunk data
-                # to the end
-                all_feature_vectors = pd.concat(
-                    [all_feature_vectors, feature_vectors], sort=False
-                )
-
-                all_wd_chunks = pd.concat([all_wd_chunks, wd_chunk], sort=False)
-
-                all_target_chunks = pd.concat(
-                    [all_target_chunks, target_chunk], sort=False
-                )
-
-            _add_missing_feature_columns(classifier, feature_vectors)
-
-            predictions = (
-                classifier.predict(feature_vectors)
-                if isinstance(classifier, rl.SVMClassifier)
-                else classifier.prob(feature_vectors)
-            )
-
-            # See https://stackoverflow.com/a/18317089/10719765
-            if name_rule:
-                LOGGER.info('Applying full names rule ...')
-                predictions = DataFrame(predictions).apply(
-                    _zero_when_different_names,
-                    axis=1,
-                    args=(wd_chunk, target_chunk),
-                )
-
-            if target_chunk.get(keys.URL) is not None:
-                predictions = DataFrame(predictions).apply(
-                    _one_when_wikidata_link_correct,
-                    axis=1,
-                    args=(target_chunk,),
-                )
-
-            LOGGER.info('Chunk %d classified', i)
-
-            # get all 'confident' predictions
-            above_threshold = predictions[predictions >= threshold]
-
-            # yield only those predictions which are not duplicate
-            yield above_threshold[~above_threshold.index.duplicated()]
-
-        # dump all processed chunks as pickled files
-        all_feature_vectors.to_pickle(complete_fv_path)
-        all_wd_chunks.to_pickle(complete_wd_path)
-        all_target_chunks.to_pickle(complete_target_path)
 
 
 def _zero_when_different_names(prediction, wikidata, target):
@@ -310,7 +217,6 @@ def _zero_when_different_names(prediction, wikidata, target):
 
 
 def _one_when_wikidata_link_correct(prediction, target):
-
     qid, tid = prediction.name
 
     urls = target.loc[tid][keys.URL]

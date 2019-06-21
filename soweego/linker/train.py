@@ -9,16 +9,15 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
-import gzip
 import logging
 import os
-import pickle
 import sys
 
 import click
 import pandas as pd
 from keras import backend as K
 from pandas import MultiIndex, concat
+from typing import Tuple
 from sklearn.externals import joblib
 from sklearn.model_selection import GridSearchCV
 
@@ -132,40 +131,31 @@ def _grid_search(
     return grid_search.best_params_
 
 
-def build_dataset(goal, catalog, entity, dir_io):
-    feature_vectors_fpath = os.path.join(
-        dir_io, constants.COMPLETE_FEATURE_VECTORS % (catalog, entity, goal)
-    )
-    positive_samples_index_fpath = os.path.join(
-        dir_io,
-        constants.COMPLETE_POSITIVE_SAMPLES_INDEX % (catalog, entity, goal),
-    )
+def build_dataset(
+    goal: str, catalog: str, entity: str, dir_io: str
+) -> Tuple[pd.DataFrame, pd.MultiIndex]:
+    """
+    Creates a dataset for `goal`.
 
-    # check if files exists for these paths. If yes then just return them
-    # instead of recomputing
-    if all(
-        os.path.isfile(p)
-        for p in [feature_vectors_fpath, positive_samples_index_fpath]
-    ):
-        LOGGER.info('Using cached version of the %s set', goal)
-
-        feature_vectors = pd.read_pickle(feature_vectors_fpath)
-
-        positive_samples_index = pickle.load(
-            gzip.open(positive_samples_index_fpath, 'rb')
-        )
-
-        return feature_vectors, positive_samples_index
+    :param goal: Can be `evaluate` or `train`. Specifies for what end we want
+        to use the dataset.
+    :param catalog: The external catalog we want to get data for.
+    :param entity: The entity in the specified catalog we want to get data for.
+    :param dir_io: Input/Output directory where working files will be saved.
+    :return: Tuple where the first element is a :class:`pandas.DataFrame` representing
+        the features extracted for a given (*QID*, *TID*) pair. The second element of the
+        Tuple is a :class:`pandas.MultiIndex`, which represents which (*QID*, *TID*) pairs
+        are positive samples (so, which pairs are really the same entity)
+    """
 
     wd_reader = workflow.build_wikidata(goal, catalog, entity, dir_io)
     wd_generator = workflow.preprocess_wikidata(goal, wd_reader)
 
     positive_samples, feature_vectors = None, None
 
-    # flag that indicates we need to add a header the first time we write
-    # to working file
     for i, wd_chunk in enumerate(wd_generator, 1):
-        # Positive samples from Wikidata
+        # Concatenate new positive samples from Wikidata
+        # to our current collection
         if positive_samples is None:
             positive_samples = wd_chunk[keys.TID]
         else:
@@ -189,6 +179,7 @@ def build_dataset(goal, catalog, entity, dir_io):
         # Preprocess target chunk
         target_chunk = workflow.preprocess_target(goal, target_reader)
 
+        # Get features
         features_path = os.path.join(
             dir_io, constants.FEATURES % (catalog, entity, goal, i)
         )
@@ -197,26 +188,18 @@ def build_dataset(goal, catalog, entity, dir_io):
             all_samples, wd_chunk, target_chunk, features_path
         )
 
+        # Concatenate current feature fectors to our collection
         if feature_vectors is None:
             feature_vectors = chunk_fv
         else:
             feature_vectors = concat([feature_vectors, chunk_fv], sort=False)
 
-    # positive_samples = concat(positive_samples)
     positive_samples_index = MultiIndex.from_tuples(
         zip(positive_samples.index, positive_samples),
         names=[keys.QID, keys.TID],
     )
 
     feature_vectors = feature_vectors.fillna(constants.FEATURE_MISSING_VALUE)
-
-    # dump final data so we can reuse it next time
-    feature_vectors.to_pickle(feature_vectors_fpath)
-
-    # MultiIndex has no `to_pickle` method, so we pickle it in the usual way
-    pickle.dump(
-        positive_samples_index, gzip.open(positive_samples_index_fpath, 'wb')
-    )
 
     LOGGER.info('Built positive samples index from Wikidata')
     return feature_vectors, positive_samples_index
