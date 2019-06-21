@@ -9,10 +9,8 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
-import gzip
 import logging
 import os
-import pickle
 import sys
 
 import click
@@ -132,7 +130,9 @@ def _grid_search(
     return grid_search.best_params_
 
 
-def build_dataset(goal: str, catalog: str, entity: str, dir_io: str) -> Tuple[pd.DataFrame, pd.MultiIndex]:
+def build_dataset(
+    goal: str, catalog: str, entity: str, dir_io: str
+) -> Tuple[pd.DataFrame, pd.MultiIndex]:
     """
     Creates a dataset for `goal`.
 

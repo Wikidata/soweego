@@ -2,7 +2,21 @@
 # -*- coding: utf-8 -*-
 
 """Supervised linking."""
+import logging
+import os
+import re
 from typing import Generator
+
+import click
+import pandas as pd
+import recordlinkage as rl
+from keras import backend as K
+from numpy import full, nan
+from sklearn.externals import joblib
+
+from soweego.commons import constants, data_gathering, keys, target_database
+from soweego.ingestor import wikidata_bot
+from soweego.linker import blocking, classifiers, neural_networks, workflow
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -10,20 +24,6 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
-import logging
-import os
-import re
-
-import click
-import recordlinkage as rl
-from keras import backend as K
-from numpy import full, nan
-import pandas as pd
-from sklearn.externals import joblib
-
-from soweego.commons import constants, data_gathering, keys, target_database
-from soweego.ingestor import wikidata_bot
-from soweego.linker import blocking, classifiers, neural_networks, workflow
 
 LOGGER = logging.getLogger(__name__)
 
@@ -65,14 +65,14 @@ LOGGER = logging.getLogger(__name__)
     help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER,
 )
 def cli(
-        classifier,
-        target,
-        target_type,
-        name_rule,
-        upload,
-        sandbox,
-        threshold,
-        dir_io,
+    classifier,
+    target,
+    target_type,
+    name_rule,
+    upload,
+    sandbox,
+    threshold,
+    dir_io,
 ):
     """Run a probabilistic linker."""
 
@@ -102,7 +102,7 @@ def cli(
     rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
 
     for chunk in execute(
-            target, target_type, model_path, name_rule, threshold, dir_io
+        target, target_type, model_path, name_rule, threshold, dir_io
     ):
         if upload:
             _upload(chunk, target, target_type, sandbox)
@@ -120,8 +120,14 @@ def _upload(predictions, catalog, entity, sandbox):
     wikidata_bot.add_identifiers(links, catalog, entity, sandbox)
 
 
-def execute(catalog: str, entity: str, model: str, name_rule: bool, threshold: float, dir_io: str) -> Generator[
-    pd.Series, None, None]:
+def execute(
+    catalog: str,
+    entity: str,
+    model: str,
+    name_rule: bool,
+    threshold: float,
+    dir_io: str,
+) -> Generator[pd.Series, None, None]:
     classifier = joblib.load(model)
 
     wd_reader = workflow.build_wikidata(
@@ -156,8 +162,7 @@ def execute(catalog: str, entity: str, model: str, name_rule: bool, threshold: f
 
         # get features
         features_path = os.path.join(
-            dir_io,
-            constants.FEATURES % (catalog, entity, 'classification', i),
+            dir_io, constants.FEATURES % (catalog, entity, 'classification', i)
         )
 
         feature_vectors = workflow.extract_features(
@@ -183,9 +188,7 @@ def execute(catalog: str, entity: str, model: str, name_rule: bool, threshold: f
 
         if target_chunk.get(keys.URL) is not None:
             predictions = pd.DataFrame(predictions).apply(
-                _one_when_wikidata_link_correct,
-                axis=1,
-                args=(target_chunk,),
+                _one_when_wikidata_link_correct, axis=1, args=(target_chunk,)
             )
 
         LOGGER.info('Chunk %d classified', i)
@@ -241,11 +244,11 @@ def _add_missing_feature_columns(classifier, feature_vectors):
         expected_features = classifier.kernel.coef_.shape[1]
 
     elif isinstance(
-            classifier,
-            (
-                    neural_networks.SingleLayerPerceptron,
-                    neural_networks.MultiLayerPerceptron,
-            ),
+        classifier,
+        (
+            neural_networks.SingleLayerPerceptron,
+            neural_networks.MultiLayerPerceptron,
+        ),
     ):
         expected_features = classifier.kernel.input_shape[1]
 
