@@ -129,7 +129,7 @@ def _run_average(classifier, catalog, entity, k_folds, kwargs, performance_out,
                  predictions_out, dir_io):
     LOGGER.info('Starting average evaluation over %d folds ...', k_folds)
 
-    predictions, p_mean, p_std, r_mean, r_std, fscore_mean, fscore_std = average_k_fold(
+    predictions, p_mean, p_std, r_mean, r_std, fscore_mean, fscore_std = _average_k_fold(
         constants.CLASSIFIERS[classifier],
         catalog,
         entity,
@@ -181,7 +181,7 @@ def _run_single(classifier, catalog, entity, k_folds, kwargs, performance_out,
         recall,
         fscore,
         confusion_matrix,
-    ) = single_k_fold(
+    ) = _single_k_fold(
         constants.CLASSIFIERS[classifier],
         catalog,
         entity,
@@ -228,7 +228,7 @@ def _run_nested(classifier, catalog, entity, k_folds, metric, kwargs,
     clf = constants.CLASSIFIERS[classifier]
     param_grid = constants.PARAMETER_GRIDS[clf]
 
-    result = nested_k_fold_with_grid_search(
+    result = _nested_k_fold_with_grid_search(
         clf,
         param_grid,
         catalog,
@@ -284,7 +284,7 @@ def _compute_performance(test_index, predictions, test_vectors_size):
     return precision, recall, fscore, confusion_matrix
 
 
-def nested_k_fold_with_grid_search(
+def _nested_k_fold_with_grid_search(
     classifier, param_grid, catalog, entity, k, scoring, dir_io, **kwargs
 ):
     if classifier in (
@@ -331,7 +331,7 @@ def nested_k_fold_with_grid_search(
     return result
 
 
-def average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
+def _average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
     predictions, precisions, recalls, fscores = None, [], [], []
     dataset, positive_samples_index = train.build_dataset(
         'training', catalog, entity, dir_io
@@ -375,7 +375,7 @@ def average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
     )
 
 
-def single_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
+def _single_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
     predictions, test_set = None, []
     dataset, positive_samples_index = train.build_dataset(
         'training', catalog, entity, dir_io
@@ -406,9 +406,3 @@ def single_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
             positive_samples_index & test_set.index, predictions, len(test_set)
         ),
     )
-
-
-def random_split(wd_chunk, target_chunk):
-    wd_train, wd_test = train_test_split(wd_chunk, test_size=0.33)
-    target_train, target_test = train_test_split(target_chunk, test_size=0.33)
-    return wd_train, target_train, wd_test, target_test
