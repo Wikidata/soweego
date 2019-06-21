@@ -407,35 +407,33 @@ def gather_wikidata_biodata(wikidata):
         'Gathering Wikidata birth/death dates/places and gender data from the Web API. This will take a while ...'
     )
     total = 0
-    # Generator of generators
-    for entity in api_requests.get_biodata(wikidata.keys()):
-        for qid, pid, value in entity:
-            parsed = api_requests.parse_wikidata_value(value)
-            if not wikidata[qid].get(keys.BIODATA):
-                wikidata[qid][keys.BIODATA] = set()
-            # `parsed` is a set of labels if the value is a QID
-            # see api_requests.parse_wikidata_value
-            if isinstance(parsed, set):
-                # The English label for gender should be enough
-                gender = parsed & {keys.MALE, keys.FEMALE}
-                if gender:
-                    wikidata[qid][keys.BIODATA].add((pid, gender.pop()))
-                else:
-                    # Add a (pid, label) tuple for each element
-                    # for better recall
-                    for element in parsed:
-                        wikidata[qid][keys.BIODATA].add((pid, element))
-            # `parsed` is a tuple (timestamp, precision) id the value is a date
-            elif isinstance(parsed, tuple):
-                timestamp, precision = parsed[0], parsed[1]
-                # Get rid of time, useless
-                timestamp = timestamp.split('T')[0]
-                wikidata[qid][keys.BIODATA].add(
-                    (pid, f'{timestamp}/{precision}')
-                )
+
+    for qid, pid, value in api_requests.get_biodata(wikidata.keys()):
+        parsed = api_requests.parse_value(value)
+        if not wikidata[qid].get(keys.BIODATA):
+            wikidata[qid][keys.BIODATA] = set()
+        # `parsed` is a set of labels if the value is a QID
+        # see api_requests.parse_value
+        if isinstance(parsed, set):
+            # The English label for gender should be enough
+            gender = parsed & {keys.MALE, keys.FEMALE}
+            if gender:
+                wikidata[qid][keys.BIODATA].add((pid, gender.pop()))
             else:
-                wikidata[qid][keys.BIODATA].add((pid, parsed))
-            total += 1
+                # Add a (pid, label) tuple for each element
+                # for better recall
+                for element in parsed:
+                    wikidata[qid][keys.BIODATA].add((pid, element))
+        # `parsed` is a tuple (timestamp, precision) id the value is a date
+        elif isinstance(parsed, tuple):
+            timestamp, precision = parsed[0], parsed[1]
+            # Get rid of time, useless
+            timestamp = timestamp.split('T')[0]
+            wikidata[qid][keys.BIODATA].add((pid, f'{timestamp}/{precision}'))
+        else:
+            wikidata[qid][keys.BIODATA].add((pid, parsed))
+        total += 1
+
     LOGGER.info('Got %d statements', total)
 
 
@@ -457,10 +455,10 @@ def gather_wikidata_links(wikidata, url_pids, ext_id_pids_to_urls):
 
 def gather_relevant_pids():
     url_pids = set()
-    for result in sparql_queries.url_pids_query():
+    for result in sparql_queries.url_pids():
         url_pids.add(result)
     ext_id_pids_to_urls = defaultdict(dict)
-    for result in sparql_queries.external_id_pids_and_urls_query():
+    for result in sparql_queries.external_id_pids_and_urls():
         for pid, formatters in result.items():
             for formatter_url, formatter_regex in formatters.items():
                 if formatter_regex:

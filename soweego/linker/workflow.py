@@ -95,8 +95,8 @@ def build_wikidata(
                 qids,
                 url_pids,
                 ext_id_pids_to_urls,
-                wd_io,
                 qids_and_tids,
+                wd_io,
             )
 
     wd_df_reader = pd.read_json(wd_io_path, lines=True, chunksize=1000)
