@@ -45,7 +45,7 @@ from soweego.wikidata import api_requests, vocabulary
 LOGGER = logging.getLogger(__name__)
 
 
-def build_wikidata(goal, catalog, entity, dir_io):
+def build_wikidata(goal: str, catalog: str, entity: str, dir_io: str) -> JsonReader:
     if goal == 'training':
         wd_io_path = os.path.join(
             dir_io, constants.WD_TRAINING_SET % (catalog, entity)
@@ -150,7 +150,7 @@ def _get_tids(qids_and_tids):
 
 
 def preprocess(
-    goal: str, wikidata_reader: JsonReader, target_reader: JsonReader
+        goal: str, wikidata_reader: JsonReader, target_reader: JsonReader
 ) -> Tuple[
     Generator[pd.DataFrame, None, None], Generator[pd.DataFrame, None, None]
 ]:
@@ -162,10 +162,10 @@ def preprocess(
 
 
 def extract_features(
-    candidate_pairs: pd.MultiIndex,
-    wikidata: pd.DataFrame,
-    target: pd.DataFrame,
-    path_io: str,
+        candidate_pairs: pd.MultiIndex,
+        wikidata: pd.DataFrame,
+        target: pd.DataFrame,
+        path_io: str,
 ) -> pd.DataFrame:
     LOGGER.info('Extracting features ...')
 
@@ -308,7 +308,7 @@ def init_model(classifier, *args, **kwargs):
     return model
 
 
-def preprocess_wikidata(goal, wikidata_reader):
+def preprocess_wikidata(goal: str, wikidata_reader: JsonReader) -> Generator[pd.DataFrame, None, None]:
     handle_goal(goal)
 
     LOGGER.info('Preprocessing Wikidata ...')
