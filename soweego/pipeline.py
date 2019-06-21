@@ -12,7 +12,7 @@ from soweego.commons import target_database
 from soweego.commons.db_manager import DBManager
 from soweego.importer.importer import check_links_cli as validate_links
 from soweego.importer.importer import import_cli
-from soweego.linker import classify, evaluate, train
+from soweego.linker import link, evaluate, train
 from soweego.validator.checks import bio_cli, dead_ids_cli, links_cli
 
 LOGGER = logging.getLogger(__name__)
@@ -99,7 +99,7 @@ def _linker(target: str, upload: bool):
         _invoke_no_exit(evaluate.cli, ['slp', target, target_type])
         _invoke_no_exit(train.cli, ['slp', target, target_type])
         _invoke_no_exit(
-            classify.cli, ['slp', target, target_type, upload_option]
+            link.cli, ['slp', target, target_type, upload_option]
         )
 
 
