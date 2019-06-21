@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 """Training set construction for supervised linking."""
-from typing import Dict, Tuple
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -17,7 +16,8 @@ import sys
 import click
 import pandas as pd
 from keras import backend as K
-from pandas import concat, MultiIndex
+from pandas import MultiIndex, concat
+from typing import Dict, Tuple
 from sklearn.externals import joblib
 from sklearn.model_selection import GridSearchCV
 
@@ -156,7 +156,9 @@ def _grid_search(
     return grid_search.best_params_
 
 
-def build_dataset(goal: str, catalog: str, entity: str, dir_io: str) -> Tuple[pd.DataFrame, pd.MultiIndex]:
+def build_dataset(
+    goal: str, catalog: str, entity: str, dir_io: str
+) -> Tuple[pd.DataFrame, pd.MultiIndex]:
     """
     Creates a dataset for `goal`.
 

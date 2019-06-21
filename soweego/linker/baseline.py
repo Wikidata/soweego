@@ -109,8 +109,8 @@ def cli(
                 qids,
                 url_pids,
                 ext_id_pids_to_urls,
-                wd_io,
                 None,
+                wd_io,
             )
             LOGGER.info("Wikidata stream stored in %s" % wd_io_path)
 

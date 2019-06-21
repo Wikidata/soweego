@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 """Supervised linking."""
-from typing import Generator
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -13,12 +12,13 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import logging
 import os
 import re
+from typing import Iterator
 
 import click
+import pandas as pd
 import recordlinkage as rl
 from keras import backend as K
 from numpy import full, nan
-import pandas as pd
 from sklearn.externals import joblib
 
 from soweego.commons import constants, data_gathering, keys, target_database
@@ -120,12 +120,14 @@ def _upload(predictions, catalog, entity, sandbox):
     wikidata_bot.add_identifiers(links, catalog, entity, sandbox)
 
 
-def execute(catalog: str,
-            entity: str,
-            model: str,
-            name_rule: bool,
-            threshold: float,
-            dir_io: str) -> Generator[pd.Series, None, None]:
+def execute(
+    catalog: str,
+    entity: str,
+    model: str,
+    name_rule: bool,
+    threshold: float,
+    dir_io: str,
+) -> Iterator[pd.Series]:
     classifier = joblib.load(model)
 
     wd_reader = workflow.build_wikidata(
@@ -160,8 +162,7 @@ def execute(catalog: str,
 
         # get features
         features_path = os.path.join(
-            dir_io,
-            constants.FEATURES % (catalog, entity, 'classification', i),
+            dir_io, constants.FEATURES % (catalog, entity, 'classification', i)
         )
 
         feature_vectors = workflow.extract_features(
@@ -170,14 +171,12 @@ def execute(catalog: str,
 
         _add_missing_feature_columns(classifier, feature_vectors)
 
-        predictions: pd.Series = (
+        predictions = (
             classifier.predict(feature_vectors)
             if isinstance(classifier, rl.SVMClassifier)
             else classifier.prob(feature_vectors)
         )
 
-        # If `name_rule==True` then we will zero all predictions
-        # for pairs whose names are not exactly the same
         # See https://stackoverflow.com/a/18317089/10719765
         if name_rule:
             LOGGER.info('Applying full names rule ...')
@@ -187,15 +186,9 @@ def execute(catalog: str,
                 args=(wd_chunk, target_chunk),
             )
 
-        # Check if any of the entities coming from the target catalog
-        # have a wikidata URL. If yes then we already know to which
-        # entity they should be mapped. Raise the prediction to `1`
-        # if the mapping correct
         if target_chunk.get(keys.URL) is not None:
             predictions = pd.DataFrame(predictions).apply(
-                _one_when_wikidata_link_correct,
-                axis=1,
-                args=(target_chunk,),
+                _one_when_wikidata_link_correct, axis=1, args=(target_chunk,)
             )
 
         LOGGER.info('Chunk %d classified', i)
@@ -207,7 +200,7 @@ def execute(catalog: str,
         yield above_threshold[~above_threshold.index.duplicated()]
 
 
-def _zero_when_different_names(prediction: pd.Series, wikidata: pd.DataFrame, target: pd.DataFrame) -> float:
+def _zero_when_different_names(prediction, wikidata, target):
     wd_names, target_names = set(), set()
     qid, tid = prediction.name
     for column in constants.NAME_FIELDS:
@@ -223,7 +216,7 @@ def _zero_when_different_names(prediction: pd.Series, wikidata: pd.DataFrame, ta
     return 0.0 if wd_names.isdisjoint(target_names) else prediction[0]
 
 
-def _one_when_wikidata_link_correct(prediction: pd.DataFrame, target: pd.DataFrame) -> float:
+def _one_when_wikidata_link_correct(prediction, target):
     qid, tid = prediction.name
 
     urls = target.loc[tid][keys.URL]
