@@ -153,9 +153,7 @@ def _get_tids(qids_and_tids):
 
 def preprocess(
     goal: str, wikidata_reader: JsonReader, target_reader: JsonReader
-) -> Tuple[
-    Iterator[pd.DataFrame], Iterator[pd.DataFrame]
-]:
+) -> Tuple[Iterator[pd.DataFrame], Iterator[pd.DataFrame]]:
     handle_goal(goal)
     return (
         preprocess_wikidata(goal, wikidata_reader),
