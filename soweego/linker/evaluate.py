@@ -21,11 +21,7 @@ from keras import backend as K
 from numpy import mean, std
 from pandas import concat
 from sklearn.externals import joblib
-from sklearn.model_selection import (
-    GridSearchCV,
-    StratifiedKFold,
-    train_test_split,
-)
+from sklearn.model_selection import GridSearchCV, StratifiedKFold
 
 from soweego.commons import constants, keys, target_database, utils
 from soweego.linker import train, workflow
@@ -215,8 +211,9 @@ def _run_nested(classifier, catalog, entity, k_folds, metric, kwargs,
         'please be patient ...'
     )
     LOGGER.info(
-        f'Starting nested {k_folds}-fold cross-validation with '
-        f'hyperparameters tuning via grid search ...',
+        'Starting nested %d-fold cross-validation with '
+        'hyperparameters tuning via grid search ...',
+        k_folds
     )
 
     clf = constants.CLASSIFIERS[classifier]
@@ -309,16 +306,20 @@ def _nested_k_fold_with_grid_search(
         cv=inner_k_fold,
         verbose=2,
     )
+
     dataset = dataset.to_numpy()
 
     for train_index, test_index in outer_k_fold.split(dataset, target):
         # Run grid search
         grid_search.fit(dataset[train_index], target[train_index])
+
         # Grid search best score is the train score
         result[f'train_{scoring}'].append(grid_search.best_score_)
+
         # Let grid search compute the test score
         test_score = grid_search.score(dataset[test_index], target[test_index])
         result[f'test_{scoring}'].append(test_score)
+
         best_model = grid_search.best_estimator_
         result['best_models'].append(best_model)
 
@@ -326,7 +327,7 @@ def _nested_k_fold_with_grid_search(
 
 
 def _average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
-    predictions, precisions, recalls, fscores = None, [], [], []
+    predictions, precisions, recalls, f_scores = None, [], [], []
     dataset, positive_samples_index = train.build_dataset(
         'training', catalog, entity, dir_io
     )
@@ -343,7 +344,8 @@ def _average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
         model.fit(training, positive_samples_index & training.index)
 
         preds = model.predict(test)
-        K.clear_session()
+
+        K.clear_session()  # Free memory
 
         p, r, f, _ = _compute_performance(
             positive_samples_index & test.index, preds, len(test)
@@ -356,7 +358,7 @@ def _average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
 
         precisions.append(p)
         recalls.append(r)
-        fscores.append(f)
+        f_scores.append(f)
 
     return (
         predictions,
@@ -364,8 +366,8 @@ def _average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
         std(precisions),
         mean(recalls),
         std(recalls),
-        mean(fscores),
-        std(fscores),
+        mean(f_scores),
+        std(f_scores),
     )
 
 
@@ -381,19 +383,23 @@ def _single_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
     for train_index, test_index in k_fold.split(
         dataset, binary_target_variables
     ):
-
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
         test_set.append(test)
 
         model = workflow.init_model(classifier, **kwargs)
         model.fit(training, positive_samples_index & training.index)
 
+        preds = model.predict(test)
+
+        K.clear_session()  # Free memory
+
         if predictions is None:
-            predictions = model.predict(test)
+            predictions = preds
         else:
-            predictions |= model.predict(test)
+            predictions |= preds
 
     test_set = concat(test_set)
+
     return (
         predictions,
         _compute_performance(
