@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Evaluation of supervised linking algorithms."""
+"""Evaluate supervised linking algorithms."""
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
