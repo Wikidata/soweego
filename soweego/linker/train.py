@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Training set construction for supervised linking."""
+"""Train supervised linking algorithms."""
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -33,59 +33,68 @@ from soweego.linker import blocking, workflow
 LOGGER = logging.getLogger(__name__)
 
 
+# Let the user pass extra kwargs to the classifier
+# This is for development purposes only, and is not explicitly documented
 @click.command(
     context_settings={'ignore_unknown_options': True, 'allow_extra_args': True}
 )
 @click.argument('classifier', type=click.Choice(constants.CLASSIFIERS))
 @click.argument(
-    'target', type=click.Choice(target_database.supported_targets())
+    'catalog', type=click.Choice(target_database.supported_targets())
 )
 @click.argument(
-    'target_type', type=click.Choice(target_database.supported_entities())
+    'entity', type=click.Choice(target_database.supported_entities())
 )
 @click.option(
+    '-t',
     '--tune',
     is_flag=True,
-    help='Run grid search for hyperparameters tuning. Default: no.',
+    help='Run grid search for hyperparameters tuning.',
 )
 @click.option(
     '-k',
     '--k-folds',
     default=5,
-    help="Number of folds for hyperparameters tuning. Use with '--tune' Default: 5.",
+    help="Number of folds for hyperparameters tuning. Use with '--tune'. "
+         "Default: 5.",
 )
 @click.option(
     '-d',
     '--dir-io',
     type=click.Path(file_okay=False),
     default=constants.SHARED_FOLDER,
-    help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER,
+    help=f'Input/output directory, default: {constants.SHARED_FOLDER}.',
 )
 @click.pass_context
-def cli(ctx, classifier, target, target_type, tune, k_folds, dir_io):
-    """Train a probabilistic linker."""
+def cli(ctx, classifier, catalog, entity, tune, k_folds, dir_io):
+    """Train a supervised linker.
+
+    Build the training set relevant to the given catalog and entity,
+    then train a model with the given algorithm.
+    """
     kwargs = utils.handle_extra_cli_args(ctx.args)
-    # the above will return None only if args are provided and badly formatted
-    # if no args are provided then `kwargs` will be an empty dict
     if kwargs is None:
         sys.exit(1)
 
     model = execute(
-        classifier=constants.CLASSIFIERS[classifier],
-        catalog=target,
-        entity=target_type,
-        tune=tune,
-        k=k_folds,
-        dir_io=dir_io,
+        constants.CLASSIFIERS[classifier],
+        catalog,
+        entity,
+        tune,
+        k_folds,
+        dir_io,
         **kwargs,
     )
+
     outfile = os.path.join(
-        dir_io, constants.LINKER_MODEL % (target, target_type, classifier)
+        dir_io,
+        constants.LINKER_MODEL.format(catalog, entity, classifier)
     )
     os.makedirs(os.path.dirname(outfile), exist_ok=True)
     joblib.dump(model, outfile)
 
-    K.clear_session()
+    K.clear_session()  # Free memory
+
     LOGGER.info("%s model dumped to '%s'", classifier, outfile)
 
 
@@ -233,8 +242,10 @@ def build_dataset(
 def _train(classifier, feature_vectors, positive_samples_index, **kwargs):
     model = utils.initialize_classifier(classifier, feature_vectors, **kwargs)
 
-    LOGGER.info('Training a %s', classifier)
+    LOGGER.info('Training a %s ...', classifier)
+
     model.fit(feature_vectors, positive_samples_index)
 
     LOGGER.info('Training done')
+
     return model
