@@ -64,7 +64,7 @@ html_static_path = ['_static']
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
     'pandas': ('https://pandas.pydata.org/pandas-docs/stable/', None),
-    'recordlinkage': ('https://recordlinkage.readthedocs.io/en/stable/', None),
+    'recordlinkage': ('https://recordlinkage.readthedocs.io/en/latest/', None),
     'requests': ('https://2.python-requests.org/en/stable/', None),
     'sklearn': ('https://scikit-learn.org/stable/', None),
 }
