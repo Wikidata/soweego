@@ -113,6 +113,7 @@ def _validator(target: str, upload: bool):
         _invoke_no_exit(dead_ids_cli, args)
         _invoke_no_exit(links_cli, args)
         _invoke_no_exit(bio_cli, args)
+        args.remove(entity_type)
 
 
 def _invoke_no_exit(function: Callable, args: list):
