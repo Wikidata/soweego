@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Supervised linking."""
+"""Run supervised linkers."""
+import sys
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -31,25 +32,10 @@ LOGGER = logging.getLogger(__name__)
 @click.command()
 @click.argument('classifier', type=click.Choice(constants.CLASSIFIERS))
 @click.argument(
-    'target', type=click.Choice(target_database.supported_targets())
+    'catalog', type=click.Choice(target_database.supported_targets())
 )
 @click.argument(
-    'target_type', type=click.Choice(target_database.supported_entities())
-)
-@click.option(
-    '--name-rule/--no-name-rule',
-    default=False,
-    help='Activate post-classification rule on full names: links with different full names will be filtered. Default: no.',
-)
-@click.option(
-    '--upload/--no-upload',
-    default=False,
-    help='Upload links to Wikidata. Default: no.',
-)
-@click.option(
-    '--sandbox/--no-sandbox',
-    default=False,
-    help='Upload to the Wikidata sandbox item Q4115189. Default: no.',
+    'entity', type=click.Choice(target_database.supported_entities())
 )
 @click.option(
     '-t',
@@ -58,60 +44,97 @@ LOGGER = logging.getLogger(__name__)
     help="Probability score threshold, default: 0.5.",
 )
 @click.option(
+    '-n',
+    '--name-rule',
+    is_flag=True,
+    help='Activate post-classification rule on full names: links with different full names will be filtered.',
+)
+@click.option(
+    '-u',
+    '--upload',
+    is_flag=True,
+    help='Upload links to Wikidata.',
+)
+@click.option(
+    '-s',
+    '--sandbox',
+    is_flag=True,
+    help='Perform all edits on the Wikidata sandbox item Q4115189.',
+)
+@click.option(
     '-d',
     '--dir-io',
     type=click.Path(file_okay=False),
     default=constants.SHARED_FOLDER,
-    help="Input/output directory, default: '%s'." % constants.SHARED_FOLDER,
+    help=f'Input/output directory, default: {constants.SHARED_FOLDER}.',
 )
-def cli(
-        classifier,
-        target,
-        target_type,
-        name_rule,
-        upload,
-        sandbox,
-        threshold,
-        dir_io,
-):
-    """Run a probabilistic linker."""
+def cli(classifier, catalog, entity, threshold, name_rule, upload, sandbox,
+        dir_io):
+    """Run a supervised linker.
 
-    # Load model from the specified classifier+target+target_type
-    model_path = os.path.join(
-        dir_io, constants.LINKER_MODEL % (target, target_type, classifier)
-    )
+    Build the classification set relevant to the given catalog and entity,
+    then generate links between Wikidata items and catalog identifiers.
 
-    results_path = os.path.join(
-        dir_io, constants.LINKER_RESULT % (target, target_type, classifier)
-    )
+    Output a gzipped CSV file, format: QID,catalog_ID,confidence_score
 
-    # Ensure that the model exists
-    if not os.path.isfile(model_path):
-        err_msg = 'No classifier model found at path: %s ' % model_path
-        LOGGER.critical('File does not exist - ' + err_msg)
-        raise FileNotFoundError(err_msg)
+    You can pass the '-u' flag to upload the output to Wikidata.
 
-    # If results path exists then delete it. If not, new we results
-    # will just be appended to an old results file.
-    if os.path.isfile(results_path):
-        os.remove(results_path)
+    A trained model must exist for the given classifier, catalog, entity.
+    To do so, use:
 
-    # ensure we have a dir to place the results
-    os.makedirs(os.path.dirname(results_path), exist_ok=True)
+    $ python -m soweego linker train
+    """
+    model_path, result_path = _handle_io(classifier, catalog, entity, dir_io)
+
+    # Exit if the model file doesn't exist
+    if model_path is None:
+        sys.exit(1)
 
     rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
 
     for chunk in execute(
-            target, target_type, model_path, name_rule, threshold, dir_io
+            catalog, entity, model_path, name_rule, threshold, dir_io
     ):
         if upload:
-            _upload(chunk, target, target_type, sandbox)
+            _upload(chunk, catalog, entity, sandbox)
 
-        chunk.to_csv(results_path, mode='a', header=False)
+        chunk.to_csv(result_path, mode='a', header=False)
 
     K.clear_session()
 
     LOGGER.info('Classification complete')
+
+
+def _handle_io(classifier, catalog, entity, dir_io):
+    # Build the output paths upon catalog, entity, and classifier args
+    model_path = os.path.join(
+        dir_io,
+        constants.LINKER_MODEL.format(catalog, entity, classifier)
+    )
+    result_path = os.path.join(
+        dir_io,
+        constants.LINKER_RESULT.format(catalog, entity, classifier)
+    )
+
+    if not os.path.isfile(model_path):
+        LOGGER.critical(
+            "A trained model must exist, but was not found at '%s'",
+            model_path
+        )
+        return None, None
+
+    # Delete existing result file,
+    # otherwise the current output would be appended to it
+    if os.path.isfile(result_path):
+        LOGGER.warning(
+            "Will delete old output file found at '%s' ...",
+            result_path
+        )
+        os.remove(result_path)
+
+    os.makedirs(os.path.dirname(result_path), exist_ok=True)
+
+    return model_path, result_path
 
 
 def _upload(predictions, catalog, entity, sandbox):
@@ -136,8 +159,6 @@ def execute(
     wd_generator = workflow.preprocess_wikidata('classification', wd_reader)
 
     for i, wd_chunk in enumerate(wd_generator, 1):
-        # TODO Also consider blocking on URLs
-
         samples = blocking.full_text_query_block(
             'classification',
             catalog,
