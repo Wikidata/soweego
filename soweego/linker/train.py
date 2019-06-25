@@ -70,8 +70,10 @@ def cli(ctx, classifier, catalog, entity, tune, k_folds, dir_io):
     if kwargs is None:
         sys.exit(1)
 
+    actual_classifier = constants.CLASSIFIERS[classifier]
+
     model = execute(
-        constants.CLASSIFIERS[classifier],
+        actual_classifier,
         catalog,
         entity,
         tune,
@@ -87,9 +89,18 @@ def cli(ctx, classifier, catalog, entity, tune, k_folds, dir_io):
     os.makedirs(os.path.dirname(outfile), exist_ok=True)
     joblib.dump(model, outfile)
 
-    K.clear_session()  # Free memory
-
     LOGGER.info("%s model dumped to '%s'", classifier, outfile)
+
+    # Free memory in case of neural networks:
+    # can be done only after the model dump
+    if actual_classifier in (
+            keys.SINGLE_LAYER_PERCEPTRON,
+            keys.MULTI_LAYER_PERCEPTRON
+    ):
+        K.clear_session()  # Clear the TensorFlow graph
+
+    LOGGER.info('Training completed')
+
 
 
 def execute(classifier: str, catalog: str, entity: str, tune: bool, k: int, dir_io: str, **kwargs) -> BaseClassifier:
