@@ -136,9 +136,8 @@ def execute(classifier: str, catalog: str, entity: str, tune: bool, k: int, dir_
             f'Grid search for {classifier} is not supported'
         )
 
-    feature_vectors, positive_samples_index = build_dataset(
-        'training', catalog, entity, dir_io
-    )
+    feature_vectors, positive_samples_index = build_training_set(catalog,
+                                                                 entity, dir_io)
 
     if tune:
         best_params = _grid_search(
@@ -156,13 +155,9 @@ def execute(classifier: str, catalog: str, entity: str, tune: bool, k: int, dir_
     return _train(classifier, feature_vectors, positive_samples_index, **kwargs)
 
 
-def build_dataset(
-    goal: str, catalog: str, entity: str, dir_io: str
-) -> Tuple[pd.DataFrame, pd.MultiIndex]:
-    """Build a training or classification dataset.
+def build_training_set(catalog: str, entity: str, dir_io: str) -> Tuple[pd.DataFrame, pd.MultiIndex]:
+    """Build a training set.
 
-    :param goal: ``{'training', 'classification'}``.
-      Which dataset to build
     :param catalog: ``{'discogs', 'imdb', 'musicbrainz'}``.
       A supported catalog
     :param entity: ``{'actor', 'band', 'director', 'musician', 'producer',
@@ -174,6 +169,8 @@ def build_dataset(
       Features are computed by comparing *(QID, catalog ID)* pairs.
       Positive samples are catalog IDs available in Wikidata
     """
+    goal = 'training'
+
     # Wikidata side
     wd_reader = workflow.build_wikidata(goal, catalog, entity, dir_io)
     wd_generator = workflow.preprocess_wikidata(goal, wd_reader)

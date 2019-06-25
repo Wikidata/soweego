@@ -289,9 +289,8 @@ def _nested_k_fold_with_grid_search(
 
     result = defaultdict(list)
 
-    dataset, positive_samples_index = train.build_dataset(
-        'training', catalog, entity, dir_io
-    )
+    dataset, positive_samples_index = train.build_training_set(catalog, entity,
+                                                               dir_io)
     model = utils.init_model(classifier, dataset.shape[1], **kwargs).kernel
 
     inner_k_fold, target = utils.prepare_stratified_k_fold(
@@ -328,9 +327,8 @@ def _nested_k_fold_with_grid_search(
 
 def _average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
     predictions, precisions, recalls, f_scores = None, [], [], []
-    dataset, positive_samples_index = train.build_dataset(
-        'training', catalog, entity, dir_io
-    )
+    dataset, positive_samples_index = train.build_training_set(catalog, entity,
+                                                               dir_io)
     k_fold, binary_target_variables = utils.prepare_stratified_k_fold(
         k, dataset, positive_samples_index
     )
@@ -373,9 +371,8 @@ def _average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
 
 def _single_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
     predictions, test_set = None, []
-    dataset, positive_samples_index = train.build_dataset(
-        'training', catalog, entity, dir_io
-    )
+    dataset, positive_samples_index = train.build_training_set(catalog, entity,
+                                                               dir_io)
     k_fold, binary_target_variables = utils.prepare_stratified_k_fold(
         k, dataset, positive_samples_index
     )
