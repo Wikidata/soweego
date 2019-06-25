@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 from soweego.commons import constants, keys
 from soweego.commons.data_gathering import tokens_fulltext_search
-from soweego.linker.workflow import handle_goal
+from soweego.commons.utils import handle_goal
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'

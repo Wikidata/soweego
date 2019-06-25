@@ -24,7 +24,7 @@ from sklearn.externals import joblib
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
 
 from soweego.commons import constants, keys, target_database, utils
-from soweego.linker import train, workflow
+from soweego.linker import train
 
 LOGGER = logging.getLogger(__name__)
 
@@ -292,7 +292,7 @@ def _nested_k_fold_with_grid_search(
     dataset, positive_samples_index = train.build_dataset(
         'training', catalog, entity, dir_io
     )
-    model = workflow.init_model(classifier, **kwargs).kernel
+    model = utils.init_model(classifier, dataset.shape[1], **kwargs).kernel
 
     inner_k_fold, target = utils.prepare_stratified_k_fold(
         k, dataset, positive_samples_index
@@ -340,7 +340,7 @@ def _average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
     ):
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
 
-        model = utils.initialize_classifier(classifier, dataset, **kwargs)
+        model = utils.init_model(classifier, dataset.shape[1], **kwargs)
         model.fit(training, positive_samples_index & training.index)
 
         preds = model.predict(test)
@@ -386,7 +386,7 @@ def _single_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
         test_set.append(test)
 
-        model = workflow.init_model(classifier, **kwargs)
+        model = utils.init_model(classifier, dataset.shape[1], **kwargs)
         model.fit(training, positive_samples_index & training.index)
 
         preds = model.predict(test)

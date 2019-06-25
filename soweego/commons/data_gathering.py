@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """Gather relevant Wikidata and target catalog data for matching and validation purposes."""
+import soweego.commons.utils
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -169,7 +170,7 @@ def perfect_name_search_bucket(
 
 
 def gather_target_dataset(goal, entity_type, catalog, identifiers):
-    workflow.handle_goal(goal)
+    soweego.commons.utils.handle_goal(goal)
 
     base, link, nlp = (
         target_database.get_main_entity(catalog, entity_type),

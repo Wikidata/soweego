@@ -31,7 +31,7 @@ from soweego.commons import (
     url_utils,
 )
 from soweego.commons.logging import log_dataframe_info
-from soweego.linker import classifiers, neural_networks
+from soweego.commons.utils import handle_goal
 from soweego.linker.feature_extraction import (
     CompareTokens,
     DateCompare,
@@ -281,31 +281,6 @@ def extract_features(
     LOGGER.info("Features dumped to '%s'", path_io)
     LOGGER.info('Feature extraction done')
     return feature_vectors
-
-
-def init_model(classifier, *args, **kwargs):
-    if classifier is keys.NAIVE_BAYES:
-        model = rl.NaiveBayesClassifier(**kwargs)
-
-    elif classifier is keys.LINEAR_SVM:
-        model = rl.SVMClassifier(**kwargs)
-
-    elif classifier is keys.SVM:
-        model = classifiers.SVCClassifier(**kwargs)
-
-    elif classifier is keys.SINGLE_LAYER_PERCEPTRON:
-        model = neural_networks.SingleLayerPerceptron(*args, **kwargs)
-
-    elif classifier is keys.MULTI_LAYER_PERCEPTRON:
-        model = neural_networks.MultiLayerPerceptron(*args, **kwargs)
-
-    else:
-        err_msg = f"""Unsupported classifier: {classifier}. It should be one of
-                    {set(constants.CLASSIFIERS)}"""
-        LOGGER.critical(err_msg)
-        raise ValueError(err_msg)
-
-    return model
 
 
 def preprocess_wikidata(
@@ -569,14 +544,6 @@ def _build_date_object(value, slice_index, to_dates_list):
     except ValueError as ve:
         LOGGER.warning(
             "Skipping date that can't be parsed: %s. Reason: %s", value, ve
-        )
-
-
-def handle_goal(goal):
-    if goal not in ('training', 'classification'):
-        raise ValueError(
-            "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'"
-            % goal
         )
 
 
