@@ -17,6 +17,7 @@ tqdm = "*"
 lxml = "*"
 tensorflow = "*"
 keras = "*"
+joblib = "*"
 
 [dev-packages]
 pylint = "*"

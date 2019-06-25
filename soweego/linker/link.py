@@ -16,11 +16,11 @@ from re import search
 from typing import Iterator
 
 import click
+import joblib
 import pandas as pd
 import recordlinkage as rl
 from keras import backend as K
 from numpy import full, nan
-from sklearn.externals import joblib
 
 from soweego.commons import constants, data_gathering, keys, target_database
 from soweego.ingestor import wikidata_bot

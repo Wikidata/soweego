@@ -16,11 +16,11 @@ import sys
 from collections import defaultdict
 
 import click
+import joblib
 import recordlinkage as rl
 from keras import backend as K
 from numpy import mean, std
 from pandas import concat
-from sklearn.externals import joblib
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
 
 from soweego.commons import constants, keys, target_database, utils

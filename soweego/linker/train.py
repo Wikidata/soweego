@@ -15,10 +15,10 @@ import sys
 from typing import Dict, Tuple
 
 import click
+import joblib
 import pandas as pd
 from recordlinkage.base import BaseClassifier
 from keras import backend as K
-from sklearn.externals import joblib
 from sklearn.model_selection import GridSearchCV
 
 from soweego.commons import constants, keys, target_database, utils, data_gathering
@@ -174,6 +174,7 @@ def build_dataset(
       Features are computed by comparing *(QID, catalog ID)* pairs.
       Positive samples are catalog IDs available in Wikidata
     """
+    # Wikidata side
     wd_reader = workflow.build_wikidata(goal, catalog, entity, dir_io)
     wd_generator = workflow.preprocess_wikidata(goal, wd_reader)
 
