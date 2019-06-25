@@ -84,8 +84,9 @@ def cli(classifier, catalog, entity, threshold, name_rule, upload, sandbox,
 
     $ python -m soweego linker train
     """
+    actual_classifier = constants.CLASSIFIERS[classifier]
     model_path, result_path = _handle_io(
-        constants.CLASSIFIERS[classifier], catalog, entity, dir_io
+        actual_classifier, catalog, entity, dir_io
     )
 
     # Exit if the model file doesn't exist
@@ -97,12 +98,18 @@ def cli(classifier, catalog, entity, threshold, name_rule, upload, sandbox,
     for chunk in execute(
             catalog, entity, model_path, name_rule, threshold, dir_io
     ):
+        chunk.to_csv(result_path, mode='a', header=False)
+
         if upload:
             _upload(chunk, catalog, entity, sandbox)
 
-        chunk.to_csv(result_path, mode='a', header=False)
-
-    K.clear_session()
+    # Free memory in case of neural networks:
+    # can be done only after classification
+    if actual_classifier in (
+            keys.SINGLE_LAYER_PERCEPTRON,
+            keys.MULTI_LAYER_PERCEPTRON
+    ):
+        K.clear_session()  # Clear the TensorFlow graph
 
     LOGGER.info('Linking completed')
 
