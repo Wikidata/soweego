@@ -32,32 +32,25 @@ from soweego.commons import (
 )
 from soweego.commons.logging import log_dataframe_info
 from soweego.commons.utils import handle_goal
-from soweego.linker.feature_extraction import (
-    CompareTokens,
-    DateCompare,
-    ExactList,
-    OccupationQidSet,
-    SimilarTokens,
-    StringList,
-)
+from soweego.linker import features
 from soweego.wikidata import api_requests, vocabulary
 
 LOGGER = logging.getLogger(__name__)
 
 
-def build_wikidata(
-    goal: str, catalog: str, entity: str, dir_io: str
-) -> JsonReader:
+def build_wikidata(goal: str, catalog: str, entity: str, dir_io: str) -> JsonReader:
     if goal == 'training':
         wd_io_path = os.path.join(
             dir_io, constants.WD_TRAINING_SET % (catalog, entity)
         )
         qids_and_tids = {}
+
     elif goal == 'classification':
         wd_io_path = os.path.join(
             dir_io, constants.WD_CLASSIFICATION_SET % (catalog, entity)
         )
         qids_and_tids = None
+
     else:
         raise ValueError(
             "Invalid 'goal' parameter: %s. Should be 'training' or 'classification'"
@@ -66,7 +59,7 @@ def build_wikidata(
 
     catalog_pid = target_database.get_catalog_pid(catalog, entity)
 
-    if os.path.exists(wd_io_path):
+    if os.path.isfile(wd_io_path):
         LOGGER.info(
             "Will reuse existing Wikidata %s set: '%s'", goal, wd_io_path
         )
@@ -105,184 +98,6 @@ def build_wikidata(
     return wd_df_reader
 
 
-def _reconstruct_qids_and_tids(wd_io_path, qids_and_tids):
-    with gzip.open(wd_io_path, 'rt') as wd_io:
-        for line in wd_io:
-            item = json.loads(line.rstrip())
-            qids_and_tids[item[keys.QID]] = {keys.TID: item[keys.TID]}
-    LOGGER.debug(
-        "Reconstructed dictionary with QIDS and target IDs from '%s'",
-        wd_io_path,
-    )
-
-
-def build_target(goal, catalog, entity, qids_and_tids):
-    handle_goal(goal)
-
-    LOGGER.info('Building %s %s set ...', catalog, goal)
-
-    if goal == 'classification':
-        if qids_and_tids:
-            raise ValueError(
-                "Invalid 'qids_and_tids' parameter: it should be None when 'goal' is 'classification'"
-            )
-        qids_and_tids = {}
-        data_gathering.gather_target_ids(
-            entity,
-            catalog,
-            target_database.get_catalog_pid(catalog, entity),
-            qids_and_tids,
-        )
-
-    target_df_reader = data_gathering.gather_target_dataset(
-        goal, entity, catalog, _get_tids(qids_and_tids)
-    )
-
-    LOGGER.info('Target %s set built', goal)
-
-    return target_df_reader
-
-
-def _get_tids(qids_and_tids):
-    tids = set()
-    for data in qids_and_tids.values():
-        for identifier in data[keys.TID]:
-            tids.add(identifier)
-    return tids
-
-
-def preprocess(
-    goal: str, wikidata_reader: JsonReader, target_reader: JsonReader
-) -> Tuple[Iterator[pd.DataFrame], Iterator[pd.DataFrame]]:
-    handle_goal(goal)
-    return (
-        preprocess_wikidata(goal, wikidata_reader),
-        preprocess_target(goal, target_reader),
-    )
-
-
-def extract_features(
-        candidate_pairs: pd.MultiIndex,
-        wikidata: pd.DataFrame,
-        target: pd.DataFrame,
-        path_io: str,
-) -> pd.DataFrame:
-    LOGGER.info('Extracting features ...')
-
-    if os.path.exists(path_io):
-        LOGGER.info("Will reuse existing features: '%s'", path_io)
-        return pd.read_pickle(path_io)
-
-    def in_both_datasets(col: str) -> bool:
-        """Checks if `col` is available in both datasets"""
-        return (col in wikidata.columns) and (col in target.columns)
-
-    compare = rl.Compare(n_jobs=cpu_count())
-    # TODO feature engineering on more fields
-    # Feature 1: exact match on names
-    if in_both_datasets(keys.NAME):
-        compare.add(ExactList(keys.NAME, keys.NAME, label='name_exact'))
-
-    if in_both_datasets(keys.URL):
-        # Feature 2: exact match on URLs
-        compare.add(ExactList(keys.URL, keys.URL, label='url_exact'))
-
-        # Feature 3: match on URL tokens
-        compare.add(
-            CompareTokens(
-                keys.URL_TOKENS,
-                keys.URL_TOKENS,
-                label='url_tokens',
-                stopwords=text_utils.STOPWORDS_URL_TOKENS,
-            )
-        )
-
-    # Feature 4: dates
-    if in_both_datasets(keys.DATE_OF_BIRTH):
-        compare.add(
-            DateCompare(
-                keys.DATE_OF_BIRTH, keys.DATE_OF_BIRTH, label='date_of_birth'
-            )
-        )
-    if in_both_datasets(keys.DATE_OF_DEATH):
-        compare.add(
-            DateCompare(
-                keys.DATE_OF_DEATH, keys.DATE_OF_DEATH, label='date_of_death'
-            )
-        )
-
-    # Feature 5: Levenshtein distance on name tokens
-    if in_both_datasets(keys.NAME_TOKENS):
-        compare.add(
-            StringList(
-                keys.NAME_TOKENS, keys.NAME_TOKENS, label='name_levenshtein'
-            )
-        )
-
-        # Feature 5: string kernel similarity on name tokens
-        compare.add(
-            StringList(
-                keys.NAME_TOKENS,
-                keys.NAME_TOKENS,
-                algorithm='cosine',
-                analyzer='char_wb',
-                label='name_string_kernel_cosine',
-            )
-        )
-
-        # Feature 6: similar name tokens
-        compare.add(
-            SimilarTokens(
-                keys.NAME_TOKENS, keys.NAME_TOKENS, label='similar_name_tokens'
-            )
-        )
-
-    # Feature 8: cosine similarity on descriptions
-    if in_both_datasets(keys.DESCRIPTION):
-        compare.add(
-            StringList(
-                keys.DESCRIPTION,
-                keys.DESCRIPTION,
-                algorithm='cosine',
-                analyzer='soweego',
-                label='description_cosine',
-            )
-        )
-
-    # Feature 9: occupation QIDs
-    occupations_col_name = vocabulary.LINKER_PIDS[vocabulary.OCCUPATION]
-    if in_both_datasets(occupations_col_name):
-        compare.add(
-            OccupationQidSet(
-                occupations_col_name,
-                occupations_col_name,
-                label='occupation_qids',
-            )
-        )
-
-    # Feature 10: genre similar tokens
-    if in_both_datasets(keys.GENRES):
-        # Feature 9: genre similar tokens
-        compare.add(
-            SimilarTokens(
-                keys.GENRES, keys.GENRES, label='genre_similar_tokens'
-            )
-        )
-
-    # calculate feature vectors
-    feature_vectors = compare.compute(candidate_pairs, wikidata, target)
-
-    # drop duplicate FV
-    feature_vectors = feature_vectors[~feature_vectors.index.duplicated()]
-
-    os.makedirs(os.path.dirname(path_io), exist_ok=True)
-    pd.to_pickle(feature_vectors, path_io)
-
-    LOGGER.info("Features dumped to '%s'", path_io)
-    LOGGER.info('Feature extraction done')
-    return feature_vectors
-
-
 def preprocess_wikidata(
     goal: str, wikidata_reader: JsonReader
 ) -> Iterator[pd.DataFrame]:
@@ -311,25 +126,25 @@ def preprocess_wikidata(
         for column in constants.NAME_FIELDS:
             if chunk.get(column) is not None:
                 chunk[f'{column}_tokens'] = chunk[column].apply(
-                    tokenize_values, args=(text_utils.tokenize,)
+                    _tokenize_values, args=(text_utils.tokenize,)
                 )
 
         # 4b. Tokenize genres if available
         if chunk.get(keys.GENRES) is not None:
             chunk[keys.GENRES] = chunk[keys.GENRES].apply(
-                tokenize_values, args=(text_utils.tokenize,)
+                _tokenize_values, args=(text_utils.tokenize,)
             )
 
         # 5. Tokenize URLs
         chunk[keys.URL_TOKENS] = chunk[keys.URL].apply(
-            tokenize_values, args=(url_utils.tokenize,)
+            _tokenize_values, args=(url_utils.tokenize,)
         )
 
         # 6. Shared preprocessing
         chunk = _shared_preprocessing(
             chunk,
-            _will_handle_birth_date(chunk),
-            _will_handle_death_date(chunk),
+            _will_handle_birth_dates(chunk),
+            _will_handle_death_dates(chunk),
         )
 
         LOGGER.info('Chunk %d done', i)
@@ -381,7 +196,7 @@ def preprocess_target(goal: str, target_reader: pd.DataFrame) -> pd.DataFrame:
     _drop_null_columns(target)
 
     # 4. Pair dates with their precision & drop precision columns
-    if _will_handle_birth_date(target):
+    if _will_handle_birth_dates(target):
         LOGGER.info('Pairing birth date columns with precision ones ...')
         target[keys.DATE_OF_BIRTH] = list(
             zip(target[keys.DATE_OF_BIRTH], target[keys.BIRTH_PRECISION])
@@ -391,7 +206,7 @@ def preprocess_target(goal: str, target_reader: pd.DataFrame) -> pd.DataFrame:
             LOGGER, target, 'Paired birth date columns with precision ones'
         )
 
-    if _will_handle_death_date(target):
+    if _will_handle_death_dates(target):
         LOGGER.info('Pairing death date columns with precision ones ...')
         target[keys.DATE_OF_DEATH] = list(
             zip(target[keys.DATE_OF_DEATH], target[keys.DEATH_PRECISION])
@@ -411,11 +226,133 @@ def preprocess_target(goal: str, target_reader: pd.DataFrame) -> pd.DataFrame:
     )
     # 6. Shared preprocessing
     target = _shared_preprocessing(
-        target, _will_handle_birth_date(target), _will_handle_death_date(target)
+        target, _will_handle_birth_dates(target), _will_handle_death_dates(target)
     )
 
     LOGGER.info('Target preprocessing done')
     return target
+
+
+def extract_features(
+        candidate_pairs: pd.MultiIndex,
+        wikidata: pd.DataFrame,
+        target: pd.DataFrame,
+        path_io: str,
+) -> pd.DataFrame:
+    LOGGER.info('Extracting features ...')
+
+    if os.path.exists(path_io):
+        LOGGER.info("Will reuse existing features: '%s'", path_io)
+        return pd.read_pickle(path_io)
+
+    def in_both_datasets(col: str) -> bool:
+        """Checks if `col` is available in both datasets"""
+        return (col in wikidata.columns) and (col in target.columns)
+
+    compare = rl.Compare(n_jobs=cpu_count())
+    # TODO feature engineering on more fields
+    # Feature 1: exact match on names
+    if in_both_datasets(keys.NAME):
+        compare.add(features.ExactList(keys.NAME, keys.NAME, label='name_exact'))
+
+    if in_both_datasets(keys.URL):
+        # Feature 2: exact match on URLs
+        compare.add(features.ExactList(keys.URL, keys.URL, label='url_exact'))
+
+        # Feature 3: match on URL tokens
+        compare.add(
+            features.CompareTokens(
+                keys.URL_TOKENS,
+                keys.URL_TOKENS,
+                label='url_tokens',
+                stopwords=text_utils.STOPWORDS_URL_TOKENS,
+            )
+        )
+
+    # Feature 4: dates
+    if in_both_datasets(keys.DATE_OF_BIRTH):
+        compare.add(
+            features.DateCompare(
+                keys.DATE_OF_BIRTH, keys.DATE_OF_BIRTH, label='date_of_birth'
+            )
+        )
+    if in_both_datasets(keys.DATE_OF_DEATH):
+        compare.add(
+            features.DateCompare(
+                keys.DATE_OF_DEATH, keys.DATE_OF_DEATH, label='date_of_death'
+            )
+        )
+
+    # Feature 5: Levenshtein distance on name tokens
+    if in_both_datasets(keys.NAME_TOKENS):
+        compare.add(
+            features.StringList(
+                keys.NAME_TOKENS, keys.NAME_TOKENS, label='name_levenshtein'
+            )
+        )
+
+        # Feature 5: string kernel similarity on name tokens
+        compare.add(
+            features.StringList(
+                keys.NAME_TOKENS,
+                keys.NAME_TOKENS,
+                algorithm='cosine',
+                analyzer='char_wb',
+                label='name_string_kernel_cosine',
+            )
+        )
+
+        # Feature 6: similar name tokens
+        compare.add(
+            features.SimilarTokens(
+                keys.NAME_TOKENS, keys.NAME_TOKENS, label='similar_name_tokens'
+            )
+        )
+
+    # Feature 8: cosine similarity on descriptions
+    if in_both_datasets(keys.DESCRIPTION):
+        compare.add(
+            features.StringList(
+                keys.DESCRIPTION,
+                keys.DESCRIPTION,
+                algorithm='cosine',
+                analyzer='soweego',
+                label='description_cosine',
+            )
+        )
+
+    # Feature 9: occupation QIDs
+    occupations_col_name = vocabulary.LINKER_PIDS[vocabulary.OCCUPATION]
+    if in_both_datasets(occupations_col_name):
+        compare.add(
+            features.OccupationQidSet(
+                occupations_col_name,
+                occupations_col_name,
+                label='occupation_qids',
+            )
+        )
+
+    # Feature 10: genre similar tokens
+    if in_both_datasets(keys.GENRES):
+        # Feature 9: genre similar tokens
+        compare.add(
+            features.SimilarTokens(
+                keys.GENRES, keys.GENRES, label='genre_similar_tokens'
+            )
+        )
+
+    # calculate feature vectors
+    feature_vectors = compare.compute(candidate_pairs, wikidata, target)
+
+    # drop duplicate FV
+    feature_vectors = feature_vectors[~feature_vectors.index.duplicated()]
+
+    os.makedirs(os.path.dirname(path_io), exist_ok=True)
+    pd.to_pickle(feature_vectors, path_io)
+
+    LOGGER.info("Features dumped to '%s'", path_io)
+    LOGGER.info('Feature extraction done')
+    return feature_vectors
 
 
 def _shared_preprocessing(df: pd.DataFrame, will_handle_birth_date: bool, will_handle_death_date: bool) -> pd.DataFrame:
@@ -435,6 +372,17 @@ def _shared_preprocessing(df: pd.DataFrame, will_handle_birth_date: bool, will_h
         _handle_dates(df, keys.DATE_OF_DEATH)
 
     return df
+
+
+def _reconstruct_qids_and_tids(wd_io_path, qids_and_tids):
+    with gzip.open(wd_io_path, 'rt') as wd_io:
+        for line in wd_io:
+            item = json.loads(line.rstrip())
+            qids_and_tids[item[keys.QID]] = {keys.TID: item[keys.TID]}
+    LOGGER.debug(
+        "Reconstructed dictionary with QIDS and target IDs from '%s'",
+        wd_io_path,
+    )
 
 
 def _normalize_values(values):
@@ -470,11 +418,7 @@ def _handle_dates(df, column):
     log_dataframe_info(LOGGER, df, 'Parsed dates')
 
 
-def _will_handle_dates(df: pd.DataFrame) -> bool:
-    return _will_handle_birth_date(df) and _will_handle_death_date(df)
-
-
-def _will_handle_birth_date(df: pd.DataFrame) -> bool:
+def _will_handle_birth_dates(df: pd.DataFrame) -> bool:
     dob_column = df.get(keys.DATE_OF_BIRTH)
     if dob_column is None:
         LOGGER.warning(
@@ -485,7 +429,7 @@ def _will_handle_birth_date(df: pd.DataFrame) -> bool:
     return True
 
 
-def _will_handle_death_date(df: pd.DataFrame) -> bool:
+def _will_handle_death_dates(df: pd.DataFrame) -> bool:
     dod_column = df.get(keys.DATE_OF_DEATH)
     if dod_column is None:
         LOGGER.warning(
@@ -574,7 +518,7 @@ def _occupations_to_set(df):
     df[col_name] = df[col_name].apply(to_set)
 
 
-def tokenize_values(values, tokenize_func):
+def _tokenize_values(values, tokenize_func):
     if values is nan:
         return nan
     all_tokens = set()
