@@ -84,7 +84,7 @@ def cli(ctx, classifier, catalog, entity, tune, k_folds, dir_io):
 
     outfile = os.path.join(
         dir_io,
-        constants.LINKER_MODEL.format(catalog, entity, classifier)
+        constants.LINKER_MODEL.format(catalog, entity, actual_classifier)
     )
     os.makedirs(os.path.dirname(outfile), exist_ok=True)
     joblib.dump(model, outfile)
