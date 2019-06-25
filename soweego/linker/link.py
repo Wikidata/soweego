@@ -84,7 +84,9 @@ def cli(classifier, catalog, entity, threshold, name_rule, upload, sandbox,
 
     $ python -m soweego linker train
     """
-    model_path, result_path = _handle_io(classifier, catalog, entity, dir_io)
+    model_path, result_path = _handle_io(
+        constants.CLASSIFIERS[classifier], catalog, entity, dir_io
+    )
 
     # Exit if the model file doesn't exist
     if model_path is None:
@@ -102,7 +104,7 @@ def cli(classifier, catalog, entity, threshold, name_rule, upload, sandbox,
 
     K.clear_session()
 
-    LOGGER.info('Classification complete')
+    LOGGER.info('Linking completed')
 
 
 def _handle_io(classifier, catalog, entity, dir_io):
@@ -118,8 +120,10 @@ def _handle_io(classifier, catalog, entity, dir_io):
 
     if not os.path.isfile(model_path):
         LOGGER.critical(
-            "A trained model must exist, but was not found at '%s'",
-            model_path
+            "Trained model not found at '%s'. "
+            "Please run 'python -m soweego linker train %s %s %s'",
+            model_path,
+            classifier, catalog, entity
         )
         return None, None
 
