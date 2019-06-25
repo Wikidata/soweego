@@ -105,13 +105,14 @@ def _linker(target: str, upload: bool):
 
 def _validator(target: str, upload: bool):
     """Contains all the command the validator has to do"""
-    upload_option = "--upload" if upload else "--no-upload"
+    args = [target, '--upload'] if upload else [target]
     # Runs the validator for each kind of entity of the given target database
     for entity_type in target_database.supported_entities_for_target(target):
+        args.insert(1, entity_type)
         LOGGER.info("Running validator for target %s %s", target, entity_type)
-        _invoke_no_exit(dead_ids_cli, [target, entity_type, upload_option])
-        _invoke_no_exit(links_cli, [target, entity_type, upload_option])
-        _invoke_no_exit(bio_cli, [target, entity_type, upload_option])
+        _invoke_no_exit(dead_ids_cli, args)
+        _invoke_no_exit(links_cli, args)
+        _invoke_no_exit(bio_cli, args)
 
 
 def _invoke_no_exit(function: Callable, args: list):
