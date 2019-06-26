@@ -345,14 +345,25 @@ def gather_target_links(entity, catalog):
     LOGGER.info('Gathering %s %s links ...', catalog, entity)
     link_entity = target_database.get_link_entity(catalog, entity)
 
+    # Early return when the links table doesn't exist
+    if link_entity is None:
+        LOGGER.warning(
+            'No links table available in the database for %s %s. '
+            'Stopping validation here',
+            catalog,
+            entity,
+        )
+        return None
+
     session = DBManager.connect_to_db()
     result = None
     try:
         query = session.query(link_entity.catalog_id, link_entity.url)
         count = query.count()
+        # Early return when no links
         if count == 0:
             LOGGER.warning(
-                "No links available for %s %s. Stopping validation here",
+                'No links available for %s %s. Stopping validation here',
                 catalog,
                 entity,
             )
