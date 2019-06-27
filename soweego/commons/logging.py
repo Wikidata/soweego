@@ -14,6 +14,7 @@ import json
 import logging
 import logging.config
 import os
+import gzip
 from io import StringIO
 from urllib.parse import unquote_plus
 
@@ -75,6 +76,25 @@ class TqdmLoggingHandler(logging.StreamHandler):
         try:
             msg = self.format(record)
             tqdm.tqdm.write(msg)
+            self.flush()
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:
+            self.handleError(record)
+
+
+class GzipLoggingHandler(logging.StreamHandler):
+
+    def __init__(self, filename: str):
+        stream = gzip.open(filename, 'w')
+        super().__init__(stream)
+
+    # we only overwrite `Logging.StreamHandler`
+    # emit method
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            self.stream.write(msg.encode('utf8'))
             self.flush()
         except (KeyboardInterrupt, SystemExit):
             raise
