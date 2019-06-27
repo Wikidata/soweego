@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 """Run supervised linkers."""
-import sys
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -12,6 +11,7 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import logging
 import os
+import sys
 from re import search
 from typing import Iterator
 
@@ -22,7 +22,7 @@ import recordlinkage as rl
 from keras import backend as K
 from numpy import full, nan
 
-from soweego.commons import constants, data_gathering, keys, target_database
+from soweego.commons import constants, keys, target_database
 from soweego.ingestor import wikidata_bot
 from soweego.linker import blocking, classifiers, neural_networks, workflow
 
@@ -156,11 +156,9 @@ def execute(model_path: str, catalog: str, entity: str, threshold: float,
         )
 
         # Build target chunk from samples
-        target_reader = data_gathering.gather_target_dataset(
-            goal,
-            entity,
-            catalog,
-            set(samples.get_level_values(keys.TID)),
+        target_reader = workflow.build_target(
+            goal, catalog, entity,
+            set(samples.get_level_values(keys.TID))
         )
 
         # Preprocess target chunk

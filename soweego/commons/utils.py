@@ -104,7 +104,7 @@ def count_num_lines_in_file(file_) -> int:
     return n_rows
 
 
-def handle_goal(goal):
+def check_goal_value(goal):
     if goal not in ('training', 'classification'):
         err_msg = (
             f"Invalid 'goal' parameter: {goal}. "

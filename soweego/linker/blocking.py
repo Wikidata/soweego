@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 from soweego.commons import constants, keys
 from soweego.commons.data_gathering import tokens_fulltext_search
-from soweego.commons.utils import handle_goal
+from soweego.commons.utils import check_goal_value
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -49,7 +49,7 @@ def full_text_query_block(
     target_entity: constants.DB_ENTITY,
     dir_io: str,
 ) -> pd.MultiIndex:
-    handle_goal(goal)
+    check_goal_value(goal)
     samples_path = os.path.join(
         dir_io,
         constants.SAMPLES

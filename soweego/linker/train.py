@@ -17,11 +17,11 @@ from typing import Dict, Tuple
 import click
 import joblib
 import pandas as pd
-from recordlinkage.base import BaseClassifier
 from keras import backend as K
+from recordlinkage.base import BaseClassifier
 from sklearn.model_selection import GridSearchCV
 
-from soweego.commons import constants, keys, target_database, utils, data_gathering
+from soweego.commons import constants, keys, target_database, utils
 from soweego.linker import blocking, workflow
 
 LOGGER = logging.getLogger(__name__)
@@ -202,8 +202,9 @@ def build_training_set(catalog: str, entity: str, dir_io: str) -> Tuple[pd.DataF
         )
 
         # Build target chunk from all samples
-        target_reader = data_gathering.gather_target_dataset(
-            goal, entity, catalog, set(all_samples.get_level_values(keys.TID))
+        target_reader = workflow.build_target(
+            goal, catalog, entity,
+            set(all_samples.get_level_values(keys.TID))
         )
         # Preprocess target chunk
         target_chunk = workflow.preprocess_target(goal, target_reader)
