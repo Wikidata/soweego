@@ -19,12 +19,14 @@ from typing import Iterable, Tuple
 
 import regex
 from pandas import DataFrame, read_sql
-from soweego.commons import constants, keys, target_database, url_utils
-from soweego.commons.db_manager import DBManager
-from soweego.importer import models
-from soweego.wikidata import api_requests, sparql_queries, vocabulary
 from sqlalchemy import or_
 from sqlalchemy.orm.query import Query
+
+from soweego.commons import constants, keys, target_database, url_utils
+from soweego.commons.db_manager import DBManager
+from soweego.commons.target_database import get_catalog_pid
+from soweego.importer import models
+from soweego.wikidata import api_requests, sparql_queries, vocabulary
 
 LOGGER = logging.getLogger(__name__)
 
@@ -205,7 +207,7 @@ def perfect_name_search_bucket(
         session.close()
 
 
-def gather_target_dataset(entity_type: str, catalog: str,
+def gather_target_dataset(catalog: str, entity_type: str,
                           identifiers: set) -> DataFrame:
     """
     Dumps the whole data of the given entity into a Dataframe
@@ -222,7 +224,7 @@ def gather_target_dataset(entity_type: str, catalog: str,
         target_database.get_nlp_entity(catalog, entity_type),
     )
 
-    LOGGER.info('Gathering %s %s for the linker ...', catalog)
+    LOGGER.info('Gathering %s %s for the linker ...', catalog, entity_type)
 
     db_engine = DBManager().get_engine().execution_options(stream_results=True)
 
@@ -523,7 +525,13 @@ def gather_wikidata_links(wikidata: dict, url_pids: set,
     LOGGER.info('Got %d links', total)
 
 
-def gather_relevant_pids():
+def gather_relevant_pids() -> Tuple[set, dict]:
+    """
+    Return a set of interesting PIDs and their formatter urls
+    More in :func:`sparql_queries.url_pids_query`
+
+    :return: Tuple of pids set and formatters dictionary
+    """
     url_pids = set()
     for result in sparql_queries.url_pids():
         url_pids.add(result)
@@ -553,10 +561,20 @@ def gather_relevant_pids():
                 else:
                     compiled_regex = None
                 ext_id_pids_to_urls[pid][formatter_url] = compiled_regex
+
     return url_pids, ext_id_pids_to_urls
 
 
-def gather_target_ids(entity, catalog, catalog_pid, aggregated):
+def gather_target_ids(entity: str, catalog: str, aggregated: dict):
+    """
+    Adds for each qid, all the linked target ids in wikidata
+
+    :param entity: Entity type to scan
+    :param catalog: Catalog to which the entity belongs
+    :param aggregated: Associations dict {'QID':{'tid':'TID'}}
+    """
+    catalog_pid = get_catalog_pid(catalog, entity)
+
     LOGGER.info(
         'Gathering Wikidata %s items with %s identifiers ...', entity, catalog
     )
@@ -576,7 +594,16 @@ def gather_target_ids(entity, catalog, catalog_pid, aggregated):
     LOGGER.info('Got %d %s identifiers', len(aggregated), catalog)
 
 
-def gather_qids(entity, catalog, catalog_pid):
+def gather_qids(catalog: str, entity: str) -> set:
+    """
+    Retrieves the qids of the wikidata entity not linked to the target.
+    Useful for building the dataset to classify.
+
+    :param catalog: Target catalog e.g. musicbrainz
+    :param entity: Entity type of the catalog e.g. musician
+    :return: Set of qids not linked to the catalog
+    """
+    catalog_pid = get_catalog_pid(catalog, entity)
     LOGGER.info(
         'Gathering Wikidata %s items with no %s identifiers ...',
         entity,
@@ -591,6 +618,7 @@ def gather_qids(entity, catalog, catalog_pid):
             0,
         )
     )
+
     LOGGER.info('Got %d Wikidata items', len(qids))
     return qids
 

@@ -46,7 +46,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def build_wikidata(
-    goal: str, catalog: str, entity: str, dir_io: str
+        goal: str, catalog: str, entity: str, dir_io: str
 ) -> JsonReader:
     if goal == 'training':
         wd_io_path = os.path.join(
@@ -64,8 +64,6 @@ def build_wikidata(
             % goal
         )
 
-    catalog_pid = target_database.get_catalog_pid(catalog, entity)
-
     if os.path.exists(wd_io_path):
         LOGGER.info(
             "Will reuse existing Wikidata %s set: '%s'", goal, wd_io_path
@@ -80,11 +78,11 @@ def build_wikidata(
 
         if goal == 'training':
             data_gathering.gather_target_ids(
-                entity, catalog, catalog_pid, qids_and_tids
+                entity, catalog, qids_and_tids
             )
             qids = qids_and_tids.keys()
         elif goal == 'classification':
-            qids = data_gathering.gather_qids(entity, catalog, catalog_pid)
+            qids = data_gathering.gather_qids(catalog, entity)
 
         url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
         os.makedirs(os.path.dirname(wd_io_path), exist_ok=True)
@@ -130,7 +128,6 @@ def build_target(goal, catalog, entity, qids_and_tids):
         data_gathering.gather_target_ids(
             entity,
             catalog,
-            target_database.get_catalog_pid(catalog, entity),
             qids_and_tids,
         )
 
@@ -152,7 +149,7 @@ def _get_tids(qids_and_tids):
 
 
 def preprocess(
-    goal: str, wikidata_reader: JsonReader, target_reader: JsonReader
+        goal: str, wikidata_reader: JsonReader, target_reader: JsonReader
 ) -> Tuple[Iterator[pd.DataFrame], Iterator[pd.DataFrame]]:
     handle_goal(goal)
     return (
@@ -162,10 +159,10 @@ def preprocess(
 
 
 def extract_features(
-    candidate_pairs: pd.MultiIndex,
-    wikidata: pd.DataFrame,
-    target: pd.DataFrame,
-    path_io: str,
+        candidate_pairs: pd.MultiIndex,
+        wikidata: pd.DataFrame,
+        target: pd.DataFrame,
+        path_io: str,
 ) -> pd.DataFrame:
     LOGGER.info('Extracting features ...')
 
@@ -309,7 +306,7 @@ def init_model(classifier, *args, **kwargs):
 
 
 def preprocess_wikidata(
-    goal: str, wikidata_reader: JsonReader
+        goal: str, wikidata_reader: JsonReader
 ) -> Iterator[pd.DataFrame]:
     handle_goal(goal)
 

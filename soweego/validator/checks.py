@@ -321,7 +321,6 @@ def dead_ids(
         data_gathering.gather_target_ids(
             entity,
             catalog,
-            target_database.get_catalog_pid(catalog, entity),
             wd_ids,
         )
     else:
@@ -417,7 +416,6 @@ def links(
         data_gathering.gather_target_ids(
             entity,
             catalog,
-            target_database.get_catalog_pid(catalog, entity),
             wd_links,
         )
         data_gathering.gather_wikidata_links(
@@ -503,7 +501,6 @@ def bio(
         data_gathering.gather_target_ids(
             entity,
             catalog,
-            target_database.get_catalog_pid(catalog, entity),
             wd_bio,
         )
         data_gathering.gather_wikidata_biodata(wd_bio)

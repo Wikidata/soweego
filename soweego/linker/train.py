@@ -89,8 +89,8 @@ def cli(ctx, classifier, target, target_type, tune, k_folds, dir_io):
 
 def execute(classifier, catalog, entity, tune, k, dir_io, **kwargs):
     if tune and classifier in (
-        keys.SINGLE_LAYER_PERCEPTRON,
-        keys.MULTI_LAYER_PERCEPTRON,
+            keys.SINGLE_LAYER_PERCEPTRON,
+            keys.MULTI_LAYER_PERCEPTRON,
     ):
         # TODO make Keras work with GridSearchCV
         raise NotImplementedError(
@@ -114,7 +114,7 @@ def execute(classifier, catalog, entity, tune, k, dir_io, **kwargs):
 
 
 def _grid_search(
-    k, feature_vectors, positive_samples_index, classifier, **kwargs
+        k, feature_vectors, positive_samples_index, classifier, **kwargs
 ):
     k_fold, target = utils.prepare_stratified_k_fold(
         k, feature_vectors, positive_samples_index
@@ -132,7 +132,7 @@ def _grid_search(
 
 
 def build_dataset(
-    goal: str, catalog: str, entity: str, dir_io: str
+        goal: str, catalog: str, entity: str, dir_io: str
 ) -> Tuple[pd.DataFrame, pd.MultiIndex]:
     """
     Creates a dataset for `goal`.
@@ -173,7 +173,7 @@ def build_dataset(
 
         # Build target chunk based on samples
         target_reader = data_gathering.gather_target_dataset(
-            goal, entity, catalog, set(all_samples.get_level_values(keys.TID))
+            catalog, entity, set(all_samples.get_level_values(keys.TID))
         )
 
         # Preprocess target chunk
