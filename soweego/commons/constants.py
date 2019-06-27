@@ -226,7 +226,7 @@ NN_CHECKPOINT_FOLDER = 'best_model_checkpoint'
 TENSOR_BOARD_FOLDER = 'tensor_board'
 
 # File names
-NN_CHECKPOINT_FILENAME = '%s_best_checkpoint_model.hdf5'
+NN_CHECKPOINT_FILENAME = '{}_best_checkpoint_model.hdf5'
 EVALUATION_PERFORMANCE_FILENAME = '{}_{}_{}_performance.txt'
 EVALUATION_PREDICTIONS_FILENAME = '{}_{}_{}_evaluation_links.csv.gz'
 RESULT_FILENAME = '{}_{}_{}_links.csv.gz'
@@ -296,8 +296,10 @@ CONFIDENCE_THRESHOLD = 0.5
 FEATURE_MISSING_VALUE = 0.0
 
 # Neural networks-specific
-ACTIVATION = 'sigmoid'
-OPTIMIZER = 'adam'
+OUTPUT_ACTIVATION = 'sigmoid'
+HIDDEN_ACTIVATION = 'relu'
+SLP_OPTIMIZER = 'adam'
+MLP_OPTIMIZER = 'adadelta'
 LOSS = 'binary_crossentropy'
 METRICS = ['accuracy']
 BATCH_SIZE = 1024

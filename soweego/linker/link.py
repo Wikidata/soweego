@@ -24,7 +24,7 @@ from numpy import full, nan
 
 from soweego.commons import constants, keys, target_database
 from soweego.ingestor import wikidata_bot
-from soweego.linker import blocking, classifiers, neural_networks, workflow
+from soweego.linker import blocking, classifiers, workflow
 
 LOGGER = logging.getLogger(__name__)
 
@@ -270,8 +270,8 @@ def _add_missing_feature_columns(classifier, feature_vectors: pd.DataFrame):
         expected_features = classifier.kernel.coef_.shape[1]
 
     elif isinstance(classifier, (
-            neural_networks.SingleLayerPerceptron,
-            neural_networks.MultiLayerPerceptron
+            classifiers.SingleLayerPerceptron,
+            classifiers.MultiLayerPerceptron
         ),
     ):
         expected_features = classifier.kernel.input_shape[1]

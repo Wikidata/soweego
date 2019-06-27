@@ -5,6 +5,13 @@
     :members:
 
 
+:mod:`soweego.linker.classifiers`
+--------------------------------------
+
+.. automodule:: soweego.linker.classifiers
+    :members:
+
+
 :mod:`soweego.linker.train`
 --------------------------------------
 

@@ -2,8 +2,6 @@
 # -*- coding: utf-8 -*-
 
 """Set of utilities."""
-import recordlinkage as rl
-
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -13,10 +11,11 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import logging
 
+import recordlinkage as rl
 from sklearn.model_selection import StratifiedKFold
 
 from soweego.commons import keys, constants
-from soweego.linker import classifiers, neural_networks
+from soweego.linker import classifiers
 
 LOGGER = logging.getLogger(__name__)
 
@@ -77,14 +76,14 @@ def init_model(classifier, num_features, **kwargs):
         model = classifiers.SVCClassifier(**kwargs)
 
     elif classifier is keys.SINGLE_LAYER_PERCEPTRON:
-        model = neural_networks.SingleLayerPerceptron(num_features, **kwargs)
+        model = classifiers.SingleLayerPerceptron(num_features, **kwargs)
 
     elif classifier is keys.MULTI_LAYER_PERCEPTRON:
-        model = neural_networks.MultiLayerPerceptron(num_features, **kwargs)
+        model = classifiers.MultiLayerPerceptron(num_features, **kwargs)
 
     else:
         err_msg = (
-            f'Unsupported classifier: {classifier}. '
+            f'Classifier not supported: {classifier}. '
             f'It should be one of {set(constants.CLASSIFIERS)}'
         )
         LOGGER.critical(err_msg)
