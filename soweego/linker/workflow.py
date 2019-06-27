@@ -201,7 +201,7 @@ def preprocess_wikidata(goal: str, wikidata_reader: JsonReader) -> Iterator[pd.D
     2. drop columns with null values only
     3. *(training)* ensure one target ID per QID
     4. tokenize names, URLs, genres, when applicable
-    5. *(shared with :func:`preprocess_target`)*
+    5. *(shared with* :func:`preprocess_target` *)*
        normalize columns with names, occupations, dates, when applicable
 
     :param goal: ``{'training', 'classification'}``.
@@ -277,7 +277,7 @@ def preprocess_target(goal: str, target_reader: Iterator[pd.DataFrame]) -> pd.Da
     4. pair dates with their precision and drop precision columns
        when applicable
     5. aggregate denormalized data on target ID
-    6. *(shared with :func:`preprocess_wikidata`)*
+    6. *(shared with* :func:`preprocess_wikidata` *)*
        normalize columns with names, occupations, dates, when applicable
 
     :param goal: ``{'training', 'classification'}``.
