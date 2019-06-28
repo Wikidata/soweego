@@ -15,7 +15,6 @@ import click
 
 from soweego import commons
 from soweego import pipeline as pipeline_cli
-from soweego import wikidata
 from soweego.importer import cli as importer_cli
 from soweego.ingestor import cli as ingestor_cli
 from soweego.linker import cli as linker_cli
@@ -48,6 +47,3 @@ def cli(ctx, log_level):
     commons.logging.setup()
     for module, level in log_level:
         commons.logging.set_log_level(module, level)
-
-    # HTTP session for the Wikidata API
-    wikidata.api_requests.build_session()
