@@ -586,7 +586,22 @@ def gather_qids(catalog: str, entity: str) -> set:
     return qids
 
 
-def extract_ids_from_urls(to_be_added, ext_id_pids_to_urls):
+def extract_ids_from_urls(to_be_added: dict,
+                          ext_id_pids_to_urls: defaultdict) -> Tuple[
+    list, list]:
+    """
+    Given a dictionary QIDs and the urls to be added to their wikidata entities,
+    return two list of valid external id assertions.
+
+    :param to_be_added: Dictionary of { 'qid': ['url1', 'url2'] } to be
+    converted in valid assertions
+    :param ext_id_pids_to_urls: Contains
+    information to translate urls to pid dictionary {'PID': {'URL FORMATTER':
+    'FORMATTER REGEX'}}
+    :return: A tuple containing two lists. The first are
+    valid external id assertions, the second contains assertions with pid
+    vocabulary.DESCRIBED_AT_URL
+    """
     LOGGER.info('Starting extraction of IDs from target links to be added ...')
     ext_ids_to_add = []
     urls_to_add = []
