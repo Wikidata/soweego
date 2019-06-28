@@ -32,7 +32,9 @@ release = '1.0'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx_autodoc_typehints',
-    'sphinx.ext.intersphinx'
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.viewcode',
+    'sphinx_click.ext'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -62,6 +64,7 @@ html_static_path = ['_static']
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
     'pandas': ('https://pandas.pydata.org/pandas-docs/stable/', None),
+    'recordlinkage': ('https://recordlinkage.readthedocs.io/en/latest/', None),
     'requests': ('https://2.python-requests.org/en/stable/', None),
     'sklearn': ('https://scikit-learn.org/stable/', None),
 }

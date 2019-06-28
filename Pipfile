@@ -17,6 +17,7 @@ tqdm = "*"
 lxml = "*"
 tensorflow = "*"
 keras = "*"
+joblib = "*"
 
 [dev-packages]
 pylint = "*"
@@ -30,3 +31,4 @@ black = "*"
 autopep8 = "*"
 sphinx = "*"
 sphinx-autodoc-typehints = "*"
+sphinx-click = "*"

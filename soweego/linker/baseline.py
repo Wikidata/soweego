@@ -197,7 +197,7 @@ def cli(
     default=constants.SHARED_FOLDER,
     help="default: '%s" % constants.SHARED_FOLDER,
 )
-def extract_available_matches_in_target(
+def extract_existing_links(
     target, target_type, upload, sandbox, output_dir
 ):
     """"""
