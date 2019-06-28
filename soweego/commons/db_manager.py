@@ -11,6 +11,7 @@ __copyright__ = 'Copyleft 2018, lenzi.edoardo'
 
 import json
 import logging
+import os
 from pkgutil import get_data
 
 from sqlalchemy import create_engine
@@ -21,7 +22,8 @@ from sqlalchemy.pool import NullPool
 
 from soweego.commons import keys
 from soweego.commons import localizations as loc
-from soweego.commons.constants import CREDENTIALS_LOCATION
+from soweego.commons.constants import DEFAULT_CREDENTIALS_LOCATION, \
+    CREDENTIALS_LOCATION
 
 BASE = declarative_base()
 LOGGER = logging.getLogger(__name__)
@@ -29,7 +31,6 @@ LOGGER = logging.getLogger(__name__)
 
 # TODO this class should become a singleton
 class DBManager:
-
     """Exposes some primitives for the DB access"""
 
     __engine: Engine
@@ -83,12 +84,7 @@ class DBManager:
 
     @staticmethod
     def get_credentials():
-        if DBManager.__credentials:
-            return DBManager.__credentials
+        if os.path.isfile(CREDENTIALS_LOCATION):
+            return json.load(open(CREDENTIALS_LOCATION))
         else:
-            return json.loads(get_data(*CREDENTIALS_LOCATION))
-
-    @staticmethod
-    def set_credentials_from_path(path: str):
-        with open(path) as file:
-            DBManager.__credentials = json.load(file)
+            return json.loads(get_data(*DEFAULT_CREDENTIALS_LOCATION))

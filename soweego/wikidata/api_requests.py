@@ -256,8 +256,8 @@ def build_session() -> requests.Session:
                     "won't log into the Wikidata API. "
                     "Please put '%s' in the '%s' module "
                     "if you want to log in next time",
-                    constants.CREDENTIALS_FILENAME,
-                    constants.CREDENTIALS_MODULE,
+                    constants.DEFAULT_CREDENTIALS_FILENAME,
+                    constants.DEFAULT_CREDENTIALS_MODULE,
                 )
             elif isinstance(error, KeyError):
                 LOGGER.info(
@@ -266,8 +266,8 @@ def build_session() -> requests.Session:
                     "Please add it to '%s' in the '%s' module "
                     "if you want to log in next time",
                     error,
-                    constants.CREDENTIALS_FILENAME,
-                    constants.CREDENTIALS_MODULE,
+                    constants.DEFAULT_CREDENTIALS_FILENAME,
+                    constants.DEFAULT_CREDENTIALS_MODULE,
                 )
 
             global BUCKET_SIZE

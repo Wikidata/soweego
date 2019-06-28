@@ -45,9 +45,11 @@ from soweego.importer.models.musicbrainz_entity import (
 )
 from soweego.wikidata import vocabulary
 
-CREDENTIALS_MODULE = 'soweego.importer.resources'
-CREDENTIALS_FILENAME = 'credentials.json'
-CREDENTIALS_LOCATION = (CREDENTIALS_MODULE, CREDENTIALS_FILENAME)
+DEFAULT_CREDENTIALS_MODULE = 'soweego.importer.resources'
+DEFAULT_CREDENTIALS_FILENAME = 'credentials.json'
+DEFAULT_CREDENTIALS_LOCATION = (
+    DEFAULT_CREDENTIALS_MODULE, DEFAULT_CREDENTIALS_FILENAME)
+CREDENTIALS_LOCATION = '/app/shared/credentials.json'
 
 # As per https://meta.wikimedia.org/wiki/User-Agent_policy
 HTTP_USER_AGENT = (
