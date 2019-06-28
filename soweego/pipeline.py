@@ -5,11 +5,8 @@ import logging
 from typing import Callable
 
 import click
-import objgraph
-from mem_top import mem_top
 
 from soweego.commons import target_database
-from soweego.commons.db_manager import DBManager
 from soweego.importer.importer import check_links_cli as validate_links
 from soweego.importer.importer import import_cli
 from soweego.linker import classify, evaluate, train
@@ -42,26 +39,14 @@ LOGGER = logging.getLogger(__name__)
     default=True,
     help='Upload the results on wikidata. Default: yes.',
 )
-@click.option(
-    '-c',
-    '--credentials-path',
-    type=click.Path(file_okay=True),
-    default=None,
-    help="default: None",
-)
 def cli(
-    target: str,
-    validator: bool,
-    importer: bool,
-    linker: bool,
-    upload: bool,
-    credentials_path: str,
+        target: str,
+        validator: bool,
+        importer: bool,
+        linker: bool,
+        upload: bool,
 ):
     """Executes importer/linker and optionally validator for a target"""
-
-    if credentials_path:
-        LOGGER.info("Using database credentials from file %s", credentials_path)
-        DBManager.set_credentials_from_path(credentials_path)
 
     if importer:
         _importer(target)
@@ -105,13 +90,15 @@ def _linker(target: str, upload: bool):
 
 def _validator(target: str, upload: bool):
     """Contains all the command the validator has to do"""
-    upload_option = "--upload" if upload else "--no-upload"
+    args = [target, '--upload'] if upload else [target]
     # Runs the validator for each kind of entity of the given target database
     for entity_type in target_database.supported_entities_for_target(target):
+        args.insert(1, entity_type)
         LOGGER.info("Running validator for target %s %s", target, entity_type)
-        _invoke_no_exit(dead_ids_cli, [target, entity_type, upload_option])
-        _invoke_no_exit(links_cli, [target, entity_type, upload_option])
-        _invoke_no_exit(bio_cli, [target, entity_type, upload_option])
+        _invoke_no_exit(dead_ids_cli, args)
+        _invoke_no_exit(links_cli, args)
+        _invoke_no_exit(bio_cli, args)
+        args.remove(entity_type)
 
 
 def _invoke_no_exit(function: Callable, args: list):
@@ -121,5 +108,3 @@ def _invoke_no_exit(function: Callable, args: list):
     except SystemExit:
         pass
     LOGGER.debug("GC collect %s\n" % gc.collect())
-    LOGGER.debug("memtop: %s\n" % mem_top())
-    LOGGER.debug("objgraph: %s\n" % objgraph.show_growth())

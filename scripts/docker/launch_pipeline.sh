@@ -31,20 +31,23 @@ shift "$((OPTIND - 1))"
 # Removes oldest backup
 PARENT_FOLDER="$(dirname ${DOCKER_SHARED_FOLDER})"
 FOLDER_NAME="$(basename ${DOCKER_SHARED_FOLDER})"
-NUMBER_OF_BACKUPS=$(find ${PARENT_FOLDER} -maxdepth 1 -name "${FOLDER_NAME}*.tar.gz" | wc -l)
+NUMBER_OF_BACKUPS=$(find ${PARENT_FOLDER} -maxdepth 1 -name "${FOLDER_NAME}*.tar.bzip2" | wc -l)
 NUMBER_OF_BACKUPS="${NUMBER_OF_BACKUPS// /}"
 echo "${NUMBER_OF_BACKUPS} backups available"
-if [[ ${NUMBER_OF_BACKUPS} = "4" ]]; then
-    to_rem=$(find ${PARENT_FOLDER} -maxdepth 1 -name "${FOLDER_NAME}*.tar.gz" | sort | head -n 1)
+if [[ ${NUMBER_OF_BACKUPS} = "3" ]]; then
+    to_rem=$(find ${PARENT_FOLDER} -maxdepth 1 -name "${FOLDER_NAME}*.tar.bzip2" | sort | head -n 1)
     echo "Deleting older backup: ${to_rem}"
     rm -f ${to_rem}
 fi
 
+(
+cd "${PARENT_FOLDER}"
 # Creates a backup and resets the docker shared folder
 NOW=$(date +"%Y_%m_%d_%H_%M")
-tar -czvf "${DOCKER_SHARED_FOLDER}_${NOW}.tar.gz" ${DOCKER_SHARED_FOLDER}
-rm -rf ${DOCKER_SHARED_FOLDER}
-mkdir -p ${DOCKER_SHARED_FOLDER}
+tar -cjvf "${FOLDER_NAME}_${NOW}.tar.bzip2" ${FOLDER_NAME}
+rm -rf ${FOLDER_NAME}
+mkdir -p ${FOLDER_NAME}
+)
 
 # Reset and update the project source code
 git reset --hard HEAD
@@ -56,4 +59,4 @@ cp "${CREDENTIALS_PATH}" "${DOCKER_SHARED_FOLDER}/credentials.json"
 
 # Builds and runs docker
 docker build --rm -f "Dockerfile.pipeline" -t maxfrax/soweego:pipeline .
-docker run -it --rm --name soweego-pipeline-$RANDOM --env-file .env --volume "${DOCKER_SHARED_FOLDER}":"/app/shared" maxfrax/soweego:pipeline -c "/app/shared/credentials.json" "$@"
+docker run -it --rm --name soweego-pipeline-$RANDOM --env-file .env --volume "${DOCKER_SHARED_FOLDER}":"/app/shared" maxfrax/soweego:pipeline "$@"

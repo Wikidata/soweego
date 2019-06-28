@@ -26,11 +26,9 @@
     },
     "debug_file_handler": {
       "formatter": "soweego",
-      "filename": "/app/shared/soweego.log",
       "level": "DEBUG",
-      "mode": "w",
-      "class": "logging.FileHandler",
-      "encoding": "utf8"
+      "class": "soweego.commons.logging.GzipLoggingHandler",
+      "filename" : "/app/shared/soweego.log.gz"
     }
   }
 }

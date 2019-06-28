@@ -2,8 +2,6 @@
 
 source .env
 
-credentials_path="soweego/importer/resources/credentials.json"
-
 PROGNAME=$0
 
 usage() {
@@ -18,16 +16,17 @@ EOF
 }
 
 export DOCKER_SHARED_FOLDER="/tmp/soweego_shared/"
-git checkout $credentials_path
 
 while getopts :s:c: o; do
   case $o in
     (s) export DOCKER_SHARED_FOLDER="$OPTARG";;
-    (c) cp $OPTARG $credentials_path;;
+    (c) export CREDENTIALS_PATH="$OPTARG";;
     (*) usage
   esac
 done
 shift "$((OPTIND - 1))"
+
+cp "${CREDENTIALS_PATH}" "${DOCKER_SHARED_FOLDER}/credentials.json"
 
 
 docker build --rm -f "Dockerfile.test" -t maxfrax/soweego:latest .
