@@ -1,7 +1,41 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Set of techniques to compare record pairs (read extract features) for probabilistic linking."""
+"""A set of custom features suitable for the
+`Record Linkage Toolkit <https://recordlinkage.readthedocs.io/>`_,
+where feature extraction stands for *record pairs comparison*.
+
+**Input:** pairs of :class:`list` objects
+coming from Wikidata and target catalog :class:`pandas.DataFrame` columns as per
+:func:`preprocess_wikidata() <soweego.linker.workflow.preprocess_wikidata>` and
+:func:`preprocess_target() <soweego.linker.workflow.preprocess_target>` output.
+
+**Output:** a *feature vector* :class:`pandas.Series`.
+
+All classes in this module share the following constructor parameters:
+
+- **left_on** (str) - a Wikidata column label
+- **right_on** (str) - a target catalog column label
+- **missing_value** - (optional) a score to fill null values
+- **label** - (optional) a label for the output feature
+  :class:`Series <pandas.Series>`
+
+Specific parameters are documented in the  *__init__* method of each class.
+
+All classes in this module implement
+:class:`recordlinkage.base.BaseCompareFeature`, and can be
+added to the feature extractor object :class:`recordlinkage.Compare`.
+
+Usage::
+
+>>> import recordlinkage as rl
+>>> from soweego.linker import features
+>>> extractor = rl.Compare()
+>>> source_column, target_column = 'birth_name', 'fullname'
+>>> feature = features.ExactMatch(source_column, target_column)
+>>> extractor.add(feature)
+
+"""
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -25,38 +59,133 @@ from soweego.commons import constants, text_utils
 from soweego.wikidata import sparql_queries
 
 LOGGER = logging.getLogger(__name__)
+
+# When calling `SharedOccupations._expand_occupations`, it's useful to have
+# a concurrent-safe dict where we cache the return value.
+# In this way, all threads of a parallel feature extractor execution
+# e.g., `recordlinkage.Compare(n_jobs=4)
+# will have access to the dict, thus drastically decreasing
+# the amount of needed SPARQL queries.
+# This cache is also preserved across executions of the feature extractor.
 _threading_manager = Manager()
-
-
-# when expanding the QID in `OccupationQidSet._expand_occupations` it
-# is useful to have a concurrent safe dict where we can cache each result, so that when this
-# feature extractor is executed in parallel, all instances will have
-# access to the same cache, drastically decreasing the number of SPARQL
-# requests that we need to make. This cache is also preserved across executions
-# of this feature extractor.
 _global_occupations_qid_cache = _threading_manager.dict()
 
 
 # Adapted from https://github.com/J535D165/recordlinkage/blob/master/recordlinkage/compare.py
 # See RECORDLINKAGE_LICENSE
-
-
-class StringList(BaseCompareFeature):
-    name = 'string_list'
-    description = 'Compare pairs of lists with string values'
+class ExactMatch(BaseCompareFeature):
+    """Compare pairs of lists through exact match on each pair of elements."""
+    name = 'exact_match'
+    description = (
+        'Compare pairs of lists through exact match on each pair of elements.'
+    )
 
     def __init__(
         self,
-        left_on,
-        right_on,
-        algorithm='levenshtein',
-        threshold=None,
-        missing_value=constants.FEATURE_MISSING_VALUE,
-        analyzer=None,
-        ngram_range=(2, 2),
-        label=None,
+        left_on: str,
+        right_on: str,
+        match_value: float = 1.0,
+        non_match_value: float = 0.0,
+        missing_value: float = constants.FEATURE_MISSING_VALUE,
+        label: str = None,
     ):
-        super(StringList, self).__init__(left_on, right_on, label=label)
+        """
+        :param left_on: a Wikidata :class:`DataFrame <pandas.DataFrame>`
+          column label
+        :param right_on: a target catalog :class:`DataFrame <pandas.DataFrame>`
+          column label
+        :param match_value: (optional) a score when element pairs match
+        :param non_match_value: (optional) a score when element pairs
+          do not match
+        :param missing_value: (optional) a score to fill null values
+        :param label: (optional) a label for the output feature
+          :class:`Series <pandas.Series>`
+        """
+        super(ExactMatch, self).__init__(left_on, right_on, label=label)
+        self.match_value = match_value
+        self.non_match_value = non_match_value
+        self.missing_value = missing_value
+
+    def _compute_vectorized(self, source_column, target_column):
+        concatenated = pd.Series(list(zip(source_column, target_column)))
+
+        def exact_apply(pair):
+            if _pair_has_any_null(pair):
+                LOGGER.debug(
+                    "Can't compare, the pair contains null values: %s", pair
+                )
+                return np.nan
+
+            scores = []
+            for source in pair[0]:
+                for target in pair[1]:
+                    if pd.isna(source) or pd.isna(target):
+                        scores.append(self.missing_value)
+                        continue
+                    if source == target:
+                        scores.append(self.match_value)
+                    else:
+                        scores.append(self.non_match_value)
+            return max(scores)
+
+        return fillna(concatenated.apply(exact_apply), self.missing_value)
+
+
+class SimilarStrings(BaseCompareFeature):
+    """Compare pairs of lists holding **strings**
+    through similarity measures on each pair of elements.
+    """
+    name = 'similar_strings'
+    description = (
+        'Compare pairs of lists holding strings '
+        'through similarity measures on each pair of elements'
+    )
+
+    def __init__(
+        self,
+        left_on: str,
+        right_on: str,
+        algorithm: str = 'levenshtein',
+        threshold: float = None,
+        missing_value: float = constants.FEATURE_MISSING_VALUE,
+        analyzer: str = None,
+        ngram_range: Tuple[int, int] = (2, 2),
+        label: str = None,
+    ):
+        """
+        :param left_on: a Wikidata :class:`DataFrame <pandas.DataFrame>`
+          column label
+        :param right_on: a target catalog :class:`DataFrame <pandas.DataFrame>`
+          column label
+        :param algorithm: (optional) ``{'cosine', 'levenshtein'}``.
+          A string similarity algorithm, either the
+          `cosine similarity <https://en.wikipedia.org/wiki/Cosine_similarity>`_
+          or the
+          `Levenshtein distance <https://en.wikipedia.org/wiki/Levenshtein_distance>`_
+          respectively
+        :param threshold: (optional) a threshold to filter features with
+          a lower or equal score
+        :param missing_value: (optional) a score to fill null values
+        :param analyzer: (optional, only applies when *algorithm='cosine'*)
+          ``{'soweego', 'word', 'char', 'char_wb'}``.
+          A text analyzer to preprocess input. It is passed to the *analyzer*
+          parameter of :class:`sklearn.feature_extraction.text.CountVectorizer`.
+
+          - ``'soweego'`` is :func:`soweego.commons.text_utils.tokenize`
+          - ``{'word', 'char', 'char_wb'}`` are *scikit* built-ins. See
+            `here <https://scikit-learn.org/stable/modules/feature_extraction.html#limitations-of-the-bag-of-words-representation>`_
+            for more details
+          - ``None`` is :meth:`str.split`,
+            and means input is already preprocessed
+
+        :param ngram_range: (optional, only applies when *algorithm='cosine'*
+          and *analyzer* is not *'soweego')*. Lower and upper boundary for
+          n-gram extraction, passed to
+          :class:`CountVectorizer <sklearn.feature_extraction.text.CountVectorizer>`
+        :param label: (optional) a label for the output feature
+          :class:`Series <pandas.Series>`
+        """
+        super(SimilarStrings, self).__init__(left_on, right_on, label=label)
         self.algorithm = algorithm
         self.threshold = threshold
         self.missing_value = missing_value
@@ -66,40 +195,48 @@ class StringList(BaseCompareFeature):
     def _compute_vectorized(self, source_column, target_column):
         if self.algorithm == 'levenshtein':
             algorithm = self.levenshtein_similarity
+
         elif self.algorithm == 'cosine':
             algorithm = self.cosine_similarity
+
         else:
-            raise ValueError(
-                'Bad string similarity algorithm: %s. Please use one of %s'
-                % (self.algorithm, ('levenshtein', 'cosine'))
+            err_msg = (
+                f'Bad string similarity algorithm: {self.algorithm}. '
+                f"Please use one of ('levenshtein', 'cosine')"
             )
+            LOGGER.critical(err_msg)
+            raise ValueError(err_msg)
 
         compared = algorithm(source_column, target_column)
         compared_filled = fillna(compared, self.missing_value)
 
         if self.threshold is None:
             return compared_filled
+
         return (compared_filled >= self.threshold).astype(np.float64)
 
-    # Adapted from https://github.com/J535D165/recordlinkage/blob/master/recordlinkage/algorithms/string.py
-    # Average the edit distance among the list of values
-    # TODO low scores if name is swapped with surname, see https://github.com/Wikidata/soweego/issues/175
+    # Adapted from
+    # https://github.com/J535D165/recordlinkage/blob/master/recordlinkage/algorithms/string.py
+    # Maximum edit distance among the list of values
+    # TODO low scores if name is swapped with surname,
+    #  see https://github.com/Wikidata/soweego/issues/175
     def levenshtein_similarity(self, source_column, target_column):
         paired = pd.Series(list(zip(source_column, target_column)))
 
-        def _levenshtein_apply(pair):
+        def levenshtein_apply(pair):
             if _pair_has_any_null(pair):
                 LOGGER.debug(
-                    "Can't compute Levenshtein distance, the pair contains null values: %s",
+                    "Can't compute Levenshtein distance, "
+                    "the pair contains null values: %s",
                     pair,
                 )
                 return np.nan
 
             scores = []
-            source_values, target_values = pair
+            source_list, target_list = pair
 
-            for source in source_values:
-                for target in target_values:
+            for source in source_list:
+                for target in target_list:
                     try:
                         score = 1 - jellyfish.levenshtein_distance(
                             source, target
@@ -110,13 +247,15 @@ class StringList(BaseCompareFeature):
                             scores.append(self.missing_value)
                         else:
                             raise
+
             return max(scores)
 
-        return paired.apply(_levenshtein_apply)
+        return paired.apply(levenshtein_apply)
 
     def cosine_similarity(self, source_column, target_column):
         if len(source_column) != len(target_column):
             raise ValueError('Columns must have the same length')
+
         if len(source_column) == len(target_column) == 0:
             LOGGER.warning("Can't compute cosine similarity, columns are empty")
             return pd.Series(np.nan)
@@ -127,23 +266,31 @@ class StringList(BaseCompareFeature):
             target_column.str.join(' '),
         )
 
-        # No analyzer means input underwent commons.text_utils#tokenize
+        # No analyzer means input underwent `commons.text_utils.tokenize`
         if self.analyzer is None:
             vectorizer = CountVectorizer(analyzer=str.split)
+
         elif self.analyzer == 'soweego':
             vectorizer = CountVectorizer(analyzer=text_utils.tokenize)
+
         # scikit-learn built-ins
-        # 'char' and char_wb' make CHARACTER n-grams, instead of WORD ones, may be useful for short strings with misspellings.
-        # 'char_wb' makes n-grams INSIDE words, thus eventually padding with whitespaces.
-        # See https://scikit-learn.org/stable/modules/feature_extraction.html#limitations-of-the-bag-of-words-representation
+        # `char` and `char_wb` make CHARACTER n-grams, instead of WORD ones:
+        # they may be useful for short strings with misspellings.
+        # `char_wb` makes n-grams INSIDE words,
+        # thus eventually padding with whitespaces. See
+        # https://scikit-learn.org/stable/modules/feature_extraction.html#limitations-of-the-bag-of-words-representation
         elif self.analyzer in ('word', 'char', 'char_wb'):
             vectorizer = CountVectorizer(
                 analyzer=self.analyzer,
                 strip_accents='unicode',
                 ngram_range=self.ngram_range,
             )
+
         else:
-            err_msg = f"Bad text analyzer: {self.analyzer}. Please use one of 'soweego', 'word', 'char', 'char_wb'"
+            err_msg = (
+                f'Bad text analyzer: {self.analyzer}. '
+                f"Please use one of ('soweego', 'word', 'char', 'char_wb')"
+            )
             LOGGER.critical(err_msg)
             raise ValueError(err_msg)
 
@@ -170,142 +317,91 @@ class StringList(BaseCompareFeature):
         )
 
 
-class ExactList(BaseCompareFeature):
-    name = 'exact_list'
+class SimilarDates(BaseCompareFeature):
+    """Compare pairs of lists holding **dates**
+    through match by maximum shared precision.
+    """
+    name = 'similar_dates'
     description = (
-        'Compare pairs of lists through exact match on each pair of elements.'
+        'Compare pairs of lists holding dates '
+        'through match by maximum shared precision'
     )
 
     def __init__(
         self,
-        left_on,
-        right_on,
-        agree_value=1.0,
-        disagree_value=0.0,
-        missing_value=constants.FEATURE_MISSING_VALUE,
-        label=None,
+        left_on: str,
+        right_on: str,
+        missing_value: float = constants.FEATURE_MISSING_VALUE,
+        label: str = None,
     ):
-        super(ExactList, self).__init__(left_on, right_on, label=label)
-        self.agree_value = agree_value
-        self.disagree_value = disagree_value
-        self.missing_value = missing_value
-
-    def _compute_vectorized(self, source_column, target_column):
-        concatenated = pd.Series(list(zip(source_column, target_column)))
-
-        def exact_apply(pair):
-            if _pair_has_any_null(pair):
-                LOGGER.debug(
-                    "Can't compare, the pair contains null values: %s", pair
-                )
-                return np.nan
-
-            scores = []
-            for source in pair[0]:
-                for target in pair[1]:
-                    if pd.isna(source) or pd.isna(target):
-                        scores.append(self.missing_value)
-                        continue
-                    if source == target:
-                        scores.append(self.agree_value)
-                    else:
-                        scores.append(self.disagree_value)
-            return max(scores)
-
-        return fillna(concatenated.apply(exact_apply), self.missing_value)
-
-
-class DateCompare(BaseCompareFeature):
-    """
-    Compares `pandas.Period` date objects, taking into
-    account their maximum precisions.
-    """
-
-    name = "date_compare"
-    description = "Compares the date attribute of record pairs."
-
-    def __init__(
-        self,
-        left_on,
-        right_on,
-        missing_value=constants.FEATURE_MISSING_VALUE,
-        label=None,
-    ):
-        super(DateCompare, self).__init__(left_on, right_on, label=label)
+        """
+        :param left_on: a Wikidata :class:`DataFrame <pandas.DataFrame>`
+          column label
+        :param right_on: a target catalog :class:`DataFrame <pandas.DataFrame>`
+          column label
+        :param missing_value: (optional) a score to fill null values
+        :param label: (optional) a label for the output feature
+          :class:`Series <pandas.Series>`
+        """
+        super(SimilarDates, self).__init__(left_on, right_on, label=label)
 
         self.missing_value = missing_value
 
     def _compute_vectorized(self, source_column, target_column):
-
-        # we zip together the source column and the target column so that
-        # they're easier to process
         concatenated = pd.Series(list(zip(source_column, target_column)))
 
         def check_date_equality(pair: Tuple[List[pd.Period], List[pd.Period]]):
-            """
-            Compares the target pd.Periods with the source pd.Periods which represent either
-            a birth or a death date.
-
-            Returns the most optimistic match
-            """
-
             if _pair_has_any_null(pair):
                 LOGGER.debug(
-                    "Can't compare dates, one of the values is NaN. Pair: %s",
+                    "Can't compare dates, the pair contains null values: %s",
                     pair,
                 )
                 return np.nan
 
-            s_items, t_items = pair
-
-            # will help us to keep track of the best score
+            source_list, target_list = pair
+            # Keep track of the best score
             best = 0
 
-            for s_date, t_date in itertools.product(s_items, t_items):
-
-                # get precision number for both dates
+            for source, target in itertools.product(source_list, target_list):
+                # Get precision number for both dates
                 s_precision = constants.PD_PERIOD_PRECISIONS.index(
-                    s_date.freq.name
+                    source.freq.name
                 )
                 t_precision = constants.PD_PERIOD_PRECISIONS.index(
-                    t_date.freq.name
+                    target.freq.name
                 )
 
-                # we choose to compare on the lowest precision
-                # since it's the maximum precision on which both
-                # dates can be safely compared
+                # Minimum pair precision = maximum shared precision
                 lowest_prec = min(s_precision, t_precision)
+                # Result for the current `source`
+                current_result = 0
 
-                # the result for the current `s_date`
-                c_r = 0
-
-                # now we loop through the possible `Period` attributes that we can compare
+                # Loop through `pandas.Period` attributes that we can compare
                 # and the precision that stands for said attribute
                 for min_required_prec, d_attr in enumerate(
                     ['year', 'month', 'day', 'hour', 'minute', 'second']
                 ):
-
-                    # If both `s_date` and `t_date` have a precision which allows the
+                    # If both `source` and `target` have a precision which allows the
                     # current attribute to be compared then we do so. If the attribute
-                    # matches then we add 1 to `c_r`, if not then we break the loop.
+                    # matches then we add 1 to `current_result`, if not then we break the loop.
                     # We consider from lowest to highest precision. If a lowest
-                    # precision attribute (ie, year) doesn't match then we say that
+                    # precision attribute (e.g., year) doesn't match then we say that
                     # the dates don't match at all (we don't check if higher precision
                     # attributes match)
                     if lowest_prec >= min_required_prec and getattr(
-                        s_date, d_attr
-                    ) == getattr(t_date, d_attr):
-                        c_r += 1
+                        source, d_attr
+                    ) == getattr(target, d_attr):
+                        current_result += 1
                     else:
                         break
 
-                # we want a value between 0 and 1 for our score. 0 means no match at all and
-                # 1 stands for perfect match. So we just divide `c_r` by `lowest_prec`
+                # We want a value between 0 and 1 for our score. 0 means no match at all and
+                # 1 stands for perfect match. We just divide `current_result` by `lowest_prec`
                 # so that we get the percentage of items that matches from the total number
                 # of items we compared (since we have variable date precision)
-                # we sum 1 to `lowers_prec` to account for the fact that the possible minimum
+                # we sum 1 to `lowest_prec` to account for the fact that the possible minimum
                 # common precision is 0 (the year)
-                best = max(best, (c_r / (lowest_prec + 1)))
+                best = max(best, (current_result / (lowest_prec + 1)))
 
             return best
 
@@ -314,24 +410,32 @@ class DateCompare(BaseCompareFeature):
         )
 
 
-class SimilarTokens(BaseCompareFeature):
-    name = 'SimilarTokens'
+class SharedTokens(BaseCompareFeature):
+    """Compare pairs of lists holding **string tokens**
+    through weighted intersection.
+    """
+    name = 'shared_tokens'
     description = (
-        'Compare pairs of lists with string values based on shared tokens.'
+        'Compare pairs of lists holding string tokens '
+        'through weighted intersection'
     )
 
-    def __init__(
-        self,
-        left_on,
-        right_on,
-        agree_value=1.0,
-        disagree_value=0.0,
-        missing_value=constants.FEATURE_MISSING_VALUE,
-        label=None,
+    def __init__(self,
+                 left_on: str,
+                 right_on: str,
+                 missing_value: float = constants.FEATURE_MISSING_VALUE,
+                 label: str = None
     ):
-        super(SimilarTokens, self).__init__(left_on, right_on, label=label)
-        self.agree_value = agree_value
-        self.disagree_value = disagree_value
+        """
+        :param left_on: a Wikidata :class:`DataFrame <pandas.DataFrame>`
+          column label
+        :param right_on: a target catalog :class:`DataFrame <pandas.DataFrame>`
+          column label
+        :param missing_value: (optional) a score to fill null values
+        :param label: (optional) a label for the output feature
+          :class:`Series <pandas.Series>`
+        """
+        super(SharedTokens, self).__init__(left_on, right_on, label=label)
         self.missing_value = missing_value
 
     def _compute_vectorized(self, source_column, target_column):
@@ -340,23 +444,21 @@ class SimilarTokens(BaseCompareFeature):
         def intersection_percentage_size(pair):
             if _pair_has_any_null(pair):
                 LOGGER.debug(
-                    "Can't compare Tokens, the pair contains null values: %s",
+                    "Can't compare tokens, the pair contains null values: %s",
                     pair,
                 )
                 return np.nan
 
-            source_labels, target_labels = pair
+            source_list, target_list = pair
+            source_set, target_set = set(source_list), set()
 
-            first_set = set(source_labels)
-            second_set = set()
+            for value in target_list:
+                if value:
+                    target_set.update(filter(None, value.split()))
 
-            for label in target_labels:
-                if label:
-                    second_set.update(filter(None, label.split()))
-
-            intersection = first_set.intersection(second_set)
+            intersection = source_set.intersection(target_set)
             count_intersect = len(intersection)
-            count_total = len(first_set.union(second_set))
+            count_total = len(source_set.union(target_set))
 
             # Penalize band stopwords
             count_low_score_words = len(
@@ -374,58 +476,67 @@ class SimilarTokens(BaseCompareFeature):
         )
 
 
-class OccupationQidSet(BaseCompareFeature):
-    name = 'occupation_qid_set'
-    description = 'Compare pairs of sets containing occupation QIDs.'
+class SharedOccupations(BaseCompareFeature):
+    """Compare pairs of lists holding **occupation QIDs** *(ontology classes)*
+    through expansion of the class hierarchy, plus intersection of values.
+    """
+    name = 'shared_occupations'
+    description = (
+        'Compare pairs of lists holding occupation QIDs '
+        'through expansion of the class hierarchy, plus intersection of values'
+    )
 
-    def __init__(self, left_on, right_on, missing_value=0.0, label=None):
-        super(OccupationQidSet, self).__init__(left_on, right_on, label=label)
+    def __init__(self, left_on: str, right_on: str, missing_value: float = 0.0, label: str = None):
+        """
+        :param left_on: a Wikidata :class:`DataFrame <pandas.DataFrame>`
+          column label
+        :param right_on: a target catalog :class:`DataFrame <pandas.DataFrame>`
+          column label
+        :param missing_value: (optional) a score to fill null values
+        :param label: (optional) a label for the output feature
+          :class:`Series <pandas.Series>`
+        """
+        super(SharedOccupations, self).__init__(left_on, right_on, label=label)
 
-        # declare that we want to use the global qid cache
         global _global_occupations_qid_cache
 
         self.missing_value = missing_value
-
-        # set instance `_expand_occupations_cache` to reference the global
-        # cache.
+        # Set private attribute `_expand_occupations_cache`
+        # to reference the global cache
         self._expand_occupations_cache = _global_occupations_qid_cache
 
+    # This should be applied to a `pandas.Series`, where each element
+    # is a set of QIDs.
+    # This function will expand the set to include all superclasses and
+    # subclasses of each QID in the original set.
     def _expand_occupations(self, occupation_qids: Set[str]) -> Set[str]:
-        """
-        This should be applied to a pandas.Series, where each element
-        is a set of QIDs.
-
-        This function will expand the set to include all superclasses and
-        subclasses of each QID in the original set.
-        """
-
         expanded_set = set()
 
         for qid in occupation_qids:
             expanded_set.add(qid)  # add qid to expanded set
 
-            # check if we have the subclasses and superclasses
+            # Check if we have the subclasses and superclasses
             # of this specific qid in memory
             if qid in self._expand_occupations_cache:
 
                 # if we do then add them to expanded set
                 expanded_set |= self._expand_occupations_cache[qid]
 
-            # if we don't have them then we get them from
+            # If we don't have them then we get them from
             # wikidata and add them to the cache and
             # `expanded_set`
             else:
 
-                # get subclasses and superclasses
+                # Get class hierarchy
                 subclasses = sparql_queries.subclasses_of(qid)
                 superclasses = sparql_queries.superclasses_of(qid)
 
                 joined = subclasses | superclasses
 
-                # add joined to cache
+                # Add joined to cache
                 self._expand_occupations_cache[qid] = joined
 
-                # finally add them to expanded set
+                # Finally, add them to expanded set
                 expanded_set |= joined
 
         return expanded_set
@@ -442,20 +553,17 @@ class OccupationQidSet(BaseCompareFeature):
         # they're easier to process
         concatenated = pd.Series(list(zip(source_column, target_column)))
 
+        # Given 2 sets, return the percentage of items that the
+        # smaller set shares with the larger set
         def check_occupation_equality(pair: Tuple[Set[str], Set[str]]):
-            """Given 2 sets, returns the percentage of items that the
-            smallest set shares with the larger set"""
-
-            # explicitly check if set is empty
             if _pair_has_any_null(pair):
                 LOGGER.debug(
-                    "Can't compare occupations, either the Wikidata or Target value is null. Pair: %s",
+                    "Can't compare occupations, "
+                    "the pair contains null values: %s",
                     pair,
                 )
                 return np.nan
 
-            s_item: Set
-            t_item: Set
             s_item, t_item = pair
 
             min_length = min(len(s_item), len(t_item))
@@ -468,35 +576,50 @@ class OccupationQidSet(BaseCompareFeature):
         )
 
 
-class CompareTokens(BaseCompareFeature):
-    name = 'compare_tokens'
+class SharedTokensPlus(BaseCompareFeature):
+    """Compare pairs of lists holding **string tokens**
+    through weighted intersection.
+
+    This feature is similar to :class:`SharedTokens`,
+    but has extra functionality:
+
+    - handles arbitrary stop words
+    - accepts nested list of tokens
+    - output score is computed FIXME metric
+    """
+    name = 'shared_tokens_plus'
     description = (
-        'Compares lists of tokens, potentially taking into account stopwords.'
+        'Compare pairs of lists holding string tokens '
+        'through weighted intersection'
     )
 
     def __init__(
         self,
-        left_on,
-        right_on,
-        agree_value=1.0,
-        disagree_value=0.0,
-        missing_value=constants.FEATURE_MISSING_VALUE,
+        left_on: str,
+        right_on: str,
+        missing_value: float = constants.FEATURE_MISSING_VALUE,
         label: str = None,
-        stopwords: Set = None,
+        stop_words: Set = None,
     ):
-        super(CompareTokens, self).__init__(left_on, right_on, label=label)
+        """
+        :param left_on: a Wikidata :class:`DataFrame <pandas.DataFrame>`
+          column label
+        :param right_on: a target catalog :class:`DataFrame <pandas.DataFrame>`
+          column label
+        :param missing_value: (optional) a score to fill null values
+        :param label: (optional) a label for the output feature
+          :class:`Series <pandas.Series>`
+        :param stop_words: (optional) a set of
+          `stop words <https://en.wikipedia.org/wiki/Stop_words>`_
+          to be filtered from input pairs
+        """
+        super(SharedTokensPlus, self).__init__(left_on, right_on, label=label)
 
-        self.agree_value = agree_value
-        self.disagree_value = disagree_value
         self.missing_value = missing_value
-        self.stopwords = stopwords
+        self.stop_words = stop_words
 
-    def _flatten_tokens(self, list_to_flatten: List) -> List:
-        """
-        takes a possibly nested List as `list_to_flatten`
-        and returns all elements in a flat array
-        """
-
+    @staticmethod
+    def _flatten(list_to_flatten: List) -> List:
         to_process = [list_to_flatten]
         result = []
 
@@ -519,12 +642,8 @@ class CompareTokens(BaseCompareFeature):
         # the columns is a set of tokens
         concatenated = pd.Series(list(zip(source_column, target_column)))
 
+        # Compute shared tokens after filtering stop words
         def compare_apply(pair: Tuple[List[str], List[str]]) -> float:
-            """
-            Compare how many tokens have the source and target columns in
-            common after removing stopwords tokens (if any)
-            """
-
             if _pair_has_any_null(pair):
                 LOGGER.debug(
                     "Can't compare, the pair contains null values: %s", pair
@@ -535,7 +654,7 @@ class CompareTokens(BaseCompareFeature):
             # make all lowercase and split on possible spaces
             # also reshape result into a list (flatten)
             pair = [
-                self._flatten_tokens([el.lower().split() for el in p])
+                self._flatten([el.lower().split() for el in p])
                 for p in pair
             ]
 
@@ -545,14 +664,14 @@ class CompareTokens(BaseCompareFeature):
             s_item = set(s_item)
             t_item = set(t_item)
 
-            if self.stopwords:
-                s_item -= self.stopwords
-                t_item -= self.stopwords
+            if self.stop_words:
+                s_item -= self.stop_words
+                t_item -= self.stop_words
 
             min_length = min(len(s_item), len(t_item))
             n_shared_items = len(s_item & t_item)
 
-            # prevent division by 0
+            # Prevent division by 0
             if min_length != 0:
                 return n_shared_items / min_length
             else:
