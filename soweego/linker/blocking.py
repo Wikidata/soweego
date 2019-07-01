@@ -23,10 +23,10 @@ for building the actual target dataset.
 
 import logging
 import os
+from multiprocessing import Pool
 from typing import Iterable, Tuple
 
 import pandas as pd
-from recordlinkage import Index
 from tqdm import tqdm
 
 from soweego.commons import constants, keys
@@ -135,7 +135,7 @@ def find_samples(
 
 def _query_generator(
     wikidata_column: pd.Series, target_db_entity: constants.DB_ENTITY
-) -> Iterable[Tuple[str, str, constants.DB_ENTITY]]:
+) -> Iterable[Tuple[str, list, constants.DB_ENTITY]]:
     for qid, values in wikidata_column.items():
         yield qid, values, target_db_entity
 
@@ -160,8 +160,12 @@ def _full_text_search(query: Tuple[str, list, constants.DB_ENTITY], boolean_mode
 def _fire_queries(
     wikidata_column: pd.Series, target_db_entity: constants.DB_ENTITY
 ):
-    for query in tqdm(
-        _query_generator(wikidata_column, target_db_entity),
-        total=len(wikidata_column),
-    ):
-        yield from _full_text_search(query)
+    with Pool() as pool:
+        for result in tqdm(
+            pool.imap_unordered(
+                _full_text_search,
+                _query_generator(wikidata_column, target_db_entity),
+            ),
+            total=len(wikidata_column),
+        ):
+            yield from result
