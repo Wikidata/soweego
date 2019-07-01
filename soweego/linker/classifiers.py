@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""A set of custom classifiers suitable for the
+"""A set of custom supervised classifiers suitable for the
 `Record Linkage Toolkit <https://recordlinkage.readthedocs.io/>`_.
 It includes
 `neural networks <https://en.wikipedia.org/wiki/Artificial_neural_network>`_ and
