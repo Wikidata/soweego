@@ -341,8 +341,8 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
       on name tokens
     - `string kernel <https://en.wikipedia.org/wiki/String_kernel>`_
       similarity on name tokens
-    - full-text index similarity on name tokens
-    - match on dates by minimum shared precision
+    - weighted intersection on name tokens
+    - match on dates by maximum shared precision
     - `cosine similarity <https://en.wikipedia.org/wiki/Cosine_similarity>`_
       on textual descriptions
     - match on occupation QIDs
@@ -371,9 +371,11 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
     feature_extractor = rl.Compare(n_jobs=cpu_count())
 
     # Exact match on full name
-    if in_both_datasets(keys.NAME):
+    name_column = keys.NAME
+    if in_both_datasets(name_column):
         feature_extractor.add(
-            features.ExactList(keys.NAME, keys.NAME, label='name_exact')
+            features.ExactMatch(name_column, name_column,
+                                label=f'{name_column}_exact')
         )
 
     # URL features
@@ -388,34 +390,35 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
         _add_name_tokens_features(feature_extractor)
 
     # Cosine similarity on description
-    if in_both_datasets(keys.DESCRIPTION):
+    description_column = keys.DESCRIPTION
+    if in_both_datasets(description_column):
         feature_extractor.add(
-            features.StringList(
-                keys.DESCRIPTION,
-                keys.DESCRIPTION,
+            features.SimilarStrings(
+                description_column,
+                description_column,
                 algorithm='cosine',
                 analyzer='soweego',
-                label='description_cosine',
+                label=f'{description_column}_cosine',
             )
         )
 
     # Match on occupation QIDs
-    occupations_col_name = vocabulary.LINKER_PIDS[vocabulary.OCCUPATION]
-    if in_both_datasets(occupations_col_name):
+    occupations_column = keys.OCCUPATIONS
+    if in_both_datasets(occupations_column):
         feature_extractor.add(
-            features.OccupationQidSet(
-                occupations_col_name,
-                occupations_col_name,
-                label='occupation_qids',
+            features.SharedOccupations(
+                occupations_column,
+                occupations_column,
+                label=f'{occupations_column}_shared',
             )
         )
 
     # Match on tokenized genres
-    if in_both_datasets(keys.GENRES):
+    genres_column = keys.GENRES
+    if in_both_datasets(genres_column):
         feature_extractor.add(
-            features.SimilarTokens(
-                keys.GENRES, keys.GENRES, label='genre_similar_tokens'
-            )
+            features.SharedTokens(genres_column, genres_column,
+                                  label=f'{genres_column}_tokens_shared')
         )
 
     feature_vectors = feature_extractor.compute(candidate_pairs, wikidata, target)
@@ -433,61 +436,70 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
 
 
 def _add_date_features(feature_extractor, in_both_datasets):
-    if in_both_datasets(keys.DATE_OF_BIRTH):
+    birth_column, death_column = keys.DATE_OF_BIRTH, keys.DATE_OF_DEATH
+
+    if in_both_datasets(birth_column):
         feature_extractor.add(
-            features.DateCompare(
-                keys.DATE_OF_BIRTH, keys.DATE_OF_BIRTH, label='date_of_birth'
+            features.SimilarDates(
+                birth_column, birth_column,
+                label=f'{birth_column}_similar'
             )
         )
 
-    if in_both_datasets(keys.DATE_OF_DEATH):
+    if in_both_datasets(death_column):
         feature_extractor.add(
-            features.DateCompare(
-                keys.DATE_OF_DEATH, keys.DATE_OF_DEATH, label='date_of_death'
+            features.SimilarDates(
+                death_column, death_column,
+                label=f'{death_column}_similar'
             )
         )
 
 
 def _add_url_features(feature_extractor):
+    url_column, url_tokens_column = keys.URL, keys.URL_TOKENS
+
     # Exact match on URLs
     feature_extractor.add(
-        features.ExactList(keys.URL, keys.URL, label='url_exact'))
+        features.ExactMatch(url_column, url_column, label=f'{url_column}_exact')
+    )
 
     # Match on URL tokens
     feature_extractor.add(
-        features.CompareTokens(
-            keys.URL_TOKENS,
-            keys.URL_TOKENS,
-            label='url_tokens',
-            stopwords=text_utils.STOPWORDS_URL_TOKENS,
+        features.SharedTokensPlus(
+            url_tokens_column,
+            url_tokens_column,
+            label=f'{url_tokens_column}_shared',
+            stop_words=text_utils.STOPWORDS_URL_TOKENS,
         )
     )
 
 
 def _add_name_tokens_features(feature_extractor):
+    name_tokens_column = keys.NAME_TOKENS
+
     # Levenshtein distance on name tokens
     feature_extractor.add(
-        features.StringList(
-            keys.NAME_TOKENS, keys.NAME_TOKENS, label='name_levenshtein'
+        features.SimilarStrings(
+            name_tokens_column, name_tokens_column,
+            label=f'{name_tokens_column}_levenshtein'
         )
     )
 
     # String kernel similarity on name tokens
     feature_extractor.add(
-        features.StringList(
-            keys.NAME_TOKENS,
-            keys.NAME_TOKENS,
+        features.SimilarStrings(
+            name_tokens_column,
+            name_tokens_column,
             algorithm='cosine',
             analyzer='char_wb',
-            label='name_string_kernel_cosine',
+            label=f'{name_tokens_column}_string_kernel_cosine',
         )
     )
 
-    # Full-text index similarity on name tokens
+    # Weighted intersection of name tokens
     feature_extractor.add(
-        features.SimilarTokens(
-            keys.NAME_TOKENS, keys.NAME_TOKENS, label='similar_name_tokens'
-        )
+        features.SharedTokens(name_tokens_column, name_tokens_column,
+                              label=f'{name_tokens_column}_shared')
     )
 
 
