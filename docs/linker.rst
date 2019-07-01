@@ -12,6 +12,30 @@
     :members:
 
 
+:mod:`soweego.linker.features`
+--------------------------------------
+
+.. automodule:: soweego.linker.features
+
+.. autoclass:: ExactMatch
+    :special-members: __init__
+
+.. autoclass:: SimilarStrings
+    :special-members: __init__
+
+.. autoclass:: SimilarDates
+    :special-members: __init__
+
+.. autoclass:: SharedTokens
+    :special-members: __init__
+
+.. autoclass:: SharedOccupations
+    :special-members: __init__
+
+.. autoclass:: SharedTokensPlus
+    :special-members: __init__
+
+
 :mod:`soweego.linker.train`
 --------------------------------------
 
