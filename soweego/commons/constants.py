@@ -233,7 +233,7 @@ RESULT_FILENAME = '{}_{}_{}_links.csv.gz'
 NESTED_CV_BEST_MODEL_FILENAME = '{}_{}_{}_best_model_k{:02}.pkl'
 MODEL_FILENAME = '{}_{}_{}_model.pkl'
 FEATURES_FILENAME = '{}_{}_{}_features{:02}.pkl.gz'
-SAMPLES_FILENAME = '%s_%s_%s_samples%02d.pkl.gz'
+SAMPLES_FILENAME = '{}_{}_{}_samples{:02}.pkl.gz'
 WD_CLASSIFICATION_SET_FILENAME = 'wikidata_%s_%s_classification_set.jsonl.gz'
 WD_TRAINING_SET_FILENAME = 'wikidata_%s_%s_training_set.jsonl.gz'
 

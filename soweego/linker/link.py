@@ -146,7 +146,7 @@ def execute(model_path: str, catalog: str, entity: str, threshold: float,
 
     for i, wd_chunk in enumerate(wd_generator, 1):
         # Collect samples via queries to the target DB
-        samples = blocking.full_text_query_block(
+        samples = blocking.find_samples(
             goal,
             catalog,
             wd_chunk[keys.NAME_TOKENS],

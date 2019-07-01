@@ -192,7 +192,7 @@ def build_training_set(catalog: str, entity: str, dir_io: str) -> Tuple[pd.DataF
 
         # All samples come from queries to the target DB
         # and include negative ones
-        all_samples = blocking.full_text_query_block(
+        all_samples = blocking.find_samples(
             goal,
             catalog,
             wd_chunk[keys.NAME_TOKENS],

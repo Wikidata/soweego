@@ -5,10 +5,17 @@
     :members:
 
 
-:mod:`soweego.linker.classifiers`
+:mod:`soweego.linker.workflow`
 --------------------------------------
 
-.. automodule:: soweego.linker.classifiers
+.. automodule:: soweego.linker.workflow
+    :members:
+
+
+:mod:`soweego.linker.blocking`
+--------------------------------------
+
+.. automodule:: soweego.linker.blocking
     :members:
 
 
@@ -36,6 +43,13 @@
     :special-members: __init__
 
 
+:mod:`soweego.linker.classifiers`
+--------------------------------------
+
+.. automodule:: soweego.linker.classifiers
+    :members:
+
+
 :mod:`soweego.linker.train`
 --------------------------------------
 
@@ -49,10 +63,4 @@
 .. automodule:: soweego.linker.link
     :members:
 
-
-:mod:`soweego.linker.workflow`
---------------------------------------
-
-.. automodule:: soweego.linker.workflow
-    :members:
 
