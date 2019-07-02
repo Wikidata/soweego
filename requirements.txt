@@ -58,7 +58,7 @@ PyMySQL==0.9.3
 pyparsing==2.4.0
 python-dateutil==2.8.0
 pytz==2019.1
-pywikibot==3.0.dev0
+pywikibot==3.0.20190430
 PyYAML==5.1.1
 recordlinkage==0.13.2
 regex==2019.6.8
