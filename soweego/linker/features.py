@@ -480,6 +480,7 @@ class SharedOccupations(BaseCompareFeature):
     """Compare pairs of lists holding **occupation QIDs** *(ontology classes)*
     through expansion of the class hierarchy, plus intersection of values.
     """
+
     name = 'shared_occupations'
     description = (
         'Compare pairs of lists holding occupation QIDs '
@@ -501,8 +502,6 @@ class SharedOccupations(BaseCompareFeature):
         global _global_occupations_qid_cache
 
         self.missing_value = missing_value
-        # Set private attribute `_expand_occupations_cache`
-        # to reference the global cache
         self._expand_occupations_cache = _global_occupations_qid_cache
 
     # This should be applied to a `pandas.Series`, where each element
@@ -513,30 +512,27 @@ class SharedOccupations(BaseCompareFeature):
         expanded_set = set()
 
         for qid in occupation_qids:
-            expanded_set.add(qid)  # add qid to expanded set
+            expanded_set.add(qid)
 
             # Check if we have the subclasses and superclasses
-            # of this specific qid in memory
+            # of this specific qid cached in memory
             if qid in self._expand_occupations_cache:
 
                 # if we do then add them to expanded set
                 expanded_set |= self._expand_occupations_cache[qid]
 
-            # If we don't have them then we get them from
+            # otherwise get them from
             # wikidata and add them to the cache and
             # `expanded_set`
             else:
 
-                # Get class hierarchy
                 subclasses = sparql_queries.subclasses_of(qid)
                 superclasses = sparql_queries.superclasses_of(qid)
 
                 joined = subclasses | superclasses
 
-                # Add joined to cache
                 self._expand_occupations_cache[qid] = joined
 
-                # Finally, add them to expanded set
                 expanded_set |= joined
 
         return expanded_set
@@ -545,12 +541,10 @@ class SharedOccupations(BaseCompareFeature):
         self, source_column: pd.Series, target_column: pd.Series
     ):
 
-        # we want to expand the target_column (add the
-        # superclasses and subclasses of each occupation)
+        # add the superclasses and subclasses of each occupation to
+        # the target column
         target_column = target_column.apply(self._expand_occupations)
 
-        # finally, we then zip together the source column and the target column so that
-        # they're easier to process
         concatenated = pd.Series(list(zip(source_column, target_column)))
 
         # Given 2 sets, return the percentage of items that the
@@ -585,7 +579,8 @@ class SharedTokensPlus(BaseCompareFeature):
 
     - handles arbitrary stop words
     - accepts nested list of tokens
-    - output score is computed FIXME metric
+    - output score is the percentage of tokens in the
+      smallest set which are shared among both sets
     """
     name = 'shared_tokens_plus'
     description = (
