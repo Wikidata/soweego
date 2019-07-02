@@ -13,10 +13,10 @@ import click
 
 from soweego.importer.importer import check_links_cli, import_cli
 
-CLI_COMMANDS = {'import': import_cli, 'check_links': check_links_cli}
+CLI_COMMANDS = {'import': import_cli, 'check_urls': check_links_cli}
 
 
 @click.group(name='importer', commands=CLI_COMMANDS)
 @click.pass_context
 def cli(_):
-    """Import target dumps into the database."""
+    """Import target catalog dumps into the database."""
