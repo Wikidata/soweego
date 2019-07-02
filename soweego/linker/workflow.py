@@ -583,13 +583,15 @@ def _shared_preprocessing(df: pd.DataFrame, will_handle_birth_date: bool, will_h
 def _handle_goal(goal, catalog, entity, dir_io):
     if goal == 'training':
         wd_io_path = os.path.join(
-            dir_io, constants.WD_TRAINING_SET % (catalog, entity)
+            dir_io,
+            constants.WD_TRAINING_SET.format(catalog, entity)
         )
         qids_and_tids = {}
 
     elif goal == 'classification':
         wd_io_path = os.path.join(
-            dir_io, constants.WD_CLASSIFICATION_SET % (catalog, entity)
+            dir_io,
+            constants.WD_CLASSIFICATION_SET.format(catalog, entity)
         )
         qids_and_tids = None
 
