@@ -24,9 +24,6 @@ import os
 from contextlib import redirect_stderr
 
 import pandas as pd
-from keras import Sequential
-from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
-from keras.layers import Dense, BatchNormalization
 from recordlinkage.adapters import SKLearnAdapter, KerasAdapter
 from recordlinkage.base import BaseClassifier
 from sklearn.svm import SVC
@@ -37,7 +34,9 @@ with redirect_stderr(open(os.devnull, 'w')):
     # When `keras` is imported, it prints a message to stderr
     # saying which backend it's using. To avoid this, we
     # redirect stderr to `devnull` for the statements in this block.
-    pass
+    from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
+    from keras.layers import Dense, BatchNormalization
+    from keras.models import Sequential
 
 LOGGER = logging.getLogger(__name__)
 
