@@ -14,7 +14,7 @@ import logging
 import recordlinkage as rl
 from sklearn.model_selection import StratifiedKFold
 
-from soweego.commons import keys, constants
+from soweego.commons import constants, keys
 from soweego.linker import classifiers
 
 LOGGER = logging.getLogger(__name__)

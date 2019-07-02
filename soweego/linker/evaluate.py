@@ -47,14 +47,14 @@ LOGGER = logging.getLogger(__name__)
     '--single',
     is_flag=True,
     help='Compute a single evaluation over all k folds, instead of k '
-         'evaluations.',
+    'evaluations.',
 )
 @click.option(
     '-n',
     '--nested',
     is_flag=True,
     help='Compute a nested cross-validation with hyperparameters tuning via '
-         'grid search. WARNING: this will take a lot of time.',
+    'grid search. WARNING: this will take a lot of time.',
 )
 @click.option(
     '-m',
@@ -62,7 +62,7 @@ LOGGER = logging.getLogger(__name__)
     type=click.Choice(constants.PERFORMANCE_METRICS),
     default='f1',
     help="Performance metric for nested cross-validation. "
-         "Use with '--nested'. Default: f1.",
+    "Use with '--nested'. Default: f1.",
 )
 @click.option(
     '-d',
@@ -72,8 +72,9 @@ LOGGER = logging.getLogger(__name__)
     help=f'Input/output directory, default: {constants.SHARED_FOLDER}.',
 )
 @click.pass_context
-def cli(ctx, classifier, catalog, entity, k_folds, single, nested, metric,
-        dir_io):
+def cli(
+    ctx, classifier, catalog, entity, k_folds, single, nested, metric, dir_io
+):
     """Evaluate the performance of a supervised linker.
 
     By default, run 5-fold cross-validation and
@@ -85,30 +86,54 @@ def cli(ctx, classifier, catalog, entity, k_folds, single, nested, metric,
 
     rl.set_option(*constants.CLASSIFICATION_RETURN_INDEX)
 
-    performance_out, predictions_out = _build_output_paths(catalog, entity,
-                                                           classifier, dir_io)
+    performance_out, predictions_out = _build_output_paths(
+        catalog, entity, classifier, dir_io
+    )
 
     # -n, --nested
     if nested:
-        _run_nested(classifier, catalog, entity, k_folds, metric, kwargs,
-                    performance_out, dir_io)
+        _run_nested(
+            classifier,
+            catalog,
+            entity,
+            k_folds,
+            metric,
+            kwargs,
+            performance_out,
+            dir_io,
+        )
         sys.exit(0)
 
     # -s, --single
     if single:
-        _run_single(classifier, catalog, entity, k_folds, kwargs,
-                    performance_out, predictions_out, dir_io)
+        _run_single(
+            classifier,
+            catalog,
+            entity,
+            k_folds,
+            kwargs,
+            performance_out,
+            predictions_out,
+            dir_io,
+        )
         sys.exit(0)
 
     # Default: average evaluation over k-fold
-    _run_average(classifier, catalog, entity, k_folds, kwargs, performance_out,
-                 predictions_out, dir_io)
+    _run_average(
+        classifier,
+        catalog,
+        entity,
+        k_folds,
+        kwargs,
+        performance_out,
+        predictions_out,
+        dir_io,
+    )
 
 
 def _build_output_paths(catalog, entity, classifier, dir_io):
     performance_outpath = os.path.join(
-        dir_io,
-        constants.LINKER_PERFORMANCE.format(catalog, entity, classifier)
+        dir_io, constants.LINKER_PERFORMANCE.format(catalog, entity, classifier)
     )
     predictions_outpath = os.path.join(
         dir_io,
@@ -121,8 +146,16 @@ def _build_output_paths(catalog, entity, classifier, dir_io):
     return performance_outpath, predictions_outpath
 
 
-def _run_average(classifier, catalog, entity, k_folds, kwargs, performance_out,
-                 predictions_out, dir_io):
+def _run_average(
+    classifier,
+    catalog,
+    entity,
+    k_folds,
+    kwargs,
+    performance_out,
+    predictions_out,
+    dir_io,
+):
     LOGGER.info('Starting average evaluation over %d folds ...', k_folds)
 
     predictions, p_mean, p_std, r_mean, r_std, fscore_mean, fscore_std = _average_k_fold(
@@ -168,16 +201,19 @@ def _run_average(classifier, catalog, entity, k_folds, kwargs, performance_out,
     )
 
 
-def _run_single(classifier, catalog, entity, k_folds, kwargs, performance_out,
-                predictions_out, dir_io):
+def _run_single(
+    classifier,
+    catalog,
+    entity,
+    k_folds,
+    kwargs,
+    performance_out,
+    predictions_out,
+    dir_io,
+):
     LOGGER.info('Starting single evaluation over %d folds ...', k_folds)
 
-    predictions, (
-        precision,
-        recall,
-        fscore,
-        confusion_matrix,
-    ) = _single_k_fold(
+    predictions, (precision, recall, fscore, confusion_matrix) = _single_k_fold(
         constants.CLASSIFIERS[classifier],
         catalog,
         entity,
@@ -204,8 +240,16 @@ def _run_single(classifier, catalog, entity, k_folds, kwargs, performance_out,
     )
 
 
-def _run_nested(classifier, catalog, entity, k_folds, metric, kwargs,
-                performance_out, dir_io):
+def _run_nested(
+    classifier,
+    catalog,
+    entity,
+    k_folds,
+    metric,
+    kwargs,
+    performance_out,
+    dir_io,
+):
     LOGGER.warning(
         'You have opted for the slowest evaluation option, '
         'please be patient ...'
@@ -213,21 +257,14 @@ def _run_nested(classifier, catalog, entity, k_folds, metric, kwargs,
     LOGGER.info(
         'Starting nested %d-fold cross-validation with '
         'hyperparameters tuning via grid search ...',
-        k_folds
+        k_folds,
     )
 
     clf = constants.CLASSIFIERS[classifier]
     param_grid = constants.PARAMETER_GRIDS[clf]
 
     result = _nested_k_fold_with_grid_search(
-        clf,
-        param_grid,
-        catalog,
-        entity,
-        k_folds,
-        metric,
-        dir_io,
-        **kwargs,
+        clf, param_grid, catalog, entity, k_folds, metric, dir_io, **kwargs
     )
 
     LOGGER.info('Evaluation done: %s', result)
@@ -238,23 +275,19 @@ def _run_nested(classifier, catalog, entity, k_folds, metric, kwargs,
             dir_io,
             constants.LINKER_NESTED_CV_BEST_MODEL.format(
                 catalog, entity, classifier, k
-            )
+            ),
         )
 
         result['best_models'].append(model_out)
         joblib.dump(model, model_out)
 
-        LOGGER.info(
-            "Best model for fold %d dumped to '%s'", k, model_out
-        )
+        LOGGER.info("Best model for fold %d dumped to '%s'", k, model_out)
 
     performance_out = performance_out.replace('txt', 'json')
     with open(performance_out, 'w') as out:
         json.dump(result, out, indent=2)
 
-    LOGGER.info(
-        "%s performance dumped to '%s'", metric, performance_out
-    )
+    LOGGER.info("%s performance dumped to '%s'", metric, performance_out)
 
 
 def _compute_performance(test_index, predictions, test_vectors_size):
@@ -289,8 +322,9 @@ def _nested_k_fold_with_grid_search(
 
     result = defaultdict(list)
 
-    dataset, positive_samples_index = train.build_training_set(catalog, entity,
-                                                               dir_io)
+    dataset, positive_samples_index = train.build_training_set(
+        catalog, entity, dir_io
+    )
     model = utils.init_model(classifier, dataset.shape[1], **kwargs).kernel
 
     inner_k_fold, target = utils.prepare_stratified_k_fold(
@@ -327,8 +361,9 @@ def _nested_k_fold_with_grid_search(
 
 def _average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
     predictions, precisions, recalls, f_scores = None, [], [], []
-    dataset, positive_samples_index = train.build_training_set(catalog, entity,
-                                                               dir_io)
+    dataset, positive_samples_index = train.build_training_set(
+        catalog, entity, dir_io
+    )
     k_fold, binary_target_variables = utils.prepare_stratified_k_fold(
         k, dataset, positive_samples_index
     )
@@ -371,8 +406,9 @@ def _average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
 
 def _single_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
     predictions, test_set = None, []
-    dataset, positive_samples_index = train.build_training_set(catalog, entity,
-                                                               dir_io)
+    dataset, positive_samples_index = train.build_training_set(
+        catalog, entity, dir_io
+    )
     k_fold, binary_target_variables = utils.prepare_stratified_k_fold(
         k, dataset, positive_samples_index
     )

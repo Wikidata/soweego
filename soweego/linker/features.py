@@ -75,6 +75,7 @@ _global_occupations_qid_cache = _threading_manager.dict()
 # See RECORDLINKAGE_LICENSE
 class ExactMatch(BaseCompareFeature):
     """Compare pairs of lists through exact match on each pair of elements."""
+
     name = 'exact_match'
     description = (
         'Compare pairs of lists through exact match on each pair of elements.'
@@ -135,6 +136,7 @@ class SimilarStrings(BaseCompareFeature):
     """Compare pairs of lists holding **strings**
     through similarity measures on each pair of elements.
     """
+
     name = 'similar_strings'
     description = (
         'Compare pairs of lists holding strings '
@@ -321,6 +323,7 @@ class SimilarDates(BaseCompareFeature):
     """Compare pairs of lists holding **dates**
     through match by maximum shared precision.
     """
+
     name = 'similar_dates'
     description = (
         'Compare pairs of lists holding dates '
@@ -414,17 +417,19 @@ class SharedTokens(BaseCompareFeature):
     """Compare pairs of lists holding **string tokens**
     through weighted intersection.
     """
+
     name = 'shared_tokens'
     description = (
         'Compare pairs of lists holding string tokens '
         'through weighted intersection'
     )
 
-    def __init__(self,
-                 left_on: str,
-                 right_on: str,
-                 missing_value: float = constants.FEATURE_MISSING_VALUE,
-                 label: str = None
+    def __init__(
+        self,
+        left_on: str,
+        right_on: str,
+        missing_value: float = constants.FEATURE_MISSING_VALUE,
+        label: str = None,
     ):
         """
         :param left_on: a Wikidata :class:`DataFrame <pandas.DataFrame>`
@@ -487,7 +492,13 @@ class SharedOccupations(BaseCompareFeature):
         'through expansion of the class hierarchy, plus intersection of values'
     )
 
-    def __init__(self, left_on: str, right_on: str, missing_value: float = 0.0, label: str = None):
+    def __init__(
+        self,
+        left_on: str,
+        right_on: str,
+        missing_value: float = 0.0,
+        label: str = None,
+    ):
         """
         :param left_on: a Wikidata :class:`DataFrame <pandas.DataFrame>`
           column label
@@ -582,6 +593,7 @@ class SharedTokensPlus(BaseCompareFeature):
     - output score is the percentage of tokens in the
       smallest set which are shared among both sets
     """
+
     name = 'shared_tokens_plus'
     description = (
         'Compare pairs of lists holding string tokens '
@@ -649,8 +661,7 @@ class SharedTokensPlus(BaseCompareFeature):
             # make all lowercase and split on possible spaces
             # also reshape result into a list (flatten)
             pair = [
-                self._flatten([el.lower().split() for el in p])
-                for p in pair
+                self._flatten([el.lower().split() for el in p]) for p in pair
             ]
 
             s_item, t_item = pair

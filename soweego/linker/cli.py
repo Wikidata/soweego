@@ -1,6 +1,6 @@
 import click
 
-from soweego.linker import baseline, link, evaluate, train
+from soweego.linker import baseline, evaluate, link, train
 
 CLI_COMMANDS = {
     'baseline': baseline.cli,

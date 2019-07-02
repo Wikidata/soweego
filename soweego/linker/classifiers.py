@@ -24,7 +24,7 @@ import os
 from contextlib import redirect_stderr
 
 import pandas as pd
-from recordlinkage.adapters import SKLearnAdapter, KerasAdapter
+from recordlinkage.adapters import KerasAdapter, SKLearnAdapter
 from recordlinkage.base import BaseClassifier
 from sklearn.svm import SVC
 
@@ -60,6 +60,7 @@ class SVCClassifier(SKLearnAdapter, BaseClassifier):
     - higher training time (quadratic to the number of samples)
 
     """
+
     def __init__(self, *args, **kwargs):
         super(SVCClassifier, self).__init__()
 
@@ -104,13 +105,14 @@ class SVCClassifier(SKLearnAdapter, BaseClassifier):
 # `recordlinkage.adapters.KerasAdapter_fit`,
 # shared across neural network implementations.
 class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
-    def _fit(self,
-             feature_vectors: pd.Series,
-             answers: pd.Series = None,
-             batch_size: int = constants.BATCH_SIZE,
-             epochs: int = constants.EPOCHS,
-             validation_split: float = constants.VALIDATION_SPLIT
-             ) -> None:
+    def _fit(
+        self,
+        feature_vectors: pd.Series,
+        answers: pd.Series = None,
+        batch_size: int = constants.BATCH_SIZE,
+        epochs: int = constants.EPOCHS,
+        validation_split: float = constants.VALIDATION_SPLIT,
+    ) -> None:
         tensor_path = os.path.join(
             constants.SHARED_FOLDER, constants.TENSOR_BOARD_FOLDER
         )
@@ -130,13 +132,15 @@ class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
             batch_size=batch_size,
             epochs=epochs,
             callbacks=[
-                EarlyStopping(monitor='val_loss',
-                              patience=100,
-                              verbose=2,
-                              restore_best_weights=True),
+                EarlyStopping(
+                    monitor='val_loss',
+                    patience=100,
+                    verbose=2,
+                    restore_best_weights=True,
+                ),
                 ModelCheckpoint(model_path, save_best_only=True),
                 TensorBoard(log_dir=tensor_path),
-            ]
+            ],
         )
 
         LOGGER.info('Fit parameters: %s', history.params)
@@ -177,15 +181,20 @@ class SingleLayerPerceptron(_BaseNeuralNetwork):
       `available metrics <https://keras.io/metrics/>`_
 
     """
+
     def __init__(self, input_dimension, **kwargs):
         super(SingleLayerPerceptron, self).__init__()
 
         model = Sequential()
-        model.add(Dense(
-            1,
-            input_dim=input_dimension,
-            activation=kwargs.get('activation', constants.OUTPUT_ACTIVATION)
-        ))
+        model.add(
+            Dense(
+                1,
+                input_dim=input_dimension,
+                activation=kwargs.get(
+                    'activation', constants.OUTPUT_ACTIVATION
+                ),
+            )
+        )
 
         model.compile(
             optimizer=kwargs.get('optimizer', constants.SLP_OPTIMIZER),
@@ -229,6 +238,7 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
       `available metrics <https://keras.io/metrics/>`_
 
     """
+
     def __init__(self, input_dimension, **kwargs):
         super(MultiLayerPerceptron, self).__init__()
 
@@ -239,8 +249,8 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
                 (
                     constants.HIDDEN_ACTIVATION,
                     constants.HIDDEN_ACTIVATION,
-                    constants.OUTPUT_ACTIVATION
-                )
+                    constants.OUTPUT_ACTIVATION,
+                ),
             )
         except ValueError:
             err_msg = (
@@ -252,9 +262,7 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
 
         model = Sequential(
             [
-                Dense(
-                    128, input_dim=input_dimension, activation=first
-                ),
+                Dense(128, input_dim=input_dimension, activation=first),
                 BatchNormalization(),
                 Dense(32, activation=second),
                 BatchNormalization(),

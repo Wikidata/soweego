@@ -102,9 +102,7 @@ def find_samples(
 
     wikidata_column.dropna(inplace=True)
 
-    samples = _fire_queries(
-        wikidata_column, target_db_entity
-    )
+    samples = _fire_queries(wikidata_column, target_db_entity)
     samples_index = pd.MultiIndex.from_tuples(
         samples, names=[keys.QID, keys.TID]
     )
@@ -140,7 +138,11 @@ def _query_generator(
         yield qid, values, target_db_entity
 
 
-def _full_text_search(query: Tuple[str, list, constants.DB_ENTITY], boolean_mode: bool = False, limit: int = 5) -> Iterable[Tuple[str, str]]:
+def _full_text_search(
+    query: Tuple[str, list, constants.DB_ENTITY],
+    boolean_mode: bool = False,
+    limit: int = 5,
+) -> Iterable[Tuple[str, str]]:
     qid, query_terms, target_db_entity = query
     tids = set(
         map(

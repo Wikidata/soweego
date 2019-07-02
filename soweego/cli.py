@@ -10,7 +10,6 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import logging
-import os
 
 import click
 import tensorflow as tf

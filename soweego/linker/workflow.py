@@ -11,17 +11,6 @@ It is a pipeline composed of the following main steps:
    (:func:`extract_features`)
 
 """
-from pandas import read_sql
-from sqlalchemy.orm import Query
-
-from soweego.commons.db_manager import DBManager
-
-__author__ = 'Marco Fossati'
-__email__ = 'fossati@spaziodati.eu'
-__version__ = '1.0'
-__license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2018, Hjfocs'
-
 import datetime
 import gzip
 import json
@@ -33,7 +22,9 @@ from typing import Iterator, Set
 import pandas as pd
 import recordlinkage as rl
 from numpy import nan
+from pandas import read_sql
 from pandas.io.json.json import JsonReader
+from sqlalchemy.orm import Query
 
 from soweego.commons import (
     constants,
@@ -43,15 +34,25 @@ from soweego.commons import (
     text_utils,
     url_utils,
 )
+from soweego.commons.db_manager import DBManager
 from soweego.commons.logging import log_dataframe_info
 from soweego.commons.utils import check_goal_value
 from soweego.linker import features
 from soweego.wikidata import api_requests, vocabulary
 
+__author__ = 'Marco Fossati'
+__email__ = 'fossati@spaziodati.eu'
+__version__ = '1.0'
+__license__ = 'GPL-3.0'
+__copyright__ = 'Copyleft 2018, Hjfocs'
+
+
 LOGGER = logging.getLogger(__name__)
 
 
-def build_wikidata(goal: str, catalog: str, entity: str, dir_io: str) -> JsonReader:
+def build_wikidata(
+    goal: str, catalog: str, entity: str, dir_io: str
+) -> JsonReader:
     """Build a Wikidata dataset for training or classification purposes:
     workflow step 1.
 
@@ -85,7 +86,10 @@ def build_wikidata(goal: str, catalog: str, entity: str, dir_io: str) -> JsonRea
     if not os.path.isfile(wd_io_path):
         LOGGER.info(
             "Building Wikidata %s set for %s %s, output file '%s' ...",
-            goal, catalog, entity, wd_io_path
+            goal,
+            catalog,
+            entity,
+            wd_io_path,
         )
 
         # Make working folders
@@ -130,7 +134,9 @@ def build_wikidata(goal: str, catalog: str, entity: str, dir_io: str) -> JsonRea
     return pd.read_json(wd_io_path, lines=True, chunksize=1000)
 
 
-def build_target(goal: str, catalog: str, entity: str, identifiers: Set[str]) -> Iterator[pd.DataFrame]:
+def build_target(
+    goal: str, catalog: str, entity: str, identifiers: Set[str]
+) -> Iterator[pd.DataFrame]:
     """Build a target catalog dataset for training or classification purposes:
     workflow step 1.
 
@@ -155,10 +161,7 @@ def build_target(goal: str, catalog: str, entity: str, identifiers: Set[str]) ->
     """
     check_goal_value(goal)
 
-    LOGGER.info(
-        'Building target %s set for %s %s ...',
-        goal, catalog, entity
-    )
+    LOGGER.info('Building target %s set for %s %s ...', goal, catalog, entity)
 
     # Target catalog ORM entities/DB tables
     base, link, nlp = (
@@ -176,9 +179,9 @@ def build_target(goal: str, catalog: str, entity: str, identifiers: Set[str]) ->
     for table in tables:
         query = query.outerjoin(table, base.catalog_id == table.catalog_id)
     # Condition
-    query = query.filter(
-        base.catalog_id.in_(identifiers)
-    ).enable_eagerloads(False)
+    query = query.filter(base.catalog_id.in_(identifiers)).enable_eagerloads(
+        False
+    )
 
     sql = query.statement
     LOGGER.debug('SQL query to be fired: %s', sql)
@@ -189,7 +192,9 @@ def build_target(goal: str, catalog: str, entity: str, identifiers: Set[str]) ->
     return read_sql(sql, db_engine, chunksize=1000)
 
 
-def preprocess_wikidata(goal: str, wikidata_reader: JsonReader) -> Iterator[pd.DataFrame]:
+def preprocess_wikidata(
+    goal: str, wikidata_reader: JsonReader
+) -> Iterator[pd.DataFrame]:
     """Preprocess a Wikidata dataset: workflow step 2.
 
     This function consumes :class:`pandas.DataFrame` chunks and
@@ -263,7 +268,9 @@ def preprocess_wikidata(goal: str, wikidata_reader: JsonReader) -> Iterator[pd.D
         yield chunk
 
 
-def preprocess_target(goal: str, target_reader: Iterator[pd.DataFrame]) -> pd.DataFrame:
+def preprocess_target(
+    goal: str, target_reader: Iterator[pd.DataFrame]
+) -> pd.DataFrame:
     """Preprocess a target catalog dataset: workflow step 2.
 
     This function consumes :class:`pandas.DataFrame` chunks and
@@ -320,7 +327,9 @@ def preprocess_target(goal: str, target_reader: Iterator[pd.DataFrame]) -> pd.Da
 
     # 6. Shared preprocessing
     target = _shared_preprocessing(
-        target, _will_handle_birth_dates(target), _will_handle_death_dates(target)
+        target,
+        _will_handle_birth_dates(target),
+        _will_handle_death_dates(target),
     )
 
     LOGGER.info('Target preprocessing done')
@@ -328,7 +337,11 @@ def preprocess_target(goal: str, target_reader: Iterator[pd.DataFrame]) -> pd.Da
     return target
 
 
-def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, target: pd.DataFrame, path_io: str,
+def extract_features(
+    candidate_pairs: pd.MultiIndex,
+    wikidata: pd.DataFrame,
+    target: pd.DataFrame,
+    path_io: str,
 ) -> pd.DataFrame:
     """Extract feature vectors by comparing pairs of
     *(Wikidata, target catalog)* records.
@@ -374,8 +387,9 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
     name_column = keys.NAME
     if in_both_datasets(name_column):
         feature_extractor.add(
-            features.ExactMatch(name_column, name_column,
-                                label=f'{name_column}_exact')
+            features.ExactMatch(
+                name_column, name_column, label=f'{name_column}_exact'
+            )
         )
 
     # URL features
@@ -417,11 +431,16 @@ def extract_features(candidate_pairs: pd.MultiIndex, wikidata: pd.DataFrame, tar
     genres_column = keys.GENRES
     if in_both_datasets(genres_column):
         feature_extractor.add(
-            features.SharedTokens(genres_column, genres_column,
-                                  label=f'{genres_column}_tokens_shared')
+            features.SharedTokens(
+                genres_column,
+                genres_column,
+                label=f'{genres_column}_tokens_shared',
+            )
         )
 
-    feature_vectors = feature_extractor.compute(candidate_pairs, wikidata, target)
+    feature_vectors = feature_extractor.compute(
+        candidate_pairs, wikidata, target
+    )
     feature_vectors = feature_vectors[
         ~feature_vectors.index.duplicated()  # Drop duplicates
     ]
@@ -441,16 +460,14 @@ def _add_date_features(feature_extractor, in_both_datasets):
     if in_both_datasets(birth_column):
         feature_extractor.add(
             features.SimilarDates(
-                birth_column, birth_column,
-                label=f'{birth_column}_similar'
+                birth_column, birth_column, label=f'{birth_column}_similar'
             )
         )
 
     if in_both_datasets(death_column):
         feature_extractor.add(
             features.SimilarDates(
-                death_column, death_column,
-                label=f'{death_column}_similar'
+                death_column, death_column, label=f'{death_column}_similar'
             )
         )
 
@@ -480,8 +497,9 @@ def _add_name_tokens_features(feature_extractor):
     # Levenshtein distance on name tokens
     feature_extractor.add(
         features.SimilarStrings(
-            name_tokens_column, name_tokens_column,
-            label=f'{name_tokens_column}_levenshtein'
+            name_tokens_column,
+            name_tokens_column,
+            label=f'{name_tokens_column}_levenshtein',
         )
     )
 
@@ -498,8 +516,11 @@ def _add_name_tokens_features(feature_extractor):
 
     # Weighted intersection of name tokens
     feature_extractor.add(
-        features.SharedTokens(name_tokens_column, name_tokens_column,
-                              label=f'{name_tokens_column}_shared')
+        features.SharedTokens(
+            name_tokens_column,
+            name_tokens_column,
+            label=f'{name_tokens_column}_shared',
+        )
     )
 
 
@@ -533,7 +554,9 @@ def _rename_or_drop_tid_columns(target):
     LOGGER.info(
         "Renaming '%s' column with no null values to '%s' "
         "& dropping '%s' columns with null values ...",
-        keys.CATALOG_ID, keys.TID, keys.CATALOG_ID,
+        keys.CATALOG_ID,
+        keys.TID,
+        keys.CATALOG_ID,
     )
 
     # If `catalog_id` is one column (i.e., a `Series`),
@@ -555,13 +578,16 @@ def _rename_or_drop_tid_columns(target):
     target.drop(columns=keys.CATALOG_ID, inplace=True)
 
     log_dataframe_info(
-        LOGGER, target,
+        LOGGER,
+        target,
         f"Renamed '{keys.CATALOG_ID}' column with no null values to "
         f"'{keys.TID}' & dropped '{keys.CATALOG_ID}' columns with null values",
     )
 
 
-def _shared_preprocessing(df: pd.DataFrame, will_handle_birth_date: bool, will_handle_death_date: bool) -> pd.DataFrame:
+def _shared_preprocessing(
+    df: pd.DataFrame, will_handle_birth_date: bool, will_handle_death_date: bool
+) -> pd.DataFrame:
     LOGGER.info('Normalizing columns with names ...')
     for column in constants.NAME_FIELDS:
         if df.get(column) is not None:
@@ -583,15 +609,13 @@ def _shared_preprocessing(df: pd.DataFrame, will_handle_birth_date: bool, will_h
 def _handle_goal(goal, catalog, entity, dir_io):
     if goal == 'training':
         wd_io_path = os.path.join(
-            dir_io,
-            constants.WD_TRAINING_SET.format(catalog, entity)
+            dir_io, constants.WD_TRAINING_SET.format(catalog, entity)
         )
         qids_and_tids = {}
 
     elif goal == 'classification':
         wd_io_path = os.path.join(
-            dir_io,
-            constants.WD_CLASSIFICATION_SET.format(catalog, entity)
+            dir_io, constants.WD_CLASSIFICATION_SET.format(catalog, entity)
         )
         qids_and_tids = None
 

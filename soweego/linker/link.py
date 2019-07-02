@@ -49,12 +49,7 @@ LOGGER = logging.getLogger(__name__)
     is_flag=True,
     help='Activate post-classification rule on full names: links with different full names will be filtered.',
 )
-@click.option(
-    '-u',
-    '--upload',
-    is_flag=True,
-    help='Upload links to Wikidata.',
-)
+@click.option('-u', '--upload', is_flag=True, help='Upload links to Wikidata.')
 @click.option(
     '-s',
     '--sandbox',
@@ -68,8 +63,9 @@ LOGGER = logging.getLogger(__name__)
     default=constants.SHARED_FOLDER,
     help=f'Input/output directory, default: {constants.SHARED_FOLDER}.',
 )
-def cli(classifier, catalog, entity, threshold, name_rule, upload, sandbox,
-        dir_io):
+def cli(
+    classifier, catalog, entity, threshold, name_rule, upload, sandbox, dir_io
+):
     """Run a supervised linker.
 
     Build the classification set relevant to the given catalog and entity,
@@ -96,7 +92,7 @@ def cli(classifier, catalog, entity, threshold, name_rule, upload, sandbox,
     rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
 
     for i, chunk in enumerate(
-            execute(model_path, catalog, entity, threshold, name_rule, dir_io)
+        execute(model_path, catalog, entity, threshold, name_rule, dir_io)
     ):
         chunk.to_csv(result_path, mode='a', header=False)
 
@@ -106,16 +102,22 @@ def cli(classifier, catalog, entity, threshold, name_rule, upload, sandbox,
     # Free memory in case of neural networks:
     # can be done only after classification
     if actual_classifier in (
-            keys.SINGLE_LAYER_PERCEPTRON,
-            keys.MULTI_LAYER_PERCEPTRON
+        keys.SINGLE_LAYER_PERCEPTRON,
+        keys.MULTI_LAYER_PERCEPTRON,
     ):
         K.clear_session()  # Clear the TensorFlow graph
 
     LOGGER.info('Linking completed')
 
 
-def execute(model_path: str, catalog: str, entity: str, threshold: float,
-            name_rule: bool, dir_io: str) -> Iterator[pd.Series]:
+def execute(
+    model_path: str,
+    catalog: str,
+    entity: str,
+    threshold: float,
+    name_rule: bool,
+    dir_io: str,
+) -> Iterator[pd.Series]:
     """Run a supervised linker.
 
     1. Build the classification set relevant to the given catalog and entity
@@ -157,19 +159,15 @@ def execute(model_path: str, catalog: str, entity: str, threshold: float,
 
         # Build target chunk from samples
         target_reader = workflow.build_target(
-            goal, catalog, entity,
-            set(samples.get_level_values(keys.TID))
+            goal, catalog, entity, set(samples.get_level_values(keys.TID))
         )
 
         # Preprocess target chunk
-        target_chunk = workflow.preprocess_target(
-            goal, target_reader
-        )
+        target_chunk = workflow.preprocess_target(goal, target_reader)
 
         # Extract features
         features_path = os.path.join(
-            dir_io,
-            constants.FEATURES.format(catalog, entity, goal, i)
+            dir_io, constants.FEATURES.format(catalog, entity, goal, i)
         )
         feature_vectors = workflow.extract_features(
             samples, wd_chunk, target_chunk, features_path
@@ -213,12 +211,10 @@ def execute(model_path: str, catalog: str, entity: str, threshold: float,
 def _handle_io(classifier, catalog, entity, dir_io):
     # Build the output paths upon catalog, entity, and classifier args
     model_path = os.path.join(
-        dir_io,
-        constants.LINKER_MODEL.format(catalog, entity, classifier)
+        dir_io, constants.LINKER_MODEL.format(catalog, entity, classifier)
     )
     result_path = os.path.join(
-        dir_io,
-        constants.LINKER_RESULT.format(catalog, entity, classifier)
+        dir_io, constants.LINKER_RESULT.format(catalog, entity, classifier)
     )
 
     if not os.path.isfile(model_path):
@@ -226,7 +222,9 @@ def _handle_io(classifier, catalog, entity, dir_io):
             "Trained model not found at '%s'. "
             "Please run 'python -m soweego linker train %s %s %s'",
             model_path,
-            classifier, catalog, entity
+            classifier,
+            catalog,
+            entity,
         )
         return None, None
 
@@ -234,8 +232,7 @@ def _handle_io(classifier, catalog, entity, dir_io):
     # otherwise the current output would be appended to it
     if os.path.isfile(result_path):
         LOGGER.warning(
-            "Will delete old output file found at '%s' ...",
-            result_path
+            "Will delete old output file found at '%s' ...", result_path
         )
         os.remove(result_path)
 
@@ -248,16 +245,12 @@ def _upload(chunk, chunk_number, catalog, entity, sandbox):
     links = dict(chunk.to_dict().keys())
 
     LOGGER.info(
-        'Starting upload of links to Wikidata, chunk %d ...',
-        chunk_number
+        'Starting upload of links to Wikidata, chunk %d ...', chunk_number
     )
 
     wikidata_bot.add_identifiers(links, catalog, entity, sandbox)
 
-    LOGGER.info(
-        'Upload to Wikidata completed, chunk %d',
-        chunk_number
-    )
+    LOGGER.info('Upload to Wikidata completed, chunk %d', chunk_number)
 
 
 def _add_missing_feature_columns(classifier, feature_vectors: pd.DataFrame):
@@ -269,10 +262,9 @@ def _add_missing_feature_columns(classifier, feature_vectors: pd.DataFrame):
     elif isinstance(classifier, (classifiers.SVCClassifier, rl.SVMClassifier)):
         expected_features = classifier.kernel.coef_.shape[1]
 
-    elif isinstance(classifier, (
-            classifiers.SingleLayerPerceptron,
-            classifiers.MultiLayerPerceptron
-        ),
+    elif isinstance(
+        classifier,
+        (classifiers.SingleLayerPerceptron, classifiers.MultiLayerPerceptron),
     ):
         expected_features = classifier.kernel.input_shape[1]
 
@@ -338,8 +330,10 @@ def _one_when_wikidata_link_correct(prediction, target):
                     LOGGER.debug(
                         'Wikidata URL detected in %s target ID: %s '
                         'Will update the confidence score from %f to %f',
-                        (qid, tid), url,
-                        prediction[0], new_score
+                        (qid, tid),
+                        url,
+                        prediction[0],
+                        new_score,
                     )
                     return new_score
 
