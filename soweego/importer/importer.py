@@ -53,7 +53,7 @@ DUMP_EXTRACTOR = {
     help=f"Input/output directory," f"default: '{constants.SHARED_FOLDER}'.",
 )
 def import_cli(catalog: str, url_check: bool, dir_io: str) -> None:
-    """Download, extract and import an available catalog."""
+    """Download, extract, and import a supported catalog."""
 
     extractor = DUMP_EXTRACTOR[catalog]()
 
