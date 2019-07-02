@@ -236,6 +236,12 @@ FEATURES_FILENAME = '{}_{}_{}_features{:02}.pkl.gz'
 SAMPLES_FILENAME = '{}_{}_{}_samples{:02}.pkl.gz'
 WD_CLASSIFICATION_SET_FILENAME = 'wikidata_%s_%s_classification_set.jsonl.gz'
 WD_TRAINING_SET_FILENAME = 'wikidata_%s_%s_training_set.jsonl.gz'
+EXTRACTED_LINKS_FILENAME = '{}_{}_extracted_links.csv'
+BASELINE_PERFECT_FILENAME = '{}_{}_baseline_perfect_names.csv'
+BASELINE_LINKS_FILENAME = '{}_{}_baseline_similar_links.csv'
+BASELINE_NAMES_FILENAME = '{}_{}_baseline_similar_names.csv'
+WIKIDATA_API_SESSION = 'wd_api_session.pkl'
+WORKS_BY_PEOPLE_STATEMENTS = '%s_works_by_%s_statements.csv'
 
 # Paths
 WD_TRAINING_SET = os.path.join(WD_FOLDER, WD_TRAINING_SET_FILENAME)
@@ -252,8 +258,10 @@ LINKER_PERFORMANCE = os.path.join(RESULTS_FOLDER,
                                   EVALUATION_PERFORMANCE_FILENAME)
 NEURAL_NETWORK_CHECKPOINT_MODEL = os.path.join(NN_CHECKPOINT_FOLDER,
                                                NN_CHECKPOINT_FILENAME)
-WIKIDATA_API_SESSION = 'wd_api_session.pkl'
-WORKS_BY_PEOPLE_STATEMENTS = '%s_works_by_%s_statements.csv'
+EXTRACTED_LINKS = os.path.join(RESULTS_FOLDER, EXTRACTED_LINKS_FILENAME)
+BASELINE_PERFECT = os.path.join(RESULTS_FOLDER, BASELINE_PERFECT_FILENAME)
+BASELINE_LINKS = os.path.join(RESULTS_FOLDER, BASELINE_LINKS_FILENAME)
+BASELINE_NAMES = os.path.join(RESULTS_FOLDER, BASELINE_NAMES_FILENAME)
 
 CLASSIFIERS = {
     'naive_bayes': keys.NAIVE_BAYES,

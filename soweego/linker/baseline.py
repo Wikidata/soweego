@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Deterministic linking."""
+"""A rule-based linker."""
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -9,12 +9,14 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+import csv
 import gzip
 import json
 import logging
+import os
 import re
+import sys
 from datetime import datetime
-from os import path
 from typing import Iterable, Tuple
 
 import click
@@ -35,7 +37,6 @@ from soweego.ingestor import wikidata_bot
 from soweego.wikidata.api_requests import get_data_for_linker
 
 LOGGER = logging.getLogger(__name__)
-WD_IO_FILENAME = 'wikidata_%s_dataset.jsonl.gz'
 
 
 @click.command()
@@ -49,7 +50,7 @@ WD_IO_FILENAME = 'wikidata_%s_dataset.jsonl.gz'
     '-s',
     '--strategy',
     type=click.Choice(['perfect', 'links', 'names', 'all']),
-    default='perfect',
+    default='all',
 )
 @click.option(
     '--check-dates/--no-check-dates',
@@ -76,7 +77,7 @@ WD_IO_FILENAME = 'wikidata_%s_dataset.jsonl.gz'
 def cli(
     target, target_type, strategy, check_dates, upload, sandbox, output_dir
 ):
-    """Rule-based matching strategies.
+    """Run a rule-based linker.
 
     NOTICE: not all the entity types are available for all the targets
 
@@ -93,9 +94,12 @@ def cli(
         target,
         target_type,
     )
-    # Wikidata
-    wd_io_path = path.join(output_dir, WD_IO_FILENAME % target)
-    if not path.exists(wd_io_path):
+
+    wd_io_path = os.path.join(
+        dir_io, constants.WD_CLASSIFICATION_SET % (catalog, entity)
+    )
+
+    if not os.path.isfile(wd_io_path):
         qids = data_gathering.gather_qids(
             target_type,
             target,
@@ -118,147 +122,137 @@ def cli(
     target_link_entity = target_database.get_link_entity(target, target_type)
     target_pid = target_database.get_catalog_pid(target, target_type)
 
-    result = None
-
     with gzip.open(wd_io_path, "rt") as wd_io:
         if strategy == 'perfect' or strategy == 'all':
             wd_io.seek(0)  # go to beginning of file
             LOGGER.info("Starting perfect name match")
-            result = perfect_name_match(
+            result = _perfect_name_match(
                 wd_io, target_entity, target_pid, check_dates
             )
-            _write_or_upload_result(
-                strategy,
-                target,
-                target_type,
-                result,
+            perfect_path = os.path.join(
                 output_dir,
-                "baseline_perfect_name.csv",
-                upload,
-                sandbox,
+                constants.BASELINE_PERFECT.format(target, target_type)
             )
+            _handle_result(result, strategy, target, perfect_path, upload,
+                           sandbox)
 
         if strategy == 'links' or strategy == 'all':
             wd_io.seek(0)  # go to beginning of file
             LOGGER.info("Starting similar links match")
-            result = similar_link_tokens_match(
+            result = _similar_link_tokens_match(
                 wd_io, target_link_entity, target_pid
             )
-            _write_or_upload_result(
-                strategy,
-                target,
-                target_type,
-                result,
+            links_path = os.path.join(
                 output_dir,
-                "baseline_similar_links.csv",
-                upload,
-                sandbox,
+                constants.BASELINE_LINKS.format(target, target_type)
             )
+            _handle_result(result, strategy, target, links_path, upload,
+                           sandbox)
 
         if strategy == 'names' or strategy == 'all':
             wd_io.seek(0)
             LOGGER.info("Starting similar names match")
-            result = similar_name_tokens_match(
+            result = _similar_name_tokens_match(
                 wd_io, target_entity, target_pid, check_dates
             )
-            _write_or_upload_result(
-                strategy,
-                target,
-                target_type,
-                result,
+            names_path = os.path.join(
                 output_dir,
-                "baseline_similar_names.csv",
-                upload,
-                sandbox,
+                constants.BASELINE_NAMES.format(target, target_type)
             )
+            _handle_result(result, strategy, target, names_path, upload,
+                           sandbox)
 
 
 @click.command()
 @click.argument(
-    'target', type=click.Choice(target_database.supported_targets())
+    'catalog', type=click.Choice(target_database.supported_targets())
 )
 @click.argument(
-    'target_type', type=click.Choice(target_database.supported_entities())
+    'entity', type=click.Choice(target_database.supported_entities())
 )
 @click.option(
-    '--upload/--no-upload',
-    default=False,
-    help='Upload check results to Wikidata. Default: no.',
+    '-u',
+    '--upload',
+    is_flag=True,
+    help='Upload links to Wikidata.',
 )
 @click.option(
-    '--sandbox/--no-sandbox',
-    default=False,
-    help='Upload to the Wikidata sandbox item Q4115189. Default: no.',
+    '-s',
+    '--sandbox',
+    is_flag=True,
+    help='Perform all edits on the Wikidata sandbox item Q4115189.',
 )
 @click.option(
-    '-o',
-    '--output-dir',
+    '-d',
+    '--dir-io',
     type=click.Path(file_okay=False),
     default=constants.SHARED_FOLDER,
-    help="default: '%s" % constants.SHARED_FOLDER,
+    help=f'Input/output directory, default: {constants.SHARED_FOLDER}.',
 )
-def extract_existing_links(
-    target, target_type, upload, sandbox, output_dir
-):
-    """"""
-    target_link_entity = target_database.get_link_entity(target, target_type)
-    target_pid = target_database.get_catalog_pid(target, target_type)
+def extract_cli(catalog, entity, upload, sandbox, dir_io):
+    """Extract Wikidata links from a target catalog dump."""
+    db_entity = target_database.get_link_entity(catalog, entity)
 
-    def result_generator(target_link_entity, target_pid):
-        if target_link_entity:
-            for r in data_gathering.tokens_fulltext_search(
-                target_link_entity,
-                True,
-                ('wikidata',),
-                where_clause=target_link_entity.is_wiki == 1,
-                limit=1_000_000_000,
-            ):
-                qid = re.search(r"(Q\d+)$", r.url).groups()[0]
-                if qid:
-                    yield (qid, target_pid, r.catalog_id)
+    if db_entity is None:
+        LOGGER.info(
+            'No links available for %s %s. Stopping extraction here',
+            catalog, entity
+        )
+        sys.exit(1)
 
-    _write_or_upload_result(
-        'extract',
-        target,
-        target_type,
-        result_generator(target_link_entity, target_pid),
-        output_dir,
-        'match_extractor.csv',
-        upload,
-        sandbox,
+    result_path = os.path.join(
+        dir_io,
+        constants.EXTRACTED_LINKS.format(catalog, entity)
     )
 
+    LOGGER.info(
+        'Starting extraction of Wikidata links available in %s %s ...',
+        catalog, entity
+    )
 
-def _write_or_upload_result(
-    strategy,
-    target,
-    target_type,
-    result: Iterable,
-    output_dir: str,
-    filename: str,
-    upload: bool,
-    sandbox: bool,
-):
+    _handle_result(_extract_existing_links(
+        db_entity,
+        target_database.get_catalog_pid(catalog, entity)
+    ), 'Wikidata links', catalog, result_path, upload, sandbox)
+
+
+def _extract_existing_links(db_entity, catalog_pid):
+    for result in data_gathering.tokens_fulltext_search(
+        db_entity,
+        True,
+        ('wikidata',),
+        where_clause=db_entity.is_wiki == 1,
+        limit=1_000_000_000,
+    ):
+        url = result.url
+        qid = re.search(constants.QID_REGEX, url)
+
+        if not qid:
+            LOGGER.warning('Skipping URL with no Wikidata QID: %s', url)
+            continue
+
+        yield qid.group(), catalog_pid, result.catalog_id
+
+
+def _handle_result(result: Iterable[Tuple[str, str, str]], origin: str,
+                   catalog: str, path_out: str, upload: bool, sandbox: bool):
     if upload:
-        wikidata_bot.add_people_statements(
-            result, target_database.get_catalog_qid(target), sandbox
-        )
-    else:
-        filename = f'{target}_{target_type}_{filename}'
-        filepath = path.join(output_dir, filename)
-        with open(filepath, 'w') as filehandle:
-            for res in result:
-                filehandle.write('%s\n' % ";".join(res))
-                filehandle.flush()
-        LOGGER.info(
-            'Baseline %s strategy against %s dumped to %s',
-            strategy,
-            target,
-            filepath,
-        )
+        to_upload = set()  # In-memory copy of the result generator
+
+    with open(path_out, 'w', 1) as fout:
+        writer = csv.writer(fout)
+        for statement in result:
+            writer.writerow(statement)
+            if upload:
+                to_upload.add(statement)
+
+    if upload:
+        wikidata_bot.add_people_statements(to_upload, catalog, sandbox)
+
+    LOGGER.info('%s %s dumped to %s', catalog, origin, path_out)
 
 
-def perfect_name_match(
+def _perfect_name_match(
     source_dataset,
     target_entity: BaseEntity,
     target_pid: str,
@@ -290,7 +284,7 @@ def perfect_name_match(
                     # wikidata entities have a list of names
                     for name in en[keys.NAME]:
                         if name.lower() == res.name.lower():
-                            if not compare_dates or birth_death_date_match(
+                            if not compare_dates or _birth_death_date_match(
                                 res, en
                             ):
                                 yield (en[keys.QID], target_pid, res.catalog_id)
@@ -298,7 +292,7 @@ def perfect_name_match(
             bucket_names.clear()
 
 
-def similar_name_tokens_match(
+def _similar_name_tokens_match(
     source, target, target_pid: str, compare_dates: bool
 ) -> Iterable[Tuple[str, str, str]]:
     """Given a dictionary ``{string: identifier}``, a BaseEntity and a tokenization function and a PID,
@@ -326,7 +320,7 @@ def similar_name_tokens_match(
             for res in data_gathering.tokens_fulltext_search(
                 target, True, tokenized
             ):
-                if not compare_dates or birth_death_date_match(res, entity):
+                if not compare_dates or _birth_death_date_match(res, entity):
                     yield (qid, target_pid, res.catalog_id)
                     to_exclude.add(res.catalog_id)
             # Looks for sets contained in our set of tokens
@@ -336,11 +330,11 @@ def similar_name_tokens_match(
             ):
                 res_tokenized = set(res.name_tokens.split())
                 if len(res_tokenized) > 1 and res_tokenized.issubset(tokenized):
-                    if not compare_dates or birth_death_date_match(res, entity):
+                    if not compare_dates or _birth_death_date_match(res, entity):
                         yield (qid, target_pid, res.catalog_id)
 
 
-def similar_link_tokens_match(
+def _similar_link_tokens_match(
     source, target, target_pid: str
 ) -> Iterable[Tuple[str, str, str]]:
     """Given a dictionary ``{string: identifier}``, a BaseEntity and a tokenization function and a PID,
@@ -390,7 +384,7 @@ def similar_link_tokens_match(
                 LOGGER.error(f'Issues searching tokens {tokenized} of {url}')
 
 
-def compare_dates_on_common_precision(
+def _compare_dates_on_common_precision(
     common_precision: int, date_elements1: Iterable, date_elements2: Iterable
 ) -> bool:
     # safety check
@@ -402,7 +396,7 @@ def compare_dates_on_common_precision(
     return True
 
 
-def date_equals(
+def _date_equals(
     born: datetime, born_precision: int, date_prec: Iterable
 ) -> bool:
     """Given a target date, its precision and a Wikidata date like ["1743-00-00T00:00:00Z", 9],
@@ -413,23 +407,23 @@ def date_equals(
     prec = int(date_prec[1])
     date_elements = date_prec[0].split('T')[0].split('-')
     common_precision = min(born_precision, prec)
-    return compare_dates_on_common_precision(
+    return _compare_dates_on_common_precision(
         common_precision, date_elements, [born.year, born.month, born.day]
     )
 
 
-def birth_death_date_match(
+def _birth_death_date_match(
     target_entity: BaseEntity, wikidata_entity: dict
 ) -> bool:
     """Given a wikidata json and a BaseEntity, checks born/death dates and tells if they match"""
     for date_prec in wikidata_entity.get('born', []):
-        if date_equals(
+        if _date_equals(
             target_entity.born, target_entity.born_precision, date_prec
         ):
             return True
 
     for date_prec in wikidata_entity.get('died', []):
-        if date_equals(
+        if _date_equals(
             target_entity.died, target_entity.died_precision, date_prec
         ):
             return True

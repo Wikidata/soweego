@@ -5,7 +5,7 @@ from soweego.linker import baseline, link, evaluate, train
 CLI_COMMANDS = {
     'baseline': baseline.cli,
     'evaluate': evaluate.cli,
-    'extract': baseline.extract_existing_links,
+    'extract': baseline.extract_cli,
     'link': link.cli,
     'train': train.cli,
 }
