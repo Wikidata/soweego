@@ -3,6 +3,7 @@
 **Work in progress!**
 
 [![Build Status](https://travis-ci.com/Wikidata/soweego.svg?branch=master)](https://travis-ci.com/Wikidata/soweego)
+[![Documentation Status](https://readthedocs.org/projects/soweego/badge/?version=latest)](https://soweego.readthedocs.io/en/latest/?badge=latest)
 
 # soweego
 _soweego_ is an entity linking system that connects Wikidata items to trusted external catalogs.
