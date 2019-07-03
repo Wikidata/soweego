@@ -31,7 +31,7 @@ https://soweego.readthedocs.io/
 # Get Ready
 Install [Docker](https://docs.docker.com/install/), then grab soweego:
 
-```bash
+```
 $ git clone https://github.com/Wikidata/soweego.git
 $ cd soweego
 ```
@@ -39,7 +39,7 @@ $ cd soweego
 # Run the Pipeline
 Piece of cake:
 
-```bash
+```
 $ ./scripts/docker/launch_pipeline.sh CATALOG
 ```
 
@@ -53,7 +53,7 @@ These steps are executed by default:
 # Use the Command Line
 You can launch every single soweego action with CLI commands:
 
-```bash
+```
 $ ./scripts/docker/launch_test.sh
 Building soweego
 # cd soweego
