@@ -106,6 +106,14 @@ def _run(catalog, entity, rule, check_dates, upload, sandbox, dir_io):
     )
     base_entity = target_database.get_main_entity(catalog, entity)
     link_entity = target_database.get_link_entity(catalog, entity)
+
+    if rule == 'links' and link_entity is None:
+        LOGGER.warning(
+            "No links available for %s %s. Stopping baseline here ...",
+            catalog, entity
+        )
+        return
+
     pid = target_database.get_catalog_pid(catalog, entity)
 
     with gzip.open(wd_io_path, 'rt') as wd_io:
@@ -122,16 +130,14 @@ def _run(catalog, entity, rule, check_dates, upload, sandbox, dir_io):
             os.makedirs(os.path.dirname(perfect_path), exist_ok=True)
             _handle_result(result, rule, catalog, perfect_path, upload, sandbox)
 
-        if rule in ('links', 'all'):
-            if link_entity is None:
-                LOGGER.info(
-                    "No links available for %s %s. Stopping '%s' rule here",
-                    catalog,
-                    entity,
-                    rule,
-                )
-                return
+        if rule == 'all' and link_entity is None:
+            LOGGER.warning(
+                "No links available for %s %s. Won't run the 'links' rule ...",
+                catalog, entity
+            )
+            pass
 
+        if rule in ('links', 'all') and link_entity is not None:
             wd_io.seek(0)
 
             LOGGER.info('Starting similar link tokens linker ...')
