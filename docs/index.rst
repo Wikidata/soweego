@@ -7,7 +7,7 @@ soweego: link Wikidata to large catalogs
 ========================================
 
 .. image:: https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Crosscut.jpg/268px-Crosscut.jpg
-    :target: https://meta.wikimedia.org/wiki/Grants:Project/Hjfocs/soweego
+   :target: https://meta.wikimedia.org/wiki/Grants:Project/Hjfocs/soweego
 
 Are you a Wikidata item? **soweego** is the only robot that lets you shake hands with your clones.
 
@@ -15,18 +15,27 @@ Are you a Wikidata item? **soweego** is the only robot that lets you shake hands
 
    $ python -m soweego run imdb
 
+
+How to
+------
+
+.. toctree::
+   :maxdepth: 1
+
+   pipeline
+   new_catalog
+   test_prod
+   recordlinkage
+
+
+API documentation
+-----------------
+
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
 
    ingestor
    validator
    wikidata
 
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`

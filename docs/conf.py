@@ -30,6 +30,7 @@ release = '1.0'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'recommonmark',
     'sphinx.ext.autodoc',
     'sphinx_autodoc_typehints',
     'sphinx.ext.intersphinx'
