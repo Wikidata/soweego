@@ -11,10 +11,11 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import logging
 
+import recordlinkage as rl
 from sklearn.model_selection import StratifiedKFold
 
-from soweego.commons.keys import MULTI_LAYER_PERCEPTRON, SINGLE_LAYER_PERCEPTRON
-from soweego.linker.workflow import init_model
+from soweego.commons import constants, keys
+from soweego.linker import classifiers
 
 LOGGER = logging.getLogger(__name__)
 
@@ -64,13 +65,32 @@ def prepare_stratified_k_fold(k, dataset, positive_samples_index):
     return k_fold, binary_target_variables
 
 
-def initialize_classifier(classifier, dataset, **kwargs):
-    if classifier in (SINGLE_LAYER_PERCEPTRON, MULTI_LAYER_PERCEPTRON):
-        model = init_model(classifier, dataset.shape[1], **kwargs)
+def init_model(classifier, num_features, **kwargs):
+    if classifier is keys.NAIVE_BAYES:
+        model = rl.NaiveBayesClassifier(**kwargs)
+
+    elif classifier is keys.LINEAR_SVM:
+        model = rl.SVMClassifier(**kwargs)
+
+    elif classifier is keys.SVM:
+        model = classifiers.SVCClassifier(**kwargs)
+
+    elif classifier is keys.SINGLE_LAYER_PERCEPTRON:
+        model = classifiers.SingleLayerPerceptron(num_features, **kwargs)
+
+    elif classifier is keys.MULTI_LAYER_PERCEPTRON:
+        model = classifiers.MultiLayerPerceptron(num_features, **kwargs)
+
     else:
-        model = init_model(classifier, **kwargs)
+        err_msg = (
+            f'Classifier not supported: {classifier}. '
+            f'It should be one of {set(constants.CLASSIFIERS)}'
+        )
+        LOGGER.critical(err_msg)
+        raise ValueError(err_msg)
 
     LOGGER.info('Model initialized: %s', model)
+
     return model
 
 
@@ -81,3 +101,14 @@ def count_num_lines_in_file(file_) -> int:
     file_.seek(0)
 
     return n_rows
+
+
+def check_goal_value(goal):
+    if goal not in ('training', 'classification'):
+        err_msg = (
+            f"Invalid 'goal' parameter: {goal}. "
+            f"It should be 'training' or 'classification'"
+        )
+
+        LOGGER.critical(err_msg)
+        raise ValueError(err_msg)
