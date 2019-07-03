@@ -110,7 +110,8 @@ def _run(catalog, entity, rule, check_dates, upload, sandbox, dir_io):
     if rule == 'links' and link_entity is None:
         LOGGER.warning(
             "No links available for %s %s. Stopping baseline here ...",
-            catalog, entity
+            catalog,
+            entity,
         )
         return
 
@@ -133,9 +134,9 @@ def _run(catalog, entity, rule, check_dates, upload, sandbox, dir_io):
         if rule == 'all' and link_entity is None:
             LOGGER.warning(
                 "No links available for %s %s. Won't run the 'links' rule ...",
-                catalog, entity
+                catalog,
+                entity,
             )
-            pass
 
         if rule in ('links', 'all') and link_entity is not None:
             wd_io.seek(0)
