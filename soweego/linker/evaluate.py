@@ -261,7 +261,12 @@ def _run_nested(
     )
 
     clf = constants.CLASSIFIERS[classifier]
-    param_grid = constants.PARAMETER_GRIDS[clf]
+    param_grid = constants.PARAMETER_GRIDS.get(clf)
+
+    if param_grid is None:
+        err_msg = f'Hyperparameter tuning for {clf} not supported'
+        LOGGER.critical(err_msg)
+        raise NotImplementedError(err_msg)
 
     result = _nested_k_fold_with_grid_search(
         clf, param_grid, catalog, entity, k_folds, metric, dir_io, **kwargs
