@@ -1,6 +1,7 @@
 # soweego: link Wikidata to large catalogs
 [![Build Status](https://travis-ci.com/Wikidata/soweego.svg?branch=master)](https://travis-ci.com/Wikidata/soweego)
 [![Documentation Status](https://readthedocs.org/projects/soweego/badge/?version=latest)](https://soweego.readthedocs.io/en/latest/?badge=latest)
+[![License](https://img.shields.io/github/license/Wikidata/soweego.svg)](https://www.gnu.org/licenses/gpl-3.0.html)
 
 _soweego_ is a pipeline that connects [Wikidata](https://wikidata.org/) to large-scale third-party catalogs.
 
@@ -117,4 +118,4 @@ The best way is to [add a new catalog](https://github.com/Wikidata/soweego/wiki/
     - apply relevant refactoring suggestions: `pylint -j 0 -d all -e R PATH_TO_YOUR_CONTRIBUTION`.
 
 # License
-The source code is under the terms of the [GNU General Public License, version 3](http://www.gnu.org/licenses/gpl.html).
+The source code is under the terms of the [GNU General Public License, version 3](https://www.gnu.org/licenses/gpl.html).
