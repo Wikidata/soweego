@@ -143,6 +143,8 @@ API documentation
 .. toctree::
    :maxdepth: 2
 
+   importer
+   models
    ingestor
    linker
    validator
