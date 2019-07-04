@@ -22,7 +22,9 @@ while getopts :s:c: o; do
 done
 shift "$((OPTIND - 1))"
 
-cp "${CREDENTIALS_PATH}" "${DOCKER_SHARED_FOLDER}/credentials.json"
+if [[ -f "$CREDENTIALS_PATH" ]]; then
+    cp "${CREDENTIALS_PATH}" "${DOCKER_SHARED_FOLDER}/credentials.json"
+fi
 
 docker-compose -f "docker-compose.dev.yml" up -d --build
 docker-compose -f "docker-compose.dev.yml" exec soweego /bin/bash

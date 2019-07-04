@@ -11,9 +11,11 @@ COPY requirements.txt /app/requirements.txt
 RUN pip install --trusted-host pypi.python.org -r requirements.txt
 
 # Run some configuration scripts
-COPY scripts/docker/config/ /config/
+COPY docker/config/ /config/
 
 RUN cd /config && sh run_all_folder_scripts.sh
+
+WORKDIR /app/soweego/
 
 # Run a BASH shell when the container launches
 CMD ["/bin/bash"]

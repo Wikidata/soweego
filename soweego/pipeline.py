@@ -1,4 +1,4 @@
-"""Module to run full soweego pipeline"""
+"""Run the whole soweego pipeline."""
 
 import gc
 import logging
@@ -17,49 +17,49 @@ LOGGER = logging.getLogger(__name__)
 
 @click.command()
 @click.argument(
-    'target', type=click.Choice(target_database.supported_targets())
+    'catalog', type=click.Choice(target_database.supported_targets())
 )
 @click.option(
     '--validator/--no-validator',
     default=False,
-    help='Executes the validation steps for the target. Default: no.',
+    help='Sync Wikidata to the target catalog. Default: no.',
 )
 @click.option(
     '--importer/--no-importer',
     default=True,
-    help='Executes the importer steps for the target. Default: yes.',
+    help='Import the target catalog dump into the database. Default: yes.',
 )
 @click.option(
     '--linker/--no-linker',
     default=True,
-    help='Executes the linker steps for the target. Default: yes.',
+    help='Link Wikidata items to target catalog identifiers. Default: yes.',
 )
 @click.option(
     '--upload/--no-upload',
     default=True,
-    help='Upload the results on wikidata. Default: yes.',
+    help='Upload results to Wikidata. Default: yes.',
 )
 def cli(
-        target: str,
+        catalog: str,
         validator: bool,
         importer: bool,
         linker: bool,
         upload: bool,
 ):
-    """Executes importer/linker and optionally validator for a target"""
+    """Launch the whole pipeline."""
 
     if importer:
-        _importer(target)
+        _importer(catalog)
     else:
         LOGGER.info("Skipping importer")
 
     if linker:
-        _linker(target, upload)
+        _linker(catalog, upload)
     else:
         LOGGER.info("Skipping linker")
 
     if validator:
-        _validator(target, upload)
+        _validator(catalog, upload)
     else:
         LOGGER.info("Skipping validator")
 
