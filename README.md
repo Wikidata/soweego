@@ -25,8 +25,8 @@ https://soweego.readthedocs.io/
 - [gather](https://soweego.readthedocs.io/en/latest/wikidata.html) live Wikidata datasets;
 - [connect](https://soweego.readthedocs.io/en/latest/linker.html) them to target catalogs via _rule-based_ and _supervised_ linkers;
 - [upload](https://soweego.readthedocs.io/en/latest/ingestor.html) links to Wikidata and [Mix'n'match](https://tools.wmflabs.org/mix-n-match/);
-- [synchronize](https://soweego.readthedocs.io/en/latest/validator.html) Wikidata to imported catalogs;
-- [enrich]() Wikidata items with statements
+- [synchronize](https://soweego.readthedocs.io/en/latest/validator.html#module-soweego.validator.checks) Wikidata to imported catalogs;
+- [enrich](https://soweego.readthedocs.io/en/latest/validator.html#module-soweego.validator.enrichment) Wikidata items with relevant statements.
 
 # Get Ready
 Install [Docker](https://docs.docker.com/install/), then grab soweego:
@@ -41,14 +41,19 @@ Piece of cake:
 
 ```
 $ ./scripts/docker/launch_pipeline.sh CATALOG
+Building soweego
+...
+:/app/soweego# python -m soweego run CATALOG
 ```
 
-Pick `CATALOG` from: `discogs`, `imdb`, `musicbrainz`.
+Pick `CATALOG` from `discogs`, `imdb`, or `musicbrainz`.
 
 These steps are executed by default:
 1. import the target catalog into a database;
 2. link Wikidata to the target with a supervised linker;
 3. synchronize Wikidata to the target.
+
+Results are in `/app/shared/results`.
 
 # Use the Command Line
 You can launch every single soweego action with CLI commands:
@@ -56,8 +61,8 @@ You can launch every single soweego action with CLI commands:
 ```
 $ ./scripts/docker/launch_test.sh
 Building soweego
-# cd soweego
-# python -m soweego
+...
+:/app/soweego# python -m soweego
 Usage: soweego [OPTIONS] COMMAND [ARGS]...
 
   Link Wikidata to large catalogs.
@@ -85,10 +90,10 @@ Just two things to remember:
 The best way is to [add a new catalog](https://github.com/Wikidata/soweego/wiki/Import-a-new-database).
 
 ## Workflow
-1. branch out of `master`;
+1. Fork this repository;
 2. follow the project structure;
 3. commit **frequently** with **clear** messages;
-4. make a pull request.
+4. send a pull request to the `master` branch of this repository.
 
 ## Coding
 1. **Style** - comply with **[PEP 8](https://www.python.org/dev/peps/pep-0008/)** and **[Wikimedia](https://www.mediawiki.org/wiki/Manual:Coding_conventions/Python)** conventions: 
@@ -97,18 +102,19 @@ The best way is to [add a new catalog](https://github.com/Wikidata/soweego/wiki/
     - _UPPERCASE_ constants;
     - anything else is _lowercase_;
     - _2_ empty lines to separate functions;
-    - _80_ characters per line.
-2. **[Type hints](https://docs.python.org/3/library/typing.html)** - add them to public function signatures;
-3. **Documentation** - write _[Sphinx](https://www.sphinx-doc.org/)_ docstrings for public functions and classes:
+    - _80_ characters per line, and up to _100_ when suitable;
+    - _single-quoted_ strings, unless single-quotes are in a string.
+2. **[Type hints](https://docs.python.org/3/library/typing.html)** - add them at least to public function signatures;
+3. **Documentation** - write _[Sphinx](https://www.sphinx-doc.org/)_ docstrings at least for public functions and classes:
     - use [reST](https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html) markup;
-    - follow _[PEP 257](https://www.python.org/dev/peps/pep-0257/)_ and _[PEP 287](https://www.python.org/dev/peps/pep-0287/)_;
+    - stick to _[PEP 257](https://www.python.org/dev/peps/pep-0257/)_ and _[PEP 287](https://www.python.org/dev/peps/pep-0287/)_;
     - pay special attention to [info field lists](https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html#info-field-lists);
     - [cross-reference](https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html#cross-referencing-python-objects) Python objects.
-4. **Refactoring**
-    - fix _[pylint](https://www.pylint.org/)_ errors: `pylint -j 0 -E soweego`;
-    - look at pylint warnings: `pylint -j 0 -d all -e W soweego`;
-    - reduce complexity: `flake8 --select C90 --max-complexity 10 soweego`;
-    - apply relevant refactoring suggestions: `pylint -j 0 -d all -e R soweego`.
+4. **Refactoring**:
+    - fix _[pylint](https://www.pylint.org/)_ errors: `pylint -j 0 -E PATH_TO_YOUR_CONTRIBUTION`;
+    - look at pylint warnings: `pylint -j 0 -d all -e W PATH_TO_YOUR_CONTRIBUTION`;
+    - reduce complexity: `flake8 --select C90 --max-complexity 10 PATH_TO_YOUR_CONTRIBUTION`;
+    - apply relevant refactoring suggestions: `pylint -j 0 -d all -e R PATH_TO_YOUR_CONTRIBUTION`.
 
 # License
 The source code is under the terms of the [GNU General Public License, version 3](http://www.gnu.org/licenses/gpl.html).
