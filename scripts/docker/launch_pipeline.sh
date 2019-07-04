@@ -55,7 +55,9 @@ git clean -f -d
 git pull
 
 # Sets up the credentials file
-cp "${CREDENTIALS_PATH}" "${DOCKER_SHARED_FOLDER}/credentials.json"
+if [[ -f "$CREDENTIALS_PATH" ]]; then
+    cp "${CREDENTIALS_PATH}" "${DOCKER_SHARED_FOLDER}/credentials.json"
+fi
 
 # Builds and runs docker
 docker build --rm -f "Dockerfile.pipeline" -t maxfrax/soweego:pipeline .
