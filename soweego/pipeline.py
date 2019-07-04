@@ -40,11 +40,7 @@ LOGGER = logging.getLogger(__name__)
     help='Upload results to Wikidata. Default: yes.',
 )
 def cli(
-        catalog: str,
-        validator: bool,
-        importer: bool,
-        linker: bool,
-        upload: bool,
+    catalog: str, validator: bool, importer: bool, linker: bool, upload: bool
 ):
     """Launch the whole pipeline."""
 
