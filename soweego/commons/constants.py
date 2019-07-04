@@ -320,6 +320,7 @@ METRICS = ['accuracy']
 BATCH_SIZE = 1024
 EPOCHS = 1000
 VALIDATION_SPLIT = 0.33
+NAIVE_BAYES_BINARIZE = 0.1
 
 # precisions for the `pandas.Period` class.
 # Listed from least to most precise, as defined here:

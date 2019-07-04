@@ -67,6 +67,10 @@ def prepare_stratified_k_fold(k, dataset, positive_samples_index):
 
 def init_model(classifier, num_features, **kwargs):
     if classifier is keys.NAIVE_BAYES:
+        # add `binarize` threshold if not already specified
+        if "binarize" not in kwargs.keys():
+            kwargs["binarize"] = constants.NAIVE_BAYES_BINARIZE
+
         model = rl.NaiveBayesClassifier(**kwargs)
 
     elif classifier is keys.LINEAR_SVM:
