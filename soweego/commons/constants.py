@@ -227,7 +227,6 @@ FEATURES_FOLDERS = 'features'
 MODELS_FOLDER = 'models'
 RESULTS_FOLDER = 'results'
 NN_CHECKPOINT_FOLDER = 'best_model_checkpoint'
-TENSOR_BOARD_FOLDER = 'tensor_board'
 
 # File names
 NN_CHECKPOINT_FILENAME = '{}_best_checkpoint_model.hdf5'

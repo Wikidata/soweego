@@ -34,7 +34,7 @@ with redirect_stderr(open(os.devnull, 'w')):
     # When `keras` is imported, it prints a message to stderr
     # saying which backend it's using. To avoid this, we
     # redirect stderr to `devnull` for the statements in this block.
-    from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
+    from keras.callbacks import EarlyStopping, ModelCheckpoint
     from keras.layers import Dense, BatchNormalization
     from keras.models import Sequential
 
@@ -113,16 +113,12 @@ class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
         epochs: int = constants.EPOCHS,
         validation_split: float = constants.VALIDATION_SPLIT,
     ) -> None:
-        tensor_path = os.path.join(
-            constants.SHARED_FOLDER, constants.TENSOR_BOARD_FOLDER
-        )
         model_path = os.path.join(
             constants.SHARED_FOLDER,
             constants.NEURAL_NETWORK_CHECKPOINT_MODEL.format(
                 self.__class__.__name__
             ),
         )
-        os.makedirs(os.path.dirname(tensor_path), exist_ok=True)
         os.makedirs(os.path.dirname(model_path), exist_ok=True)
 
         history = self.kernel.fit(
@@ -139,7 +135,6 @@ class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
                     restore_best_weights=True,
                 ),
                 ModelCheckpoint(model_path, save_best_only=True),
-                TensorBoard(log_dir=tensor_path),
             ],
         )
 
