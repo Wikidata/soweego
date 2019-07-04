@@ -14,6 +14,11 @@ soweego: link Wikidata to large catalogs
    :target: https://soweego.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
 
+.. image:: https://img.shields.io/github/license/Wikidata/soweego.svg
+   :target: https://www.gnu.org/licenses/gpl-3.0.html
+   :alt: License
+
+
 *soweego* is a pipeline that connects `Wikidata <https://wikidata.org/>`_ to large-scale third-party catalogs.
 
 *soweego* is the only system that makes *statisticians, epidemiologists, historians,* and *computer scientists* agree.
@@ -21,10 +26,6 @@ Why? Because it performs *record linkage, data matching,* and *entity resolution
 Too easy, they all seem to be `synonyms <https://en.wikipedia.org/wiki/Record_linkage#Naming_conventions>`_!
 
 Oh, *soweego* also embeds `Machine Learning <https://en.wikipedia.org/wiki/Machine_learning>`_ and advocates for `Linked Data <https://en.wikipedia.org/wiki/Linked_data>`_.
-
-.. image:: https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Crosscut.jpg/268px-Crosscut.jpg
-   :target: https://meta.wikimedia.org/wiki/Grants:Project/Hjfocs/soweego
-   :alt: Is soweego similar to the Go game?
 
 
 Official Project Page
@@ -97,10 +98,10 @@ You can launch every single soweego action with CLI commands::
 
    Options:
      -l, --log-level <TEXT CHOICE>...
-                                     Module name followed by one of [DEBUG, INFO,
-                                     WARNING, ERROR, CRITICAL]. Multiple pairs
-                                     allowed.
-     --help                          Show this message and exit.
+                              Module name followed by one of [DEBUG, INFO,
+                              WARNING, ERROR, CRITICAL]. Multiple pairs
+                              allowed.
+     --help                   Show this message and exit.
 
    Commands:
      importer  Import target catalog dumps into the database.
@@ -125,6 +126,15 @@ How-tos
    new_catalog
    test_prod
    recordlinkage
+
+
+CLI documentation
+-----------------
+
+.. toctree::
+   :maxdepth: 2
+
+   cli
 
 
 API documentation
@@ -152,4 +162,4 @@ The best way is to :ref:`add a new catalog <add-a-new-catalog>`.
 License
 -------
 
-The source code is under the terms of the `GNU General Public License, version 3 <http://www.gnu.org/licenses/gpl.html>`_.
+The source code is under the terms of the `GNU General Public License, version 3 <https://www.gnu.org/licenses/gpl.html>`_.
