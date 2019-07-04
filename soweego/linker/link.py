@@ -41,7 +41,7 @@ LOGGER = logging.getLogger(__name__)
     '-t',
     '--threshold',
     default=constants.CONFIDENCE_THRESHOLD,
-    help="Probability score threshold, default: 0.5.",
+    help=f"Probability score threshold, default: {constants.CONFIDENCE_THRESHOLD}.",
 )
 @click.option(
     '-n',
