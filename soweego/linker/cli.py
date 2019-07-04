@@ -1,13 +1,13 @@
 import click
 
-from soweego.linker import baseline, classify, evaluate, train
+from soweego.linker import baseline, evaluate, link, train
 
 CLI_COMMANDS = {
     'baseline': baseline.cli,
-    'train': train.cli,
-    'classify': classify.cli,
     'evaluate': evaluate.cli,
-    'extract_matches': baseline.extract_available_matches_in_target,
+    'extract': baseline.extract_cli,
+    'link': link.cli,
+    'train': train.cli,
 }
 
 

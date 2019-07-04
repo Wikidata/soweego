@@ -9,7 +9,7 @@ import click
 from soweego.commons import target_database
 from soweego.importer.importer import check_links_cli as validate_links
 from soweego.importer.importer import import_cli
-from soweego.linker import classify, evaluate, train
+from soweego.linker import evaluate, link, train
 from soweego.validator.checks import bio_cli, dead_ids_cli, links_cli
 
 LOGGER = logging.getLogger(__name__)
@@ -40,11 +40,7 @@ LOGGER = logging.getLogger(__name__)
     help='Upload results to Wikidata. Default: yes.',
 )
 def cli(
-        catalog: str,
-        validator: bool,
-        importer: bool,
-        linker: bool,
-        upload: bool,
+    catalog: str, validator: bool, importer: bool, linker: bool, upload: bool
 ):
     """Launch the whole pipeline."""
 
@@ -83,9 +79,7 @@ def _linker(target: str, upload: bool):
             continue
         _invoke_no_exit(evaluate.cli, ['slp', target, target_type])
         _invoke_no_exit(train.cli, ['slp', target, target_type])
-        _invoke_no_exit(
-            classify.cli, ['slp', target, target_type, upload_option]
-        )
+        _invoke_no_exit(link.cli, ['slp', target, target_type, upload_option])
 
 
 def _validator(target: str, upload: bool):

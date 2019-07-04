@@ -17,14 +17,11 @@ from collections import defaultdict
 from typing import Iterable
 
 import regex
-from pandas import read_sql
 from sqlalchemy import or_
-from sqlalchemy.orm.query import Query
 
 from soweego.commons import constants, keys, target_database, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer import models
-from soweego.linker import workflow
 from soweego.wikidata import api_requests, sparql_queries, vocabulary
 
 LOGGER = logging.getLogger(__name__)
@@ -166,44 +163,6 @@ def perfect_name_search_bucket(
         raise
     finally:
         session.close()
-
-
-def gather_target_dataset(goal, entity_type, catalog, identifiers):
-    workflow.handle_goal(goal)
-
-    base, link, nlp = (
-        target_database.get_main_entity(catalog, entity_type),
-        target_database.get_link_entity(catalog, entity_type),
-        target_database.get_nlp_entity(catalog, entity_type),
-    )
-
-    LOGGER.info('Gathering %s %s for the linker ...', catalog, goal)
-
-    db_engine = DBManager().get_engine().execution_options(stream_results=True)
-
-    # keep only non-None references
-    tables = [tb for tb in (base, link, nlp) if tb]
-
-    # create the query
-    query = Query(tables)
-
-    # remove base table so that we don't "outerjoin" it with
-    # itself
-    tables.remove(base)
-
-    # make the join statements to join different tables
-    for tb in tables:
-        query = query.outerjoin(tb, base.catalog_id == tb.catalog_id)
-
-    # finally, add the filter condition to the query
-    query = query.filter(base.catalog_id.in_(identifiers)).enable_eagerloads(
-        False
-    )
-
-    statement = query.statement
-    LOGGER.debug('SQL query to be fired: %s', statement)
-
-    return read_sql(statement, db_engine, chunksize=1000)
 
 
 def _build_dataset_relevant_fields(base, link, nlp):

@@ -10,11 +10,11 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+import gzip
 import json
 import logging
 import logging.config
 import os
-import gzip
 from io import StringIO
 from urllib.parse import unquote_plus
 
@@ -84,7 +84,6 @@ class TqdmLoggingHandler(logging.StreamHandler):
 
 
 class GzipLoggingHandler(logging.StreamHandler):
-
     def __init__(self, filename: str):
         stream = gzip.open(filename, 'w')
         super().__init__(stream)

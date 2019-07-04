@@ -1,9 +1,6 @@
 The Command Line
 ================
 
-.. note::
-
-
 Importer
 --------
 
