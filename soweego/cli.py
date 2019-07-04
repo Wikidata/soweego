@@ -12,6 +12,7 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import logging
 
 import click
+import tensorflow as tf
 
 from soweego import commons
 from soweego import pipeline as pipeline_cli
@@ -19,6 +20,11 @@ from soweego.importer import cli as importer_cli
 from soweego.ingestor import cli as ingestor_cli
 from soweego.linker import cli as linker_cli
 from soweego.validator import cli as validator_cli
+
+# set env variable to ignore tensorflow warnings
+# (only errors are printed)
+tf.logging.set_verbosity(tf.logging.ERROR)
+
 
 CLI_COMMANDS = {
     'importer': importer_cli.cli,

@@ -143,7 +143,9 @@ API documentation
 .. toctree::
    :maxdepth: 2
 
+   cli
    ingestor
+   linker
    validator
    wikidata
 

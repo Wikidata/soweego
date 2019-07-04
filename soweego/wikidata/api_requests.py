@@ -2,14 +2,6 @@
 # -*- coding: utf-8 -*-
 
 """Set of specific Web API requests for Wikidata data collection."""
-from soweego.commons.db_manager import DBManager
-
-__author__ = 'Marco Fossati'
-__email__ = 'fossati@spaziodati.eu'
-__version__ = '1.0'
-__license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2018, Hjfocs'
-
 import json
 import logging
 import os
@@ -25,8 +17,16 @@ from requests.exceptions import RequestException
 from tqdm import tqdm
 
 from soweego.commons import constants, keys
+from soweego.commons.db_manager import DBManager
 from soweego.commons.logging import log_request_data
 from soweego.wikidata import vocabulary
+
+__author__ = 'Marco Fossati'
+__email__ = 'fossati@spaziodati.eu'
+__version__ = '1.0'
+__license__ = 'GPL-3.0'
+__copyright__ = 'Copyleft 2018, Hjfocs'
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -72,7 +72,7 @@ def get_biodata(qids: Set[str]) -> Iterator[Tuple[str, str, str]]:
 
 
 def get_links(
-        qids: Set[str], url_pids: Set[str], ext_id_pids_to_urls: Dict
+    qids: Set[str], url_pids: Set[str], ext_id_pids_to_urls: Dict
 ) -> Iterator[Tuple]:
     """Collect sitelinks and third-party links
     for a given set of Wikidata items.
@@ -126,13 +126,13 @@ def get_links(
 
 
 def get_data_for_linker(
-        catalog: str,
-        entity: str,
-        qids: Set[str],
-        url_pids: Set[str],
-        ext_id_pids_to_urls: Dict,
-        qids_and_tids: Dict,
-        fileout: TextIO,
+    catalog: str,
+    entity: str,
+    qids: Set[str],
+    url_pids: Set[str],
+    ext_id_pids_to_urls: Dict,
+    qids_and_tids: Dict,
+    fileout: TextIO,
 ) -> None:
     """Collect relevant data for linking Wikidata to a given catalog.
     Dump the result to a given output stream.
@@ -200,7 +200,7 @@ def get_data_for_linker(
         # `processed_bucket` will be a list of dicts, where each dict
         # is a processed entity from the bucket
         for processed_bucket in pool.imap_unordered(
-                pool_function, tqdm(qid_buckets, total=len(qid_buckets))
+            pool_function, tqdm(qid_buckets, total=len(qid_buckets))
         ):
             # Join results into a string so that we can write them to
             # the dump file
@@ -284,7 +284,7 @@ def build_session() -> requests.Session:
 
 
 def parse_value(
-        value: Union[str, Dict]
+    value: Union[str, Dict]
 ) -> Union[str, Tuple[str, str], Set[str], None]:
     """Parse a value returned by the Wikidata API into standard Python objects.
 
@@ -368,13 +368,13 @@ def _lookup_label(item_value):
 # This function will be consumed by `get_data_for_linker`:
 # it enables parallel processing for Wikidata buckets
 def _process_bucket(
-        bucket,
-        request_params,
-        url_pids,
-        ext_id_pids_to_urls,
-        qids_and_tids,
-        needs,
-        counters,
+    bucket,
+    request_params,
+    url_pids,
+    ext_id_pids_to_urls,
+    qids_and_tids,
+    needs,
+    counters,
 ) -> List[Dict]:
     entities = _sanity_check(bucket, request_params)
 
@@ -684,7 +684,7 @@ def _yield_ext_id_links(ext_id_pids_to_urls, claims, qid, no_ext_ids_count):
 
 
 def _yield_expected_values(
-        qid, claims, expected_pids, count, include_pid=False
+    qid, claims, expected_pids, count, include_pid=False
 ):
     available = expected_pids.intersection(claims.keys())
 
@@ -741,7 +741,7 @@ def _get_login_token(session: requests.Session) -> str:
 # and an eventual error message from the server.
 # Cookies for authentication are automatically saved into the session.
 def _actual_login(
-        session: requests.Session, user: str, password: str, token: str
+    session: requests.Session, user: str, password: str, token: str
 ) -> Tuple[bool, str]:
     login_response = session.post(
         WIKIDATA_API_URL,
