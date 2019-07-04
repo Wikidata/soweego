@@ -15,5 +15,7 @@ COPY scripts/docker/config/ /config/
 
 RUN cd /config && sh run_all_folder_scripts.sh
 
+WORKDIR /app/soweego/
+
 # Run a BASH shell when the container launches
 CMD ["/bin/bash"]
