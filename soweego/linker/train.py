@@ -50,7 +50,7 @@ LOGGER = logging.getLogger(__name__)
     '--k-folds',
     default=5,
     help="Number of folds for hyperparameters tuning. Use with '--tune'. "
-         "Default: 5.",
+    "Default: 5.",
 )
 @click.option(
     '-d',
@@ -73,18 +73,12 @@ def cli(ctx, classifier, catalog, entity, tune, k_folds, dir_io):
     actual_classifier = constants.CLASSIFIERS[classifier]
 
     model = execute(
-        actual_classifier,
-        catalog,
-        entity,
-        tune,
-        k_folds,
-        dir_io,
-        **kwargs,
+        actual_classifier, catalog, entity, tune, k_folds, dir_io, **kwargs
     )
 
     outfile = os.path.join(
         dir_io,
-        constants.LINKER_MODEL.format(catalog, entity, actual_classifier)
+        constants.LINKER_MODEL.format(catalog, entity, actual_classifier),
     )
     os.makedirs(os.path.dirname(outfile), exist_ok=True)
     joblib.dump(model, outfile)
@@ -94,15 +88,23 @@ def cli(ctx, classifier, catalog, entity, tune, k_folds, dir_io):
     # Free memory in case of neural networks:
     # can be done only after the model dump
     if actual_classifier in (
-            keys.SINGLE_LAYER_PERCEPTRON,
-            keys.MULTI_LAYER_PERCEPTRON
+        keys.SINGLE_LAYER_PERCEPTRON,
+        keys.MULTI_LAYER_PERCEPTRON,
     ):
         K.clear_session()  # Clear the TensorFlow graph
 
     LOGGER.info('Training completed')
 
 
-def execute(classifier: str, catalog: str, entity: str, tune: bool, k: int, dir_io: str, **kwargs) -> BaseClassifier:
+def execute(
+    classifier: str,
+    catalog: str,
+    entity: str,
+    tune: bool,
+    k: int,
+    dir_io: str,
+    **kwargs,
+) -> BaseClassifier:
     """Train a supervised linker.
 
     1. Build the training set relevant to the given catalog and entity
@@ -127,16 +129,17 @@ def execute(classifier: str, catalog: str, entity: str, tune: bool, k: int, dir_
     :return: the trained model
     """
     if tune and classifier in (
-            keys.SINGLE_LAYER_PERCEPTRON,
-            keys.MULTI_LAYER_PERCEPTRON,
+        keys.SINGLE_LAYER_PERCEPTRON,
+        keys.MULTI_LAYER_PERCEPTRON,
     ):
         # TODO make Keras work with GridSearchCV
         raise NotImplementedError(
             f'Grid search for {classifier} is not supported'
         )
 
-    feature_vectors, positive_samples_index = build_training_set(catalog,
-                                                                 entity, dir_io)
+    feature_vectors, positive_samples_index = build_training_set(
+        catalog, entity, dir_io
+    )
 
     if tune:
         best_params = _grid_search(
@@ -154,7 +157,9 @@ def execute(classifier: str, catalog: str, entity: str, tune: bool, k: int, dir_
     return _train(classifier, feature_vectors, positive_samples_index, **kwargs)
 
 
-def build_training_set(catalog: str, entity: str, dir_io: str) -> Tuple[pd.DataFrame, pd.MultiIndex]:
+def build_training_set(
+    catalog: str, entity: str, dir_io: str
+) -> Tuple[pd.DataFrame, pd.MultiIndex]:
     """Build a training set.
 
     :param catalog: ``{'discogs', 'imdb', 'musicbrainz'}``.
@@ -192,7 +197,7 @@ def build_training_set(catalog: str, entity: str, dir_io: str) -> Tuple[pd.DataF
 
         # All samples come from queries to the target DB
         # and include negative ones
-        all_samples = blocking.full_text_query_block(
+        all_samples = blocking.find_samples(
             goal,
             catalog,
             wd_chunk[keys.NAME_TOKENS],
@@ -203,15 +208,13 @@ def build_training_set(catalog: str, entity: str, dir_io: str) -> Tuple[pd.DataF
 
         # Build target chunk from all samples
         target_reader = workflow.build_target(
-            goal, catalog, entity,
-            set(all_samples.get_level_values(keys.TID))
+            goal, catalog, entity, set(all_samples.get_level_values(keys.TID))
         )
         # Preprocess target chunk
         target_chunk = workflow.preprocess_target(goal, target_reader)
 
         features_path = os.path.join(
-            dir_io,
-            constants.FEATURES.format(catalog, entity, goal, i)
+            dir_io, constants.FEATURES.format(catalog, entity, goal, i)
         )
 
         # Extract features from all samples
@@ -239,11 +242,11 @@ def build_training_set(catalog: str, entity: str, dir_io: str) -> Tuple[pd.DataF
 
 
 def _grid_search(
-        k: int,
-        feature_vectors: pd.DataFrame,
-        positive_samples_index: pd.MultiIndex,
-        classifier: str,
-        **kwargs
+    k: int,
+    feature_vectors: pd.DataFrame,
+    positive_samples_index: pd.MultiIndex,
+    classifier: str,
+    **kwargs,
 ) -> Dict:
     k_fold, target = utils.prepare_stratified_k_fold(
         k, feature_vectors, positive_samples_index

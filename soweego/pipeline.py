@@ -9,7 +9,7 @@ import click
 from soweego.commons import target_database
 from soweego.importer.importer import check_links_cli as validate_links
 from soweego.importer.importer import import_cli
-from soweego.linker import link, evaluate, train
+from soweego.linker import evaluate, link, train, baseline
 from soweego.validator.checks import bio_cli, dead_ids_cli, links_cli
 
 LOGGER = logging.getLogger(__name__)
@@ -40,11 +40,8 @@ LOGGER = logging.getLogger(__name__)
     help='Upload results to Wikidata. Default: yes.',
 )
 def cli(
-        catalog: str,
-        validator: bool,
-        importer: bool,
-        linker: bool,
-        upload: bool,
+        catalog: str, validator: bool, importer: bool, linker: bool,
+        upload: bool
 ):
     """Launch the whole pipeline."""
 
@@ -77,15 +74,17 @@ def _importer(target: str):
 def _linker(target: str, upload: bool):
     """Contains all the command the linker has to do"""
     LOGGER.info("Running linker for target: %s", target)
-    upload_option = "--upload" if upload else "--no-upload"
+
     for target_type in target_database.supported_entities_for_target(target):
         if not target_type:
             continue
+        args = [target, target_type, '--upload'] if upload else [target,
+                                                                 target_type]
+
+        _invoke_no_exit(baseline.extract_cli, args)
         _invoke_no_exit(evaluate.cli, ['slp', target, target_type])
         _invoke_no_exit(train.cli, ['slp', target, target_type])
-        _invoke_no_exit(
-            link.cli, ['slp', target, target_type, upload_option]
-        )
+        _invoke_no_exit(link.cli, ['slp'].extend(args))
 
 
 def _validator(target: str, upload: bool):

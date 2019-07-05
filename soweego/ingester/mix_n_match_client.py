@@ -170,7 +170,7 @@ def add_catalog(catalog: str, entity: str) -> int:
         LOGGER.error(
             "Failed catalog addition/update due to %s. "
             "You can enable the debug log with the CLI option "
-            "'-l soweego.ingestor DEBUG' for more details",
+            "'-l soweego.ingester DEBUG' for more details",
             error.__class__.__name__,
         )
         LOGGER.debug(error)
@@ -259,7 +259,7 @@ def add_matches(
         LOGGER.error(
             "Failed addition/update due to %s. "
             "You can enable the debug log with the CLI option "
-            "'-l soweego.ingestor DEBUG' for more details",
+            "'-l soweego.ingester DEBUG' for more details",
             error.__class__.__name__,
         )
         LOGGER.debug(error)
@@ -341,7 +341,7 @@ def _sync_matches(session, catalog_id, success):
         LOGGER.error(
             "Failed query of existing matches due to %s. "
             "You can enable the debug log with the CLI option "
-            "'-l soweego.ingestor DEBUG' for more details",
+            "'-l soweego.ingester DEBUG' for more details",
             error.__class__.__name__,
         )
         LOGGER.debug(error)

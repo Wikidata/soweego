@@ -58,7 +58,7 @@ PyMySQL==0.9.3
 pyparsing==2.4.0
 python-dateutil==2.8.0
 pytz==2019.1
-pywikibot==3.0.dev0
+pywikibot==3.0.20190430
 PyYAML==5.1.1
 recordlinkage==0.13.2
 regex==2019.6.8
@@ -78,10 +78,10 @@ sphinxcontrib-jsmath==1.0.1
 sphinxcontrib-qthelp==1.0.2
 sphinxcontrib-serializinghtml==1.1.3
 SQLAlchemy==1.3.5
-tb-nightly==1.14.0a20190603
-tensorflow==2.0.0b1
+tensorboard==1.13.1
+tensorflow==1.13.1
+tensorflow-estimator==1.13.0
 termcolor==1.1.0
-tf-estimator-nightly==1.14.0.dev2019060501
 toml==0.10.0
 tqdm==4.32.2
 traitlets==4.3.2

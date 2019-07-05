@@ -6,11 +6,10 @@ Import a new catalog
    up and running;
 2. create a model file for the database you want to import in
    ``${PROJECT_ROOT}/soweego/importer/models/``;
-3. call it ``${NEW_DATABASE}_entity.py`` and paste the snippet below. It
-   is enough to replace ``${NEW_DATABASE}`` with your database name.
+3. call it ``${NEW_DATABASE}_entity.py`` and paste the snippet below. It is enough to replace ``${NEW_DATABASE}`` with your database name and ``${NEW_ENTITY_NAME}`` with a word describing what this entity is about e.g musician, painter.
    Other variables (marked with a leading ``$``) are optional;
 4. **optional:** you can define database-specific columns, see ``TODO``.
-   Column names **must be unique**: no overlapping among classes.
+   Column names **must be unique**: no overlapping among the class you define and the BaseEntity class.
 
 .. code:: py
 
@@ -25,43 +24,34 @@ Import a new catalog
    __license__ = 'GPL-3.0'
    __copyright__ = 'Copyleft ${YEAR}, ${YOUR_NAME_HERE}'
 
-   from sqlalchemy import Column, ForeignKey, String
+   from sqlalchemy import Column, String
    from sqlalchemy.ext.declarative import declarative_base
 
-   from soweego.importer.models.base_entity import BaseEntity
+   from soweego.importer.models.base_entity import BaseEntity, BaseRelationship
    from soweego.importer.models.base_link_entity import BaseLinkEntity
 
    BASE = declarative_base()
 
-   class ${NEW_DATABASE}Entity(BaseEntity, BASE):
-       __tablename__ = '${NEW_DATABASE}'
-       __mapper_args__ = {
-           'polymorphic_identity': __tablename__,
-           'concrete': True}
+   class ${NEW_DATABASE}${NEW_ENTITY_NAME}Entity(BaseEntity):
+       """Describes a ${NEW_ENTITY_NAME} of ${NEW_DATABASE}"""
+
+       __tablename__ = '${NEW_DATABASE}_${NEW_ENTITY_NAME}'
+       __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
+
        # TODO Optional: define database-specific columns here
        # For instance:
        # birth_place = Column(String(255))
 
-   class ${NEW_DATABASE}LinkEntity(BaseLinkEntity, BASE):
-       __tablename__ = '${NEW_DATABASE}_link'
-       __mapper_args__ = {
-           'polymorphic_identity': __tablename__,
-           'concrete': True}
-       catalog_id = Column(String(32), ForeignKey(${NEW_DATABASE}Entity.catalog_id), 
-                           index=True)
+5. create the file
+   ``${PROJECT_ROOT}/soweego/importer/${NEW_DATABASE}_dump_extractor.py``;
+6. define a class ``${NEW_DATABASE}DumpExtractor(BaseDumpExtractor)``;
+7. override ``BaseDumpExtractor`` methods:
 
-1. create the file
-   ``${PROJECT_ROOT}/soweego/importer/${NEW_DATABASE}_dump_downloader.py``;
-2. define a class ``${NEW_DATABASE}DumpDownloader(BaseDumpDownloader)``;
-3. override ``BaseDumpDownloader`` methods:
-
-   -  ``import_from_dump`` creates ``${NEW_DATABASE}Entity`` and
-      ``${NEW_DATABASE}LinkEntity`` instances for each entity and stores
+   -  ``extract_and_populate`` is in charge to create an instance of ``${NEW_DATABASE}${NEW_ENTITY_NAME}Entity`` for each entity in the dump and to store
       it in the database. See the instructions below;
-   -  ``dump_download_url`` computes and returns the latest dump URL.
-      The override is optional: if you don't implement it, you'll always
-      have to call the import of your database with the
-      ``--download-url`` option (see later).
+   -  ``get_dump_download_urls`` computes the latest list of URLs forming the dump. Tipically, there will be only an URL, but in some case the dumps are given in multiple archives.
+   
+8. If you still have doubts, try to check out Musicbrainz, Discogs or Imdb extractors.
 
 Instructions to store entities in database
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -71,8 +61,8 @@ Setup:
 ::
 
    db_manager = DBManager()
-   db_manager.drop(${NEW_DATABASE}Entity)
-   db_manager.create(${NEW_DATABASE}Entity)
+   db_manager.drop(${NEW_DATABASE}${NEW_ENTITY_NAME})
+   db_manager.create(${NEW_DATABASE}${NEW_ENTITY_NAME})
 
 Creating a transaction:
 
@@ -84,7 +74,9 @@ Adding an entity to a transaction
 
 ::
 
-   current_entity = ${NEW_DATABASE}Entity()
+   current_entity = ${NEW_DATABASE}${NEW_ENTITY_NAME}Entity()
+   ...
+   # Fill the fields of current_entity
    ...
    session.add(current_entity)
 
@@ -99,35 +91,80 @@ Keep your sessions as small as possibile!
 Set up the CLI to import your database
 --------------------------------------
 
-``${PROJECT_ROOT}/soweego/importer/importer.py`` contains the following
-CLI command:
+Add a couple of keys for your database in ``${PROJECT_ROOT}/soweego/commons/keys.cs``:
 
 .. code:: py
 
-   @click.command()
-   @click.argument('catalog', type=click.Choice(['discogs', 'musicbrainz']))
-   @click.option('--download-url', '-du', default=None)
-   @click.option('--output', '-o', default='output', type=click.Path())
-   def import_cli(catalog: str, download_url: str, output: str) -> None:
-       """Check if there is an updated dump in the output path;
-          if not, download the dump"""
-       importer = Importer()
-       downloader = BaseDumpDownloader()
+   # Supported catalogs
+   DISCOGS = 'discogs'
+   IMDB = 'imdb'
+   MUSICBRAINZ = 'musicbrainz'
+   TWITTER = 'twitter'
+   ${NEW_DATABASE} = '${NEW_DATABASE}'
+   
+   # Supported entities
+   # People
+   ACTOR = 'actor'
+   BAND = 'band'
+   DIRECTOR = 'director'
+   PRODUCER = 'producer'
+   MUSICIAN = 'musician'
+   WRITER = 'writer'
+   ${NEW_ENTITY_NAME}= '${NEW_ENTITY_NAME}'
+   # Works
 
-       if catalog == 'discogs':
-           downloader = DiscogsDumpDownloader()
-       elif catalog == 'musicbrainz':
-           downloader = MusicBrainzDumpDownloader()
+Then you need to add your database among the supported ones. Just add an entry in the ``DUMP_EXTRACTOR`` dictionary in ``${PROJECT_ROOT}/soweego/importer/importer.py``.
 
-       importer.refresh_dump(
-           output, download_url, downloader)
+.. code:: py
 
-Add an ``elif`` case for your database and make sure you set the
-appropriate ``downloader`` for your database.
+   DUMP_EXTRACTOR = {
+       keys.DISCOGS: DiscogsDumpExtractor,
+       keys.IMDB: ImdbDumpExtractor,
+       keys.MUSICBRAINZ: MusicBrainzDumpExtractor,
+       keys.${NEW_DATABASE}: ${NEW_DATABASE}DumpExtractor
+   }
+  
+The last step is to set up the dictionary ``TARGET_CATALOGS`` in ``${PROJECT_ROOT}/soweego/commons/constants.cs``.
+Your entry should be like:
 
-The same database name you choose for the if statement needs to be added
-in the list:
-``@click.argument('catalog', type=click.Choice(['discogs', 'musicbrainz']))``.
+.. code:: py
+
+   keys.MUSICBRAINZ: {
+           keys.MUSICIAN: {
+               keys.CLASS_QID: vocabulary.MUSICIAN_QID,
+               keys.MAIN_ENTITY: MusicbrainzArtistEntity,
+               keys.LINK_ENTITY: MusicbrainzArtistLinkEntity,
+               keys.NLP_ENTITY: None,
+               keys.RELATIONSHIP_ENTITY: MusicBrainzReleaseGroupArtistRelationship,
+               keys.WORK_TYPE: keys.MUSICAL_WORK,
+           },
+           keys.BAND: {
+               keys.CLASS_QID: vocabulary.BAND_QID,
+               keys.MAIN_ENTITY: MusicbrainzBandEntity,
+               keys.LINK_ENTITY: MusicbrainzBandLinkEntity,
+               keys.NLP_ENTITY: None,
+               keys.RELATIONSHIP_ENTITY: MusicBrainzReleaseGroupArtistRelationship,
+               keys.WORK_TYPE: keys.MUSICAL_WORK,
+           },
+           keys.MUSICAL_WORK: {
+               keys.CLASS_QID: vocabulary.MUSICAL_WORK_QID,
+               keys.MAIN_ENTITY: MusicbrainzReleaseGroupEntity,
+               keys.LINK_ENTITY: MusicbrainzReleaseGroupLinkEntity,
+               keys.NLP_ENTITY: None,
+               keys.RELATIONSHIP_ENTITY: MusicBrainzReleaseGroupArtistRelationship,
+               keys.WORK_TYPE: None,
+           },
+   },
+   keys.${NEW_DATABASE}: {
+           keys.${NEW_ENTITY_NAME}: {
+               keys.CLASS_QID: vocabulary.MUSICIAN_QID, # Insert the Wikidata class QID corresponding to your entity type
+               keys.MAIN_ENTITY: ${NEW_DATABASE}${NEW_ENTITY_NAME}Entity,
+               keys.LINK_ENTITY: None,
+               keys.NLP_ENTITY: None,
+               keys.RELATIONSHIP_ENTITY: None,
+               keys.WORK_TYPE: None,
+           },
+   },
 
 Running the import process
 --------------------------
@@ -136,10 +173,4 @@ Running the import process
    mode <https://github.com/Wikidata/soweego/wiki/How-do-I-test-soweego-on-my-machine%3F>`__.
 
 2. run
-   ``python -m soweego importer import_catalog ${YOUR_DATABASE_NAME}``
-
-   You have the following options:
-
-   -  ``--output``, ``-o``, for setting the output folder in which the
-      dump will be stored
-   -  ``--download-url``, ``-du``, for specifying a dump URL to download
+   ``python -m soweego importer import ${YOUR_DATABASE_NAME}``

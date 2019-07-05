@@ -35,8 +35,7 @@ How do you run it?
 2. Launch ``./scripts/docker/launch_test.sh``;
 3. You are now in a Docker container BASH shell with a fully working
    soweego instance;
-4. Run ``cd soweego``;
-5. You are set. To check if it's working, try ``python -m soweego``.
+4. You are set. To check if it's working, try ``python -m soweego``.
 
 .. _launch_testsh-options:
 
@@ -64,7 +63,7 @@ Production environment
 
 It's useful when you need to run *soweego* against the Wikimedia
 database. It is also helpful to run the system against a custom
-database. Editing the credentials is all you need to do to chose the
+database. Creating a credentials file is all you need to do to chose the
 database. Note: you need access to the Wikimedia infrastructure to run
 *soweego* on it.
 
@@ -90,8 +89,7 @@ How do you run it?
 2. Launch ``./scripts/docker/launch_prod.sh``;
 3. You are now in a Docker container BASH shell with a fully working
    *soweego* instance;
-4. Run ``cd soweego``;
-5. You are set. To check if it's working, try ``python -m soweego``.
+4. You are set. To check if it's working, try ``python -m soweego``.
 
 .. _launch_prodsh-options:
 

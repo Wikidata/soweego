@@ -30,11 +30,10 @@ release = '1.0'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'recommonmark',
     'sphinx.ext.autodoc',
-    'sphinx_autodoc_typehints',
     'sphinx.ext.intersphinx',
     'sphinx.ext.viewcode',
+    'sphinx_autodoc_typehints',
     'sphinx_click.ext'
 ]
 
@@ -51,7 +50,6 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
 html_theme = 'alabaster'
 
 # Add any paths that contain custom static files (such as style sheets) here,
@@ -59,6 +57,31 @@ html_theme = 'alabaster'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
+# Theme options are theme-specific and customize the look and feel of a theme
+# further.  For a list of options available for each theme, see the
+# documentation.
+# https://alabaster.readthedocs.io/en/latest/customization.html#theme-options
+html_theme_options = {
+    # Basic
+    'page_width': '980px',
+    'note_bg': '#9CF',
+    # Sidebar
+    'logo': 'logo.png',
+    'logo_name': True,
+    'logo_text_align': 'center',
+    'description': 'Link Wikidata to large catalogs',
+    'sidebar_collapse': True,
+    # Services & badges
+    'github_user': 'Wikidata',
+    'github_repo': 'soweego',
+    'github_banner': True,
+    'github_button': True,
+    'github_type': 'star',
+    'github_count': False,
+    # Header & footer
+    'show_powered_by': False,
+
+}
 
 # -- Extension configuration -------------------------------------------------
 

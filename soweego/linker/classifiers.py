@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""A set of custom classifiers suitable for the
+"""A set of custom supervised classifiers suitable for the
 `Record Linkage Toolkit <https://recordlinkage.readthedocs.io/>`_.
 It includes
 `neural networks <https://en.wikipedia.org/wiki/Artificial_neural_network>`_ and
@@ -24,10 +24,7 @@ import os
 from contextlib import redirect_stderr
 
 import pandas as pd
-from keras import Sequential
-from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
-from keras.layers import Dense, BatchNormalization
-from recordlinkage.adapters import SKLearnAdapter, KerasAdapter
+from recordlinkage.adapters import KerasAdapter, SKLearnAdapter
 from recordlinkage.base import BaseClassifier
 from sklearn.svm import SVC
 
@@ -37,7 +34,9 @@ with redirect_stderr(open(os.devnull, 'w')):
     # When `keras` is imported, it prints a message to stderr
     # saying which backend it's using. To avoid this, we
     # redirect stderr to `devnull` for the statements in this block.
-    pass
+    from keras.callbacks import EarlyStopping, ModelCheckpoint
+    from keras.layers import Dense, BatchNormalization
+    from keras.models import Sequential
 
 LOGGER = logging.getLogger(__name__)
 
@@ -61,6 +60,7 @@ class SVCClassifier(SKLearnAdapter, BaseClassifier):
     - higher training time (quadratic to the number of samples)
 
     """
+
     def __init__(self, *args, **kwargs):
         super(SVCClassifier, self).__init__()
 
@@ -105,23 +105,20 @@ class SVCClassifier(SKLearnAdapter, BaseClassifier):
 # `recordlinkage.adapters.KerasAdapter_fit`,
 # shared across neural network implementations.
 class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
-    def _fit(self,
-             feature_vectors: pd.Series,
-             answers: pd.Series = None,
-             batch_size: int = constants.BATCH_SIZE,
-             epochs: int = constants.EPOCHS,
-             validation_split: float = constants.VALIDATION_SPLIT
-             ) -> None:
-        tensor_path = os.path.join(
-            constants.SHARED_FOLDER, constants.TENSOR_BOARD_FOLDER
-        )
+    def _fit(
+        self,
+        feature_vectors: pd.Series,
+        answers: pd.Series = None,
+        batch_size: int = constants.BATCH_SIZE,
+        epochs: int = constants.EPOCHS,
+        validation_split: float = constants.VALIDATION_SPLIT,
+    ) -> None:
         model_path = os.path.join(
             constants.SHARED_FOLDER,
             constants.NEURAL_NETWORK_CHECKPOINT_MODEL.format(
                 self.__class__.__name__
             ),
         )
-        os.makedirs(os.path.dirname(tensor_path), exist_ok=True)
         os.makedirs(os.path.dirname(model_path), exist_ok=True)
 
         history = self.kernel.fit(
@@ -131,13 +128,14 @@ class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
             batch_size=batch_size,
             epochs=epochs,
             callbacks=[
-                EarlyStopping(monitor='val_loss',
-                              patience=100,
-                              verbose=2,
-                              restore_best_weights=True),
+                EarlyStopping(
+                    monitor='val_loss',
+                    patience=100,
+                    verbose=2,
+                    restore_best_weights=True,
+                ),
                 ModelCheckpoint(model_path, save_best_only=True),
-                TensorBoard(log_dir=tensor_path),
-            ]
+            ],
         )
 
         LOGGER.info('Fit parameters: %s', history.params)
@@ -178,15 +176,20 @@ class SingleLayerPerceptron(_BaseNeuralNetwork):
       `available metrics <https://keras.io/metrics/>`_
 
     """
+
     def __init__(self, input_dimension, **kwargs):
         super(SingleLayerPerceptron, self).__init__()
 
         model = Sequential()
-        model.add(Dense(
-            1,
-            input_dim=input_dimension,
-            activation=kwargs.get('activation', constants.OUTPUT_ACTIVATION)
-        ))
+        model.add(
+            Dense(
+                1,
+                input_dim=input_dimension,
+                activation=kwargs.get(
+                    'activation', constants.OUTPUT_ACTIVATION
+                ),
+            )
+        )
 
         model.compile(
             optimizer=kwargs.get('optimizer', constants.SLP_OPTIMIZER),
@@ -230,6 +233,7 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
       `available metrics <https://keras.io/metrics/>`_
 
     """
+
     def __init__(self, input_dimension, **kwargs):
         super(MultiLayerPerceptron, self).__init__()
 
@@ -240,8 +244,8 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
                 (
                     constants.HIDDEN_ACTIVATION,
                     constants.HIDDEN_ACTIVATION,
-                    constants.OUTPUT_ACTIVATION
-                )
+                    constants.OUTPUT_ACTIVATION,
+                ),
             )
         except ValueError:
             err_msg = (
@@ -253,9 +257,7 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
 
         model = Sequential(
             [
-                Dense(
-                    128, input_dim=input_dimension, activation=first
-                ),
+                Dense(128, input_dim=input_dimension, activation=first),
                 BatchNormalization(),
                 Dense(32, activation=second),
                 BatchNormalization(),

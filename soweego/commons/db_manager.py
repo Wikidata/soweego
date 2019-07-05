@@ -22,8 +22,10 @@ from sqlalchemy.pool import NullPool
 
 from soweego.commons import keys
 from soweego.commons import localizations as loc
-from soweego.commons.constants import DEFAULT_CREDENTIALS_LOCATION, \
-    CREDENTIALS_LOCATION
+from soweego.commons.constants import (
+    CREDENTIALS_LOCATION,
+    DEFAULT_CREDENTIALS_LOCATION,
+)
 
 BASE = declarative_base()
 LOGGER = logging.getLogger(__name__)
