@@ -6,10 +6,10 @@ Import a new catalog
    up and running;
 2. create a model file for the database you want to import in
    ``${PROJECT_ROOT}/soweego/importer/models/``;
-3. call it ``${NEW_DATABASE}_entity.py`` and paste the snippet below. It is enough to replace ``${NEW_DATABASE}`` with your database name and ``${NEW_ENTITY_NAME}`` with a word describing what this entity describes e.g musician, painter.
+3. call it ``${NEW_DATABASE}_entity.py`` and paste the snippet below. It is enough to replace ``${NEW_DATABASE}`` with your database name and ``${NEW_ENTITY_NAME}`` with a word describing what this entity is about e.g musician, painter.
    Other variables (marked with a leading ``$``) are optional;
 4. **optional:** you can define database-specific columns, see ``TODO``.
-   Column names **must be unique**: no overlapping among classes.
+   Column names **must be unique**: no overlapping among the class you define and the BaseEntity class.
 
 .. code:: py
 
@@ -38,18 +38,20 @@ Import a new catalog
        __tablename__ = '${NEW_DATABASE}_${NEW_ENTITY_NAME}'
        __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
-	   # TODO Optional: define database-specific columns here
-	   # For instance:
-	   # birth_place = Column(String(255))
+       # TODO Optional: define database-specific columns here
+       # For instance:
+       # birth_place = Column(String(255))
 
-1. create the file
+5. create the file
    ``${PROJECT_ROOT}/soweego/importer/${NEW_DATABASE}_dump_extractor.py``;
-2. define a class ``${NEW_DATABASE}DumpExtractor(BaseDumpExtractor)``;
-3. override ``BaseDumpExtractor`` methods:
+6. define a class ``${NEW_DATABASE}DumpExtractor(BaseDumpExtractor)``;
+7. override ``BaseDumpExtractor`` methods:
 
-   -  ``extract_and_populate`` is in charge to create an instance of ``${NEW_DATABASE}${NEW_ENTITY_NAME}Entity`` for each entity in the dump and stores
+   -  ``extract_and_populate`` is in charge to create an instance of ``${NEW_DATABASE}${NEW_ENTITY_NAME}Entity`` for each entity in the dump and to store
       it in the database. See the instructions below;
-   -  ``get_dump_download_urls`` computes and returns the list of URLs forming the dump. Tipically, there will be only an URL, but in some case the dumps is given in multiple archives.
+   -  ``get_dump_download_urls`` computes the latest list of URLs forming the dump. Tipically, there will be only an URL, but in some case the dumps are given in multiple archives.
+   
+8. If you still have doubts, try to check out Musicbrainz, Discogs or Imdb extractors.
 
 Instructions to store entities in database
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -59,8 +61,8 @@ Setup:
 ::
 
    db_manager = DBManager()
-   db_manager.drop(${NEW_DATABASE}Entity)
-   db_manager.create(${NEW_DATABASE}Entity)
+   db_manager.drop(${NEW_DATABASE}${NEW_ENTITY_NAME})
+   db_manager.create(${NEW_DATABASE}${NEW_ENTITY_NAME})
 
 Creating a transaction:
 
@@ -119,11 +121,11 @@ Then you need to add your database among the supported ones. Just add an entry i
        keys.DISCOGS: DiscogsDumpExtractor,
        keys.IMDB: ImdbDumpExtractor,
        keys.MUSICBRAINZ: MusicBrainzDumpExtractor,
-	   keys.${NEW_DATABASE}: ${NEW_DATABASE}DumpExtractor
+       keys.${NEW_DATABASE}: ${NEW_DATABASE}DumpExtractor
    }
   
-The last step is to set up the dictionary ``TARGET_CATALOGS`` in ``${PROJECT_ROOT}/soweego/commons/constants.cs``
-Your entry should be like
+The last step is to set up the dictionary ``TARGET_CATALOGS`` in ``${PROJECT_ROOT}/soweego/commons/constants.cs``.
+Your entry should be like:
 
 .. code:: py
 
@@ -152,17 +154,17 @@ Your entry should be like
                keys.RELATIONSHIP_ENTITY: MusicBrainzReleaseGroupArtistRelationship,
                keys.WORK_TYPE: None,
            },
-       },
+   },
    keys.${NEW_DATABASE}: {
-               keys.${NEW_ENTITY_NAME}: {
-	               keys.CLASS_QID: vocabulary.MUSICIAN_QID, # Insert the Wikidata class QID corresponding to your entity type
-	               keys.MAIN_ENTITY: ${NEW_DATABASE}${NEW_ENTITY_NAME}Entity,
-	               keys.LINK_ENTITY: None,
-	               keys.NLP_ENTITY: None,
-	               keys.RELATIONSHIP_ENTITY: None,
-	               keys.WORK_TYPE: None,
-	           },
-	       },
+           keys.${NEW_ENTITY_NAME}: {
+               keys.CLASS_QID: vocabulary.MUSICIAN_QID, # Insert the Wikidata class QID corresponding to your entity type
+               keys.MAIN_ENTITY: ${NEW_DATABASE}${NEW_ENTITY_NAME}Entity,
+               keys.LINK_ENTITY: None,
+               keys.NLP_ENTITY: None,
+               keys.RELATIONSHIP_ENTITY: None,
+               keys.WORK_TYPE: None,
+           },
+   },
 
 Running the import process
 --------------------------
