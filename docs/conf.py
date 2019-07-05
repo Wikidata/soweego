@@ -66,7 +66,6 @@ html_theme_options = {
     'page_width': '980px',
     'note_bg': '#9CF',
     # Sidebar
-    'fixed_sidebar': True,
     'logo': 'logo.png',
     'logo_name': True,
     'logo_text_align': 'center',
