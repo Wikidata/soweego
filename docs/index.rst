@@ -44,7 +44,7 @@ Highlights
 - :mod:`import <soweego.importer>` large catalogs into a SQL database;
 - :mod:`gather <soweego.wikidata>` live Wikidata datasets;
 - :mod:`connect <soweego.linker>` them to target catalogs via *rule-based* and *supervised* linkers;
-- :mod:`upload <soweego.ingestor>` links to Wikidata and `Mix'n'match <https://tools.wmflabs.org/mix-n-match/>`_;
+- :mod:`upload <soweego.ingester>` links to Wikidata and `Mix'n'match <https://tools.wmflabs.org/mix-n-match/>`_;
 - :mod:`synchronize <soweego.validator.checks>` Wikidata to imported catalogs;
 - :mod:`enrich <soweego.validator.enrichment>` Wikidata items with relevant statements.
 
@@ -65,9 +65,10 @@ Run the Pipeline
 
 Piece of cake::
 
-   $ ./scripts/docker/launch_test.sh
+   $ ./docker/run.sh
    Building soweego
    ...
+
    :/app/soweego# python -m soweego run CATALOG
 
 Pick ``CATALOG`` from ``discogs``, ``imdb``, or ``musicbrainz``.
@@ -86,11 +87,14 @@ Results are in ``/app/shared/results``.
 Use the Command Line
 --------------------
 
-You can launch every single soweego action with CLI commands::
+You can launch every single soweego action with CLI commands:
 
-   $ ./scripts/docker/launch_test.sh
+.. code-block:: text
+
+   $ ./docker/run.sh
    Building soweego
    ...
+
    :/app/soweego# python -m soweego
    Usage: soweego [OPTIONS] COMMAND [ARGS]...
 
@@ -105,7 +109,7 @@ You can launch every single soweego action with CLI commands::
 
    Commands:
      importer  Import target catalog dumps into the database.
-     ingest    Take soweego output into Wikidata items.
+     ingester  Take soweego output into Wikidata items.
      linker    Link Wikidata items to target catalog identifiers.
      run       Launch the whole pipeline.
      sync      Sync Wikidata to target catalogs.
@@ -145,7 +149,7 @@ API documentation
 
    importer
    models
-   ingestor
+   ingester
    linker
    validator
    wikidata
