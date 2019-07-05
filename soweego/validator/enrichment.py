@@ -29,7 +29,7 @@ from soweego.commons import (
     utils,
 )
 from soweego.commons.db_manager import DBManager
-from soweego.ingestor import wikidata_bot
+from soweego.ingester import wikidata_bot
 from soweego.wikidata import vocabulary
 
 LOGGER = logging.getLogger(__name__)

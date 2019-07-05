@@ -11,11 +11,11 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import click
 
-from soweego.ingestor import mix_n_match_client, wikidata_bot
+from soweego.ingester import mix_n_match_client, wikidata_bot
 
 CLI_COMMANDS = {
-    'deletion': wikidata_bot.delete_cli,
-    'deprecation': wikidata_bot.deprecate_cli,
+    'delete': wikidata_bot.delete_cli,
+    'deprecate': wikidata_bot.deprecate_cli,
     'identifiers': wikidata_bot.identifiers_cli,
     'mnm': mix_n_match_client.cli,
     'people': wikidata_bot.people_cli,

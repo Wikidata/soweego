@@ -34,7 +34,7 @@ from soweego.commons import (
 from soweego.commons.utils import count_num_lines_in_file
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.base_link_entity import BaseLinkEntity
-from soweego.ingestor import wikidata_bot
+from soweego.ingester import wikidata_bot
 from soweego.linker.workflow import build_wikidata
 
 LOGGER = logging.getLogger(__name__)

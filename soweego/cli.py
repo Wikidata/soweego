@@ -17,7 +17,7 @@ import tensorflow as tf
 from soweego import commons
 from soweego import pipeline as pipeline_cli
 from soweego.importer import cli as importer_cli
-from soweego.ingestor import cli as ingestor_cli
+from soweego.ingester import cli as ingester_cli
 from soweego.linker import cli as linker_cli
 from soweego.validator import cli as validator_cli
 
@@ -28,14 +28,14 @@ tf.logging.set_verbosity(tf.logging.ERROR)
 
 CLI_COMMANDS = {
     'importer': importer_cli.cli,
-    'ingest': ingestor_cli.cli,
+    'ingester': ingester_cli.cli,
     'linker': linker_cli.cli,
     'sync': validator_cli.cli,
     'run': pipeline_cli.cli,
 }
 
 # Avoid verbose requests logging
-logging.getLogger("requests").setLevel(logging.WARNING)
+logging.getLogger('requests').setLevel(logging.WARNING)
 
 
 @click.group(commands=CLI_COMMANDS)
@@ -44,12 +44,15 @@ logging.getLogger("requests").setLevel(logging.WARNING)
     '--log-level',
     type=(str, click.Choice(commons.logging.LEVELS)),
     multiple=True,
-    help='Module name followed by one of [DEBUG, INFO, WARNING, ERROR, CRITICAL]. Multiple pairs allowed.',
+    help=(
+            'Module name followed by one of '
+            '[DEBUG, INFO, WARNING, ERROR, CRITICAL]. '
+            'Multiple pairs allowed.'
+    ),
 )
 @click.pass_context
 def cli(ctx, log_level):
     """Link Wikidata to large catalogs."""
-
     commons.logging.setup()
     for module, level in log_level:
         commons.logging.set_log_level(module, level)
