@@ -56,7 +56,10 @@ class DBManager:
             LOGGER.critical(loc.FAIL_CREATE_ENGINE, error)
 
     def get_engine(self) -> Engine:
-        """Return the current SQL Alchemy engine instance"""
+        """Return the current SQL Alchemy engine instance
+
+        :return: Returns the database engine instance
+        """
         return self.__engine
 
     def new_session(self) -> session.Session:
@@ -79,12 +82,17 @@ class DBManager:
 
     @staticmethod
     def connect_to_db():
+        """
+        Istantiates DBManager and returns a new sessions.
+        :return:
+        """
         db_manager = DBManager()
         session = db_manager.new_session()
         return session
 
     @staticmethod
     def get_credentials():
+        """Reads the credentials file, if not found returns the default ones."""
         if os.path.isfile(CREDENTIALS_LOCATION):
             return json.load(open(CREDENTIALS_LOCATION))
         else:
