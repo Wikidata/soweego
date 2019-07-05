@@ -1,52 +1,103 @@
 The Command Line
 ================
 
+.. note:: Start your exploration journey of the command line interface (*CLI*) with ::
+
+   $ python -m soweego
+
+As a reminder, make sure you are inside Docker::
+
+   $ cd soweego && ./docker/run.sh
+   Building soweego
+
+   ...
+
+   :/app/soweego#
+
+
 Importer
 --------
 
-Usage::
+.. code-block:: text
 
-   $ python -m soweego importer ...
+   python -m soweego importer
+   Usage: soweego importer [OPTIONS] COMMAND [ARGS]...
 
-.. click:: soweego.importer.importer:import_cli
-   :prog: import
+     Import target catalog dumps into the database.
+
+   Options:
+     --help  Show this message and exit.
+
+   Commands:
+     check_urls  Check for rotten URLs of an imported catalog.
+     import      Download, extract, and import a supported catalog.
 
 .. click:: soweego.importer.importer:check_links_cli
    :prog: check_urls
 
+.. click:: soweego.importer.importer:import_cli
+   :prog: import
 
-Ingestor
+
+Ingester
 --------
 
-Usage::
+.. code-block:: text
 
-   $ python -m soweego ingest ...
+   python -m soweego ingester
+   Usage: soweego ingester [OPTIONS] COMMAND [ARGS]...
 
-.. click:: soweego.ingestor.wikidata_bot:delete_cli
-   :prog: deletion
+     Take soweego output into Wikidata items.
 
-.. click:: soweego.ingestor.wikidata_bot:deprecate_cli
-   :prog: deprecation
+   Options:
+     --help  Show this message and exit.
 
-.. click:: soweego.ingestor.wikidata_bot:identifiers_cli
+   Commands:
+     delete       Delete invalid identifiers.
+     deprecate    Deprecate invalid identifiers.
+     identifiers  Add identifiers.
+     mnm          Upload matches to the Mix'n'match tool.
+     people       Add statements to Wikidata people.
+     works        Add statements to Wikidata works.
+
+.. click:: soweego.ingester.wikidata_bot:delete_cli
+   :prog: delete
+
+.. click:: soweego.ingester.wikidata_bot:deprecate_cli
+   :prog: deprecate
+
+.. click:: soweego.ingester.wikidata_bot:identifiers_cli
    :prog: identifiers
 
-.. click:: soweego.ingestor.mix_n_match_client:cli
+.. click:: soweego.ingester.mix_n_match_client:cli
    :prog: mnm
 
-.. click:: soweego.ingestor.wikidata_bot:people_cli
+.. click:: soweego.ingester.wikidata_bot:people_cli
    :prog: people
 
-.. click:: soweego.ingestor.wikidata_bot:works_cli
+.. click:: soweego.ingester.wikidata_bot:works_cli
    :prog: works
 
 
 Linker
 ------
 
-Usage::
+.. code-block:: text
 
-   $ python -m soweego linker ...
+   python -m soweego linker
+   Usage: soweego linker [OPTIONS] COMMAND [ARGS]...
+
+     Link Wikidata items to target catalog identifiers.
+
+   Options:
+     --help  Show this message and exit.
+
+   Commands:
+     baseline  Run a rule-based linker.
+     evaluate  Evaluate the performance of a supervised linker.
+     extract   Extract Wikidata links from a target catalog dump.
+     link      Run a supervised linker.
+     train     Train a supervised linker.
 
 .. click:: soweego.linker.baseline:cli
    :prog: baseline
@@ -57,19 +108,19 @@ Usage::
 .. click:: soweego.linker.baseline:extract_cli
    :prog: extract
 
-.. click:: soweego.linker.train:cli
-   :prog: train
-
 .. click:: soweego.linker.link:cli
    :prog: link
+
+.. click:: soweego.linker.train:cli
+   :prog: train
 
 
 Pipeline
 --------
 
-Usage::
+.. code-block:: text
 
-   $ python -m soweego ...
+   python -m soweego run
 
 .. click:: soweego.pipeline:cli
    :prog: run
@@ -78,18 +129,30 @@ Usage::
 Validator AKA Sync
 ------------------
 
-Usage::
+.. code-block:: text
 
-   $ python -m soweego sync ...
-   
+   python -m soweego sync
+   Usage: soweego sync [OPTIONS] COMMAND [ARGS]...
+
+     Sync Wikidata to target catalogs.
+
+   Options:
+     --help  Show this message and exit.
+
+   Commands:
+     bio    Validate identifiers against biographical data.
+     ids    Check if identifiers are still alive.
+     links  Validate identifiers against links.
+     works  Generate statements about works by people.
+
+.. click:: soweego.validator.checks:bio_cli
+   :prog: bio
+
 .. click:: soweego.validator.checks:dead_ids_cli
    :prog: ids
 
 .. click:: soweego.validator.checks:links_cli
    :prog: links
-
-.. click:: soweego.validator.checks:bio_cli
-   :prog: bio
 
 .. click:: soweego.validator.enrichment:works_people_cli
    :prog: works
