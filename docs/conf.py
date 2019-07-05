@@ -64,6 +64,7 @@ html_static_path = ['_static']
 html_theme_options = {
     # Basic
     'page_width': '980px',
+    'note_bg': '#9CF',
     # Sidebar
     'fixed_sidebar': True,
     'logo': 'logo.png',
