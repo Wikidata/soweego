@@ -1,43 +1,97 @@
-Run the pipeline
-================
+Run soweego
+===========
 
-It's useful when you need to run all the *soweego* steps. It does not
-require you to have the project in your machine: it is an already built
-docker image. Editing the credentials is all you need to do to chose the
-database.
+*soweego* can be seen as a **pipeline of submodules**. Maybe, is best to
+say that we designed it explicitly in this way. They can be combined at
+will, but in the following lines, you will read how we do it.
 
-This environment is a docker container that executes
-``python -m soweego pipeline`` command. Obviously, it can be run with
-custom options. Note: the code is put into the image during the build
-process.
+Our flow starts by running the **importing process**, which translates
+the target dumps in structured database tables. After that, we run the
+**linking process**. In this step, the linker itself gathers the right
+up to date dataset from Wikidata and tries to match it with the
+preiously imported data. The last step we execute is **validation**.
+Basically, it scans the linked entities available in Wikidata to perform
+some naive quality checks. Each entity approved by the validator is
+consequently enriched with all the assertions minable from our imported
+data.
 
-What do you need to run it?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+What do I need to run your setup?
+---------------------------------
 
--  `Docker <https://www.docker.com/get-started>`__
--  Database credentials file, like
-   ``${PROJECT_ROOT}/soweego/importer/resources/db_credentials.json``.
+First of all, you need Docker up and running on the system. Then, since
+our “production” environment has benefited from Wikimedia Foundations’s
+database, you need to provide soweego a working database to run our
+setup (MariaDB 10.36 is the only database tested). To tell soweego where
+to find your database, you need to create a JSON file with the following
+structure:
 
-How do you run it?
-~~~~~~~~~~~~~~~~~~
+.. code:: json
 
-1. In your terminal, move to the project root;
-2. Launch ``./scripts/docker/launch_pipeline.sh``;
-3. The script will ask you some parameters.
-4. The pipeline is now running!
+   {
+       "DB_ENGINE": "mysql+pymysql",
+       "HOST": "*ip address or equivalent*",
+       "USER": "*database user*",
+       "PASSWORD": "*database user password*",
+       "TEST_DB": "soweego",
+       "PROD_DB": "*database name*",
+       "WIKIDATA_API_PASSWORD": "",    # Optional wikidata api login
+       "WIKIDATA_API_USER": ""         # Optional wikidata api login
+   }
 
-.. _launch_pipelinesh-options:
+Finally, ensure to have a folder in which soweego will write
+results/helper files. soweego favourite food is disk space, but usually
+with 20GB it should be sated.
 
-launch_pipeline.sh options
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+How do I actually run it?
+-------------------------
 
-================================ ========================================================================= ======================= ==============================================================================================
-**Option**                       **Expected Value**                                                        **Default Value**       **Description**
-================================ ========================================================================= ======================= ==============================================================================================
--s                               directory path                                                            ``/tmp/soweego_shared`` Tells docker which folder in your machine will be shared with *soweego* container.
-target (argument, not an option) one of the available targets name (atm. musicbrainz, discogs. imdb)       None                    Tells *soweego* which database will go through the whole process.
---validator / --no-validator     No value needed. The option you choose among the two is the value itself. --no-validator          Tells *soweego* to run or not the validator step.
---importer / --no-importer       No value needed. The option you choose among the two is the value itself. --importer              Tells *soweego* to run or not the importer step.
---linker / --no-linker           No value needed. The option you choose among the two is the value itself. --linker                Tells *soweego* to run or not the linker step.
---upload / --no-upload           No value needed. The option you choose among the two is the value itself. --upload                Tells *soweego* to upload or not the computed links among wikidata and the target to wikidata.
-================================ ========================================================================= ======================= ==============================================================================================
+1. Clone soweego from `GitHub <https://github.com/wikidata/soweego/>`__;
+2. Open a bash and move in the project root;
+3. Choose a target to run eg Musicbrainz, Discogs, ImDB.
+4. Launch the following command replacing the variables with your
+   absolute paths and append your target:
+   ``./docker/launch_pipeline.sh -c ${ABSOLUTE_PATH_TO_THE_JSON} -s ${ABSOLUTE_ PATH_TO_THE_OUTPUT_FOLDER} imdb``
+
+Additional parameters tailable to your command:
+
++-----------------------------------+-----------------------------------+
+| Argument                          | Description                       |
++===================================+===================================+
+| ``--validator`` /                 | Enables/disables the validation   |
+| ``--no-validator``                | step                              |
++-----------------------------------+-----------------------------------+
+| ``--importer`` /                  | Enables/disables the importing    |
+| ``--no-importer``                 | step                              |
++-----------------------------------+-----------------------------------+
+| ``--linker`` / ``--no-linker``    | Enables/disables the linking step |
++-----------------------------------+-----------------------------------+
+| ``--upload`` / ``--no-upload``    | Enables/disable the upload to     |
+|                                   | Wikidata of the results           |
++-----------------------------------+-----------------------------------+
+
+Important
+~~~~~~~~~
+
+The command does not only run soweego, but it takes care of some side
+tasks. Initially, backups the folder you give as the parameter. The
+backups will be three at most. When creating the 4th backup, the oldest
+is deleted. After the archiving step, the given folder is emptied.
+Subsequently, it checks out the master branch and pulls the latest
+changes (deleting all the pending edits in the local repository).
+Finally, our soweego setup is launched.
+
+Under the hood
+--------------
+
+The pipeline structure is actually defined in ``pipeline.py`` and is
+launched by ``python -m soweego run``. Our setup script launches
+``python -m soweego run`` as latest command and appends all the
+arguments from the target (eg. musicbrainz, discogs, imdb) onwards.
+
+Cron jobs
+---------
+
+Our setup is launched periodically for each target. We obviously rely on
+cron jobs to achieve this. You can find in ``scripts/cron`` the helpers
+we call though the cron tab. They can be reused easily just by changing
+all the paths to adhere to your environment setup.
