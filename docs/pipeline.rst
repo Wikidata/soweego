@@ -9,7 +9,7 @@ Our flow starts by running the **importing process**, which translates
 the target dumps in structured database tables. After that, we run the
 **linking process**. In this step, the linker itself gathers the right
 up to date dataset from Wikidata and tries to match it with the
-preiously imported data. The last step we execute is **validation**.
+previously imported data. The last step we execute is **validation**.
 Basically, it scans the linked entities available in Wikidata to perform
 some naive quality checks. Each entity approved by the validator is
 consequently enriched with all the assertions minable from our imported
@@ -20,8 +20,8 @@ What do I need to run your setup?
 
 First of all, you need Docker up and running on the system. Then, since
 our “production” environment has benefited from Wikimedia Foundations’s
-database, you need to provide soweego a working database to run our
-setup (MariaDB 10.36 is the only database tested). To tell soweego where
+database, you need to provide soweego a working database yourself 
+(MariaDB 10.36 is the only database tested). To tell soweego where
 to find your database, you need to create a JSON file with the following
 structure:
 
@@ -73,8 +73,8 @@ Important
 ~~~~~~~~~
 
 The command does not only run soweego, but it takes care of some side
-tasks. Initially, backups the folder you give as the parameter. The
-backups will be three at most. When creating the 4th backup, the oldest
+tasks. Initially, it backups the folder you give as the parameter. It will keep atmost 3 backups.
+When creating the 4th backup, the oldest
 is deleted. After the archiving step, the given folder is emptied.
 Subsequently, it checks out the master branch and pulls the latest
 changes (deleting all the pending edits in the local repository).
@@ -83,7 +83,7 @@ Finally, our soweego setup is launched.
 Under the hood
 --------------
 
-The pipeline structure is actually defined in ``pipeline.py`` and is
+The submodules arrangment is actually defined in ``pipeline.py`` and is
 launched by ``python -m soweego run``. Our setup script launches
 ``python -m soweego run`` as latest command and appends all the
 arguments from the target (eg. musicbrainz, discogs, imdb) onwards.
