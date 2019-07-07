@@ -25,7 +25,7 @@ https://soweego.readthedocs.io/
 - [import](https://soweego.readthedocs.io/en/latest/importer.html) large catalogs into a SQL database;
 - [gather](https://soweego.readthedocs.io/en/latest/wikidata.html) live Wikidata datasets;
 - [connect](https://soweego.readthedocs.io/en/latest/linker.html) them to target catalogs via _rule-based_ and _supervised_ linkers;
-- [upload](https://soweego.readthedocs.io/en/latest/ingestor.html) links to Wikidata and [Mix'n'match](https://tools.wmflabs.org/mix-n-match/);
+- [upload](https://soweego.readthedocs.io/en/latest/ingester.html) links to Wikidata and [Mix'n'match](https://tools.wmflabs.org/mix-n-match/);
 - [synchronize](https://soweego.readthedocs.io/en/latest/validator.html#module-soweego.validator.checks) Wikidata to imported catalogs;
 - [enrich](https://soweego.readthedocs.io/en/latest/validator.html#module-soweego.validator.enrichment) Wikidata items with relevant statements.
 
