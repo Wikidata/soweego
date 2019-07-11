@@ -70,7 +70,9 @@ Now it's too late to get out!
 Run the Pipeline
 ----------------
 
-Piece of cake::
+Piece of cake:
+
+.. code-block:: text
 
    :/app/soweego# python -m soweego run CATALOG
 
