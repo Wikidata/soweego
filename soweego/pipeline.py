@@ -67,8 +67,6 @@ def _importer(target: str):
         "Running importer for target: %s without resolving the URLs", target
     )
     _invoke_no_exit(import_cli, [target])
-    LOGGER.info("Validating URL resolving them for target %s", target)
-    _invoke_no_exit(validate_links, [target])
 
 
 def _linker(target: str, upload: bool):
