@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""FIXME FIXME FIXME Discogs SQL Alchemy ORM model for musicians"""
+"""`Discogs <https://www.discogs.com/>`_
+`SQLAlchemy <https://www.sqlalchemy.org/>`_ ORM entities."""
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -28,8 +29,19 @@ MASTER_TABLE = 'discogs_master'
 MASTER_ARTIST_RELATIONSHIP_TABLE = 'discogs_master_artist_relationship'
 
 
-class DiscogsBaseEntity(BaseEntity):
-    """Each Discogs entity should inherit this structure"""
+class DiscogsArtistEntity(BaseEntity):
+    """A Discogs *artist*: either a musician or a band.
+    It comes from the ``_artists.xml.gz`` dataset.
+    See the `download page <https://data.discogs.com/>`_.
+
+    Each Discogs ORM entity should inherit this class.
+
+    **Attributes:**
+
+    - **real_name** (text) - a name in real life
+    - **data_quality** (string(20)) - an indicator of data quality
+
+    """
 
     __tablename__ = BASE_ENTITY
     # Name in real life
@@ -40,50 +52,18 @@ class DiscogsBaseEntity(BaseEntity):
     __abstract__ = True
 
 
-class DiscogsMusicianEntity(DiscogsBaseEntity):
-    """Describes a Musician in discogs"""
+class DiscogsMasterEntity(DiscogsArtistEntity):
+    """A Discogs *master*: a musical work, which can have multiple *releases*.
+    It comes from the ``_masters.xml.gz`` dataset.
+    See the `download page <https://data.discogs.com/>`_.
 
-    __tablename__ = MUSICIAN_TABLE
-    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
+    **Attributes:**
 
+    - **main_release_id** (string(50)) - a Discogs identifier of the
+      main release for this musical work
+    - **genres** (text) - a string list of musical genres
 
-class DiscogsMusicianLinkEntity(BaseLinkEntity):
-    """Describes a musician web link in discogs"""
-
-    __tablename__ = MUSICIAN_LINK_TABLE
-    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
-
-
-class DiscogsMusicianNlpEntity(BaseNlpEntity, BASE):
-    """Describes textual data of a Musician in discogs"""
-
-    __tablename__ = MUSICIAN_NLP_TABLE
-    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
-
-
-class DiscogsGroupEntity(DiscogsBaseEntity):
-    """Describes a musical group in discogs"""
-
-    __tablename__ = GROUP_TABLE
-    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
-
-
-class DiscogsGroupLinkEntity(BaseLinkEntity):
-    """Describes a musical group web link in discogs"""
-
-    __tablename__ = GROUP_LINK_TABLE
-    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
-
-
-class DiscogsGroupNlpEntity(BaseNlpEntity, BASE):
-    """Describes textual data of a musical group in discogs"""
-
-    __tablename__ = GROUP_NLP_TABLE
-    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
-
-
-class DiscogsMasterEntity(DiscogsBaseEntity):
-    """Describes a master release in discogs"""
+    """
 
     __tablename__ = MASTER_TABLE
     __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
@@ -93,12 +73,53 @@ class DiscogsMasterEntity(DiscogsBaseEntity):
     data_quality = Column(String(50))
 
 
+class DiscogsMusicianEntity(DiscogsArtistEntity):
+    """A Discogs musician."""
+
+    __tablename__ = MUSICIAN_TABLE
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
+
+
+class DiscogsMusicianLinkEntity(BaseLinkEntity):
+    """A Discogs musician Web link (URL)."""
+
+    __tablename__ = MUSICIAN_LINK_TABLE
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
+
+
+class DiscogsMusicianNlpEntity(BaseNlpEntity, BASE):
+    """A Discogs musician textual description."""
+
+    __tablename__ = MUSICIAN_NLP_TABLE
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
+
+
+class DiscogsGroupEntity(DiscogsArtistEntity):
+    """A Discogs band."""
+
+    __tablename__ = GROUP_TABLE
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
+
+
+class DiscogsGroupLinkEntity(BaseLinkEntity):
+    """A Discogs band Web link (URL)."""
+
+    __tablename__ = GROUP_LINK_TABLE
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
+
+
+class DiscogsGroupNlpEntity(BaseNlpEntity, BASE):
+    """A Discogs band textual description."""
+
+    __tablename__ = GROUP_NLP_TABLE
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
+
+
 class DiscogsMasterArtistRelationship(BaseRelationship):
-    """Describes the relationship between a master release and the
-    artist/group whom made it """
+    """A relationship between a Discogs musical work and the Discogs
+    musician or band who made it."""
 
     __tablename__ = MASTER_ARTIST_RELATIONSHIP_TABLE
-
     __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
     def __repr__(self):

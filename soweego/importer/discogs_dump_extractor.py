@@ -26,7 +26,7 @@ from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models.base_link_entity import BaseLinkEntity
 from soweego.importer.models.discogs_entity import (
-    DiscogsBaseEntity,
+    DiscogsArtistEntity,
     DiscogsGroupEntity,
     DiscogsGroupLinkEntity,
     DiscogsGroupNlpEntity,
@@ -384,7 +384,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         #      get member.attrib['id']
 
     def _populate_musician(
-        self, entity_array, entity: DiscogsBaseEntity, infos: dict
+        self, entity_array, entity: DiscogsArtistEntity, infos: dict
     ):
         # Main entity
         self._fill_entity(entity, infos)
@@ -447,7 +447,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             )
 
     @staticmethod
-    def _fill_entity(entity: DiscogsBaseEntity, infos):
+    def _fill_entity(entity: DiscogsArtistEntity, infos):
         # Base fields
         entity.catalog_id = infos['identifier']
         entity.name = infos['name']
@@ -473,7 +473,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             )
 
     def _denormalize_name_variation_entities(
-        self, main_entity: DiscogsBaseEntity, name_variation_nodes
+        self, main_entity: DiscogsArtistEntity, name_variation_nodes
     ):
         entity_class = type(main_entity)
         for node in name_variation_nodes:
