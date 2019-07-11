@@ -93,7 +93,7 @@ class GzipLoggingHandler(logging.StreamHandler):
     def emit(self, record):
         try:
             msg = self.format(record)
-            self.stream.write(msg.encode('utf8'))
+            self.stream.write(msg.encode('utf8') + '\n')
             self.flush()
         except (KeyboardInterrupt, SystemExit):
             raise
