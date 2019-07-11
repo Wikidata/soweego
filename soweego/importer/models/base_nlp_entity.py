@@ -22,7 +22,7 @@ BASE = declarative_base()
 
 class BaseNlpEntity(AbstractConcreteBase, BASE):
     """Minimal ORM structure for a target catalog piece of text.
-    Each ORM NLP entity should implement this interface.
+    Each ORM NLP entity should inherit this class.
 
     **Attributes:**
 

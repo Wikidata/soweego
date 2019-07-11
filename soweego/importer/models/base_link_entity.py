@@ -21,7 +21,7 @@ BASE = declarative_base()
 
 class BaseLinkEntity(AbstractConcreteBase, BASE):
     """Minimal ORM structure for a target catalog link/URL.
-    Each ORM link entity should implement this interface.
+    Each ORM link entity should inherit this class.
 
     **Attributes:**
 
