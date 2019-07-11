@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Ingestor CLI commands."""
+"""Ingester CLI commands."""
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
