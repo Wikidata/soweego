@@ -30,28 +30,31 @@ https://soweego.readthedocs.io/
 - [enrich](https://soweego.readthedocs.io/en/latest/validator.html#module-soweego.validator.enrichment) Wikidata items with relevant statements.
 
 # Get Ready
-Install [Docker](https://docs.docker.com/install/), then grab soweego:
+Install [Docker](https://docs.docker.com/install/), then enter soweego:
 
 ```
 $ git clone https://github.com/Wikidata/soweego.git
 $ cd soweego
+$ ./docker/run.sh
+Building soweego
+...
+
+root@70c9b4894a30:/app/soweego#
 ```
+
+Now it's too late to get out!
 
 # Run the Pipeline
 Piece of cake:
 
 ```
-$ ./docker/launch_pipeline.sh CATALOG
-Building soweego
-...
-
 :/app/soweego# python -m soweego run CATALOG
 ```
 
 Pick `CATALOG` from `discogs`, `imdb`, or `musicbrainz`.
 
 These steps are executed by default:
-1. import the target catalog into a database;
+1. import the target catalog into a local database;
 2. link Wikidata to the target with a supervised linker;
 3. synchronize Wikidata to the target.
 
@@ -61,10 +64,6 @@ Results are in `/app/shared/results`.
 You can launch every single soweego action with CLI commands:
 
 ```
-$ ./docker/run.sh
-Building soweego
-...
-
 :/app/soweego# python -m soweego
 Usage: soweego [OPTIONS] COMMAND [ARGS]...
 
@@ -78,7 +77,7 @@ Options:
   --help                          Show this message and exit.
 
 Commands:
-  importer  Import target catalog dumps into the database.
+  importer  Import target catalog dumps into a SQL database.
   ingester  Take soweego output into Wikidata items.
   linker    Link Wikidata items to target catalog identifiers.
   run       Launch the whole pipeline.
@@ -91,7 +90,7 @@ Just two things to remember:
 
 # Contribute
 The best way is to [add a new catalog](https://github.com/Wikidata/soweego/wiki/Import-a-new-database).
-Have a look at the [guidelines](CONTRIBUTING.md).
+Don't forget to have a look at the [guidelines](CONTRIBUTING.md).
 
 # License
 The source code is under the terms of the [GNU General Public License, version 3](https://www.gnu.org/licenses/gpl.html).
