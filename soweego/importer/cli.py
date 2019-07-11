@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Click-command descriptions for the importer"""
+"""Importer CLI commands."""
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -19,4 +19,4 @@ CLI_COMMANDS = {'import': import_cli, 'check_urls': check_links_cli}
 @click.group(name='importer', commands=CLI_COMMANDS)
 @click.pass_context
 def cli(_):
-    """Import target catalog dumps into the database."""
+    """Import target catalog dumps into a SQL database."""

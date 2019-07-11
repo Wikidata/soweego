@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Base SQL Alchemy ORM entity"""
+"""Base `SQLAlchemy <https://www.sqlalchemy.org/>`_ ORM entities."""
 
 __author__ = 'Edoardo Lenzi'
 __email__ = 'edoardolenzi9@gmail.com'
@@ -20,7 +20,24 @@ BASE = declarative_base()
 
 
 class BaseEntity(AbstractConcreteBase, BASE):
-    """Each database entity should conform with this interface"""
+    """Minimal ORM structure for a target catalog entry.
+    Each ORM entity should implement this interface.
+
+    **Attributes:**
+
+    - **internal_id** (integer) - an internal primary key
+    - **catalog_id** (string(50)) - a target catalog identifier
+    - **name** (text) - a full name (person), or full title (work)
+    - **name_tokens** (text) - a **name** tokenized through
+      :func:`~soweego.commons.text_utils.tokenize`
+    - **born** (date) - a birth (person), or publication (work) date
+    - **born_precision** (integer) - a birth (person), or publication (work)
+      date precision
+    - **died** (date) - a death date. Only applies to a person
+    - **died_precision** (integer) - a death date precision.
+      Only applies to a person
+
+    """
 
     __tablename__ = None
     internal_id = Column(
@@ -60,7 +77,19 @@ class BaseEntity(AbstractConcreteBase, BASE):
 
 
 class BaseRelationship(AbstractConcreteBase, BASE):
-    """Each database relationship should conform with this interface"""
+    """Minimal ORM structure for a target catalog relationship
+    between entries. Each ORM relationship entity should implement this
+    interface.
+
+    You can build a relationship for different purposes:
+    typically, to connect works with people, or groups with individuals.
+
+    **Attributes:**
+
+    - **from_catalog_id** (string(50)) - a target catalog identifier
+    - **to_catalog_id** (string(50)) - a target catalog identifier
+
+    """
 
     __tablename__ = None
     internal_id = Column(

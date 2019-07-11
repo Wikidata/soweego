@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""IMDB dump extractor"""
+"""`IMDb <https://www.imdb.com/>`_ dump extractor."""
 
 __author__ = 'Andrea Tupini'
 __email__ = 'tupini07@gmail.com'
 __version__ = '1.0'
 __license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2018, tupini07'
+__copyright__ = 'Copyleft 2019, tupini07'
 
 import copy
 import csv
@@ -31,7 +31,8 @@ DUMP_URL_MOVIE_INFO = 'https://datasets.imdbws.com/title.basics.tsv.gz'
 
 
 class ImdbDumpExtractor(BaseDumpExtractor):
-    """Defines where to download Imdb dump and how to post-process it"""
+    """Download IMDb dumps, extract data, and
+    populate a database instance."""
 
     # Counters
     n_actors = 0
@@ -47,17 +48,11 @@ class ImdbDumpExtractor(BaseDumpExtractor):
     _sqlalchemy_commit_every = 100_000
 
     def get_dump_download_urls(self) -> List[str]:
-        """
-        :return: the urls from which to download the data dumps
-        the first URL is the one for the **person dump**, the
-        second downloads the **movie dump**
-        """
         return [DUMP_URL_PERSON_INFO, DUMP_URL_MOVIE_INFO]
 
     @staticmethod
     def _normalize_null(entity: Dict) -> None:
-        """
-        IMDB represents a null entry with \\N , this method converts
+        """IMDb represents a null entry with \\N , this method converts
         all \\N to None so that they're saved as null in the database.
         This is done for all 'entries' of a given entity.
 
@@ -74,16 +69,16 @@ class ImdbDumpExtractor(BaseDumpExtractor):
     def extract_and_populate(
         self, dump_file_paths: List[str], resolve: bool
     ) -> None:
-        """
-        Extracts the data in the dumps (person and movie) and processes them.
-        It then proceeds to add the appropriate data to the database.
+        """Extract relevant data from the *name* (people) and *title* (works)
+        IMDb dumps, preprocess them, populate
+        `SQLAlchemy <https://www.sqlalchemy.org/>`_ ORM entities, and persist
+        them to a database instance.
 
-        See
-        :ref:`soweego.importer.models.imdb_entity` module to see the SQLAlchemy
-        definition of the entities we use to save IMDB data.
+        See :mod:`~soweego.importer.models.imdb_entity`
+        for the ORM definitions.
 
-        :param dump_file_paths: the absolute paths of the already downloaded
-        dump files.
+        :param dump_file_paths: paths to downloaded catalog dumps
+        :param resolve: whether to resolve URLs found in catalog dumps or not
         """
 
         # the order of these files is specified in `self.get_dump_download_urls`

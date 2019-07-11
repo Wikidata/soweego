@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""MusicBrainz dump extractor"""
+"""`MusicBrainz <https://musicbrainz.org/>`_ dump extractor."""
 
 __author__ = 'Massimo Frasson'
 __email__ = 'maxfrax@gmail.com'
@@ -16,7 +16,7 @@ import tarfile
 from collections import defaultdict
 from csv import DictReader
 from datetime import date, datetime
-from typing import Iterable, Tuple
+from typing import Iterable, Tuple, List
 
 import requests
 from sqlalchemy.exc import IntegrityError
@@ -43,18 +43,30 @@ LOGGER = logging.getLogger(__name__)
 
 
 class MusicBrainzDumpExtractor(BaseDumpExtractor):
-    """Defines where to download Musicbrainz dump and how to post-process it"""
+    """Download MusicBrainz dumps, extract data, and
+    populate a database instance."""
 
     _sqlalchemy_commit_every = 100_000
 
-    def get_dump_download_urls(self) -> Iterable[str]:
+    def get_dump_download_urls(self) -> List[str]:
         base_url = 'http://ftp.musicbrainz.org/pub/musicbrainz/data/fullexport'
         latest_version = requests.get(f'{base_url}/LATEST').text.rstrip()
         return [f'{base_url}/{latest_version}/mbdump.tar.bz2']
 
     def extract_and_populate(
-        self, dump_file_paths: Iterable[str], resolve: bool
+        self, dump_file_paths: List[str], resolve: bool
     ):
+        """Extract relevant data from the *artist* (people) and *release group*
+        (works) MusicBrainz dumps, preprocess them, populate
+        `SQLAlchemy <https://www.sqlalchemy.org/>`_ ORM entities, and persist
+        them to a database instance.
+
+        See :mod:`~soweego.importer.models.musicbrainz_entity`
+        for the ORM definitions.
+
+        :param dump_file_paths: paths to downloaded catalog dumps
+        :param resolve: whether to resolve URLs found in catalog dumps or not
+        """
         dump_file_path = dump_file_paths[0]
         dump_path = os.path.join(
             os.path.dirname(os.path.abspath(dump_file_path)),

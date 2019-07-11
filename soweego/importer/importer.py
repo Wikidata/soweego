@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Generic service for dump updating/importing"""
+"""Download, extract, and import a supported catalog."""
 
 __author__ = 'Massimo Frasson'
 __email__ = 'maxfrax@gmail.com'
 __version__ = '1.0'
 __license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2018, Massimo Frasson'
+__copyright__ = 'Copyleft 2018, MaxFrax96'
 
 import datetime
 import logging
@@ -42,15 +42,17 @@ DUMP_EXTRACTOR = {
 @click.option(
     '--url-check',
     is_flag=True,
-    help='Check for rotten URLs while importing. Default: no.'
-    'WARNING: this will dramatically increase the import time.',
+    help=(
+            'Check for rotten URLs while importing. Default: no. '
+            'WARNING: this will dramatically increase the import time.'
+    ),
 )
 @click.option(
     '-d',
     '--dir-io',
     type=click.Path(file_okay=False),
     default=constants.SHARED_FOLDER,
-    help=f"Input/output directory," f"default: '{constants.SHARED_FOLDER}'.",
+    help=f'Input/output directory, default: {constants.SHARED_FOLDER}.',
 )
 def import_cli(catalog: str, url_check: bool, dir_io: str) -> None:
     """Download, extract, and import a supported catalog."""
@@ -69,11 +71,7 @@ def _resolve_url(res):
     'catalog', type=click.Choice(target_database.supported_targets())
 )
 def check_links_cli(catalog: str):
-    """
-    Check for rotten URLs of an imported catalog.
-
-    :param catalog: one of the keys of constants.TARGET_CATALOGS
-    """
+    """Check for rotten URLs of an imported catalog."""
     for entity_type in target_database.supported_entities_for_target(catalog):
 
         LOGGER.info("Validating %s %s links...", catalog, entity_type)
@@ -116,19 +114,19 @@ def check_links_cli(catalog: str):
 
 
 class Importer:
-    """Downloads the latest dump of a certain target"""
+    """Handle a catalog dump: check its freshness and dispatch the appropriate
+    extractor."""
 
     def refresh_dump(
         self, output_folder: str, extractor: BaseDumpExtractor, resolve: bool
     ):
-        """
-        Downloads the dump, if necessary, and calls the handler over the dump
-        file.
-        :param output_folder: folder in which the downloaded dumps will be
-        stored
-        :param extractor: BaseDumpExtractor implementation to process the dump
-        :param resolve: try to resolve each url in the dump to check if it
-        works?
+        """Eventually download the latest dump, and call the
+         corresponding extractor.
+
+        :param output_folder: a path where the downloaded dumps will be stored
+        :param extractor: :class:`~soweego.importer.base_dump_extractor.BaseDumpExtractor`
+          implementation to process the dump
+        :param resolve: whether to resolve URLs found in catalog dumps or not
         """
         filepaths = []
 
@@ -171,5 +169,5 @@ class Importer:
 
     @staticmethod
     def _update_dump(dump_url: str, file_output_path: str):
-        """Download the dump"""
+        """Download the dump."""
         client.download_file(dump_url, file_output_path)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Base SQL Alchemy ORM link entity"""
+"""Base `SQLAlchemy <https://www.sqlalchemy.org/>`_ ORM entity for URLs."""
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -20,7 +20,19 @@ BASE = declarative_base()
 
 
 class BaseLinkEntity(AbstractConcreteBase, BASE):
-    """Describes the basic structure of a entity containing links"""
+    """Minimal ORM structure for a target catalog link/URL.
+    Each ORM link entity should implement this interface.
+
+    **Attributes:**
+
+    - **internal_id** (integer) - an internal primary key
+    - **catalog_id** (string(50)) - a target catalog identifier
+    - **url** (text) - a full URL
+    - **is_wiki** (boolean) - whether a URL is a Wiki link or not
+    - **url_tokens** (text) - a **url** tokenized through
+      :func:`~soweego.commons.text_utils.tokenize`
+
+    """
 
     __tablename__ = None
     internal_id = Column(
@@ -30,7 +42,7 @@ class BaseLinkEntity(AbstractConcreteBase, BASE):
     catalog_id = Column(String(50), nullable=False, index=True)
     # Full URL
     url = Column(Text)
-    # Whether the URL is a Wiki link
+    # Whether the URL is a Wiki link or not
     is_wiki = Column(Boolean)
     # Tokenized URL
     url_tokens = Column(Text)

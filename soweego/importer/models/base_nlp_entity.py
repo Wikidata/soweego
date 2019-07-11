@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Base SQL Alchemy ORM entity for textual data that will undergo NLP"""
+"""Base `SQLAlchemy <https://www.sqlalchemy.org/>`_ ORM entity for
+textual data that will undergo some natural language processing (*NLP*)."""
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -20,7 +21,18 @@ BASE = declarative_base()
 
 
 class BaseNlpEntity(AbstractConcreteBase, BASE):
-    """Base strucuture for storing data useful for NLP processes"""
+    """Minimal ORM structure for a target catalog piece of text.
+    Each ORM NLP entity should implement this interface.
+
+    **Attributes:**
+
+    - **internal_id** (integer) - an internal primary key
+    - **catalog_id** (string(50)) - a target catalog identifier
+    - **description** (text) - a text describing the main catalog entry
+    - **description_tokens** (text) - a **description** tokenized through
+      :func:`~soweego.commons.text_utils.tokenize`
+
+    """
 
     __tablename__ = None
     internal_id = Column(

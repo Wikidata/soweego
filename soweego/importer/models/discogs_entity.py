@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Discogs SQL Alchemy ORM model for musicians"""
+"""FIXME FIXME FIXME Discogs SQL Alchemy ORM model for musicians"""
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
