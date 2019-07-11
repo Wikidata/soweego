@@ -29,7 +29,7 @@ from soweego.importer.models.discogs_entity import (
 from soweego.importer.models.imdb_entity import (
     ImdbActorEntity,
     ImdbDirectorEntity,
-    ImdbMovieEntity,
+    IMDbTitleEntity,
     ImdbMoviePersonRelationship,
     ImdbMusicianEntity,
     ImdbProducerEntity,
@@ -158,7 +158,7 @@ TARGET_CATALOGS = {
         },
         keys.AUDIOVISUAL_WORK: {
             keys.CLASS_QID: vocabulary.AUDIOVISUAL_WORK_QID,
-            keys.MAIN_ENTITY: ImdbMovieEntity,
+            keys.MAIN_ENTITY: IMDbTitleEntity,
             keys.LINK_ENTITY: None,
             keys.NLP_ENTITY: None,
             keys.RELATIONSHIP_ENTITY: ImdbMoviePersonRelationship,

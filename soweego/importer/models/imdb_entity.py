@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""IMDB SQL Alchemy ORM model"""
+"""`IMDb <https://www.imdb.com/>`_
+`SQLAlchemy <https://www.sqlalchemy.org/>`_ ORM entities, based on
+the datasets `specifications <https://www.imdb.com/interfaces/>`_."""
 
-__author__ = 'Andrea Tupini'
-__email__ = 'tupini07@gmail.com'
+__author__ = 'Marco Fossati, Andrea Tupini'
+__email__ = 'fossati@spaziodati.eu, tupini07@gmail.com'
 __version__ = '1.0'
 __license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2018, tupini07'
+__copyright__ = 'Copyleft 2019, Hjfocs, tupini07'
 
 from sqlalchemy import Boolean, Column, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
@@ -17,26 +19,71 @@ from soweego.wikidata import vocabulary
 
 BASE = declarative_base()
 
+NAME_TABLE = 'imdb_name'
+TITLE_TABLE = 'imdb_title'
+
 ACTOR_TABLE = 'imdb_actor'
-BASE_PERSON_TABLE = 'imdb_base_person'
 DIRECTOR_TABLE = 'imdb_director'
-MOVIE_TABLE = 'imdb_movie'
 MUSICIAN_TABLE = 'imdb_musician'
-MOVIE_PERSON_RELATIONSHIP_TABLE = 'imdb_movie_person_relationship'
 PRODUCER_TABLE = 'imdb_producer'
 WRITER_TABLE = 'imdb_writer'
 
+TITLE_NAME_RELATIONSHIP_TABLE = 'imdb_title_name_relationship'
 
-# actor, director, producer e writer
+
+class IMDbNameEntity(BaseEntity):
+    """An IMDb *name*: a person like an actor, director, producer, etc.
+    It comes from the ``name.basics.tsv.gz`` dataset.
+    See the `download page <https://datasets.imdbws.com/>`_
+
+    All ORM entities describing IMDb people should inherit this class.
+
+    **Attributes**:
+
+    - **gender** (string(10)) - a gender
+    - **occupations** (string(255)) - a string list of Wikidata QIDs
+      identifying occupations
+    """
+
+    # Each entity should be represented by its main occupation QID
+    # defined in `soweego.wikidata.vocabulary`
+    table_occupation = None
+
+    __tablename__ = NAME_TABLE
+
+    gender = Column(String(10))
+    occupations = Column(String(255), nullable=True)
+
+    # IMDb has only years, so override `BaseEntity`
+    # and set default year precisions
+    born_precision = Column(Integer, default=9, nullable=False)
+    died_precision = Column(Integer, default=9, nullable=False)
+
+    __abstract__ = True
 
 
-class ImdbMovieEntity(BaseEntity):
-    """Describes the Movie Entity for Imdb"""
+class IMDbTitleEntity(BaseEntity):
+    """An IMDb *title*: an audiovisual work like a movie, short,
+    TV series episode, etc.
+    It comes from the ``title.basics.tsv.gz`` dataset.
+    See the `download page <https://datasets.imdbws.com/>`_
 
-    __tablename__ = MOVIE_TABLE
-    internal_id = Column(
-        Integer, unique=True, primary_key=True, autoincrement=True
-    )
+    Each IMDb ORM entity should inherit this class.
+
+    **Attributes:**
+
+    - **title_type** (string(100)) - an audiovisual work type, like *movie*
+      or *short*
+    - **primary_title** (text) - the most popular title
+    - **original_title** (text) - a title in the original language
+    - **is_adult** (boolean) - whether the audiovisual work is for adults or not
+    - **runtime_minutes** (integer) - a runtime in minutes
+    - **genres** (string(255)) - a string list of audiovisual genres
+
+    """
+
+    __tablename__ = TITLE_TABLE
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
     title_type = Column(String(100))
     primary_title = Column(Text)
@@ -47,36 +94,12 @@ class ImdbMovieEntity(BaseEntity):
 
     def __repr__(self) -> str:
         return (
-            f'<ImdbMovieEntity(catalog_id="{self.catalog_id}", '
-            f'title="{self.original_title}")>'
+            f'<IMDbTitleEntity(catalog_id="{self.catalog_id}", '
+            f'original_title="{self.original_title}")>'
         )
 
 
-class ImdbPersonEntity(BaseEntity):
-    """Describes the Person Entity for Imdb"""
-
-    # each table/entity type should be associated with
-    # an occupation (defined in vocabulary.py) which
-    # is the main occupation for people in said table
-    table_occupation = None
-
-    __tablename__ = BASE_PERSON_TABLE
-    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
-
-    gender = Column(String(10))
-
-    # base imdb person entity
-    born_precision = Column(Integer, default=9, nullable=False)
-    died_precision = Column(Integer, default=9, nullable=False)
-
-    # space separated string of QIDs representing an
-    # occupation
-    occupations = Column(String(255), nullable=True)
-
-    __abstract__ = True
-
-
-class ImdbActorEntity(ImdbPersonEntity):
+class ImdbActorEntity(IMDbNameEntity):
     """Describes the Actor Entity for Imdb"""
 
     table_occupation = vocabulary.ACTOR_QID
@@ -85,7 +108,7 @@ class ImdbActorEntity(ImdbPersonEntity):
     __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
-class ImdbDirectorEntity(ImdbPersonEntity):
+class ImdbDirectorEntity(IMDbNameEntity):
     """Describes the Director Entity for Imdb"""
 
     table_occupation = vocabulary.FILM_DIRECTOR_QID
@@ -94,7 +117,7 @@ class ImdbDirectorEntity(ImdbPersonEntity):
     __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
-class ImdbMusicianEntity(ImdbPersonEntity):
+class ImdbMusicianEntity(IMDbNameEntity):
     """Describes the Musician Entity for Imdb"""
 
     table_occupation = vocabulary.MUSICIAN_QID
@@ -103,7 +126,7 @@ class ImdbMusicianEntity(ImdbPersonEntity):
     __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
-class ImdbProducerEntity(ImdbPersonEntity):
+class ImdbProducerEntity(IMDbNameEntity):
     """Describes the Producer Entity for Imdb"""
 
     table_occupation = vocabulary.FILM_PRODUCER_QID
@@ -112,7 +135,7 @@ class ImdbProducerEntity(ImdbPersonEntity):
     __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
-class ImdbWriterEntity(ImdbPersonEntity):
+class ImdbWriterEntity(IMDbNameEntity):
     """Describes the Writer Entity for Imdb"""
 
     table_occupation = vocabulary.SCREENWRITER_QID
@@ -124,7 +147,7 @@ class ImdbWriterEntity(ImdbPersonEntity):
 class ImdbMoviePersonRelationship(BaseRelationship):
     """Describes the relationship between a movie and a person"""
 
-    __tablename__ = MOVIE_PERSON_RELATIONSHIP_TABLE
+    __tablename__ = TITLE_NAME_RELATIONSHIP_TABLE
 
     __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 

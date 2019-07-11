@@ -93,7 +93,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         tables = [
             imdb_entity.ImdbActorEntity,
             imdb_entity.ImdbDirectorEntity,
-            imdb_entity.ImdbMovieEntity,
+            imdb_entity.IMDbTitleEntity,
             imdb_entity.ImdbMusicianEntity,
             imdb_entity.ImdbProducerEntity,
             imdb_entity.ImdbWriterEntity,
@@ -119,7 +119,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         ):
 
             # create the movie SQLAlchemy entity and populate it
-            movie_entity = imdb_entity.ImdbMovieEntity()
+            movie_entity = imdb_entity.IMDbTitleEntity()
             movie_entity.catalog_id = movie_info.get('tconst')
             movie_entity.title_type = movie_info.get('titleType')
             if movie_info.get('primaryTitle') is not None:
@@ -338,13 +338,13 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
     def _populate_person(
         self,
-        person_entity: imdb_entity.ImdbPersonEntity,
+        person_entity: imdb_entity.IMDbNameEntity,
         person_info: Dict,
         entity_array: object,
     ) -> None:
         """
         Given an instance of
-        :ref:`soweego.importer.models.imdb_entity.ImdbPersonEntity`
+        :ref:`soweego.importer.models.imdb_entity.IMDbNameEntity`
         this function populates its attributes according to
         the provided `person_info` dictionary. It then adds
         said instance to the SQLAlchemy session.
@@ -378,7 +378,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         # IMDb only provides us with the birth and death year of
         # a person, so this is the only one we'll take into
         # account. Month and Day are set by default to 1. The
-        # base `ImdbPersonEntity` defines a precision of 9 for the
+        # base `IMDbNameEntity` defines a precision of 9 for the
         # birth and death dates, which (according to
         # `vocab.DATE_PRECISION`) means that only the year is correct.
         born_year = person_info.get('birthYear')
