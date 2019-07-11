@@ -36,13 +36,13 @@ from soweego.importer.models.imdb_entity import (
     IMDbWriterEntity,
 )
 from soweego.importer.models.musicbrainz_entity import (
-    MusicbrainzArtistEntity,
-    MusicbrainzArtistLinkEntity,
-    MusicbrainzBandEntity,
-    MusicbrainzBandLinkEntity,
+    MusicBrainzArtistEntity,
+    MusicBrainzArtistLinkEntity,
+    MusicBrainzBandEntity,
+    MusicBrainzBandLinkEntity,
     MusicBrainzReleaseGroupArtistRelationship,
-    MusicbrainzReleaseGroupEntity,
-    MusicbrainzReleaseGroupLinkEntity,
+    MusicBrainzReleaseGroupEntity,
+    MusicBrainzReleaseGroupLinkEntity,
 )
 from soweego.wikidata import vocabulary
 
@@ -168,24 +168,24 @@ TARGET_CATALOGS = {
     keys.MUSICBRAINZ: {
         keys.MUSICIAN: {
             keys.CLASS_QID: vocabulary.MUSICIAN_QID,
-            keys.MAIN_ENTITY: MusicbrainzArtistEntity,
-            keys.LINK_ENTITY: MusicbrainzArtistLinkEntity,
+            keys.MAIN_ENTITY: MusicBrainzArtistEntity,
+            keys.LINK_ENTITY: MusicBrainzArtistLinkEntity,
             keys.NLP_ENTITY: None,
             keys.RELATIONSHIP_ENTITY: MusicBrainzReleaseGroupArtistRelationship,
             keys.WORK_TYPE: keys.MUSICAL_WORK,
         },
         keys.BAND: {
             keys.CLASS_QID: vocabulary.BAND_QID,
-            keys.MAIN_ENTITY: MusicbrainzBandEntity,
-            keys.LINK_ENTITY: MusicbrainzBandLinkEntity,
+            keys.MAIN_ENTITY: MusicBrainzBandEntity,
+            keys.LINK_ENTITY: MusicBrainzBandLinkEntity,
             keys.NLP_ENTITY: None,
             keys.RELATIONSHIP_ENTITY: MusicBrainzReleaseGroupArtistRelationship,
             keys.WORK_TYPE: keys.MUSICAL_WORK,
         },
         keys.MUSICAL_WORK: {
             keys.CLASS_QID: vocabulary.MUSICAL_WORK_QID,
-            keys.MAIN_ENTITY: MusicbrainzReleaseGroupEntity,
-            keys.LINK_ENTITY: MusicbrainzReleaseGroupLinkEntity,
+            keys.MAIN_ENTITY: MusicBrainzReleaseGroupEntity,
+            keys.LINK_ENTITY: MusicBrainzReleaseGroupLinkEntity,
             keys.NLP_ENTITY: None,
             keys.RELATIONSHIP_ENTITY: MusicBrainzReleaseGroupArtistRelationship,
             keys.WORK_TYPE: None,

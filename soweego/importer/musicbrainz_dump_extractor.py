@@ -29,13 +29,13 @@ from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.musicbrainz_entity import (
     MusicBrainzArtistBandRelationship,
-    MusicbrainzArtistEntity,
-    MusicbrainzArtistLinkEntity,
-    MusicbrainzBandEntity,
-    MusicbrainzBandLinkEntity,
+    MusicBrainzArtistEntity,
+    MusicBrainzArtistLinkEntity,
+    MusicBrainzBandEntity,
+    MusicBrainzBandLinkEntity,
     MusicBrainzReleaseGroupArtistRelationship,
-    MusicbrainzReleaseGroupEntity,
-    MusicbrainzReleaseGroupLinkEntity,
+    MusicBrainzReleaseGroupEntity,
+    MusicBrainzReleaseGroupLinkEntity,
 )
 from soweego.wikidata.sparql_queries import external_id_pids_and_urls
 
@@ -85,7 +85,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         db_manager = DBManager()
 
-        tables = [MusicbrainzReleaseGroupEntity]
+        tables = [MusicBrainzReleaseGroupEntity]
         db_manager.drop(tables)
         db_manager.create(tables)
 
@@ -126,7 +126,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         LOGGER.debug("Added %s/%s relationships records", *relationships_count)
 
-        tables = [MusicbrainzReleaseGroupLinkEntity]
+        tables = [MusicBrainzReleaseGroupLinkEntity]
         db_manager.drop(tables)
         db_manager.create(tables)
         LOGGER.info(
@@ -141,7 +141,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         LOGGER.debug("Added %s/%s release group link records", *link_count)
 
-        tables = [MusicbrainzArtistEntity, MusicbrainzBandEntity]
+        tables = [MusicBrainzArtistEntity, MusicBrainzBandEntity]
         db_manager.drop(tables)
         db_manager.create(tables)
 
@@ -157,7 +157,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         LOGGER.debug("Added %s/%s artist records", *artist_count)
 
-        tables = [MusicbrainzArtistLinkEntity, MusicbrainzBandLinkEntity]
+        tables = [MusicBrainzArtistLinkEntity, MusicBrainzBandLinkEntity]
         db_manager.drop(tables)
         db_manager.create(tables)
 
@@ -374,13 +374,13 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                 if artist['id'] in artistid_url:
                     for link in artistid_url[artist['id']]:
                         if self._check_person(artist['type_id']):
-                            current_entity = MusicbrainzArtistLinkEntity()
+                            current_entity = MusicBrainzArtistLinkEntity()
                             self._fill_link_entity(
                                 current_entity, artist['gid'], link
                             )
                             yield current_entity
                         if self._check_band(artist['type_id']):
-                            current_entity = MusicbrainzBandLinkEntity()
+                            current_entity = MusicBrainzBandLinkEntity()
                             self._fill_link_entity(
                                 current_entity, artist['gid'], link
                             )
@@ -405,7 +405,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             for release in tqdm(releases, total=n_rows):
                 if release['id'] in release_group_id_urls:
                     for link in release_group_id_urls[release['id']]:
-                        entity = MusicbrainzReleaseGroupLinkEntity()
+                        entity = MusicBrainzReleaseGroupLinkEntity()
                         self._fill_link_entity(entity, release['gid'], link)
                         yield entity
 
@@ -471,13 +471,13 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                     # Checks if artist has isni
                     link = artist_link[artist['id']]
                     if self._check_person(artist['type_id']):
-                        current_entity = MusicbrainzArtistLinkEntity()
+                        current_entity = MusicBrainzArtistLinkEntity()
                         self._fill_link_entity(
                             current_entity, artist['gid'], link
                         )
                         yield current_entity
                     if self._check_band(artist['type_id']):
-                        current_entity = MusicbrainzBandLinkEntity()
+                        current_entity = MusicBrainzBandLinkEntity()
                         self._fill_link_entity(
                             current_entity, artist['gid'], link
                         )
@@ -547,7 +547,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
             for artist in tqdm(artist_reader, total=n_rows):
                 if self._check_person(artist['type_id']):
-                    current_entity = MusicbrainzArtistEntity()
+                    current_entity = MusicBrainzArtistEntity()
 
                     try:
                         self._fill_entity(current_entity, artist, areas)
@@ -561,7 +561,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                     # Creates an entity foreach available alias
                     for alias in self._alias_entities(
                         current_entity,
-                        MusicbrainzArtistEntity,
+                        MusicBrainzArtistEntity,
                         aliases[artist['id']],
                     ):
                         alias.gender = current_entity.gender
@@ -570,7 +570,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                     yield current_entity
 
                 if self._check_band(artist['type_id']):
-                    current_entity = MusicbrainzBandEntity()
+                    current_entity = MusicBrainzBandEntity()
 
                     try:
                         self._fill_entity(current_entity, artist, areas)
@@ -581,7 +581,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
                     # Creates an entity foreach available alias
                     for alias in self._alias_entities(
                         current_entity,
-                        MusicbrainzBandEntity,
+                        MusicBrainzBandEntity,
                         aliases[artist['id']],
                     ):
                         yield alias
@@ -675,7 +675,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             for row in tqdm(
                 release_reader, total=count_num_lines_in_file(releasefile)
             ):
-                entity = MusicbrainzReleaseGroupEntity()
+                entity = MusicBrainzReleaseGroupEntity()
                 self._fill_entity(entity, row, None)
                 if row['id'] in release_group_datesprec:
                     dateprec = release_group_datesprec[row['id']]
@@ -774,7 +774,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
             entity.died = None
             entity.died_precision = None
 
-        if isinstance(entity, (MusicbrainzArtistEntity, MusicbrainzBandEntity)):
+        if isinstance(entity, (MusicBrainzArtistEntity, MusicBrainzBandEntity)):
             try:
                 entity.birth_place = areas[info['b_place']]
             except KeyError:
