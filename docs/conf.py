@@ -90,5 +90,6 @@ intersphinx_mapping = {
     'pandas': ('https://pandas.pydata.org/pandas-docs/stable/', None),
     'recordlinkage': ('https://recordlinkage.readthedocs.io/en/latest/', None),
     'requests': ('https://2.python-requests.org/en/stable/', None),
+    'sqlalchemy': ('https://docs.sqlalchemy.org/en/13/', None),
     'sklearn': ('https://scikit-learn.org/stable/', None),
 }
