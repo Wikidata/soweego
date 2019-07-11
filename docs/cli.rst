@@ -12,7 +12,7 @@ As a reminder, make sure you are inside Docker::
 
    ...
 
-   :/app/soweego#
+   root@70c9b4894a30:/app/soweego#
 
 
 Importer
@@ -23,7 +23,7 @@ Importer
    python -m soweego importer
    Usage: soweego importer [OPTIONS] COMMAND [ARGS]...
 
-     Import target catalog dumps into the database.
+     Import target catalog dumps into a SQL database.
 
    Options:
      --help  Show this message and exit.
