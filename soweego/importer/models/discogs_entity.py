@@ -19,9 +19,9 @@ from soweego.importer.models.base_nlp_entity import BaseNlpEntity
 
 BASE = declarative_base()
 
-ARTIST_TABLE = 'discogs_artist'
-MASTER_TABLE = 'discogs_master'
+ARTIST_TABLE = 'discogs_artist'  # Abstract table
 
+MASTER_TABLE = 'discogs_master'
 MUSICIAN_TABLE = 'discogs_musician'
 MUSICIAN_LINK_TABLE = 'discogs_musician_link'
 MUSICIAN_NLP_TABLE = 'discogs_musician_nlp'
@@ -98,7 +98,7 @@ class DiscogsMusicianNlpEntity(BaseNlpEntity, BASE):
 
 
 class DiscogsGroupEntity(DiscogsArtistEntity):
-    """A Discogs band."""
+    """A Discogs *group*, namely a band."""
 
     __tablename__ = GROUP_TABLE
     __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}

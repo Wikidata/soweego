@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Abstract class for catalog dumps extraction."""
+"""Base class for catalog dumps extraction."""
 
 import logging
 import warnings

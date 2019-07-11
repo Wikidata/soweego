@@ -43,6 +43,7 @@ class IMDbNameEntity(BaseEntity):
     - **gender** (string(10)) - a gender
     - **occupations** (string(255)) - a string list of Wikidata QIDs
       identifying occupations
+
     """
 
     # Each entity should be represented by its main occupation QID
@@ -68,7 +69,7 @@ class IMDbTitleEntity(BaseEntity):
     It comes from the ``title.basics.tsv.gz`` dataset.
     See the `download page <https://datasets.imdbws.com/>`_
 
-    Each IMDb ORM entity should inherit this class.
+    All ORM entities describing IMDb works should inherit this class.
 
     **Attributes:**
 
