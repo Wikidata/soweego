@@ -21,7 +21,7 @@ BASE = declarative_base()
 
 class BaseEntity(AbstractConcreteBase, BASE):
     """Minimal ORM structure for a target catalog entry.
-    Each ORM entity should implement this interface.
+    Each ORM entity should inherit this class.
 
     **Attributes:**
 
@@ -40,6 +40,7 @@ class BaseEntity(AbstractConcreteBase, BASE):
     """
 
     __tablename__ = None
+
     internal_id = Column(
         Integer, unique=True, primary_key=True, autoincrement=True
     )
@@ -58,21 +59,22 @@ class BaseEntity(AbstractConcreteBase, BASE):
     # Date of death precision
     died_precision = Column(Integer)
 
-    # Full-text index over 'name' and 'name_tokens'
+    # Full-text index over `name_tokens`
     @declared_attr
     def __table_args__(cls):
         return (
             Index(
-                'ftix_name_tokens_%s' % cls.__tablename__,
-                "name_tokens",
-                mysql_prefix="FULLTEXT",
+                f'ftix_name_tokens_{cls.__tablename__}',
+                'name_tokens',
+                mysql_prefix='FULLTEXT',
             ),
             {'mysql_charset': 'utf8mb4'},
         )
 
     def __repr__(self) -> str:
-        return "<BaseEntity(catalog_id='{0}', name='{1}')>".format(
-            self.catalog_id, self.name
+        return (
+            f'<BaseEntity(catalog_id="{self.catalog_id}", '
+            f'name="{self.name}")>'
         )
 
 
