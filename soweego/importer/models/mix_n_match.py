@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Mix'n'match SQL Alchemy ORM models for catalogs that need curation.
+"""`Mix'n'match <https://tools.wmflabs.org/mix-n-match/>`_
+`SQLAlchemy <https://www.sqlalchemy.org/>`_ ORM entities
+for catalogs that need curation.
 
 They follow the ``catalog`` and ``entry`` tables of the ``s51434__mixnmatch_p``
-database located in ToolsDB under the Wikimedia Toolforge infrastructure.
-See https://wikitech.wikimedia.org/wiki/Help:Toolforge/Database#Connecting_to_the_database_replicas
+database located in
+`ToolsDB <https://wikitech.wikimedia.org/wiki/Help:Toolforge/Database#User_databases>`_
+under the Wikimedia
+`Toolforge <https://wikitech.wikimedia.org/wiki/Portal:Toolforge>`_
+infrastructure. See how to
+`connect <https://wikitech.wikimedia.org/wiki/Help:Toolforge/Database#Connecting_to_the_database_replicas>`_.
 """
 
 __author__ = 'Marco Fossati'
@@ -27,7 +33,10 @@ CATALOG_OWNER = 2362992  # soweego bot MnM user ID
 
 
 class MnMCatalog(BASE):
+    """A Mix'n'match catalog."""
+
     __tablename__ = CATALOG_TABLE
+
     id = Column(
         INTEGER(11, unsigned=True),
         unique=True,
@@ -53,7 +62,10 @@ class MnMCatalog(BASE):
 
 
 class MnMEntry(BASE):
+    """A Mix'n'match entry."""
+
     __tablename__ = ENTRY_TABLE
+
     id = Column(
         INTEGER(11, unsigned=True),
         unique=True,
