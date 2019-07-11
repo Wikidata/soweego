@@ -18,14 +18,17 @@ from soweego.importer.models.base_link_entity import BaseLinkEntity
 from soweego.importer.models.base_nlp_entity import BaseNlpEntity
 
 BASE = declarative_base()
-BASE_ENTITY = 'discogs_base_entity'
+
+ARTIST_TABLE = 'discogs_artist'
+MASTER_TABLE = 'discogs_master'
+
 MUSICIAN_TABLE = 'discogs_musician'
 MUSICIAN_LINK_TABLE = 'discogs_musician_link'
 MUSICIAN_NLP_TABLE = 'discogs_musician_nlp'
 GROUP_TABLE = 'discogs_group'
 GROUP_LINK_TABLE = 'discogs_group_link'
 GROUP_NLP_TABLE = 'discogs_group_nlp'
-MASTER_TABLE = 'discogs_master'
+
 MASTER_ARTIST_RELATIONSHIP_TABLE = 'discogs_master_artist_relationship'
 
 
@@ -34,7 +37,7 @@ class DiscogsArtistEntity(BaseEntity):
     It comes from the ``_artists.xml.gz`` dataset.
     See the `download page <https://data.discogs.com/>`_.
 
-    Each Discogs ORM entity should inherit this class.
+    All ORM entities describing Discogs people should inherit this class.
 
     **Attributes:**
 
@@ -43,7 +46,8 @@ class DiscogsArtistEntity(BaseEntity):
 
     """
 
-    __tablename__ = BASE_ENTITY
+    __tablename__ = ARTIST_TABLE
+
     # Name in real life
     real_name = Column(Text)
     # Discogs-specific indicator of data quality
@@ -52,7 +56,7 @@ class DiscogsArtistEntity(BaseEntity):
     __abstract__ = True
 
 
-class DiscogsMasterEntity(DiscogsArtistEntity):
+class DiscogsMasterEntity(BaseEntity):
     """A Discogs *master*: a musical work, which can have multiple *releases*.
     It comes from the ``_masters.xml.gz`` dataset.
     See the `download page <https://data.discogs.com/>`_.
@@ -70,7 +74,6 @@ class DiscogsMasterEntity(DiscogsArtistEntity):
 
     main_release_id = Column(String(50))
     genres = Column(Text)
-    data_quality = Column(String(50))
 
 
 class DiscogsMusicianEntity(DiscogsArtistEntity):
