@@ -91,13 +91,13 @@ class ImdbDumpExtractor(BaseDumpExtractor):
         start = datetime.datetime.now()
 
         tables = [
-            imdb_entity.ImdbActorEntity,
-            imdb_entity.ImdbDirectorEntity,
+            imdb_entity.IMDbActorEntity,
+            imdb_entity.IMDbDirectorEntity,
             imdb_entity.IMDbTitleEntity,
-            imdb_entity.ImdbMusicianEntity,
-            imdb_entity.ImdbProducerEntity,
-            imdb_entity.ImdbWriterEntity,
-            imdb_entity.ImdbMoviePersonRelationship,
+            imdb_entity.IMDbMusicianEntity,
+            imdb_entity.IMDbProducerEntity,
+            imdb_entity.IMDbWriterEntity,
+            imdb_entity.IMDbTitleNameRelationship,
         ]
 
         db_manager = DBManager()
@@ -199,15 +199,15 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
             if 'actor' in professions or 'actress' in professions:
                 self.n_actors += 1
-                types_of_entities.append(imdb_entity.ImdbActorEntity())
+                types_of_entities.append(imdb_entity.IMDbActorEntity())
 
             if 'director' in professions:
                 self.n_directors += 1
-                types_of_entities.append(imdb_entity.ImdbDirectorEntity())
+                types_of_entities.append(imdb_entity.IMDbDirectorEntity())
 
             if 'producer' in professions:
                 self.n_producers += 1
-                types_of_entities.append(imdb_entity.ImdbProducerEntity())
+                types_of_entities.append(imdb_entity.IMDbProducerEntity())
 
             if any(
                 prof
@@ -220,22 +220,22 @@ class ImdbDumpExtractor(BaseDumpExtractor):
                 for prof in professions
             ):
                 self.n_musicians += 1
-                types_of_entities.append(imdb_entity.ImdbMusicianEntity())
+                types_of_entities.append(imdb_entity.IMDbMusicianEntity())
 
             if 'writer' in professions:
                 self.n_writers += 1
-                types_of_entities.append(imdb_entity.ImdbWriterEntity())
+                types_of_entities.append(imdb_entity.IMDbWriterEntity())
 
             # if the only profession a person has is `miscellaneous` then we
             # add it to all tables
             if professions == ['miscellaneous']:
                 self.n_misc += 1
                 types_of_entities = [
-                    imdb_entity.ImdbActorEntity(),
-                    imdb_entity.ImdbDirectorEntity(),
-                    imdb_entity.ImdbMusicianEntity(),
-                    imdb_entity.ImdbProducerEntity(),
-                    imdb_entity.ImdbWriterEntity(),
+                    imdb_entity.IMDbActorEntity(),
+                    imdb_entity.IMDbDirectorEntity(),
+                    imdb_entity.IMDbMusicianEntity(),
+                    imdb_entity.IMDbProducerEntity(),
+                    imdb_entity.IMDbWriterEntity(),
                 ]
 
             # add person to every matching table
@@ -431,7 +431,7 @@ class ImdbDumpExtractor(BaseDumpExtractor):
 
         for title in know_for_titles:
             entity_array.append(
-                imdb_entity.ImdbMoviePersonRelationship(
+                imdb_entity.IMDbTitleNameRelationship(
                     from_catalog_id=title,
                     to_catalog_id=person_info.get('nconst'),
                 )

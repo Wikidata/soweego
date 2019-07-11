@@ -99,8 +99,8 @@ class IMDbTitleEntity(BaseEntity):
         )
 
 
-class ImdbActorEntity(IMDbNameEntity):
-    """Describes the Actor Entity for Imdb"""
+class IMDbActorEntity(IMDbNameEntity):
+    """An IMDb actor."""
 
     table_occupation = vocabulary.ACTOR_QID
 
@@ -108,8 +108,8 @@ class ImdbActorEntity(IMDbNameEntity):
     __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
-class ImdbDirectorEntity(IMDbNameEntity):
-    """Describes the Director Entity for Imdb"""
+class IMDbDirectorEntity(IMDbNameEntity):
+    """An IMDb director."""
 
     table_occupation = vocabulary.FILM_DIRECTOR_QID
 
@@ -117,8 +117,8 @@ class ImdbDirectorEntity(IMDbNameEntity):
     __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
-class ImdbMusicianEntity(IMDbNameEntity):
-    """Describes the Musician Entity for Imdb"""
+class IMDbMusicianEntity(IMDbNameEntity):
+    """An IMDb musician."""
 
     table_occupation = vocabulary.MUSICIAN_QID
 
@@ -126,8 +126,8 @@ class ImdbMusicianEntity(IMDbNameEntity):
     __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
-class ImdbProducerEntity(IMDbNameEntity):
-    """Describes the Producer Entity for Imdb"""
+class IMDbProducerEntity(IMDbNameEntity):
+    """An IMDb producer."""
 
     table_occupation = vocabulary.FILM_PRODUCER_QID
 
@@ -135,8 +135,8 @@ class ImdbProducerEntity(IMDbNameEntity):
     __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
-class ImdbWriterEntity(IMDbNameEntity):
-    """Describes the Writer Entity for Imdb"""
+class IMDbWriterEntity(IMDbNameEntity):
+    """An IMDb writer."""
 
     table_occupation = vocabulary.SCREENWRITER_QID
 
@@ -144,11 +144,11 @@ class ImdbWriterEntity(IMDbNameEntity):
     __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
-class ImdbMoviePersonRelationship(BaseRelationship):
-    """Describes the relationship between a movie and a person"""
+class IMDbTitleNameRelationship(BaseRelationship):
+    """A relationship between an IMDb audiovisual work and an IMDb
+    person who took part in it."""
 
     __tablename__ = TITLE_NAME_RELATIONSHIP_TABLE
-
     __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
     def __repr__(self):
