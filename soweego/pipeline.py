@@ -76,13 +76,15 @@ def _linker(target: str, upload: bool):
     for target_type in target_database.supported_entities_for_target(target):
         if not target_type:
             continue
-        args = [target, target_type, '--upload'] if upload else [target,
-                                                                 target_type]
+        arguments = [target, target_type, '--upload'] if upload else [target,
+                                                                      target_type]
 
-        _invoke_no_exit(baseline.extract_cli, args)
+        _invoke_no_exit(baseline.extract_cli, arguments)
         _invoke_no_exit(evaluate.cli, ['slp', target, target_type])
         _invoke_no_exit(train.cli, ['slp', target, target_type])
-        _invoke_no_exit(link.cli, ['slp'].extend(args))
+        arg_linker = ['slp']
+        arg_linker.extend(arguments)
+        _invoke_no_exit(link.cli, arg_linker)
 
 
 def _validator(target: str, upload: bool):
