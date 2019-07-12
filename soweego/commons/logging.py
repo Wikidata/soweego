@@ -85,7 +85,7 @@ class TqdmLoggingHandler(logging.StreamHandler):
 
 class GzipLoggingHandler(logging.StreamHandler):
     def __init__(self, filename: str):
-        stream = gzip.open(filename, 'w')
+        stream = gzip.open(filename, 'wt')
         super().__init__(stream)
 
     # we only overwrite `Logging.StreamHandler`
@@ -93,7 +93,7 @@ class GzipLoggingHandler(logging.StreamHandler):
     def emit(self, record):
         try:
             msg = self.format(record)
-            self.stream.write(msg.encode('utf8') + '\n')
+            self.stream.write(msg + '\n')
             self.flush()
         except (KeyboardInterrupt, SystemExit):
             raise
