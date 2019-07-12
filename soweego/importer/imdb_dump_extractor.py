@@ -30,9 +30,10 @@ DUMP_URL_PERSON_INFO = 'https://datasets.imdbws.com/name.basics.tsv.gz'
 DUMP_URL_MOVIE_INFO = 'https://datasets.imdbws.com/title.basics.tsv.gz'
 
 
-class ImdbDumpExtractor(BaseDumpExtractor):
+class IMDbDumpExtractor(BaseDumpExtractor):
     """Download IMDb dumps, extract data, and
-    populate a database instance."""
+    populate a database instance.
+    """
 
     # Counters
     n_actors = 0

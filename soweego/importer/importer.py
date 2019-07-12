@@ -23,14 +23,14 @@ from soweego.commons import keys, target_database, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.discogs_dump_extractor import DiscogsDumpExtractor
-from soweego.importer.imdb_dump_extractor import ImdbDumpExtractor
+from soweego.importer.imdb_dump_extractor import IMDbDumpExtractor
 from soweego.importer.musicbrainz_dump_extractor import MusicBrainzDumpExtractor
 
 LOGGER = logging.getLogger(__name__)
 
 DUMP_EXTRACTOR = {
     keys.DISCOGS: DiscogsDumpExtractor,
-    keys.IMDB: ImdbDumpExtractor,
+    keys.IMDB: IMDbDumpExtractor,
     keys.MUSICBRAINZ: MusicBrainzDumpExtractor,
 }
 
