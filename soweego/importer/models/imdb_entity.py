@@ -41,8 +41,7 @@ class IMDbNameEntity(BaseEntity):
     **Attributes**:
 
     - **gender** (string(10)) - a gender
-    - **occupations** (string(255)) - a string list of Wikidata QIDs
-      identifying occupations
+    - **occupations** (string(255)) - a string list of Wikidata occupation QIDs
 
     """
 
