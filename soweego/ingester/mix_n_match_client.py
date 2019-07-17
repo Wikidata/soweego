@@ -294,7 +294,7 @@ def _import_matches(
     url_prefix,
 ):
     for qid, tid, score in tqdm(links_reader, total=n_links):
-        url = '' if url_prefix is None else url_prefix + tid
+        url = '' if url_prefix is None else f'{url_prefix}{tid}'
 
         db_entity = mix_n_match.MnMEntry()
         _set_entry_fields(
