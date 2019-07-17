@@ -1,3 +1,5 @@
+.. _new:
+
 Import a new catalog
 ====================
 

@@ -159,8 +159,9 @@ API documentation
 Contribute
 ----------
 
-The best way is to :ref:`add a new catalog <add-a-new-catalog>`.
-don't forget to have a look at the following guidelines.
+.. note:: The best way is to :ref:`new`.
+
+Please have a look at the following guidelines.
 
 .. toctree::
    :maxdepth: 1
