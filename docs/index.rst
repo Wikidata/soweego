@@ -129,7 +129,7 @@ How-tos
 
    pipeline
    new_catalog
-   test_prod
+   dev_prod
    recordlinkage
 
 

@@ -1,4 +1,4 @@
-Set up test and production environments
+Development and production environments
 =======================================
 
 Get started
@@ -12,8 +12,11 @@ Get started
    git clone https://github.com/Wikidata/soweego.git
    cd soweego
 
-Test environment
-----------------
+
+.. _dev:
+
+Development environment
+-----------------------
 
 It's useful when you are developing or testing some features. In this
 environment, you don't need to be afraid of breaking stuff.
