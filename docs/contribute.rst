@@ -1,3 +1,7 @@
+Contribution guidelines
+=======================
+
+
 Workflow
 --------
 
@@ -24,7 +28,7 @@ Coding
 3. **Documentation** - write `Sphinx <https://www.sphinx-doc.org/>`_ docstrings at least for public functions and classes:
 
     - use `reST <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_ markup;
-    - stick to `PEP 257 <https://www.python.org/dev/peps/pep-0257/>`_ and _`PEP 287 <https://www.python.org/dev/peps/pep-0287/>`_;
+    - stick to `PEP 257 <https://www.python.org/dev/peps/pep-0257/>`_ and `PEP 287 <https://www.python.org/dev/peps/pep-0287/>`_;
     - pay special attention to `info field lists <https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html#info-field-lists>`_;
     - `cross-reference <https://www.sphinx-doc.org/en/master/usage/restructuredtext/domains.html#cross-referencing-python-objects>`_ Python objects.
 

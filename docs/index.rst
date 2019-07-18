@@ -52,7 +52,9 @@ Highlights
 Get Ready
 ---------
 
-Install `Docker <https://docs.docker.com/install/>`_, then enter soweego::
+Install `Docker <https://docs.docker.com/install/>`_
+and `Compose <https://docs.docker.com/compose/install/>`_,
+then enter soweego::
 
    $ git clone https://github.com/Wikidata/soweego.git
    $ cd soweego
@@ -120,6 +122,8 @@ Just two things to remember:
 1. you can always get ``--help``;
 2. each command may have sub-commands.
 
+Find all details in the :ref:`cli_docs`.
+
 
 How-tos
 -------
@@ -130,10 +134,11 @@ How-tos
    pipeline
    new_catalog
    dev_prod
-   recordlinkage
 
 
-CLI documentation
+.. _cli_docs:
+
+CLI Documentation
 -----------------
 
 .. toctree::
@@ -142,7 +147,7 @@ CLI documentation
    cli
 
 
-API documentation
+API Documentation
 -----------------
 
 .. toctree::
@@ -159,14 +164,25 @@ API documentation
 Contribute
 ----------
 
-.. note:: The best way is to :ref:`new`.
+.. note:: the best way is to :ref:`new`.
 
-Please have a look at the following guidelines.
+Please have a look here:
+
+.. toctree::
+   :maxdepth: 2
+
+   contribute
+
+
+Experiments & notes
+-------------------
 
 .. toctree::
    :maxdepth: 1
-
-   contribute
+   
+   experiments
+   evaluations
+   recordlinkage
 
 
 License

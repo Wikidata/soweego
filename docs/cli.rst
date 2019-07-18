@@ -1,7 +1,9 @@
-The Command Line
+.. _clidoc:
+
+The command line
 ================
 
-.. note:: Start your exploration journey of the command line interface (*CLI*) with ::
+.. note:: start your exploration journey of the command line interface (*CLI*) with ::
 
    $ python -m soweego
 
