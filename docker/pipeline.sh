@@ -1,7 +1,5 @@
 #!/bin/bash
 
-source .env
-
 PROGNAME=$0
 
 usage() {
@@ -61,4 +59,5 @@ fi
 
 # Builds and runs docker
 docker build --rm -f "Dockerfile.pipeline" -t maxfrax/soweego:pipeline .
-docker run -it --rm --name soweego-pipeline-$RANDOM --env-file .env --volume "${DOCKER_SHARED_FOLDER}":"/app/shared" maxfrax/soweego:pipeline "$@"
+docker run -it --rm --name soweego-pipeline-$RANDOM --volume "${DOCKER_SHARED_FOLDER}":"/app/shared" maxfrax/soweego:pipeline "$@"
+

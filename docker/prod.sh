@@ -1,7 +1,5 @@
 #!/bin/bash
 
-source .env
-
 PROGNAME=$0
 
 usage() {
@@ -32,4 +30,5 @@ fi
 
 
 docker build --rm -f "Dockerfile.test" -t maxfrax/soweego:latest .
-docker run -it --rm --name soweego-prod-$RANDOM --env-file .env --volume "${DOCKER_SHARED_FOLDER}":"/app/shared" --volume "$(pwd)":"/app/soweego" maxfrax/soweego:latest /bin/bash
+docker run -it --rm --name soweego-prod-$RANDOM --volume "${DOCKER_SHARED_FOLDER}":"/app/shared" --volume "$(pwd)":"/app/soweego" maxfrax/soweego:latest /bin/bash
+
