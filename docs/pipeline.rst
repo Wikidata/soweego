@@ -1,97 +1,98 @@
-Run soweego
-===========
+Run the pipeline
+================
 
-*soweego* can be seen as a **pipeline of submodules**. Maybe, is best to
-say that we designed it explicitly in this way. They can be combined at
-will, but in the following lines, you will read how we do it.
+*soweego* is a pipeline of **Python modules** by design.
+Each module can be used alone or combined with others at will.
 
-Our flow starts by running the **importing process**, which translates
-the target dumps in structured database tables. After that, we run the
-**linking process**. In this step, the linker itself gathers the right
-up to date dataset from Wikidata and tries to match it with the
-previously imported data. The last step we execute is **validation**.
-Basically, it scans the linked entities available in Wikidata to perform
-some naive quality checks. Each entity approved by the validator is
-consequently enriched with all the assertions minable from our imported
-data.
+In this page, you will grasp the typical workflow:
 
-What do I need to run your setup?
----------------------------------
+1. :ref:`import <importer>` the dumps of a given target catalog into a SQL database
+2. :ref:`link <linker>` the imported catalog to Wikidata
+3. :ref:`sync <validator>` Wikidata to the imported catalog
 
-First of all, you need Docker up and running on the system. Then, since
-our “production” environment has benefited from Wikimedia Foundations’s
-database, you need to provide soweego a working database yourself 
-(MariaDB 10.36 is the only database tested). To tell soweego where
-to find your database, you need to create a JSON file with the following
-structure:
 
-.. code:: json
+Get set
+-------
+
+1. Install `Docker <https://docs.docker.com/install/>`_
+2. install `MariaDB <https://mariadb.com/downloads/#mariadb_platform>`_
+3. create a credentials JSON file like this:
+
+::
 
    {
        "DB_ENGINE": "mysql+pymysql",
-       "HOST": "*ip address or equivalent*",
-       "USER": "*database user*",
-       "PASSWORD": "*database user password*",
+       "HOST": "${DB_IP_ADDRESS}",
+       "USER": "${DB_USER}",
+       "PASSWORD": "${DB_PASSWORD}",
        "TEST_DB": "soweego",
-       "PROD_DB": "*database name*",
-       "WIKIDATA_API_PASSWORD": "",    # Optional wikidata api login
-       "WIKIDATA_API_USER": ""         # Optional wikidata api login
+       "PROD_DB": "${DB_NAME}",
+       "WIKIDATA_API_USER": "${WIKI_USER_NAME}",
+       "WIKIDATA_API_PASSWORD": "${WIKI_PASSWORD}"
    }
 
-Finally, ensure to have a folder in which soweego will write
-results/helper files. soweego favourite food is disk space, but usually
-with 20GB it should be sated.
+``WIKIDATA_API_USER`` and ``WIKIDATA_API_PASSWORD`` are optional:
+set them to run authenticated requests against the
+`Wikidata Web API <https://www.wikidata.org/w/api.php>`_.
+If you have a `Wikidata bot account <https://www.wikidata.org/wiki/Wikidata:Bots>`_,
+processing will speed up.
 
-How do I actually run it?
--------------------------
+*soweego*'s favourite food is disk space, so make sure you have enough:
+**20 GB** should sate its appetite.
 
-1. Clone soweego from `GitHub <https://github.com/wikidata/soweego/>`__;
-2. Open a bash and move in the project root;
-3. Choose a target to run eg Musicbrainz, Discogs, ImDB.
-4. Launch the following command replacing the variables with your
-   absolute paths and append your target:
-   ``./docker/launch_pipeline.sh -c ${ABSOLUTE_PATH_TO_THE_JSON} -s ${ABSOLUTE_ PATH_TO_THE_OUTPUT_FOLDER} imdb``
 
-Additional parameters tailable to your command:
+Go
+--
 
-+-----------------------------------+-----------------------------------+
-| Argument                          | Description                       |
-+===================================+===================================+
-| ``--validator`` /                 | Enables/disables the validation   |
-| ``--no-validator``                | step                              |
-+-----------------------------------+-----------------------------------+
-| ``--importer`` /                  | Enables/disables the importing    |
-| ``--no-importer``                 | step                              |
-+-----------------------------------+-----------------------------------+
-| ``--linker`` / ``--no-linker``    | Enables/disables the linking step |
-+-----------------------------------+-----------------------------------+
-| ``--upload`` / ``--no-upload``    | Enables/disable the upload to     |
-|                                   | Wikidata of the results           |
-+-----------------------------------+-----------------------------------+
+::
 
-Important
-~~~~~~~~~
+   $ git clone https://github.com/Wikidata/soweego.git
+   $ cd soweego
+   $ ./docker/pipeline.sh -c ${CREDENTIALS_FILE} -s ${OUTPUT_FOLDER} ${CATALOG}
 
-The command does not only run soweego, but it takes care of some side
-tasks. Initially, it backups the folder you give as the parameter. It will keep atmost 3 backups.
-When creating the 4th backup, the oldest
-is deleted. After the archiving step, the given folder is emptied.
-Subsequently, it checks out the master branch and pulls the latest
-changes (deleting all the pending edits in the local repository).
-Finally, our soweego setup is launched.
+``${OUTPUT_FOLDER}`` is a path to a folder on your local filesystem:
+this is where all *soweego* output goes.
+Pick ``${CATALOG}`` from ``discogs``, ``imdb``, or ``musicbrainz``.
+
+
+``pipeline.sh``
+~~~~~~~~~~~~~~~
+
+This script does not only run *soweego*, but also takes care of some side tasks:
+
+- backs up the output folder in a tar ball
+- keeps at most 3 backups
+- empties the output folder
+- pulls the latest *soweego* master branch.
+  **N.B.:** this will **erase any pending edits**
+  in the local git repository
+
+==================================== =========== ==============================
+             **Flag**                **Default**        **Description**
+==================================== =========== ==============================
+``--importer`` / ``--no-importer``   enabled     enable / disable the importer
+``--linker`` / ``--no-linker``       enabled     enable / disable the linker
+``--validator`` / ``--no-validator`` enabled     enable / disable the validator
+``--upload`` / ``--no-upload``       disabled    enable / disable the upload
+                                                 of results to Wikidata
+==================================== =========== ==============================
+
 
 Under the hood
 --------------
 
-The submodules arrangment is actually defined in ``pipeline.py`` and is
-launched by ``python -m soweego run``. Our setup script launches
-``python -m soweego run`` as latest command and appends all the
-arguments from the target (eg. musicbrainz, discogs, imdb) onwards.
+The actual pipeline is implemented in ``soweego/pipeline.py``,
+so you can also launch it with ::
+   
+   python -m soweego run
+   
+See :ref:`clidoc` and :ref:`pipeline` for more details.
+
 
 Cron jobs
 ---------
 
-Our setup is launched periodically for each target. We obviously rely on
-cron jobs to achieve this. You can find in ``scripts/cron`` the helpers
-we call though the cron tab. They can be reused easily just by changing
-all the paths to adhere to your environment setup.
+*soweego* periodically runs pipelines for each supported catalog via
+`cron <https://en.wikipedia.org/wiki/Cron>`_ jobs.
+You can find ``crontab``-ready scripts in the ``scripts/cron`` folder.
+Feel free to reuse them! Just remember to set the appropriate paths.

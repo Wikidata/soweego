@@ -17,6 +17,8 @@ As a reminder, make sure you are inside Docker::
    root@70c9b4894a30:/app/soweego#
 
 
+.. _importer:
+
 Importer
 --------
 
@@ -81,6 +83,8 @@ Ingester
    :prog: works
 
 
+.. _linker:
+
 Linker
 ------
 
@@ -117,6 +121,8 @@ Linker
    :prog: train
 
 
+.. _pipeline:
+
 Pipeline
 --------
 
@@ -127,6 +133,8 @@ Pipeline
 .. click:: soweego.pipeline:cli
    :prog: run
 
+
+.. _validator:
 
 Validator AKA Sync
 ------------------
