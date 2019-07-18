@@ -96,7 +96,7 @@ Just create a credentials JSON file like this::
 
    {
        "DB_ENGINE": "mysql+pymysql",
-       "HOST": "${IP_ADDRESS}",
+       "HOST": "${DB_IP_ADDRESS}",
        "USER": "${DB_USER}",
        "PASSWORD": "${DB_PASSWORD}",
        "TEST_DB": "soweego",
@@ -124,10 +124,10 @@ Check if everything went fine with a shot of ::
 
 
 ``prod.sh`` options
-^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~
 
 ========== ================== =============================================================== =================================================================================
-**Option** **Expected value** **Default value**                                                  **Description**
+**Option** **Expected value**                      **Default value**                                                        **Description**
 ========== ================== =============================================================== =================================================================================
 ``-s``     a directory path   ``/tmp/soweego_shared``                                         Directory shared between the *soweego* Docker container and your local filesystem
 ``-c``     a file path        ``${PROJECT_ROOT}/soweego/importer/resources/credentials.json`` Credentials file
