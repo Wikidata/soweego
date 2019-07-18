@@ -15,6 +15,7 @@ Oh, *soweego* also embeds [Machine Learning](https://en.wikipedia.org/wiki/Machi
 
 # Official Project Page
 *soweego* is made possible thanks to the [Wikimedia Foundation](https://wikimediafoundation.org/):
+
 https://meta.wikimedia.org/wiki/Grants:Project/Hjfocs/soweego
 
 # Documentation
@@ -90,7 +91,7 @@ Just two things to remember:
 2. each command may have sub-commands.
 
 # Contribute
-The best way is to [import a new catalog](https://soweego.readthedocs.io/new_catalog.html).
+The best way is to [import a new catalog](https://soweego.readthedocs.io/en/latest/new_catalog.html).
 Please also have a look at the [guidelines](CONTRIBUTING.md).
 
 # License
