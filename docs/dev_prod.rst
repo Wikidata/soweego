@@ -1,16 +1,20 @@
 Development and production environments
 =======================================
 
-Get started
------------
+.. note::
 
-1. `Install Docker <https://www.docker.com/get-started>`__;
-2. In your command line launch the following commands:
+   as a *soweego* user or contributor, you will typically use the :ref:`dev`.
+   The :ref:`prod` is tailored for
+   `Cloud VPS project <https://tools.wmflabs.org/openstack-browser/project/soweego>`_ members.
 
-.. code:: bash
 
-   git clone https://github.com/Wikidata/soweego.git
-   cd soweego
+First of all
+------------
+
+Install `Docker <https://docs.docker.com/install/>`_, then clone soweego::
+
+   $ git clone https://github.com/Wikidata/soweego.git
+   $ cd soweego
 
 
 .. _dev:
@@ -18,90 +22,113 @@ Get started
 Development environment
 -----------------------
 
-It's useful when you are developing or testing some features. In this
-environment, you don't need to be afraid of breaking stuff.
+Use it to run or play around *soweego* on your local machine.
+And to contribute new features, of course!
 
-It provides you with a MariaDB instance and a BASH shell ready to run
-*soweego* CLI commands. You are free to change *soweego* code while the
-shell is running, the code is synced.
+This environment ships with a `MariaDB <https://mariadb.com/>`_ database instance
+and a `BASH <https://www.gnu.org/software/bash/>`_ shell.
+It is ready to run :ref:`clidoc`.
+Feel free to hack *soweego* while the environment is running: your code is synced.
 
-What do you need to run it?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Get set
+~~~~~~~
 
--  `Docker <https://www.docker.com/get-started>`__
--  `Docker Compose <https://docs.docker.com/compose/install/>`__
+Just install `Docker Compose <https://docs.docker.com/compose/install/>`_.
 
-How do you run it?
+Go
+~~
+
+::
+
+   $ ./docker/run.sh
+   Building soweego
+   ...
+
+   root@70c9b4894a30:/app/soweego#
+
+You are now in a BASH shell with a fully working *soweego* instance.
+Check if everything went fine with a shot of ::
+
+   python -m soweego
+
+
+``run.sh`` options
 ~~~~~~~~~~~~~~~~~~
 
-1. In your terminal, move to the project root;
-2. Launch ``./scripts/docker/launch_test.sh``;
-3. You are now in a Docker container BASH shell with a fully working
-   soweego instance;
-4. You are set. To check if it's working, try ``python -m soweego``.
+========== ================== ======================= =================================================================================
+**Option** **Expected value** **Default value**       **Description**
+========== ================== ======================= =================================================================================
+``-s``     a directory path   ``/tmp/soweego_shared`` Directory shared between the *soweego* Docker container and your local filesystem
+========== ================== ======================= =================================================================================
 
-.. _launch_testsh-options:
+Access the local database instance
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-launch_test.sh options
-^^^^^^^^^^^^^^^^^^^^^^
+As easy as::
 
-========== ================== ======================= ================================================================================
-**Option** **Expected Value** **Default Value**       **Description**
-========== ================== ======================= ================================================================================
--s         directory path     ``/tmp/soweego_shared`` Tells docker which folder in your machine will be shared with soweego container.
-========== ================== ======================= ================================================================================
+   $ docker exec -it soweego_db_1 /bin/bash
+   root@0f51e7c512df:/# mysql -uroot -hlocalhost -pdba soweego
+   MariaDB [soweego]>
 
-How do you connect with the local database instance?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The test environment comes with a running
-`MariaDB <https://mariadb.com/>`__ instance. To query it from your
-terminal:
-
-1. ``docker exec -it soweego_db_1 /bin/bash``;
-2. ``mysql -uroot -hlocalhost -pdba soweego``.
+.. _prod:
 
 Production environment
 ----------------------
 
-It's useful when you need to run *soweego* against the Wikimedia
-database. It is also helpful to run the system against a custom
-database. Creating a credentials file is all you need to do to chose the
-database. Note: you need access to the Wikimedia infrastructure to run
-*soweego* on it.
+*soweego* lives in a Wikimedia
+`Cloud VPS project <https://tools.wmflabs.org/openstack-browser/project/soweego>`_,
+and this is the environment deployed there.
+Please contact the project administrators if you want to help with the VPS machine.
 
-This environment provides you with a BASH shell ready to run *soweego*
-CLI commands. You are free to change *soweego* code while the shell is
-running, the code is synced.
+You can also use it to run *soweego* on a machine that already has a working database
+(typically a server).
 
-.. _what-do-you-need-to-run-it-1:
+This environment ships with a `BASH <https://www.gnu.org/software/bash/>`_ shell
+ready to run :ref:`clidoc`.
+Feel free to hack *soweego* while the environment is running: your code is synced.
 
-What do you need to run it?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
--  `Docker <https://www.docker.com/get-started>`__
--  Database credentials file, like
-   ``${PROJECT_ROOT}/soweego/importer/resources/db_credentials.json``.
+Get set
+~~~~~~~
 
-.. _how-do-you-run-it-1:
+Just create a credentials JSON file like this::
 
-How do you run it?
-~~~~~~~~~~~~~~~~~~
+   {
+       "DB_ENGINE": "mysql+pymysql",
+       "HOST": "${IP_ADDRESS}",
+       "USER": "${DB_USER}",
+       "PASSWORD": "${DB_PASSWORD}",
+       "TEST_DB": "soweego",
+       "PROD_DB": "${DB_NAME}"
+   }
 
-1. In your terminal, move to the project root;
-2. Launch ``./scripts/docker/launch_prod.sh``;
-3. You are now in a Docker container BASH shell with a fully working
-   *soweego* instance;
-4. You are set. To check if it's working, try ``python -m soweego``.
+Don't forget to set the ``${...}`` variables!
 
-.. _launch_prodsh-options:
 
-launch_prod.sh options
-^^^^^^^^^^^^^^^^^^^^^^
+Go
+~~
 
-========== ================== ================================================================== ==================================================================================
-**Option** **Expected Value** **Default Value**                                                  **Description**
-========== ================== ================================================================== ==================================================================================
--s         directory path     ``/tmp/soweego_shared``                                            Tells docker which folder in your machine will be shared with *soweego* container.
--c         file path          ``${PROJECT_ROOT}/soweego/importer/resources/db_credentials.json`` Sets which file in your machine *soweego* will read for database credentials.
-========== ================== ================================================================== ==================================================================================
+::
+
+   $ ./docker/prod.sh -c ${YOUR_CREDENTIALS_FILE}
+   Sending build context to Docker daemon
+   ...
+
+   root@62c602c23fa9:/app/soweego#
+
+You are now in a BASH shell with a fully working *soweego* instance.
+Check if everything went fine with a shot of ::
+
+   python -m soweego
+
+
+``prod.sh`` options
+^^^^^^^^^^^^^^^^^^^
+
+========== ================== =============================================================== =================================================================================
+**Option** **Expected value** **Default value**                                                  **Description**
+========== ================== =============================================================== =================================================================================
+``-s``     a directory path   ``/tmp/soweego_shared``                                         Directory shared between the *soweego* Docker container and your local filesystem
+``-c``     a file path        ``${PROJECT_ROOT}/soweego/importer/resources/credentials.json`` Credentials file
+========== ================== =============================================================== =================================================================================
