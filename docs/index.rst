@@ -166,7 +166,7 @@ Contribute
 
 .. note:: the best way is to :ref:`new`.
 
-Please have a look here:
+Please also have a look here:
 
 .. toctree::
    :maxdepth: 2
