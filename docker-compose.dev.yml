@@ -5,7 +5,7 @@ services:
     tty: true
     build:
       context: .
-      dockerfile: Dockerfile.test
+      dockerfile: Dockerfile.dev
     depends_on:
       - db
     volumes:
