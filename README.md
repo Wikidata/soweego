@@ -15,6 +15,7 @@ Oh, *soweego* also embeds [Machine Learning](https://en.wikipedia.org/wiki/Machi
 
 # Official Project Page
 *soweego* is made possible thanks to the [Wikimedia Foundation](https://wikimediafoundation.org/):
+
 https://meta.wikimedia.org/wiki/Grants:Project/Hjfocs/soweego
 
 # Documentation
