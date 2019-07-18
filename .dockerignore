@@ -1,4 +1,3 @@
-# comment
 */temp*
 */*/temp*
 temp?
@@ -10,6 +9,5 @@ pylint
 README.md
 requirements
 scripts
-!scripts/docker/config/*
 tests
 debug.log
