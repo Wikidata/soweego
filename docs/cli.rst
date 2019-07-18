@@ -7,7 +7,7 @@ The command line
 
    $ python -m soweego
 
-As a reminder, make sure you are inside Docker::
+As a reminder, make sure you are inside *soweego*::
 
    $ cd soweego && ./docker/run.sh
    Building soweego
