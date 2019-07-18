@@ -54,7 +54,7 @@ Get Ready
 
 Install `Docker <https://docs.docker.com/install/>`_
 and `Compose <https://docs.docker.com/compose/install/>`_,
-then enter soweego::
+then enter *soweego*::
 
    $ git clone https://github.com/Wikidata/soweego.git
    $ cd soweego
@@ -94,7 +94,7 @@ Results are in ``/app/shared/results``.
 Use the Command Line
 --------------------
 
-You can launch every single soweego action with CLI commands:
+You can launch every single *soweego* action with CLI commands:
 
 .. code-block:: text
 
