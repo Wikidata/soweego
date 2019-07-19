@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 cd /srv/prod/soweego/
 /usr/bin/tmux kill-session -t discogs
 /usr/bin/tmux new-session -d -s discogs

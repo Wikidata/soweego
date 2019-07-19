@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 cd /srv/prod/soweego/
 /usr/bin/tmux kill-session -t imdb
 /usr/bin/tmux new-session -d -s imdb
