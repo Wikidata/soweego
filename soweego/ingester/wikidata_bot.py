@@ -142,7 +142,7 @@ def identifiers_cli(catalog, entity, identifiers, sandbox):
 
     $ echo '{ "Q446627": "266995" }' > rhell.json
 
-    $ python -m soweego ingest identifiers discogs musician rhell.json
+    $ python -m soweego ingester identifiers discogs musician rhell.json
 
     Result:
 
@@ -177,7 +177,7 @@ def people_cli(catalog, statements, sandbox):
 
     $ echo Q312387,P463,Q483407 > joey.csv
 
-    $ python -m soweego ingest people discogs joey.csv
+    $ python -m soweego ingester people discogs joey.csv
 
     Result:
 
@@ -219,7 +219,7 @@ def works_cli(catalog, statements, sandbox):
 
     $ echo Q4354548,P175,Q5969,139984 > cmon.csv
 
-    $ python -m soweego ingest works discogs cmon.csv
+    $ python -m soweego ingester works discogs cmon.csv
 
     Result:
 
