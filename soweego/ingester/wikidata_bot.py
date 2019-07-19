@@ -32,6 +32,7 @@ from typing import Iterable
 
 import click
 import pywikibot
+from pywikibot.exceptions import NoPage
 
 from soweego.commons import target_database
 from soweego.commons.constants import QID_REGEX
@@ -552,7 +553,12 @@ def _essential_checks(
     while item.isRedirectPage():
         item = item.getRedirectTarget()
 
-    data = item.get()
+    try:
+        data = item.get()
+    except NoPage:
+        LOGGER.warning("%s doesn't exist anymore", subject)
+        return None, None
+
     # No data at all
     if not data:
         LOGGER.warning('%s has no data at all', subject)
