@@ -4,10 +4,12 @@ PROGNAME=$0
 
 usage() {
   cat << EOF >&2
-Usage: $PROGNAME [-c FILE] [-s DIRECTORY]
+Usage: $PROGNAME [-c FILE] [-s DIRECTORY] [ARGS]
 
 -c FILE       Credentials file. Default: soweego/importer/resources/credentials.json
 -s DIRECTORY  Output directory. Default: /tmp/soweego_shared/
+
+ARGS are optional arguments passed to the soweego pipeline.
 
 EOF
   exit 1
@@ -33,13 +35,13 @@ shift "$((OPTIND - 1))"
 
 PARENT_FOLDER="$(dirname ${DOCKER_SHARED_FOLDER})"
 FOLDER_NAME="$(basename ${DOCKER_SHARED_FOLDER})"
-NUMBER_OF_BACKUPS=$(find ${PARENT_FOLDER} -maxdepth 1 -name "${FOLDER_NAME}*.tar.bzip2" | wc -l)
+NUMBER_OF_BACKUPS=$(find ${PARENT_FOLDER} -maxdepth 1 -name "${FOLDER_NAME}*.tar.bz2" | wc -l)
 NUMBER_OF_BACKUPS="${NUMBER_OF_BACKUPS// /}"
 echo "${NUMBER_OF_BACKUPS} backups available"
 
 # Remove the oldest backup
 if [[ ${NUMBER_OF_BACKUPS} = "3" ]]; then
-    to_rem=$(find ${PARENT_FOLDER} -maxdepth 1 -name "${FOLDER_NAME}*.tar.bzip2" | sort | head -n 1)
+    to_rem=$(find ${PARENT_FOLDER} -maxdepth 1 -name "${FOLDER_NAME}*.tar.bz2" | sort | head -n 1)
     echo "Deleting older backup: ${to_rem}"
     rm -f ${to_rem}
 fi
@@ -48,7 +50,7 @@ fi
 cd "${PARENT_FOLDER}"
 # Back up and reset the Docker shared folder
 NOW=$(date +"%Y_%m_%d_%H_%M")
-tar -cvjf "${FOLDER_NAME}_${NOW}.tar.bzip2" ${FOLDER_NAME}
+tar -cvjf "${FOLDER_NAME}_${NOW}.tar.bz2" ${FOLDER_NAME}
 rm -rf ${FOLDER_NAME}
 mkdir -p ${FOLDER_NAME}
 )
