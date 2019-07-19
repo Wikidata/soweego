@@ -46,9 +46,11 @@ if [[ ${NUMBER_OF_BACKUPS} = "3" ]]; then
     rm -f ${to_rem}
 fi
 
+# Back up and reset the Docker shared folder
 (
 cd "${PARENT_FOLDER}"
-# Back up and reset the Docker shared folder
+# Restore permissions due to Docker writing files as root
+sudo chown -R hjfocs:wikidev ${FOLDER_NAME}
 NOW=$(date +"%Y_%m_%d_%H_%M")
 tar -cvjf "${FOLDER_NAME}_${NOW}.tar.bz2" ${FOLDER_NAME}
 rm -rf ${FOLDER_NAME}
