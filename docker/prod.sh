@@ -1,13 +1,13 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 PROGNAME=$0
 
 usage() {
   cat << EOF >&2
-Usage: $PROGNAME [-s <dir>] [-c <file>] 
+Usage: $PROGNAME [-c FILE] [-s DIRECTORY]
 
--s <dir>: ...
--f <file>: ...
+-c FILE       Credentials file. Default: soweego/importer/resources/credentials.json
+-s DIRECTORY  Output directory. Default: /tmp/soweego_shared/
 
 EOF
   exit 1
@@ -15,10 +15,10 @@ EOF
 
 export DOCKER_SHARED_FOLDER="/tmp/soweego_shared/"
 
-while getopts :s:c: o; do
+while getopts :c:s: o; do
   case $o in
-    (s) export DOCKER_SHARED_FOLDER="$OPTARG";;
     (c) export CREDENTIALS_PATH="$OPTARG";;
+    (s) export DOCKER_SHARED_FOLDER="$OPTARG";;
     (*) usage
   esac
 done
