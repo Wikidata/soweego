@@ -600,6 +600,9 @@ def _check_for_same_value(
 
 
 def _parse_value(value):
+    # It may not be a string
+    if not isinstance(value, str):
+        value = str(value)
     # Build an item in case of QID
     value_is_qid = search(QID_REGEX, value)
     if value_is_qid:
