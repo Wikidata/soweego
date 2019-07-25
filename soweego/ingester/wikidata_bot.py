@@ -33,6 +33,7 @@ from typing import Iterable
 import click
 import pywikibot
 from pywikibot.exceptions import NoPage
+from pywikibot.data.api import APIError
 
 from soweego.commons import target_database
 from soweego.commons.constants import QID_REGEX
@@ -650,32 +651,47 @@ def _reference(claim, stated_in, person_pid, person_tid):
     STATED_IN_REFERENCE.setTarget(pywikibot.ItemPage(REPO, stated_in))
 
     if None in (person_pid, person_tid):
-        claim.addSources([STATED_IN_REFERENCE, RETRIEVED_REFERENCE])
-
-        LOGGER.info(
-            'Added (%s, %s), (%s, %s) reference node',
-            STATED_IN_REFERENCE.getID(),
-            stated_in,
-            RETRIEVED_REFERENCE.getID(),
-            TODAY,
+        reference_log = (
+            f'({STATED_IN_REFERENCE.getID()}, {stated_in}), '
+            f'({RETRIEVED_REFERENCE.getID()}, {TODAY})'
         )
+
+        try:
+            claim.addSources([STATED_IN_REFERENCE, RETRIEVED_REFERENCE])
+
+            LOGGER.info(
+                'Added %s reference node',
+                reference_log
+            )
+        except APIError as error:
+            LOGGER.warning(
+                'Could not add %s reference node: %s',
+                reference_log, error
+            )
     else:
         tid_reference = pywikibot.Claim(REPO, person_pid, is_reference=True)
         tid_reference.setTarget(person_tid)
 
-        claim.addSources(
-            [STATED_IN_REFERENCE, tid_reference, RETRIEVED_REFERENCE]
+        reference_log = (
+            f'({STATED_IN_REFERENCE.getID()}, {stated_in}), '
+            f'({person_pid}, {person_tid}), '
+            f'({RETRIEVED_REFERENCE.getID()}, {TODAY})'
         )
 
-        LOGGER.info(
-            'Added (%s, %s), (%s, %s), (%s, %s) reference node',
-            STATED_IN_REFERENCE.getID(),
-            stated_in,
-            person_pid,
-            person_tid,
-            RETRIEVED_REFERENCE.getID(),
-            TODAY,
-        )
+        try:
+            claim.addSources(
+                [STATED_IN_REFERENCE, tid_reference, RETRIEVED_REFERENCE]
+            )
+
+            LOGGER.info(
+                'Added %s reference node',
+                reference_log
+            )
+        except APIError as error:
+            LOGGER.warning(
+                'Could not add %s reference node: %s',
+                reference_log, error
+            )
 
 
 def _delete_or_deprecate(action, qid, tid, catalog, catalog_pid) -> None:
