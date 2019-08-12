@@ -13,7 +13,7 @@ import logging
 import os
 import sys
 from re import search
-from typing import Iterator
+from typing import Iterator, Tuple
 
 import click
 import joblib
@@ -156,20 +156,7 @@ def execute(
             else classifier.prob(feature_vectors)
         )
 
-        # Full name rule: if names differ, it's not a link
-        if name_rule:
-            LOGGER.info('Applying full names rule ...')
-            predictions = pd.DataFrame(predictions).apply(
-                _zero_when_different_names,
-                axis=1,
-                args=(wd_chunk, target_chunk),
-            )
-
-        # Wikidata URL rule: if the target ID has a Wikidata URL, it's a link
-        if target_chunk.get(keys.URL) is not None:
-            predictions = pd.DataFrame(predictions).apply(
-                _one_when_wikidata_link_correct, axis=1, args=(target_chunk,)
-            )
+        predictions = _apply_linking_rules(name_rule, predictions, target_chunk, wd_chunk)
 
         # Filter by threshold
         above_threshold = predictions[predictions >= threshold]
@@ -217,6 +204,30 @@ def _classification_set_generator(catalog, entity, dir_io) -> Iterator[Tuple[pd.
         yield wd_chunk, target_chunk, feature_vectors
 
         LOGGER.info('Chunk %d classified', i)
+
+
+def _apply_linking_rules(name_rule, predictions, target_chunk, wd_chunk):
+    # Full name rule: if names differ, it's not a link
+    if name_rule:
+        LOGGER.info('Applying full names rule ...')
+        predictions = pd.DataFrame(predictions).apply(
+            _zero_when_different_names,
+            axis=1,
+            args=(wd_chunk, target_chunk),
+        )
+    # Wikidata URL rule: if the target ID has a Wikidata URL, it's a link
+    if target_chunk.get(keys.URL) is not None:
+        predictions = pd.DataFrame(predictions).apply(
+            _one_when_wikidata_link_correct, axis=1, args=(target_chunk,)
+        )
+    return predictions
+
+def _get_unique_predictions_above_threshold(predictions, threshold) -> pd.DataFrame:
+    # Filter by threshold
+    above_threshold = predictions[predictions >= threshold]
+
+    # Remove duplicates
+    return above_threshold[~above_threshold.index.duplicated()]
 
 
 def _handle_io(classifier, catalog, entity, dir_io):
