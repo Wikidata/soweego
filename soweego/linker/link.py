@@ -139,8 +139,49 @@ def execute(
       will be read/written
     :return: the generator yielding chunks of links
     """
-    goal = 'classification'
     classifier = joblib.load(model_path)
+
+    for wd_chunk, target_chunk, feature_vectors in _classification_set_generator(catalog,
+                                                                                 entity,
+                                                                                 dir_io):
+
+        # The classification set must have the same feature space
+        # as the training one
+        _add_missing_feature_columns(classifier, feature_vectors)
+
+        predictions = (
+            # LSVM doesn't support probability scores
+            classifier.predict(feature_vectors)
+            if isinstance(classifier, rl.SVMClassifier)
+            else classifier.prob(feature_vectors)
+        )
+
+        # Full name rule: if names differ, it's not a link
+        if name_rule:
+            LOGGER.info('Applying full names rule ...')
+            predictions = pd.DataFrame(predictions).apply(
+                _zero_when_different_names,
+                axis=1,
+                args=(wd_chunk, target_chunk),
+            )
+
+        # Wikidata URL rule: if the target ID has a Wikidata URL, it's a link
+        if target_chunk.get(keys.URL) is not None:
+            predictions = pd.DataFrame(predictions).apply(
+                _one_when_wikidata_link_correct, axis=1, args=(target_chunk,)
+            )
+
+        # Filter by threshold
+        above_threshold = predictions[predictions >= threshold]
+
+        # Remove duplicates
+        yield above_threshold[~above_threshold.index.duplicated()]
+
+
+def _classification_set_generator(catalog, entity, dir_io) -> Iterator[Tuple[pd.DataFrame,
+                                                                             pd.DataFrame,
+                                                                             pd.DataFrame]]:
+    goal = 'classification'
 
     # Wikidata side
     wd_reader = workflow.build_wikidata(goal, catalog, entity, dir_io)
@@ -173,39 +214,9 @@ def execute(
             samples, wd_chunk, target_chunk, features_path
         )
 
-        # The classification set must have the same feature space
-        # as the training one
-        _add_missing_feature_columns(classifier, feature_vectors)
-
-        predictions = (
-            # LSVM doesn't support probability scores
-            classifier.predict(feature_vectors)
-            if isinstance(classifier, rl.SVMClassifier)
-            else classifier.prob(feature_vectors)
-        )
-
-        # Full name rule: if names differ, it's not a link
-        if name_rule:
-            LOGGER.info('Applying full names rule ...')
-            predictions = pd.DataFrame(predictions).apply(
-                _zero_when_different_names,
-                axis=1,
-                args=(wd_chunk, target_chunk),
-            )
-
-        # Wikidata URL rule: if the target ID has a Wikidata URL, it's a link
-        if target_chunk.get(keys.URL) is not None:
-            predictions = pd.DataFrame(predictions).apply(
-                _one_when_wikidata_link_correct, axis=1, args=(target_chunk,)
-            )
+        yield wd_chunk, target_chunk, feature_vectors
 
         LOGGER.info('Chunk %d classified', i)
-
-        # Filter by threshold
-        above_threshold = predictions[predictions >= threshold]
-
-        # Remove duplicates
-        yield above_threshold[~above_threshold.index.duplicated()]
 
 
 def _handle_io(classifier, catalog, entity, dir_io):
