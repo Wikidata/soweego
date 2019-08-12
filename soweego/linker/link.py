@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """Run supervised linkers."""
+from functools import reduce
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -103,7 +104,7 @@ def _run_for_all(catalog, entity, threshold, name_rule, upload, sandbox, dir_io,
     """
 
     assert join_method in constants.SC_AVAILABLE, (
-                'The provided join method needs to be one of: ' + str(constants.SC_AVAILABLE))
+            'The provided join method needs to be one of: ' + str(constants.SC_AVAILABLE))
 
     # ensure that models for all classifiers exist, and directly get the model
     # and results path
@@ -143,18 +144,49 @@ def _run_for_all(catalog, entity, threshold, name_rule, upload, sandbox, dir_io,
                                                target_chunk,
                                                wd_chunk)
 
-            (_get_unique_predictions_above_threshold(predictions, threshold)
+            # Threshold will be applied later, after joining
+            (_get_unique_predictions_above_threshold(predictions, 0.0)
              .to_csv(result_path, mode='a', header=False))
 
     # Once we have all the classification sets we can proceed to mix them
     # as desired
+    all_results = []
+    for _, _, result_path in available_classifiers:
+        all_results.append(
+            (pd.read_csv(result_path,
+                         header=None,
+                         names=['qid', 'tid', 'prediction'])
+             .set_index(['qid', 'tid']))
+        )
 
+    # Note that using the "concat" method will leave duplicate rows (with the same index)
+    # this will be removed later using the `_get_unique_predictions_above_threshold` method
     if join_method == constants.SC_UNION:
-        pass
+        merged_results = pd.concat(all_results, join='outer')
+
     elif join_method == constants.SC_INTERSECTION:
-        pass
+        merged_results = pd.concat(all_results, join='inner')
+
     elif join_method == constants.SC_AVERAGE:
-        pass
+        # This method is really an intersection of the results, but we also consider the
+        # averages of the results.
+
+        # create a dataframe which will contain the
+        merged_results = pd.concat(all_results, join='inner')
+
+        # remove duplicates now so that we don't double the work in the next loop
+        merged_results = merged_results[~merged_results.index.duplicated()]
+
+        for record in merged_results.iterrows():
+            index = record[0]
+            # get the prediction associated with the record in each set of results
+            merged_results[index] = reduce(lambda leftt, rightt: (leftt + rightt[index]) / 2,
+                                           all_results,
+                                           0)
+
+    # TODO write final result to a file
+    # node that we need to consider threshold!
+    _get_unique_predictions_above_threshold(merged_results, threshold)
 
     K.clear_session()  # Clear the TensorFlow graph
 
