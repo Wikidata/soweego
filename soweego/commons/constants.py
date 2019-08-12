@@ -335,3 +335,10 @@ PD_PERIOD_PRECISIONS = [
     'U',  # up to the microsecond
     'N',  # up to the nanosecond
 ]
+
+# available methods to join predictions (super-confident predictions)
+SC_UNION = 'union'
+SC_INTERSECTION = 'intersection'
+SC_AVERAGE = 'average'
+
+SC_AVAILABLE = [SC_UNION, SC_INTERSECTION, SC_AVERAGE]

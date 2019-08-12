@@ -65,8 +65,15 @@ LOGGER = logging.getLogger(__name__)
     default=constants.SHARED_FOLDER,
     help=f'Input/output directory, default: {constants.SHARED_FOLDER}.',
 )
+@click.option(
+    '-jm',
+    '--join-method',
+    type=click.Choice(constants.SC_AVAILABLE),
+    default=constants.SC_AVERAGE,
+    help=f"Way in which the results of 'all' classifiers are merged. Only used when classifier='all'. Default: {constants.SC_AVERAGE}.",
+)
 def cli(
-        classifier, catalog, entity, threshold, name_rule, upload, sandbox, dir_io
+        classifier, catalog, entity, threshold, name_rule, upload, sandbox, dir_io, join_method
 ):
     """Run a supervised linker.
 
@@ -83,17 +90,20 @@ def cli(
     $ python -m soweego linker train
     """
     if classifier == "all":
-        _run_for_all(catalog, dir_io, entity, name_rule, sandbox, threshold, upload)
+        _run_for_all(catalog, entity, threshold, name_rule, upload, sandbox, dir_io, join_method)
     else:
-        _run_for_one(catalog, classifier, dir_io, entity, name_rule, sandbox, threshold, upload)
+        _run_for_one(classifier, catalog, entity, threshold, name_rule, upload, sandbox, dir_io)
 
     LOGGER.info('Linking completed')
 
 
-def _run_for_all(catalog, dir_io, entity, name_rule, sandbox, threshold, upload):
+def _run_for_all(catalog, entity, threshold, name_rule, upload, sandbox, dir_io, join_method):
     """
     Runs the `linking` procedure using all available classifiers
     """
+
+    assert join_method in constants.SC_AVAILABLE, (
+                'The provided join method needs to be one of: ' + str(constants.SC_AVAILABLE))
 
     # ensure that models for all classifiers exist, and directly get the model
     # and results path
@@ -139,14 +149,17 @@ def _run_for_all(catalog, dir_io, entity, name_rule, sandbox, threshold, upload)
     # Once we have all the classification sets we can proceed to mix them
     # as desired
 
-    # union
-    # intersection
-    # average
+    if join_method == constants.SC_UNION:
+        pass
+    elif join_method == constants.SC_INTERSECTION:
+        pass
+    elif join_method == constants.SC_AVERAGE:
+        pass
 
     K.clear_session()  # Clear the TensorFlow graph
 
 
-def _run_for_one(catalog, classifier, dir_io, entity, name_rule, sandbox, threshold, upload):
+def _run_for_one(classifier, catalog, entity, threshold, name_rule, upload, sandbox, dir_io):
     """
     Runs the `linking` procedure for only one classifier
     """
