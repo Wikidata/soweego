@@ -158,11 +158,7 @@ def execute(
 
         predictions = _apply_linking_rules(name_rule, predictions, target_chunk, wd_chunk)
 
-        # Filter by threshold
-        above_threshold = predictions[predictions >= threshold]
-
-        # Remove duplicates
-        yield above_threshold[~above_threshold.index.duplicated()]
+        yield _get_unique_predictions_above_threshold(predictions, threshold)
 
 
 def _classification_set_generator(catalog, entity, dir_io) -> Iterator[Tuple[pd.DataFrame,
