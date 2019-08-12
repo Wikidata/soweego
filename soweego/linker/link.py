@@ -30,7 +30,9 @@ LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
-@click.argument('classifier', type=click.Choice(constants.CLASSIFIERS))
+@click.argument('classifier', type=click.Choice(
+    list(constants.CLASSIFIERS.keys()) + ['all'])
+                )
 @click.argument(
     'catalog', type=click.Choice(target_database.supported_targets())
 )
@@ -64,7 +66,7 @@ LOGGER = logging.getLogger(__name__)
     help=f'Input/output directory, default: {constants.SHARED_FOLDER}.',
 )
 def cli(
-    classifier, catalog, entity, threshold, name_rule, upload, sandbox, dir_io
+        classifier, catalog, entity, threshold, name_rule, upload, sandbox, dir_io
 ):
     """Run a supervised linker.
 
@@ -80,11 +82,80 @@ def cli(
 
     $ python -m soweego linker train
     """
+    if classifier == "all":
+        _run_for_all(catalog, dir_io, entity, name_rule, sandbox, threshold, upload)
+    else:
+        _run_for_one(catalog, classifier, dir_io, entity, name_rule, sandbox, threshold, upload)
+
+    LOGGER.info('Linking completed')
+
+
+def _run_for_all(catalog, dir_io, entity, name_rule, sandbox, threshold, upload):
+    """
+    Runs the `linking` procedure using all available classifiers
+    """
+
+    # ensure that models for all classifiers exist, and directly get the model
+    # and results path
+    available_classifiers = []
+    for classifier_name in list(set(constants.CLASSIFIERS.values())):
+        model_path, result_path = _handle_io(
+            classifier_name, catalog, entity, dir_io
+        )
+        # Exit if the model file doesn't exist
+        if model_path is None:
+            sys.exit(1)
+
+        available_classifiers.append((classifier_name, model_path, result_path))
+
+    rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
+
+    for wd_chunk, target_chunk, feature_vectors in _classification_set_generator(catalog,
+                                                                                 entity,
+                                                                                 dir_io):
+        # predict the current chunk with all classifiers
+        for classifier_name, model_path, result_path in available_classifiers:
+            classifier = joblib.load(model_path)
+
+            # The classification set must have the same feature space
+            # as the training one
+            _add_missing_feature_columns(classifier, feature_vectors)
+
+            predictions = (
+                # LSVM doesn't support probability scores
+                classifier.predict(feature_vectors)
+                if isinstance(classifier, rl.SVMClassifier)
+                else classifier.prob(feature_vectors)
+            )
+
+            predictions = _apply_linking_rules(name_rule,
+                                               predictions,
+                                               target_chunk,
+                                               wd_chunk)
+
+            (_get_unique_predictions_above_threshold(predictions, threshold)
+             .to_csv(result_path, mode='a', header=False))
+
+    # Once we have all the classification sets we can proceed to mix them
+    # as desired
+
+    # union
+    # intersection
+    # average
+
+    K.clear_session()  # Clear the TensorFlow graph
+
+
+def _run_for_one(catalog, classifier, dir_io, entity, name_rule, sandbox, threshold, upload):
+    """
+    Runs the `linking` procedure for only one classifier
+    """
+
     actual_classifier = constants.CLASSIFIERS[classifier]
+
     model_path, result_path = _handle_io(
         actual_classifier, catalog, entity, dir_io
     )
-
     # Exit if the model file doesn't exist
     if model_path is None:
         sys.exit(1)
@@ -92,7 +163,7 @@ def cli(
     rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
 
     for i, chunk in enumerate(
-        execute(model_path, catalog, entity, threshold, name_rule, dir_io)
+            execute(model_path, catalog, entity, threshold, name_rule, dir_io)
     ):
         chunk.to_csv(result_path, mode='a', header=False)
 
@@ -102,21 +173,19 @@ def cli(
     # Free memory in case of neural networks:
     # can be done only after classification
     if actual_classifier in (
-        keys.SINGLE_LAYER_PERCEPTRON,
-        keys.MULTI_LAYER_PERCEPTRON,
+            keys.SINGLE_LAYER_PERCEPTRON,
+            keys.MULTI_LAYER_PERCEPTRON,
     ):
         K.clear_session()  # Clear the TensorFlow graph
 
-    LOGGER.info('Linking completed')
-
 
 def execute(
-    model_path: str,
-    catalog: str,
-    entity: str,
-    threshold: float,
-    name_rule: bool,
-    dir_io: str,
+        model_path: str,
+        catalog: str,
+        entity: str,
+        threshold: float,
+        name_rule: bool,
+        dir_io: str,
 ) -> Iterator[pd.Series]:
     """Run a supervised linker.
 
@@ -144,7 +213,6 @@ def execute(
     for wd_chunk, target_chunk, feature_vectors in _classification_set_generator(catalog,
                                                                                  entity,
                                                                                  dir_io):
-
         # The classification set must have the same feature space
         # as the training one
         _add_missing_feature_columns(classifier, feature_vectors)
@@ -156,7 +224,10 @@ def execute(
             else classifier.prob(feature_vectors)
         )
 
-        predictions = _apply_linking_rules(name_rule, predictions, target_chunk, wd_chunk)
+        predictions = _apply_linking_rules(name_rule,
+                                           predictions,
+                                           target_chunk,
+                                           wd_chunk)
 
         yield _get_unique_predictions_above_threshold(predictions, threshold)
 
@@ -217,6 +288,7 @@ def _apply_linking_rules(name_rule, predictions, target_chunk, wd_chunk):
             _one_when_wikidata_link_correct, axis=1, args=(target_chunk,)
         )
     return predictions
+
 
 def _get_unique_predictions_above_threshold(predictions, threshold) -> pd.DataFrame:
     # Filter by threshold
@@ -281,8 +353,8 @@ def _add_missing_feature_columns(classifier, feature_vectors: pd.DataFrame):
         expected_features = classifier.kernel.coef_.shape[1]
 
     elif isinstance(
-        classifier,
-        (classifiers.SingleLayerPerceptron, classifiers.MultiLayerPerceptron),
+            classifier,
+            (classifiers.SingleLayerPerceptron, classifiers.MultiLayerPerceptron),
     ):
         expected_features = classifier.kernel.input_shape[1]
 
