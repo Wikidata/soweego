@@ -191,9 +191,19 @@ def _run_for_all(catalog, entity, threshold, name_rule, upload, sandbox, dir_io,
     # since we may have duplicates, optimistically prefer the entry with higher prediction
     merged_results = merged_results.sort_values(by='prediction', ascending=False)
 
-    _get_unique_predictions_above_threshold(merged_results, threshold)
+    merged_results = _get_unique_predictions_above_threshold(merged_results, threshold)
+
+    result_path = os.path.join(
+        dir_io, constants.LINKER_RESULT_JOINED.format(catalog, entity, join_method)
+    )
+
+    merged_results.to_csv(result_path, mode='a', header=False)
+
+    if upload:
+        _upload(merged_results, 0, catalog, entity, sandbox)
 
     K.clear_session()  # Clear the TensorFlow graph
+
 
 
 def _run_for_one(classifier, catalog, entity, threshold, name_rule, upload, sandbox, dir_io):

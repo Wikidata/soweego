@@ -233,6 +233,7 @@ NN_CHECKPOINT_FILENAME = '{}_best_checkpoint_model.hdf5'
 EVALUATION_PERFORMANCE_FILENAME = '{}_{}_{}_performance.txt'
 EVALUATION_PREDICTIONS_FILENAME = '{}_{}_{}_evaluation_links.csv.gz'
 RESULT_FILENAME = '{}_{}_{}_links.csv.gz'
+RESULT_JOINED_FILENAME = '{}_{}_ALL_{}_links.csv.gz'
 NESTED_CV_BEST_MODEL_FILENAME = '{}_{}_{}_best_model_k{:02}.pkl'
 MODEL_FILENAME = '{}_{}_{}_model.pkl'
 FEATURES_FILENAME = '{}_{}_{}_features{:02}.pkl.gz'
@@ -256,6 +257,7 @@ LINKER_NESTED_CV_BEST_MODEL = os.path.join(
     MODELS_FOLDER, NESTED_CV_BEST_MODEL_FILENAME
 )
 LINKER_RESULT = os.path.join(RESULTS_FOLDER, RESULT_FILENAME)
+LINKER_RESULT_JOINED = os.path.join(RESULTS_FOLDER, RESULT_JOINED_FILENAME)
 LINKER_EVALUATION_PREDICTIONS = os.path.join(
     RESULTS_FOLDER, EVALUATION_PREDICTIONS_FILENAME
 )
