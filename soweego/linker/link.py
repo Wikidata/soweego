@@ -258,6 +258,7 @@ def execute(
     for wd_chunk, target_chunk, feature_vectors in _classification_set_generator(catalog,
                                                                                  entity,
                                                                                  dir_io):
+
         # The classification set must have the same feature space
         # as the training one
         _add_missing_feature_columns(classifier, feature_vectors)
@@ -394,7 +395,10 @@ def _add_missing_feature_columns(classifier, feature_vectors: pd.DataFrame):
         # This seems to be the only easy way for Naïve Bayes
         expected_features = len(classifier.kernel._binarizers)
 
-    elif isinstance(classifier, (classifiers.SVCClassifier, rl.SVMClassifier)):
+    elif isinstance(classifier, classifiers.SVCClassifier):
+        expected_features = classifier.kernel.shape_fit_[1]
+
+    elif isinstance(classifier, rl.SVMClassifier):
         expected_features = classifier.kernel.coef_.shape[1]
 
     elif isinstance(
