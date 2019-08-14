@@ -126,6 +126,7 @@ def _run_for_all(catalog, entity, threshold, name_rule, upload, sandbox, dir_io,
                                                                                  dir_io):
         # predict the current chunk with all classifiers
         for classifier_name, model_path, result_path in available_classifiers:
+            LOGGER.info('Classifying chunk with classifier: %s', classifier_name)
             classifier = joblib.load(model_path)
 
             # The classification set must have the same feature space
@@ -159,8 +160,11 @@ def _run_for_all(catalog, entity, threshold, name_rule, upload, sandbox, dir_io,
              .set_index(['qid', 'tid']))
         )
 
+    LOGGER.info("Joining the results of the classifications using the '%s' method", join_method)
+
     # Note that using the "concat" method will leave duplicate rows (with the same index)
     # this will be removed later using the `_get_unique_predictions_above_threshold` method
+    merged_results: pd.DataFrame
     if join_method == constants.SC_UNION:
         merged_results = pd.concat(all_results, join='outer')
 
@@ -180,7 +184,7 @@ def _run_for_all(catalog, entity, threshold, name_rule, upload, sandbox, dir_io,
         for record in merged_results.iterrows():
             index = record[0]
             # get the prediction associated with the record in each set of results
-            merged_results[index] = reduce(lambda leftt, rightt: (leftt + rightt[index]) / 2,
+            merged_results[index] = reduce(lambda leftt, rightt: (leftt + rightt.loc[index]) / 2,
                                            all_results,
                                            0)
 
