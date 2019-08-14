@@ -188,8 +188,9 @@ def _run_for_all(catalog, entity, threshold, name_rule, upload, sandbox, dir_io,
                                            all_results,
                                            0)
 
-    # TODO write final result to a file
-    # node that we need to consider threshold!
+    # since we may have duplicates, optimistically prefer the entry with higher prediction
+    merged_results = merged_results.sort_values(by='prediction', ascending=False)
+
     _get_unique_predictions_above_threshold(merged_results, threshold)
 
     K.clear_session()  # Clear the TensorFlow graph
