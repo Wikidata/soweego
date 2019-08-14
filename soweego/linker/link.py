@@ -189,7 +189,8 @@ def _run_for_all(catalog, entity, threshold, name_rule, upload, sandbox, dir_io,
                                            0)
 
     # since we may have duplicates, optimistically prefer the entry with higher prediction
-    merged_results = merged_results.sort_values(by='prediction', ascending=False)
+    merged_results = merged_results.sort_values(by='prediction',
+                                                ascending=False)['prediction']  # get a pd.Series
 
     merged_results = _get_unique_predictions_above_threshold(merged_results, threshold)
 
@@ -197,13 +198,20 @@ def _run_for_all(catalog, entity, threshold, name_rule, upload, sandbox, dir_io,
         dir_io, constants.LINKER_RESULT_JOINED.format(catalog, entity, join_method)
     )
 
+    # Delete existing result file,
+    # otherwise the current output would be appended to it
+    if os.path.isfile(result_path):
+        LOGGER.warning(
+            "Will delete old output file found at '%s' ...", result_path
+        )
+        os.remove(result_path)
+
     merged_results.to_csv(result_path, mode='a', header=False)
 
     if upload:
         _upload(merged_results, 0, catalog, entity, sandbox)
 
     K.clear_session()  # Clear the TensorFlow graph
-
 
 
 def _run_for_one(classifier, catalog, entity, threshold, name_rule, upload, sandbox, dir_io):
@@ -273,7 +281,6 @@ def execute(
     for wd_chunk, target_chunk, feature_vectors in _classification_set_generator(catalog,
                                                                                  entity,
                                                                                  dir_io):
-
         # The classification set must have the same feature space
         # as the training one
         _add_missing_feature_columns(classifier, feature_vectors)
