@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 """Run supervised linkers."""
-from functools import reduce
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -13,6 +12,7 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import logging
 import os
 import sys
+from functools import reduce
 from re import search
 from typing import Iterator, Tuple
 
@@ -99,7 +99,8 @@ def cli(
 
 def _run_for_all(catalog, entity, threshold, name_rule, upload, sandbox, dir_io, join_method):
     """
-    Runs the `linking` procedure using all available classifiers
+    Runs the `linking` procedure using all available classifiers. Joins the results using
+    `join_method`
     """
 
     assert join_method in constants.SC_AVAILABLE, (
@@ -115,6 +116,8 @@ def _run_for_all(catalog, entity, threshold, name_rule, upload, sandbox, dir_io,
         # Exit if the model file doesn't exist
         if model_path is None:
             sys.exit(1)
+
+        LOGGER.debug('Loading %s classifier ..', classifier_name)
 
         available_classifiers.append((classifier_name,
                                       joblib.load(model_path),
@@ -181,12 +184,14 @@ def _run_for_all(catalog, entity, threshold, name_rule, upload, sandbox, dir_io,
         # remove duplicates now so that we don't double the work in the next loop
         merged_results = merged_results[~merged_results.index.duplicated()]
 
-        for record in merged_results.iterrows():
+        # TODO: Might be a good idea to parallelize this
+        for record in tqdm(merged_results.iterrows(), total=len(merged_results)):
             index = record[0]
+
             # get the prediction associated with the record in each set of results
-            merged_results[index] = reduce(lambda leftt, rightt: (leftt + rightt.loc[index]) / 2,
-                                           all_results,
-                                           0)
+            merged_results.loc[index] = reduce(lambda leftt, rightt: (leftt + rightt.loc[index]) / 2,
+                                               all_results,
+                                               0)
 
     # since we may have duplicates, optimistically prefer the entry with higher prediction
     merged_results = merged_results.sort_values(by='prediction',
