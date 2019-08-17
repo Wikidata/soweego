@@ -71,8 +71,7 @@ LOGGER = logging.getLogger(__name__)
     '--join-method',
     type=click.Choice(constants.SC_AVAILABLE),
     default=constants.SC_AVERAGE,
-    help=f"Way in which the results of 'all' classifiers are merged. Only used when classifier='all'. Default: {constants.SC_AVERAGE}.",
-)
+    help=f"Way in which the results of 'all' classifiers are merged. Only used when classifier='all'. Default: {constants.SC_AVERAGE}.")
 def cli(
         classifier, catalog, entity, threshold, name_rule, upload, sandbox, dir_io, join_method
 ):
@@ -117,7 +116,9 @@ def _run_for_all(catalog, entity, threshold, name_rule, upload, sandbox, dir_io,
         if model_path is None:
             sys.exit(1)
 
-        available_classifiers.append((classifier_name, model_path, result_path))
+        available_classifiers.append((classifier_name,
+                                      joblib.load(model_path),
+                                      result_path))
 
     rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
 
@@ -125,9 +126,8 @@ def _run_for_all(catalog, entity, threshold, name_rule, upload, sandbox, dir_io,
                                                                                  entity,
                                                                                  dir_io):
         # predict the current chunk with all classifiers
-        for classifier_name, model_path, result_path in available_classifiers:
+        for classifier_name, classifier, result_path in available_classifiers:
             LOGGER.info('Classifying chunk with classifier: %s', classifier_name)
-            classifier = joblib.load(model_path)
 
             # The classification set must have the same feature space
             # as the training one
