@@ -32,8 +32,8 @@ LOGGER = logging.getLogger(__name__)
 
 @click.command()
 @click.argument('classifier', type=click.Choice(
-    list(constants.CLASSIFIERS.keys()) + ['all'])
-                )
+    constants.EXTENDED_CLASSIFIERS
+))
 @click.argument(
     'catalog', type=click.Choice(target_database.supported_targets())
 )

@@ -285,6 +285,12 @@ CLASSIFIERS = {
     'mlp': keys.MULTI_LAYER_PERCEPTRON,  # Shorthand
 }
 
+# holds mention of 'classifier ensemble'
+EXTENDED_CLASSIFIERS = {
+    **CLASSIFIERS,
+    'all': 'all'
+}
+
 PERFORMANCE_METRICS = ['precision', 'recall', 'f1']
 
 PARAMETER_GRIDS = {
