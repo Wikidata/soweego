@@ -1,5 +1,5 @@
 import logging
-from typing import Union
+from typing import List, Union
 
 import pandas as pd
 from tqdm import tqdm
@@ -63,3 +63,17 @@ def remove_duplicates_by_majority_vote(df: pd.DataFrame, threshold=0.0) -> pd.Da
     result.drop(index=rows_to_drop, inplace=True)
 
     return result
+
+
+def join_dataframes_by_union(dfs: List[pd.DataFrame]) -> pd.DataFrame:
+    """
+    Joins dataframes via set "union"
+    """
+    return pd.concat(dfs, join='outer')
+
+
+def join_dataframes_by_intersection(dfs: List[pd.DataFrame]) -> pd.DataFrame:
+    """
+    Joins dataframes via set "intersection"
+    """
+    return pd.concat(dfs, join='inner')
