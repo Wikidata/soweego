@@ -64,6 +64,50 @@ def remove_duplicates_by_majority_vote(df: pd.DataFrame, threshold=0.0) -> pd.Da
     return result
 
 
+def remove_duplicates_by_averaging(df: pd.DataFrame, threshold=0.0) -> pd.DataFrame:
+    """
+    Takes a dataframe which represents the predictions given by multiple classifiers.
+    It will average all duplicate predictions.
+
+    :param df: The dataframe containing the predictions
+    :param threshold: Predictions with certainty above this threshold are considered as matches
+
+    :return: A dataframe containing the averaged predictions
+    """
+
+    # Ensure that index is sorted
+    df = df.sort_index()
+
+    # where we will save the result
+    # remove duplicates so that we go through them only once
+    result = df.copy(deep=True)[~df.index.duplicated()]
+
+    # at the end we will drop these rows
+    rows_to_drop = []
+
+    LOGGER.info('Joining classifier results via "averaging", using threshold "%s" ', threshold)
+
+    def get_average_for_idx(idx: str) -> Union[float, bool]:
+
+        preds = df.loc[idx]
+        avg = float(preds.mean())
+
+        return avg
+
+    for idx, _ in tqdm(result.iterrows(), total=len(result)):
+        avg = get_average_for_idx(idx)
+
+        if avg >= threshold:
+            result.loc[idx] = avg
+        else:
+            LOGGER.debug('Entry with index "%s" will be dropped. It has an average of "%s"', idx, avg)
+            rows_to_drop.append(idx)
+
+    result.drop(index=rows_to_drop, inplace=True)
+
+    return result
+
+
 def join_dataframes_by_union(dfs: List[pd.DataFrame]) -> pd.DataFrame:
     """
     Joins dataframes via set "union"
