@@ -12,7 +12,6 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import logging
 import os
 import sys
-from functools import reduce
 from re import search
 from typing import Iterator, Tuple
 
@@ -22,11 +21,10 @@ import pandas as pd
 import recordlinkage as rl
 from keras import backend as K
 from numpy import full, nan
-from tqdm import tqdm
 
 from soweego.commons import constants, keys, target_database
 from soweego.ingester import wikidata_bot
-from soweego.linker import blocking, classifiers, workflow
+from soweego.linker import blocking, classifiers, ensembles, workflow
 
 LOGGER = logging.getLogger(__name__)
 
@@ -70,9 +68,12 @@ LOGGER = logging.getLogger(__name__)
 @click.option(
     '-jm',
     '--join-method',
-    type=click.Choice(constants.SC_AVAILABLE),
-    default=constants.SC_AVERAGE,
-    help=f"Way in which the results of 'all' classifiers are merged. Only used when classifier='all'. Default: {constants.SC_AVERAGE}.")
+    type=(click.Choice(constants.SC_AVAILABLE_JOIN),
+          click.Choice(constants.SC_AVAILABLE_COMBINE)),
+    default=(constants.SC_INTERSECTION, constants.SC_AVERAGE),
+    help=(f"Way in which the results of 'all' classifiers are merged. The first term can be 'union' or 'intersection' "
+          f"and says how the sets of predictions are joined. The second term can be 'average' or 'vote' and specify "
+          f"how duplicates predictions are dealt with. Only used when classifier='all'. Default: {(constants.SC_INTERSECTION, constants.SC_AVERAGE)}."))
 def cli(
         classifier, catalog, entity, threshold, name_rule, upload, sandbox, dir_io, join_method
 ):
@@ -103,9 +104,11 @@ def _run_for_all(catalog, entity, threshold, name_rule, upload, sandbox, dir_io,
     Runs the `linking` procedure using all available classifiers. Joins the results using
     `join_method`
     """
+    assert join_method[0] in constants.SC_AVAILABLE_JOIN, (
+            'The provided join method needs to be one of: ' + str(constants.SC_AVAILABLE_JOIN))
 
-    assert join_method in constants.SC_AVAILABLE, (
-            'The provided join method needs to be one of: ' + str(constants.SC_AVAILABLE))
+    assert join_method[1] in constants.SC_AVAILABLE_COMBINE, (
+            'The provided combine method needs to be one of: ' + str(constants.SC_AVAILABLE_COMBINE))
 
     # ensure that models for all classifiers exist, and directly get the model
     # and results path
