@@ -1,5 +1,5 @@
 import logging
-from typing import List, Union
+from typing import List, Tuple, Union
 
 import pandas as pd
 from tqdm import tqdm
@@ -33,7 +33,9 @@ def remove_duplicates_by_majority_vote(df: pd.DataFrame, threshold=0.0) -> pd.Da
     # at the end we will drop these rows
     rows_to_drop = []
 
-    def is_majority_voted(idx: str) -> Union[float, bool]:
+    LOGGER.info('Joining classifier results via "majority voting", using threshold "%s" ', threshold)
+
+    def is_majority_voted(idx: Tuple[str, str]) -> Tuple[bool, float]:
         """Tells us if the majority of predictions say that the `idx` should stay"""
 
         preds = df.loc[idx]
@@ -44,19 +46,16 @@ def remove_duplicates_by_majority_vote(df: pd.DataFrame, threshold=0.0) -> pd.Da
         # the maximum prediction. Else return None, so that the
         # idx is removed from the final dataframe
         if perc_votes >= 0.5:
-            LOGGER.debug('Entry with index "%s" will stay since it has "%s" of votes ..', idx, perc_votes)
-            return float(preds.max())
+            return True, float(preds.max())
         else:
             LOGGER.debug('Entry with index "%s" will be dropped since only has "%s" of votes ..', idx, perc_votes)
-            return False
-
-    LOGGER.info('Joining classifier results via "majority voting", using threshold "%s" ', threshold)
+            return False, float(preds.min())
 
     for idx, _ in tqdm(result.iterrows(), total=len(result)):
-        res = is_majority_voted(idx)
+        is_good, pred = is_majority_voted(idx)
 
-        if res:
-            result.loc[idx] = res
+        if is_good:
+            result.loc[idx] = pred
         else:
             rows_to_drop.append(idx)
 
