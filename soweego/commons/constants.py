@@ -233,7 +233,7 @@ NN_CHECKPOINT_FILENAME = '{}_best_checkpoint_model.hdf5'
 EVALUATION_PERFORMANCE_FILENAME = '{}_{}_{}_performance.txt'
 EVALUATION_PREDICTIONS_FILENAME = '{}_{}_{}_evaluation_links.csv.gz'
 RESULT_FILENAME = '{}_{}_{}_links.csv.gz'
-RESULT_JOINED_FILENAME = '{}_{}_ALL_{}_links.csv.gz'
+RESULT_JOINED_FILENAME = '{}_{}_ALL_{}_{}_links.csv.gz'
 NESTED_CV_BEST_MODEL_FILENAME = '{}_{}_{}_best_model_k{:02}.pkl'
 MODEL_FILENAME = '{}_{}_{}_model.pkl'
 FEATURES_FILENAME = '{}_{}_{}_features{:02}.pkl.gz'
@@ -348,5 +348,7 @@ PD_PERIOD_PRECISIONS = [
 SC_UNION = 'union'
 SC_INTERSECTION = 'intersection'
 SC_AVERAGE = 'average'
+SC_VOTING = 'vote'
 
-SC_AVAILABLE = [SC_UNION, SC_INTERSECTION, SC_AVERAGE]
+SC_AVAILABLE_JOIN = [SC_UNION, SC_INTERSECTION]
+SC_AVAILABLE_COMBINE = [SC_VOTING, SC_AVERAGE]
