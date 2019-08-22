@@ -169,42 +169,28 @@ def _run_for_all(catalog, entity, threshold, name_rule, upload, sandbox, dir_io,
 
     LOGGER.info("Joining the results of the classifications using the '%s' method", join_method)
 
-    # Note that using the "concat" method will leave duplicate rows (with the same index)
-    # this will be removed later using the `_get_unique_predictions_above_threshold` method
+    how_to_join, how_to_rem_duplicates = join_method
+
+    # Now we use join the dataframes using the correct method
     merged_results: pd.DataFrame
-    if join_method == constants.SC_UNION:
-        merged_results = pd.concat(all_results, join='outer')
+    if how_to_join == constants.SC_UNION:
+        merged_results = ensembles.join_dataframes_by_union(all_results)
 
-    elif join_method == constants.SC_INTERSECTION:
-        merged_results = pd.concat(all_results, join='inner')
+    elif how_to_join == constants.SC_INTERSECTION:
+        merged_results = ensembles.join_dataframes_by_intersection(all_results)
 
-    elif join_method == constants.SC_AVERAGE:
-        # This method is really an intersection of the results, but we also consider the
-        # averages of the results.
+    # and then proceed to deal with duplicates. This step also removes entries under the
+    # specified threshold
+    if how_to_rem_duplicates == constants.SC_AVERAGE:
+        merged_results = ensembles.remove_duplicates_by_averaging(merged_results, threshold)
 
-        # create a dataframe which will contain the
-        merged_results = pd.concat(all_results, join='inner')
+    elif how_to_rem_duplicates == constants.SC_VOTING:
+        merged_results = ensembles.remove_duplicates_by_majority_vote(merged_results, threshold)
 
-        # remove duplicates now so that we don't double the work in the next loop
-        merged_results = merged_results[~merged_results.index.duplicated()]
-
-        # TODO: Might be a good idea to parallelize this
-        for record in tqdm(merged_results.iterrows(), total=len(merged_results)):
-            index = record[0]
-
-            # get the prediction associated with the record in each set of results
-            merged_results.loc[index] = reduce(lambda leftt, rightt: (leftt + rightt.loc[index]) / 2,
-                                               all_results,
-                                               0)
-
-    # since we may have duplicates, optimistically prefer the entry with higher prediction
-    merged_results = merged_results.sort_values(by='prediction',
-                                                ascending=False)['prediction']  # get a pd.Series
-
-    merged_results = _get_unique_predictions_above_threshold(merged_results, threshold)
+    merged_results = merged_results['prediction']  # get a pd.Series
 
     result_path = os.path.join(
-        dir_io, constants.LINKER_RESULT_JOINED.format(catalog, entity, join_method)
+        dir_io, constants.LINKER_RESULT_JOINED.format(catalog, entity, how_to_join, how_to_rem_duplicates)
     )
 
     # Delete existing result file,
