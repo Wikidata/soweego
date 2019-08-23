@@ -233,6 +233,7 @@ NN_CHECKPOINT_FILENAME = '{}_best_checkpoint_model.hdf5'
 EVALUATION_PERFORMANCE_FILENAME = '{}_{}_{}_performance.txt'
 EVALUATION_PREDICTIONS_FILENAME = '{}_{}_{}_evaluation_links.csv.gz'
 RESULT_FILENAME = '{}_{}_{}_links.csv.gz'
+RESULT_JOINED_FILENAME = '{}_{}_ALL_{}_{}_links.csv.gz'
 NESTED_CV_BEST_MODEL_FILENAME = '{}_{}_{}_best_model_k{:02}.pkl'
 MODEL_FILENAME = '{}_{}_{}_model.pkl'
 FEATURES_FILENAME = '{}_{}_{}_features{:02}.pkl.gz'
@@ -256,6 +257,7 @@ LINKER_NESTED_CV_BEST_MODEL = os.path.join(
     MODELS_FOLDER, NESTED_CV_BEST_MODEL_FILENAME
 )
 LINKER_RESULT = os.path.join(RESULTS_FOLDER, RESULT_FILENAME)
+LINKER_RESULT_JOINED = os.path.join(RESULTS_FOLDER, RESULT_JOINED_FILENAME)
 LINKER_EVALUATION_PREDICTIONS = os.path.join(
     RESULTS_FOLDER, EVALUATION_PREDICTIONS_FILENAME
 )
@@ -281,6 +283,12 @@ CLASSIFIERS = {
     'lsvm': keys.LINEAR_SVM,  # Shorthand
     'slp': keys.SINGLE_LAYER_PERCEPTRON,  # Shorthand
     'mlp': keys.MULTI_LAYER_PERCEPTRON,  # Shorthand
+}
+
+# holds mention of 'classifier ensemble'
+EXTENDED_CLASSIFIERS = {
+    **CLASSIFIERS,
+    'all': 'all'
 }
 
 PERFORMANCE_METRICS = ['precision', 'recall', 'f1']
@@ -335,3 +343,12 @@ PD_PERIOD_PRECISIONS = [
     'U',  # up to the microsecond
     'N',  # up to the nanosecond
 ]
+
+# available methods to join predictions (super-confident predictions)
+SC_UNION = 'union'
+SC_INTERSECTION = 'intersection'
+SC_AVERAGE = 'average'
+SC_VOTING = 'vote'
+
+SC_AVAILABLE_JOIN = [SC_UNION, SC_INTERSECTION]
+SC_AVAILABLE_COMBINE = [SC_VOTING, SC_AVERAGE]
