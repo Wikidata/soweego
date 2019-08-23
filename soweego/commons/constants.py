@@ -29,10 +29,10 @@ from soweego.importer.models.discogs_entity import (
 from soweego.importer.models.imdb_entity import (
     IMDbActorEntity,
     IMDbDirectorEntity,
-    IMDbTitleEntity,
-    IMDbTitleNameRelationship,
     IMDbMusicianEntity,
     IMDbProducerEntity,
+    IMDbTitleEntity,
+    IMDbTitleNameRelationship,
     IMDbWriterEntity,
 )
 from soweego.importer.models.musicbrainz_entity import (
@@ -286,10 +286,7 @@ CLASSIFIERS = {
 }
 
 # holds mention of 'classifier ensemble'
-EXTENDED_CLASSIFIERS = {
-    **CLASSIFIERS,
-    'all': 'all'
-}
+EXTENDED_CLASSIFIERS = {**CLASSIFIERS, 'all': 'all'}
 
 PERFORMANCE_METRICS = ['precision', 'recall', 'f1']
 

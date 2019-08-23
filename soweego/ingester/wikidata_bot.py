@@ -32,8 +32,8 @@ from typing import Iterable
 
 import click
 import pywikibot
-from pywikibot.exceptions import NoPage
 from pywikibot.data.api import APIError
+from pywikibot.exceptions import NoPage
 
 from soweego.commons import target_database
 from soweego.commons.constants import QID_REGEX
@@ -659,14 +659,10 @@ def _reference(claim, stated_in, person_pid, person_tid):
         try:
             claim.addSources([STATED_IN_REFERENCE, RETRIEVED_REFERENCE])
 
-            LOGGER.info(
-                'Added %s reference node',
-                reference_log
-            )
+            LOGGER.info('Added %s reference node', reference_log)
         except APIError as error:
             LOGGER.warning(
-                'Could not add %s reference node: %s',
-                reference_log, error
+                'Could not add %s reference node: %s', reference_log, error
             )
     else:
         tid_reference = pywikibot.Claim(REPO, person_pid, is_reference=True)
@@ -683,14 +679,10 @@ def _reference(claim, stated_in, person_pid, person_tid):
                 [STATED_IN_REFERENCE, tid_reference, RETRIEVED_REFERENCE]
             )
 
-            LOGGER.info(
-                'Added %s reference node',
-                reference_log
-            )
+            LOGGER.info('Added %s reference node', reference_log)
         except APIError as error:
             LOGGER.warning(
-                'Could not add %s reference node: %s',
-                reference_log, error
+                'Could not add %s reference node: %s', reference_log, error
             )
 
 

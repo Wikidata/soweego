@@ -7,7 +7,9 @@ from tqdm import tqdm
 LOGGER = logging.getLogger(__name__)
 
 
-def remove_duplicates_by_majority_vote(df: pd.DataFrame, threshold=0.0) -> pd.DataFrame:
+def remove_duplicates_by_majority_vote(
+    df: pd.DataFrame, threshold=0.0
+) -> pd.DataFrame:
     """
     Takes a dataframe which represents the predictions given by multiple classifiers.
     These predictions will most certainly have duplicate values (predictions for the
@@ -33,7 +35,10 @@ def remove_duplicates_by_majority_vote(df: pd.DataFrame, threshold=0.0) -> pd.Da
     # at the end we will drop these rows
     rows_to_drop = []
 
-    LOGGER.info('Joining classifier results via "majority voting", using threshold "%s" ', threshold)
+    LOGGER.info(
+        'Joining classifier results via "majority voting", using threshold "%s" ',
+        threshold,
+    )
 
     def is_majority_voted(idx: Tuple[str, str]) -> Tuple[bool, float]:
         """Tells us if the majority of predictions say that the `idx` should stay"""
@@ -48,7 +53,11 @@ def remove_duplicates_by_majority_vote(df: pd.DataFrame, threshold=0.0) -> pd.Da
         if perc_votes >= 0.5:
             return True, float(preds.max())
         else:
-            LOGGER.debug('Entry with index "%s" will be dropped since only has "%s" of votes ..', idx, perc_votes)
+            LOGGER.debug(
+                'Entry with index "%s" will be dropped since only has "%s" of votes ..',
+                idx,
+                perc_votes,
+            )
             return False, float(preds.min())
 
     for idx, _ in tqdm(result.iterrows(), total=len(result)):
@@ -64,7 +73,9 @@ def remove_duplicates_by_majority_vote(df: pd.DataFrame, threshold=0.0) -> pd.Da
     return result
 
 
-def remove_duplicates_by_averaging(df: pd.DataFrame, threshold=0.0) -> pd.DataFrame:
+def remove_duplicates_by_averaging(
+    df: pd.DataFrame, threshold=0.0
+) -> pd.DataFrame:
     """
     Takes a dataframe which represents the predictions given by multiple classifiers.
     It will average all duplicate predictions.
@@ -85,7 +96,10 @@ def remove_duplicates_by_averaging(df: pd.DataFrame, threshold=0.0) -> pd.DataFr
     # at the end we will drop these rows
     rows_to_drop = []
 
-    LOGGER.info('Joining classifier results via "averaging", using threshold "%s" ', threshold)
+    LOGGER.info(
+        'Joining classifier results via "averaging", using threshold "%s" ',
+        threshold,
+    )
 
     def get_average_for_idx(idx: str) -> Union[float, bool]:
 
@@ -100,7 +114,11 @@ def remove_duplicates_by_averaging(df: pd.DataFrame, threshold=0.0) -> pd.DataFr
         if avg >= threshold:
             result.loc[idx] = avg
         else:
-            LOGGER.debug('Entry with index "%s" will be dropped. It has an average of "%s"', idx, avg)
+            LOGGER.debug(
+                'Entry with index "%s" will be dropped. It has an average of "%s"',
+                idx,
+                avg,
+            )
             rows_to_drop.append(idx)
 
     result.drop(index=rows_to_drop, inplace=True)

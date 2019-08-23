@@ -42,71 +42,71 @@ URL_PID_TERMS = ' '.join(['wdt:%s' % pid for pid in vocabulary.URL_PIDS])
 
 # Templates
 IDENTIFIER_TEMPLATE = (
-        'SELECT DISTINCT '
-        + ITEM_BINDING
-        + ' '
-        + IDENTIFIER_BINDING
-        + ' WHERE { '
-        + ITEM_BINDING
-        + ' wdt:%s/wdt:P279* wd:%s ; wdt:%s '
-        + IDENTIFIER_BINDING
-        + ' . }'
+    'SELECT DISTINCT '
+    + ITEM_BINDING
+    + ' '
+    + IDENTIFIER_BINDING
+    + ' WHERE { '
+    + ITEM_BINDING
+    + ' wdt:%s/wdt:P279* wd:%s ; wdt:%s '
+    + IDENTIFIER_BINDING
+    + ' . }'
 )
 LINKS_TEMPLATE = (
-        'SELECT DISTINCT '
-        + ITEM_BINDING
-        + ' '
-        + LINK_BINDING
-        + ' WHERE { VALUES '
-        + PROPERTY_BINDING
-        + ' { '
-        + URL_PID_TERMS
-        + ' } . '
-        + ITEM_BINDING
-        + ' wdt:%s/wdt:P279* wd:%s ; wdt:%s '
-        + IDENTIFIER_BINDING
-        + ' ; '
-        + PROPERTY_BINDING
-        + ' '
-        + LINK_BINDING
-        + ' . }'
+    'SELECT DISTINCT '
+    + ITEM_BINDING
+    + ' '
+    + LINK_BINDING
+    + ' WHERE { VALUES '
+    + PROPERTY_BINDING
+    + ' { '
+    + URL_PID_TERMS
+    + ' } . '
+    + ITEM_BINDING
+    + ' wdt:%s/wdt:P279* wd:%s ; wdt:%s '
+    + IDENTIFIER_BINDING
+    + ' ; '
+    + PROPERTY_BINDING
+    + ' '
+    + LINK_BINDING
+    + ' . }'
 )
 CLASSIFICATION_DATASET_TEMPLATE = (
-        'SELECT DISTINCT '
-        + ITEM_BINDING
-        + ' WHERE { '
-        + ITEM_BINDING
-        + ' wdt:%s/wdt:P279* wd:%s . FILTER NOT EXISTS { '
-        + ITEM_BINDING
-        + ' wdt:%s '
-        + IDENTIFIER_BINDING
-        + ' . } . }'
+    'SELECT DISTINCT '
+    + ITEM_BINDING
+    + ' WHERE { '
+    + ITEM_BINDING
+    + ' wdt:%s/wdt:P279* wd:%s . FILTER NOT EXISTS { '
+    + ITEM_BINDING
+    + ' wdt:%s '
+    + IDENTIFIER_BINDING
+    + ' . } . }'
 )
 EXT_ID_PIDS_AND_URLS_TEMPLATE = (
-        'SELECT * WHERE { '
-        + PROPERTY_BINDING
-        + ' a wikibase:Property ; wikibase:propertyType wikibase:ExternalId ; wdt:P1630 '
-        + FORMATTER_URL_BINDING
-        + ' . OPTIONAL { '
-        + PROPERTY_BINDING
-        + ' wdt:P1793 '
-        + FORMATTER_REGEX_BINDING
-        + ' . } . }'
+    'SELECT * WHERE { '
+    + PROPERTY_BINDING
+    + ' a wikibase:Property ; wikibase:propertyType wikibase:ExternalId ; wdt:P1630 '
+    + FORMATTER_URL_BINDING
+    + ' . OPTIONAL { '
+    + PROPERTY_BINDING
+    + ' wdt:P1793 '
+    + FORMATTER_REGEX_BINDING
+    + ' . } . }'
 )
 SUBCLASSES_OF_TEMPLATE = (
-        'SELECT DISTINCT '
-        + ITEM_BINDING
-        + ' WHERE { '
-        + ITEM_BINDING
-        + ' wdt:P279* wd:%s . }'
+    'SELECT DISTINCT '
+    + ITEM_BINDING
+    + ' WHERE { '
+    + ITEM_BINDING
+    + ' wdt:P279* wd:%s . }'
 )
 SUPERCLASSES_OF_TEMPLATE = (
-        'SELECT DISTINCT '
-        + ITEM_BINDING
-        + ' WHERE { '
-        + ' wd:%s wdt:P279* '
-        + ITEM_BINDING
-        + ' . }'
+    'SELECT DISTINCT '
+    + ITEM_BINDING
+    + ' WHERE { '
+    + ' wd:%s wdt:P279* '
+    + ITEM_BINDING
+    + ' . }'
 )
 
 URL_PIDS_QUERY = (
@@ -192,10 +192,10 @@ def external_id_pids_and_urls() -> Iterator[Dict]:
 
 
 def run_query(
-        query_type: Tuple[str, str],
-        class_qid: str,
-        catalog_pid: str,
-        result_per_page: int,
+    query_type: Tuple[str, str],
+    class_qid: str,
+    catalog_pid: str,
+    result_per_page: int,
 ) -> Iterator[Union[Tuple, str]]:
     """Run a filled SPARQL query template against the Wikidata endpoint
     with eventual paging.
@@ -232,7 +232,7 @@ def run_query(
             % (vocabulary.INSTANCE_OF, class_qid, catalog_pid)
             if how == keys.CLASS_QUERY
             else IDENTIFIER_TEMPLATE
-                 % (vocabulary.OCCUPATION, class_qid, catalog_pid)
+            % (vocabulary.OCCUPATION, class_qid, catalog_pid)
         )
         return _parse_query_result(
             keys.IDENTIFIER, _run_paged_query(result_per_page, query)
@@ -244,7 +244,7 @@ def run_query(
             LINKS_TEMPLATE % (vocabulary.INSTANCE_OF, class_qid, catalog_pid)
             if how == keys.CLASS_QUERY
             else LINKS_TEMPLATE
-                 % (vocabulary.OCCUPATION, class_qid, catalog_pid)
+            % (vocabulary.OCCUPATION, class_qid, catalog_pid)
         )
         return _parse_query_result(
             keys.LINKS, _run_paged_query(result_per_page, query)
@@ -257,7 +257,7 @@ def run_query(
             % (vocabulary.INSTANCE_OF, class_qid, catalog_pid)
             if how == keys.CLASS_QUERY
             else CLASSIFICATION_DATASET_TEMPLATE
-                 % (vocabulary.OCCUPATION, class_qid, catalog_pid)
+            % (vocabulary.OCCUPATION, class_qid, catalog_pid)
         )
         return _parse_query_result(
             keys.DATASET, _run_paged_query(result_per_page, query)
@@ -376,8 +376,7 @@ def _make_request(query, response_format=DEFAULT_RESPONSE_FORMAT):
     except requests.exceptions.ConnectionError:
         wait_time = random()
         LOGGER.warning(
-            'There was a connection error, '
-            'will retry after %f seconds ...',
+            'There was a connection error, ' 'will retry after %f seconds ...',
             wait_time,
         )
 

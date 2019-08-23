@@ -45,9 +45,9 @@ logging.getLogger('requests').setLevel(logging.WARNING)
     type=(str, click.Choice(commons.logging.LEVELS)),
     multiple=True,
     help=(
-            'Module name followed by one of '
-            '[DEBUG, INFO, WARNING, ERROR, CRITICAL]. '
-            'Multiple pairs allowed.'
+        'Module name followed by one of '
+        '[DEBUG, INFO, WARNING, ERROR, CRITICAL]. '
+        'Multiple pairs allowed.'
     ),
 )
 @click.pass_context

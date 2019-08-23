@@ -27,7 +27,7 @@ class BaseDumpExtractor:
     """
 
     def extract_and_populate(
-            self, dump_file_paths: List[str], resolve: bool
+        self, dump_file_paths: List[str], resolve: bool
     ) -> None:
         """Extract relevant data and populate
         `SQLAlchemy <https://www.sqlalchemy.org/>`_ ORM entities accordingly.

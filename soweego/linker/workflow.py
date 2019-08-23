@@ -33,10 +33,10 @@ from soweego.commons import (
     target_database,
     text_utils,
     url_utils,
+    utils,
 )
 from soweego.commons.db_manager import DBManager
 from soweego.commons.logging import log_dataframe_info
-from soweego.commons import utils
 from soweego.linker import features
 from soweego.wikidata import api_requests, vocabulary
 

@@ -43,8 +43,8 @@ DUMP_EXTRACTOR = {
     '--url-check',
     is_flag=True,
     help=(
-            'Check for rotten URLs while importing. Default: no. '
-            'WARNING: this will dramatically increase the import time.'
+        'Check for rotten URLs while importing. Default: no. '
+        'WARNING: this will dramatically increase the import time.'
     ),
 )
 @click.option(

@@ -16,7 +16,7 @@ import tarfile
 from collections import defaultdict
 from csv import DictReader
 from datetime import date, datetime
-from typing import Iterable, Tuple, List
+from typing import List, Tuple
 
 import requests
 from sqlalchemy.exc import IntegrityError
@@ -53,9 +53,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
         latest_version = requests.get(f'{base_url}/LATEST').text.rstrip()
         return [f'{base_url}/{latest_version}/mbdump.tar.bz2']
 
-    def extract_and_populate(
-        self, dump_file_paths: List[str], resolve: bool
-    ):
+    def extract_and_populate(self, dump_file_paths: List[str], resolve: bool):
         """Extract relevant data from the *artist* (people) and *release group*
         (works) MusicBrainz dumps, preprocess them, populate
         `SQLAlchemy <https://www.sqlalchemy.org/>`_ ORM entities, and persist
