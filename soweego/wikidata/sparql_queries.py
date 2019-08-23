@@ -16,6 +16,7 @@ from random import random
 from re import search
 from typing import Dict, Iterator, Set, Tuple, Union
 
+import requests
 from requests import get
 
 from soweego.commons import constants, keys
@@ -361,15 +362,29 @@ def _get_valid_qid(result):
 
 
 def _make_request(query, response_format=DEFAULT_RESPONSE_FORMAT):
-    response = get(
-        WIKIDATA_SPARQL_ENDPOINT,
-        params={'query': query},
-        headers={
-            'Accept': response_format,
-            'User-Agent': constants.HTTP_USER_AGENT,
-        },
-    )
-    log_request_data(response, LOGGER)
+    try:
+        response = get(
+            WIKIDATA_SPARQL_ENDPOINT,
+            params={'query': query},
+            headers={
+                'Accept': response_format,
+                'User-Agent': constants.HTTP_USER_AGENT,
+            },
+        )
+        log_request_data(response, LOGGER)
+
+    except requests.exceptions.ConnectionError:
+        wait_time = random()
+        LOGGER.warning(
+            'There was a connection error, ' 'will retry after %f seconds ...',
+            wait_time,
+        )
+
+        # Block the current thread for `wait_time` seconds
+        time.sleep(wait_time)
+
+        # Retry the request and return result
+        return _make_request(query, response_format)
 
     if response.ok:
         LOGGER.debug(

@@ -15,7 +15,7 @@ import os
 import shutil
 import xml.etree.ElementTree as et
 from datetime import date, datetime
-from typing import Iterable, Tuple, List, Optional
+from typing import Iterable, List, Optional, Tuple
 
 from lxml import etree
 from requests import get

@@ -33,10 +33,10 @@ from soweego.commons import (
     target_database,
     text_utils,
     url_utils,
+    utils,
 )
 from soweego.commons.db_manager import DBManager
 from soweego.commons.logging import log_dataframe_info
-from soweego.commons.utils import check_goal_value
 from soweego.linker import features
 from soweego.wikidata import api_requests, vocabulary
 
@@ -159,7 +159,7 @@ def build_target(
     :param identifiers: a set of catalog IDs to gather data for
     :return: the generator yielding :class:`pandas.DataFrame` chunks
     """
-    check_goal_value(goal)
+    utils.check_goal_value(goal)
 
     LOGGER.info('Building target %s set for %s %s ...', goal, catalog, entity)
 
@@ -216,7 +216,7 @@ def preprocess_wikidata(
     :return: the generator yielding preprocessed
       :class:`pandas.DataFrame` chunks
     """
-    check_goal_value(goal)
+    utils.check_goal_value(goal)
 
     LOGGER.info('Preprocessing Wikidata %s set ...', goal)
 
@@ -294,7 +294,7 @@ def preprocess_target(
     :return: the generator yielding preprocessed
       :class:`pandas.DataFrame` chunks
     """
-    check_goal_value(goal)
+    utils.check_goal_value(goal)
 
     LOGGER.info('Preprocessing target ...')
 

@@ -29,9 +29,8 @@ from typing import Iterable, Tuple
 import pandas as pd
 from tqdm import tqdm
 
-from soweego.commons import constants, keys
+from soweego.commons import constants, keys, utils
 from soweego.commons.data_gathering import tokens_fulltext_search
-from soweego.commons.utils import check_goal_value
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
@@ -74,7 +73,7 @@ def find_samples(
       will be read/written
     :return: the blocking index holding candidate pairs
     """
-    check_goal_value(goal)
+    utils.check_goal_value(goal)
 
     samples_path = os.path.join(
         dir_io,
