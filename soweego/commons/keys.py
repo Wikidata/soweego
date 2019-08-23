@@ -101,3 +101,6 @@ LINEAR_SVM = 'linear_support_vector_machines'
 SVM = 'support_vector_machines'
 SINGLE_LAYER_PERCEPTRON = 'single_layer_perceptron'
 MULTI_LAYER_PERCEPTRON = 'multi_layer_perceptron'
+
+# For ensembles
+ALL_CLASSIFIERS = 'all'

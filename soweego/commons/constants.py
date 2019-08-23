@@ -286,7 +286,7 @@ CLASSIFIERS = {
 }
 
 # holds mention of 'classifier ensemble'
-EXTENDED_CLASSIFIERS = {**CLASSIFIERS, 'all': 'all'}
+EXTENDED_CLASSIFIERS = {**CLASSIFIERS, 'all': keys.ALL_CLASSIFIERS}
 
 PERFORMANCE_METRICS = ['precision', 'recall', 'f1']
 
