@@ -402,10 +402,12 @@ def _average_k_fold(classifier, catalog, entity, k, dir_io, join_method, **kwarg
     ):
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
 
-        model = utils.init_model(classifier, dataset.shape[1], **kwargs)
-        model.fit(training, positive_samples_index & training.index)
-
-        preds = model.predict(test)
+        preds = _init_model_and_get_preds(classifier,
+                                          dataset.shape[1],
+                                          training,
+                                          test,
+                                          positive_samples_index,
+                                          join_method)
 
         K.clear_session()  # Free memory
 
@@ -448,10 +450,12 @@ def _single_k_fold(classifier, catalog, entity, k, dir_io, join_method, **kwargs
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
         test_set.append(test)
 
-        model = utils.init_model(classifier, dataset.shape[1], **kwargs)
-        model.fit(training, positive_samples_index & training.index)
-
-        preds = model.predict(test)
+        preds = _init_model_and_get_preds(classifier,
+                                          dataset.shape[1],
+                                          training,
+                                          test,
+                                          positive_samples_index,
+                                          join_method)
 
         K.clear_session()  # Free memory
 
@@ -468,3 +472,64 @@ def _single_k_fold(classifier, catalog, entity, k, dir_io, join_method, **kwargs
             positive_samples_index & test_set.index, predictions, len(test_set)
         ),
     )
+
+
+def _init_model_and_get_preds(classifier: str,
+                              num_features: int,
+                              training_set: pd.DataFrame,
+                              test_set: pd.DataFrame,
+                              positive_samples_index: pd.MultiIndex,
+                              join_method: Tuple[str, str],
+                              **kwargs) -> pd.Series:
+    def _fit_predict(clsf: str):
+        model = utils.init_model(clsf, num_features, **kwargs)
+        model.fit(training_set, positive_samples_index & training_set.index)
+        return model.predict(test_set)
+
+    if classifier == keys.ALL_CLASSIFIERS:
+        how_to_join, how_to_rem_duplicates = join_method
+
+        assert how_to_join in constants.SC_AVAILABLE_JOIN, (
+                'The provided join method needs to be one of: '
+                + str(constants.SC_AVAILABLE_JOIN)
+        )
+
+        assert how_to_rem_duplicates in constants.SC_AVAILABLE_COMBINE, (
+                'The provided combine method needs to be one of: '
+                + str(constants.SC_AVAILABLE_COMBINE)
+        )
+
+        preds = [_fit_predict(test_set)
+                 for m in set(constants.CLASSIFIERS.values())]
+
+        # join preds ...
+        # TODO
+
+        import pudb;
+        pudb.set_trace()
+
+    else:
+        preds = _fit_predict(classifier)
+
+    return preds
+
+    # TODO This is also repeated in link.py. Maybe extract it to ensembles.py?
+    # # Now we use join the dataframes using the correct method
+    # merged_results: pd.DataFrame
+    # if how_to_join == constants.SC_UNION:
+    #     merged_results = ensembles.join_dataframes_by_union(all_results)
+    #
+    # elif how_to_join == constants.SC_INTERSECTION:
+    #     merged_results = ensembles.join_dataframes_by_intersection(all_results)
+    #
+    # # and then proceed to deal with duplicates. This step also removes entries under the
+    # # specified threshold
+    # if how_to_rem_duplicates == constants.SC_AVERAGE:
+    #     merged_results = ensembles.remove_duplicates_by_averaging(
+    #         merged_results, threshold
+    #     )
+    #
+    # elif how_to_rem_duplicates == constants.SC_VOTING:
+    #     merged_results = ensembles.remove_duplicates_by_majority_vote(
+    #         merged_results, threshold
+    #     )
