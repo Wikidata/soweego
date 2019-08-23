@@ -284,11 +284,11 @@ def _run_nested(
         k_folds,
     )
 
-    clf = constants.CLASSIFIERS[classifier]
+    clf = constants.CLASSIFIERS.get(classifier)
     param_grid = constants.PARAMETER_GRIDS.get(clf)
 
     if param_grid is None:
-        err_msg = f'Hyperparameter tuning for {clf} not supported'
+        err_msg = f'Hyperparameter tuning for classifier "{clf}" is not supported'
         LOGGER.critical(err_msg)
         raise NotImplementedError(err_msg)
 
