@@ -95,7 +95,7 @@ class SVCClassifier(SKLearnAdapter, BaseClassifier):
         # so we return the second column
         classifications = self.kernel.predict_proba(feature_vectors)[:, 1]
 
-        return pd.DataFrame(classifications, index=feature_vectors.index)
+        return pd.Series(classifications, index=feature_vectors.index)
 
     def __repr__(self):
         return f'{self.kernel}'
@@ -106,12 +106,12 @@ class SVCClassifier(SKLearnAdapter, BaseClassifier):
 # shared across neural network implementations.
 class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
     def _fit(
-        self,
-        feature_vectors: pd.Series,
-        answers: pd.Series = None,
-        batch_size: int = constants.BATCH_SIZE,
-        epochs: int = constants.EPOCHS,
-        validation_split: float = constants.VALIDATION_SPLIT,
+            self,
+            feature_vectors: pd.Series,
+            answers: pd.Series = None,
+            batch_size: int = constants.BATCH_SIZE,
+            epochs: int = constants.EPOCHS,
+            validation_split: float = constants.VALIDATION_SPLIT,
     ) -> None:
         model_path = os.path.join(
             constants.SHARED_FOLDER,
