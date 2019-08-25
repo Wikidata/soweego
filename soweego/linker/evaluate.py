@@ -101,7 +101,7 @@ def cli(
     if kwargs is None:
         sys.exit(1)
 
-    rl.set_option(*constants.CLASSIFICATION_RETURN_INDEX)
+    rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
 
     performance_out, predictions_out = _build_output_paths(
         catalog, entity, classifier, dir_io
@@ -485,7 +485,13 @@ def _init_model_and_get_preds(classifier: str,
                                  len(training_set.columns),  # num features
                                  **kwargs)
         model.fit(training_set, positive_samples_index & training_set.index)
-        return model.predict(test_set)
+
+        return (
+            # LSVM doesn't support probability scores
+            model.predict(test_set)
+            if isinstance(model, rl.SVMClassifier)
+            else model.prob(test_set)
+        )
 
     if classifier == keys.ALL_CLASSIFIERS:
         how_to_join, how_to_rem_duplicates = join_method
