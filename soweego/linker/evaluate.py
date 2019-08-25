@@ -403,7 +403,6 @@ def _average_k_fold(classifier, catalog, entity, k, dir_io, join_method, **kwarg
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
 
         preds = _init_model_and_get_preds(classifier,
-                                          dataset.shape[1],
                                           training,
                                           test,
                                           positive_samples_index,
@@ -451,7 +450,6 @@ def _single_k_fold(classifier, catalog, entity, k, dir_io, join_method, **kwargs
         test_set.append(test)
 
         preds = _init_model_and_get_preds(classifier,
-                                          dataset.shape[1],
                                           training,
                                           test,
                                           positive_samples_index,
@@ -480,9 +478,12 @@ def _init_model_and_get_preds(classifier: str,
                               test_set: pd.DataFrame,
                               positive_samples_index: pd.MultiIndex,
                               join_method: Tuple[str, str],
+                              threshold=0.5,
                               **kwargs) -> pd.Series:
     def _fit_predict(clsf: str):
-        model = utils.init_model(clsf, num_features, **kwargs)
+        model = utils.init_model(clsf,
+                                 len(training_set.columns),  # num features
+                                 **kwargs)
         model.fit(training_set, positive_samples_index & training_set.index)
         return model.predict(test_set)
 
