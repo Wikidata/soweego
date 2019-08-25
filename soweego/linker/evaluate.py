@@ -26,7 +26,7 @@ from pandas import concat
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
 
 from soweego.commons import constants, keys, target_database, utils
-from soweego.linker import train
+from soweego.linker import train, ensembles
 
 LOGGER = logging.getLogger(__name__)
 
@@ -473,7 +473,6 @@ def _single_k_fold(classifier, catalog, entity, k, dir_io, join_method, **kwargs
 
 
 def _init_model_and_get_preds(classifier: str,
-                              num_features: int,
                               training_set: pd.DataFrame,
                               test_set: pd.DataFrame,
                               positive_samples_index: pd.MultiIndex,
@@ -496,24 +495,19 @@ def _init_model_and_get_preds(classifier: str,
     if classifier == keys.ALL_CLASSIFIERS:
         how_to_join, how_to_rem_duplicates = join_method
 
-        assert how_to_join in constants.SC_AVAILABLE_JOIN, (
-                'The provided join method needs to be one of: '
-                + str(constants.SC_AVAILABLE_JOIN)
-        )
-
-        assert how_to_rem_duplicates in constants.SC_AVAILABLE_COMBINE, (
-                'The provided combine method needs to be one of: '
-                + str(constants.SC_AVAILABLE_COMBINE)
-        )
+        ensembles.assert_join_merge_keywords(how_to_join,
+                                             how_to_rem_duplicates)
 
         preds = [_fit_predict(m)
                  for m in set(constants.CLASSIFIERS.values())]
 
-        # join preds ...
-        # TODO
+        preds = ensembles.ensemble_predictions_by_keywords(preds,
+                                                           threshold,
+                                                           how_to_join,
+                                                           how_to_rem_duplicates)
 
-        import pudb;
-        pudb.set_trace()
+
+
 
     else:
         preds = _fit_predict(classifier)
