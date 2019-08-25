@@ -495,6 +495,8 @@ def _init_model_and_get_preds(classifier: str,
                               join_method: Tuple[str, str],
                               threshold=0.5,
                               **kwargs) -> pd.Series:
+    LOGGER.debug('Getting predictions for fold using "%s" classifier and a threshold of "%d"', classifier, threshold)
+
     def _fit_predict(clsf: str):
         model = utils.init_model(clsf,
                                  len(training_set.columns),  # num features
@@ -509,6 +511,7 @@ def _init_model_and_get_preds(classifier: str,
         )
 
     if classifier == keys.ALL_CLASSIFIERS:
+        LOGGER.debug('Joining results with method "%s"', join_method)
         how_to_join, how_to_rem_duplicates = join_method
 
         ensembles.assert_join_merge_keywords(how_to_join,
