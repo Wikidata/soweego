@@ -110,7 +110,7 @@ def cli(
     rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
 
     performance_out, predictions_out = _build_output_paths(
-        catalog, entity, classifier, dir_io
+        catalog, entity, classifier, dir_io, join_method
     )
 
     # -n, --nested
@@ -159,15 +159,29 @@ def cli(
     sys.exit(0)
 
 
-def _build_output_paths(catalog, entity, classifier, dir_io):
+def _build_output_paths(catalog, entity, classifier, dir_io, join_method):
+    # If we're getting the result from an 'ensemble' (all classifiers) then
+    # use the appropriate output file
+    if classifier == keys.ALL_CLASSIFIERS:
+        performanceFp = constants.LINKER_JOINED_PERFORMANCE.format(
+            catalog, entity, *join_method
+        )
+        predictionsFp = constants.LINKER_EVALUATION_JOINED_PREDICTIONS.format(
+            catalog, entity, *join_method
+        )
+    else:
+        performanceFp = constants.LINKER_PERFORMANCE.format(
+            catalog, entity, classifier
+        )
+        predictionsFp = constants.LINKER_EVALUATION_PREDICTIONS.format(
+            catalog, entity, classifier
+        )
+
     performance_outpath = os.path.join(
-        dir_io, constants.LINKER_PERFORMANCE.format(catalog, entity, classifier)
+        dir_io, performanceFp
     )
     predictions_outpath = os.path.join(
-        dir_io,
-        constants.LINKER_EVALUATION_PREDICTIONS.format(
-            catalog, entity, classifier
-        ),
+        dir_io, predictionsFp
     )
     os.makedirs(os.path.dirname(predictions_outpath), exist_ok=True)
 
