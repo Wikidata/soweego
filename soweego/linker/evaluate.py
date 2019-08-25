@@ -180,7 +180,7 @@ def _run_average(
     LOGGER.info('Starting average evaluation over %d folds ...', k_folds)
 
     predictions, p_mean, p_std, r_mean, r_std, fscore_mean, fscore_std = _average_k_fold(
-        constants.CLASSIFIERS[classifier],
+        constants.EXTENDED_CLASSIFIERS[classifier],
         catalog,
         entity,
         k_folds,
@@ -237,7 +237,7 @@ def _run_single(
     LOGGER.info('Starting single evaluation over %d folds ...', k_folds)
 
     predictions, (precision, recall, fscore, confusion_matrix) = _single_k_fold(
-        constants.CLASSIFIERS[classifier],
+        constants.EXTENDED_CLASSIFIERS[classifier],
         catalog,
         entity,
         k_folds,
@@ -499,7 +499,7 @@ def _init_model_and_get_preds(classifier: str,
                 + str(constants.SC_AVAILABLE_COMBINE)
         )
 
-        preds = [_fit_predict(test_set)
+        preds = [_fit_predict(m)
                  for m in set(constants.CLASSIFIERS.values())]
 
         # join preds ...
