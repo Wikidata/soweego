@@ -512,25 +512,4 @@ def _init_model_and_get_preds(classifier: str,
     else:
         preds = _fit_predict(classifier)
 
-    return preds
-
-    # TODO This is also repeated in link.py. Maybe extract it to ensembles.py?
-    # # Now we use join the dataframes using the correct method
-    # merged_results: pd.DataFrame
-    # if how_to_join == constants.SC_UNION:
-    #     merged_results = ensembles.join_dataframes_by_union(all_results)
-    #
-    # elif how_to_join == constants.SC_INTERSECTION:
-    #     merged_results = ensembles.join_dataframes_by_intersection(all_results)
-    #
-    # # and then proceed to deal with duplicates. This step also removes entries under the
-    # # specified threshold
-    # if how_to_rem_duplicates == constants.SC_AVERAGE:
-    #     merged_results = ensembles.remove_duplicates_by_averaging(
-    #         merged_results, threshold
-    #     )
-    #
-    # elif how_to_rem_duplicates == constants.SC_VOTING:
-    #     merged_results = ensembles.remove_duplicates_by_majority_vote(
-    #         merged_results, threshold
-    #     )
+    return preds[preds >= threshold].index
