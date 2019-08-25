@@ -74,6 +74,12 @@ LOGGER = logging.getLogger(__name__)
     help=f'Input/output directory, default: {constants.SHARED_FOLDER}.',
 )
 @click.option(
+    '-t',
+    '--threshold',
+    default=constants.CONFIDENCE_THRESHOLD,
+    help=f"Probability score threshold, default: {constants.CONFIDENCE_THRESHOLD}.",
+)
+@click.option(
     '-jm',
     '--join-method',
     type=(
@@ -90,7 +96,7 @@ LOGGER = logging.getLogger(__name__)
 )
 @click.pass_context
 def cli(
-        ctx, classifier, catalog, entity, k_folds, single, nested, metric, dir_io, join_method
+        ctx, classifier, catalog, entity, k_folds, single, nested, metric, dir_io, threshold, join_method
 ):
     """Evaluate the performance of a supervised linker.
 
@@ -131,6 +137,7 @@ def cli(
             performance_out,
             predictions_out,
             dir_io,
+            threshold,
             join_method
         )
 
@@ -145,6 +152,7 @@ def cli(
             performance_out,
             predictions_out,
             dir_io,
+            threshold,
             join_method
         )
 
@@ -175,6 +183,7 @@ def _run_average(
         performance_out,
         predictions_out,
         dir_io,
+        threshold,
         join_method
 ):
     LOGGER.info('Starting average evaluation over %d folds ...', k_folds)
@@ -186,6 +195,7 @@ def _run_average(
         k_folds,
         dir_io,
         join_method,
+        threshold,
         **kwargs,
     )
 
@@ -232,6 +242,7 @@ def _run_single(
         performance_out,
         predictions_out,
         dir_io,
+        threshold,
         join_method
 ):
     LOGGER.info('Starting single evaluation over %d folds ...', k_folds)
@@ -243,6 +254,7 @@ def _run_single(
         k_folds,
         dir_io,
         join_method,
+        threshold,
         **kwargs,
     )
 
@@ -388,7 +400,7 @@ def _nested_k_fold_with_grid_search(
     return result
 
 
-def _average_k_fold(classifier, catalog, entity, k, dir_io, join_method, **kwargs):
+def _average_k_fold(classifier, catalog, entity, k, dir_io, join_method, threshold, **kwargs):
     predictions, precisions, recalls, f_scores = None, [], [], []
     dataset, positive_samples_index = train.build_training_set(
         catalog, entity, dir_io
@@ -406,7 +418,9 @@ def _average_k_fold(classifier, catalog, entity, k, dir_io, join_method, **kwarg
                                           training,
                                           test,
                                           positive_samples_index,
-                                          join_method)
+                                          join_method,
+                                          threshold,
+                                          **kwargs)
 
         K.clear_session()  # Free memory
 
@@ -434,7 +448,7 @@ def _average_k_fold(classifier, catalog, entity, k, dir_io, join_method, **kwarg
     )
 
 
-def _single_k_fold(classifier, catalog, entity, k, dir_io, join_method, **kwargs):
+def _single_k_fold(classifier, catalog, entity, k, dir_io, join_method, threshold, **kwargs):
     predictions, test_set = None, []
     dataset, positive_samples_index = train.build_training_set(
         catalog, entity, dir_io
@@ -453,7 +467,9 @@ def _single_k_fold(classifier, catalog, entity, k, dir_io, join_method, **kwargs
                                           training,
                                           test,
                                           positive_samples_index,
-                                          join_method)
+                                          join_method,
+                                          threshold,
+                                          **kwargs)
 
         K.clear_session()  # Free memory
 
@@ -505,9 +521,6 @@ def _init_model_and_get_preds(classifier: str,
                                                            threshold,
                                                            how_to_join,
                                                            how_to_rem_duplicates)
-
-
-
 
     else:
         preds = _fit_predict(classifier)
