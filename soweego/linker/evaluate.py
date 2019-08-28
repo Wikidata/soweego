@@ -534,7 +534,7 @@ def _init_model_and_get_preds(classifier: str,
                                              how_to_rem_duplicates)
 
         preds = [_fit_predict(m)
-                 for m in set(constants.CLASSIFIERS.values())]
+                 for m in constants.CLASSIFIERS_FOR_ENSEMBLE]
 
         preds = ensembles.ensemble_predictions_by_keywords(preds,
                                                            threshold,

@@ -140,7 +140,7 @@ def _run_for_all(
     # ensure that models for all classifiers exist, and directly get the model
     # and results path
     available_classifiers = []
-    for classifier_name in list(set(constants.CLASSIFIERS.values())):
+    for classifier_name in constants.CLASSIFIERS_FOR_ENSEMBLE:
         model_path, result_path = _handle_io(
             classifier_name, catalog, entity, dir_io
         )
