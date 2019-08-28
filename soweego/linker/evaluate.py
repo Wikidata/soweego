@@ -310,6 +310,8 @@ def _run_nested(
         k_folds,
     )
 
+    # currently at least one of these are None if the classifier is
+    # SLP, MLP, or all
     clf = constants.CLASSIFIERS.get(classifier)
     param_grid = constants.PARAMETER_GRIDS.get(clf)
 

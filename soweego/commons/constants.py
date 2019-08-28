@@ -285,17 +285,26 @@ CLASSIFIERS = {
     'naive_bayes': keys.NAIVE_BAYES,
     'support_vector_machines': keys.SVM,
     'linear_support_vector_machines': keys.LINEAR_SVM,
+    'random_forest': keys.RANDOM_FOREST,
     'single_layer_perceptron': keys.SINGLE_LAYER_PERCEPTRON,
     'multi_layer_perceptron': keys.MULTI_LAYER_PERCEPTRON,
     'nb': keys.NAIVE_BAYES,  # Shorthand
     'svm': keys.SVM,  # Shorthand
     'lsvm': keys.LINEAR_SVM,  # Shorthand
+    'rfc': keys.RANDOM_FOREST,  # Shorthand
     'slp': keys.SINGLE_LAYER_PERCEPTRON,  # Shorthand
     'mlp': keys.MULTI_LAYER_PERCEPTRON,  # Shorthand
 }
 
 # holds mention of 'classifier ensemble'
 EXTENDED_CLASSIFIERS = {**CLASSIFIERS, 'all': keys.ALL_CLASSIFIERS}
+CLASSIFIERS_FOR_ENSEMBLE = [
+    keys.NAIVE_BAYES,
+    keys.LINEAR_SVM,
+    keys.RANDOM_FOREST,
+    keys.SINGLE_LAYER_PERCEPTRON,
+    keys.MULTI_LAYER_PERCEPTRON,
+]
 
 PERFORMANCE_METRICS = ['precision', 'recall', 'f1']
 
@@ -316,6 +325,11 @@ PARAMETER_GRIDS = {
     keys.SINGLE_LAYER_PERCEPTRON: {
         'epochs': [100, 1000, 2000, 3000],
         'batch_size': [256, 512, 1024, 2048],
+    },
+    keys.RANDOM_FOREST: {
+        'n_estimators': [100, 200, 350, 500],
+        'max_features': [None, 'auto'],
+        'bootstrap': [True, False],
     },
 }
 

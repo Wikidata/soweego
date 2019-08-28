@@ -99,8 +99,10 @@ REAL_NAME = 'real_name'
 NAIVE_BAYES = 'naive_bayes'
 LINEAR_SVM = 'linear_support_vector_machines'
 SVM = 'support_vector_machines'
+RANDOM_FOREST = 'random_forest'
 SINGLE_LAYER_PERCEPTRON = 'single_layer_perceptron'
 MULTI_LAYER_PERCEPTRON = 'multi_layer_perceptron'
+
 
 # For ensembles
 ALL_CLASSIFIERS = 'all'

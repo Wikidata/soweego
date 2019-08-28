@@ -79,6 +79,9 @@ def init_model(classifier: str, num_features: int, **kwargs):
     elif classifier is keys.SVM:
         model = classifiers.SVCClassifier(**kwargs)
 
+    elif classifier is keys.RANDOM_FOREST:
+        model = classifiers.RandomForest(**kwargs)
+
     elif classifier is keys.SINGLE_LAYER_PERCEPTRON:
         model = classifiers.SingleLayerPerceptron(num_features, **kwargs)
 

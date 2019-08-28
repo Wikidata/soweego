@@ -12,6 +12,13 @@ you will use its :meth:`fit() <recordlinkage.NaiveBayesClassifier.fit>`,
 :meth:`predict() <recordlinkage.NaiveBayesClassifier.predict>`, and
 :meth:`prob() <recordlinkage.NaiveBayesClassifier.prob>` methods.
 """
+import sys
+from collections import namedtuple
+
+import joblib
+from sklearn.ensemble import RandomForestClassifier
+
+from soweego.linker import link
 
 __author__ = 'Marco Fossati, Andrea Tupini'
 __email__ = 'fossati@spaziodati.eu, tupini07@gmail.com'
@@ -89,6 +96,58 @@ class SVCClassifier(SKLearnAdapter, BaseClassifier):
 
         # `SVC.predict_proba` returns a matrix
         # where rows are classifications and columns are classes.
+        # We are in a binary setting, so 2 classes:
+        # `0` for non-matches, `1` for matches.
+        # We only need the probability of being a match,
+        # so we return the second column
+        classifications = self.kernel.predict_proba(feature_vectors)[:, 1]
+
+        return pd.Series(classifications, index=feature_vectors.index)
+
+    def __repr__(self):
+        return f'{self.kernel}'
+
+
+class RandomForest(SKLearnAdapter, BaseClassifier):
+    """A Random Forest classifier.
+
+    This class implements :class:`sklearn.ensemble.RandomForestClassifier`.
+
+    It fits multiple decision trees on sub-samples of the dataset and
+    averages the result to get more accuracy and reduce over-fitting.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(RandomForest, self).__init__()
+
+        kwargs['n_estimators'] = kwargs.get('n_estimators', 100)
+        kwargs['max_features'] = kwargs.get('max_features', 'auto')
+        kwargs['bootstrap'] = kwargs.get('bootstrap', True)
+
+        self.kernel = RandomForestClassifier(*args, **kwargs)
+
+    def prob(self, feature_vectors: pd.DataFrame) -> pd.DataFrame:
+        """Classify record pairs and include the probability score
+        of being a match.
+
+        :param feature_vectors: a :class:`DataFrame <pandas.DataFrame>`
+          computed via record pairs comparison. This should be
+          :meth:`recordlinkage.Compare.compute` output.
+          See :func:`extract_features() <soweego.linker.workflow.extract_features>`
+          for more details
+        :return: the classification results
+        """
+
+        match_class = self.kernel.classes_[1]
+
+        # Invalid class label
+        assert match_class == 1, (
+            f'Invalid match class label: {match_class}.'
+            'sklearn.ensemble.RandomForestClassifier.predict_proba() expects the second class '
+            'in the trained model to be 1'
+        )
+
+        # in the result, rows are classifications and columns are classes.
         # We are in a binary setting, so 2 classes:
         # `0` for non-matches, `1` for matches.
         # We only need the probability of being a match,
