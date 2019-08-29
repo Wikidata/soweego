@@ -331,7 +331,7 @@ def _run_nested(
         model_out = os.path.join(
             dir_io,
             constants.LINKER_NESTED_CV_BEST_MODEL.format(
-                catalog, entity, classifier, k
+                catalog, entity, clf, k
             ),
         )
 
