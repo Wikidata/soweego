@@ -328,8 +328,6 @@ PARAMETER_GRIDS = {
     },
     keys.RANDOM_FOREST: {
         'n_estimators': [100, 200, 350, 500],
-        'max_features': [None, 'auto'],
-        'bootstrap': [True, False],
     },
 }
 
