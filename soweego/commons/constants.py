@@ -231,7 +231,11 @@ NN_CHECKPOINT_FOLDER = 'best_model_checkpoint'
 # File names
 NN_CHECKPOINT_FILENAME = '{}_best_checkpoint_model.hdf5'
 EVALUATION_PERFORMANCE_FILENAME = '{}_{}_{}_performance.txt'
+EVALUATION_JOINED_PERFORMANCE_FILENAME = '{}_{}_ALL_{}_{}_performance.txt'
 EVALUATION_PREDICTIONS_FILENAME = '{}_{}_{}_evaluation_links.csv.gz'
+EVALUATION_JOINED_PREDICTIONS_FILENAME = (
+    '{}_{}_ALL_{}_{}_evaluation_links.csv.gz'
+)
 RESULT_FILENAME = '{}_{}_{}_links.csv.gz'
 RESULT_JOINED_FILENAME = '{}_{}_ALL_{}_{}_links.csv.gz'
 NESTED_CV_BEST_MODEL_FILENAME = '{}_{}_{}_best_model_k{:02}.pkl'
@@ -261,9 +265,16 @@ LINKER_RESULT_JOINED = os.path.join(RESULTS_FOLDER, RESULT_JOINED_FILENAME)
 LINKER_EVALUATION_PREDICTIONS = os.path.join(
     RESULTS_FOLDER, EVALUATION_PREDICTIONS_FILENAME
 )
+LINKER_EVALUATION_JOINED_PREDICTIONS = os.path.join(
+    RESULTS_FOLDER, EVALUATION_JOINED_PREDICTIONS_FILENAME
+)
 LINKER_PERFORMANCE = os.path.join(
     RESULTS_FOLDER, EVALUATION_PERFORMANCE_FILENAME
 )
+LINKER_JOINED_PERFORMANCE = os.path.join(
+    RESULTS_FOLDER, EVALUATION_JOINED_PERFORMANCE_FILENAME
+)
+
 NEURAL_NETWORK_CHECKPOINT_MODEL = os.path.join(
     NN_CHECKPOINT_FOLDER, NN_CHECKPOINT_FILENAME
 )
@@ -276,17 +287,26 @@ CLASSIFIERS = {
     'naive_bayes': keys.NAIVE_BAYES,
     'support_vector_machines': keys.SVM,
     'linear_support_vector_machines': keys.LINEAR_SVM,
+    'random_forest': keys.RANDOM_FOREST,
     'single_layer_perceptron': keys.SINGLE_LAYER_PERCEPTRON,
     'multi_layer_perceptron': keys.MULTI_LAYER_PERCEPTRON,
     'nb': keys.NAIVE_BAYES,  # Shorthand
     'svm': keys.SVM,  # Shorthand
     'lsvm': keys.LINEAR_SVM,  # Shorthand
+    'rfc': keys.RANDOM_FOREST,  # Shorthand
     'slp': keys.SINGLE_LAYER_PERCEPTRON,  # Shorthand
     'mlp': keys.MULTI_LAYER_PERCEPTRON,  # Shorthand
 }
 
 # holds mention of 'classifier ensemble'
-EXTENDED_CLASSIFIERS = {**CLASSIFIERS, 'all': 'all'}
+EXTENDED_CLASSIFIERS = {**CLASSIFIERS, 'all': keys.ALL_CLASSIFIERS}
+CLASSIFIERS_FOR_ENSEMBLE = [
+    keys.NAIVE_BAYES,
+    keys.LINEAR_SVM,
+    keys.RANDOM_FOREST,
+    keys.SINGLE_LAYER_PERCEPTRON,
+    keys.MULTI_LAYER_PERCEPTRON,
+]
 
 PERFORMANCE_METRICS = ['precision', 'recall', 'f1']
 
@@ -308,6 +328,7 @@ PARAMETER_GRIDS = {
         'epochs': [100, 1000, 2000, 3000],
         'batch_size': [256, 512, 1024, 2048],
     },
+    keys.RANDOM_FOREST: {'n_estimators': [100, 200, 350, 500]},
 }
 
 CLASSIFICATION_RETURN_SERIES = ('classification.return_type', 'series')
