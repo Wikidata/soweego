@@ -516,6 +516,8 @@ def _handle_addition(
         existing_values = [
             claim_value.getTarget().lower()
             for claim_value in given_predicate_claims
+            # Yes, it happens: a claim with no value
+            if claim_value.getTarget()
         ]
     else:
         existing_values = [
