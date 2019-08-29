@@ -14,11 +14,8 @@ you will use its :meth:`fit() <recordlinkage.NaiveBayesClassifier.fit>`,
 """
 import logging
 import os
-import sys
-from collections import namedtuple
 from contextlib import redirect_stderr
 
-import joblib
 import pandas as pd
 from recordlinkage.adapters import KerasAdapter, SKLearnAdapter
 from recordlinkage.base import BaseClassifier
@@ -26,7 +23,6 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 
 from soweego.commons import constants
-from soweego.linker import link
 
 __author__ = 'Marco Fossati, Andrea Tupini'
 __email__ = 'fossati@spaziodati.eu, tupini07@gmail.com'
@@ -329,4 +325,3 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
         )
 
         self.kernel = model
-
