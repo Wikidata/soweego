@@ -50,7 +50,7 @@ class DiscogsArtistEntity(BaseEntity):
 
     # Name in real life
     real_name = Column(Text)
-    
+
     # Discogs-specific indicator of data quality
     data_quality = Column(String(20))
 
