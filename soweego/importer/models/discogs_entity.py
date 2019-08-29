@@ -50,6 +50,7 @@ class DiscogsArtistEntity(BaseEntity):
 
     # Name in real life
     real_name = Column(Text)
+    
     # Discogs-specific indicator of data quality
     data_quality = Column(String(20))
 
@@ -74,6 +75,9 @@ class DiscogsMasterEntity(BaseEntity):
 
     main_release_id = Column(String(50))
     genres = Column(Text)
+
+    # Discogs-specific indicator of data quality
+    data_quality = Column(String(20))
 
 
 class DiscogsMusicianEntity(DiscogsArtistEntity):
