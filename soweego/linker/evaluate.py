@@ -162,6 +162,7 @@ def cli(
 def _build_output_paths(catalog, entity, classifier, dir_io, join_method):
     # If we're getting the result from an 'ensemble' (all classifiers) then
     # use the appropriate output file
+
     if classifier == keys.ALL_CLASSIFIERS:
         performanceFp = constants.LINKER_JOINED_PERFORMANCE.format(
             catalog, entity, *join_method
@@ -170,6 +171,9 @@ def _build_output_paths(catalog, entity, classifier, dir_io, join_method):
             catalog, entity, *join_method
         )
     else:
+
+        classifier = constants.CLASSIFIERS.get(classifier)
+
         performanceFp = constants.LINKER_PERFORMANCE.format(
             catalog, entity, classifier
         )
