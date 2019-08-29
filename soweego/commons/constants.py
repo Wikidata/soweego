@@ -233,7 +233,9 @@ NN_CHECKPOINT_FILENAME = '{}_best_checkpoint_model.hdf5'
 EVALUATION_PERFORMANCE_FILENAME = '{}_{}_{}_performance.txt'
 EVALUATION_JOINED_PERFORMANCE_FILENAME = '{}_{}_ALL_{}_{}_performance.txt'
 EVALUATION_PREDICTIONS_FILENAME = '{}_{}_{}_evaluation_links.csv.gz'
-EVALUATION_JOINED_PREDICTIONS_FILENAME = '{}_{}_ALL_{}_{}_evaluation_links.csv.gz'
+EVALUATION_JOINED_PREDICTIONS_FILENAME = (
+    '{}_{}_ALL_{}_{}_evaluation_links.csv.gz'
+)
 RESULT_FILENAME = '{}_{}_{}_links.csv.gz'
 RESULT_JOINED_FILENAME = '{}_{}_ALL_{}_{}_links.csv.gz'
 NESTED_CV_BEST_MODEL_FILENAME = '{}_{}_{}_best_model_k{:02}.pkl'
@@ -326,9 +328,7 @@ PARAMETER_GRIDS = {
         'epochs': [100, 1000, 2000, 3000],
         'batch_size': [256, 512, 1024, 2048],
     },
-    keys.RANDOM_FOREST: {
-        'n_estimators': [100, 200, 350, 500],
-    },
+    keys.RANDOM_FOREST: {'n_estimators': [100, 200, 350, 500]},
 }
 
 CLASSIFICATION_RETURN_SERIES = ('classification.return_type', 'series')

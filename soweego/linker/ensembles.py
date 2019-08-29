@@ -10,7 +10,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def remove_duplicates_by_majority_vote(
-        df: pd.Series, threshold=0.0
+    df: pd.Series, threshold=0.0
 ) -> pd.Series:
     """
     Takes a pd.Series which represents the predictions given by multiple classifiers.
@@ -75,9 +75,7 @@ def remove_duplicates_by_majority_vote(
     return result
 
 
-def remove_duplicates_by_averaging(
-        df: pd.Series, threshold=0.0
-) -> pd.Series:
+def remove_duplicates_by_averaging(df: pd.Series, threshold=0.0) -> pd.Series:
     """
     Takes a pd.Series which represents the predictions given by multiple classifiers.
     It will average all duplicate predictions.
@@ -144,20 +142,22 @@ def join_predictions_by_intersection(dfs: List[pd.Series]) -> pd.Series:
 
 def assert_join_merge_keywords(how_to_join: str, how_to_rem_duplicates: str):
     assert how_to_join in constants.SC_AVAILABLE_JOIN, (
-            'The provided join method needs to be one of: '
-            + str(constants.SC_AVAILABLE_JOIN)
+        'The provided join method needs to be one of: '
+        + str(constants.SC_AVAILABLE_JOIN)
     )
 
     assert how_to_rem_duplicates in constants.SC_AVAILABLE_COMBINE, (
-            'The provided combine method needs to be one of: '
-            + str(constants.SC_AVAILABLE_COMBINE)
+        'The provided combine method needs to be one of: '
+        + str(constants.SC_AVAILABLE_COMBINE)
     )
 
 
-def ensemble_predictions_by_keywords(all_results: List[pd.Series],
-                                     threshold: float,
-                                     how_to_join: str,
-                                     how_to_rem_duplicates: str) -> pd.DataFrame:
+def ensemble_predictions_by_keywords(
+    all_results: List[pd.Series],
+    threshold: float,
+    how_to_join: str,
+    how_to_rem_duplicates: str,
+) -> pd.DataFrame:
 
     for k in all_results:
         assert isinstance(k, pd.Series), 'All predictions should be pd.Series'

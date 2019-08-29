@@ -12,12 +12,20 @@ you will use its :meth:`fit() <recordlinkage.NaiveBayesClassifier.fit>`,
 :meth:`predict() <recordlinkage.NaiveBayesClassifier.predict>`, and
 :meth:`prob() <recordlinkage.NaiveBayesClassifier.prob>` methods.
 """
+import logging
+import os
 import sys
 from collections import namedtuple
+from contextlib import redirect_stderr
 
 import joblib
+import pandas as pd
+from recordlinkage.adapters import KerasAdapter, SKLearnAdapter
+from recordlinkage.base import BaseClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
 
+from soweego.commons import constants
 from soweego.linker import link
 
 __author__ = 'Marco Fossati, Andrea Tupini'
@@ -26,16 +34,6 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2019, Hjfocs, tupini07'
 
-import logging
-import os
-from contextlib import redirect_stderr
-
-import pandas as pd
-from recordlinkage.adapters import KerasAdapter, SKLearnAdapter
-from recordlinkage.base import BaseClassifier
-from sklearn.svm import SVC
-
-from soweego.commons import constants
 
 with redirect_stderr(open(os.devnull, 'w')):
     # When `keras` is imported, it prints a message to stderr
@@ -165,12 +163,12 @@ class RandomForest(SKLearnAdapter, BaseClassifier):
 # shared across neural network implementations.
 class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
     def _fit(
-            self,
-            feature_vectors: pd.Series,
-            answers: pd.Series = None,
-            batch_size: int = constants.BATCH_SIZE,
-            epochs: int = constants.EPOCHS,
-            validation_split: float = constants.VALIDATION_SPLIT,
+        self,
+        feature_vectors: pd.Series,
+        answers: pd.Series = None,
+        batch_size: int = constants.BATCH_SIZE,
+        epochs: int = constants.EPOCHS,
+        validation_split: float = constants.VALIDATION_SPLIT,
     ) -> None:
         model_path = os.path.join(
             constants.SHARED_FOLDER,
@@ -346,7 +344,9 @@ class SuperConfidentPredsEnsemble(BaseClassifier):
 
     # TODO: saving the 'actual model' may be unnecessary. Might impact if target PC has low mem
     # NOTE: Here we = can save also whether the results and model exist
-    _Classf_info = namedtuple("ClassifierInfo", ["model_path", "results_path", "actual_model"])
+    _Classf_info = namedtuple(
+        "ClassifierInfo", ["model_path", "results_path", "actual_model"]
+    )
 
     def __init__(self, catalog, entity, dir_io):
         super().__init__()
@@ -358,7 +358,9 @@ class SuperConfidentPredsEnsemble(BaseClassifier):
             # TODO: this is borrowed from linker.link (probably it's not the best idea, want decoupling)
             # We possibly want to maintain a dict which tells us which classifiers have been trained or not
             # namedict?
-            model_path, result_path = link._handle_io(classifier, catalog, entity, dir_io)
+            model_path, result_path = link._handle_io(
+                classifier, catalog, entity, dir_io
+            )
 
             # also this may be removed
             if model_path is None:
@@ -368,8 +370,9 @@ class SuperConfidentPredsEnsemble(BaseClassifier):
                 self._Classf_info(
                     model_path=model_path,
                     results_path=result_path,
-                    actual_model=joblib.load(model_path)
-                ))
+                    actual_model=joblib.load(model_path),
+                )
+            )
 
     def _fit(self, *args, **kwargs):
         pass

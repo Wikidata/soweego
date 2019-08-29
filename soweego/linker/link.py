@@ -67,26 +67,26 @@ LOGGER = logging.getLogger(__name__)
     '-jm',
     '--join-method',
     type=(
-            click.Choice(constants.SC_AVAILABLE_JOIN),
-            click.Choice(constants.SC_AVAILABLE_COMBINE),
+        click.Choice(constants.SC_AVAILABLE_JOIN),
+        click.Choice(constants.SC_AVAILABLE_COMBINE),
     ),
     default=(constants.SC_INTERSECTION, constants.SC_AVERAGE),
     help=(
-            f"Way in which the results of 'all' classifiers are merged. The first term can be 'union' or 'intersection' "
-            f"and says how the sets of predictions are joined. The second term can be 'average' or 'vote' and specify "
-            f"how duplicates predictions are dealt with. Only used when classifier='all'. Default: {(constants.SC_INTERSECTION, constants.SC_AVERAGE)}."
+        f"Way in which the results of 'all' classifiers are merged. The first term can be 'union' or 'intersection' "
+        f"and says how the sets of predictions are joined. The second term can be 'average' or 'vote' and specify "
+        f"how duplicates predictions are dealt with. Only used when classifier='all'. Default: {(constants.SC_INTERSECTION, constants.SC_AVERAGE)}."
     ),
 )
 def cli(
-        classifier,
-        catalog,
-        entity,
-        threshold,
-        name_rule,
-        upload,
-        sandbox,
-        dir_io,
-        join_method,
+    classifier,
+    catalog,
+    entity,
+    threshold,
+    name_rule,
+    upload,
+    sandbox,
+    dir_io,
+    join_method,
 ):
     """Run a supervised linker.
 
@@ -129,7 +129,7 @@ def cli(
 
 
 def _run_for_all(
-        catalog, entity, threshold, name_rule, upload, sandbox, dir_io, join_method
+    catalog, entity, threshold, name_rule, upload, sandbox, dir_io, join_method
 ):
     """
     Runs the `linking` procedure using all available classifiers. Joins the results using
@@ -157,9 +157,9 @@ def _run_for_all(
     rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
 
     for (
-            wd_chunk,
-            target_chunk,
-            feature_vectors,
+        wd_chunk,
+        target_chunk,
+        feature_vectors,
     ) in _classification_set_generator(catalog, entity, dir_io):
         # predict the current chunk with all classifiers
         for classifier_name, classifier, result_path in available_classifiers:
@@ -200,7 +200,7 @@ def _run_for_all(
                     header=None,
                     names=['qid', 'tid', 'prediction'],
                     index_col=['qid', 'tid'],
-                    squeeze=True
+                    squeeze=True,
                 )
             )
         )
@@ -213,10 +213,9 @@ def _run_for_all(
     how_to_join, how_to_rem_duplicates = join_method
 
     # merge results and get a pd.Series
-    merged_results = ensembles.ensemble_predictions_by_keywords(all_results,
-                                                                threshold,
-                                                                how_to_join,
-                                                                how_to_rem_duplicates)
+    merged_results = ensembles.ensemble_predictions_by_keywords(
+        all_results, threshold, how_to_join, how_to_rem_duplicates
+    )
 
     result_path = os.path.join(
         dir_io,
@@ -242,7 +241,7 @@ def _run_for_all(
 
 
 def _run_for_one(
-        classifier, catalog, entity, threshold, name_rule, upload, sandbox, dir_io
+    classifier, catalog, entity, threshold, name_rule, upload, sandbox, dir_io
 ):
     """
     Runs the `linking` procedure for only one classifier
@@ -260,7 +259,7 @@ def _run_for_one(
     rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
 
     for i, chunk in enumerate(
-            execute(model_path, catalog, entity, threshold, name_rule, dir_io)
+        execute(model_path, catalog, entity, threshold, name_rule, dir_io)
     ):
         chunk.to_csv(result_path, mode='a', header=False)
 
@@ -270,19 +269,19 @@ def _run_for_one(
     # Free memory in case of neural networks:
     # can be done only after classification
     if actual_classifier in (
-            keys.SINGLE_LAYER_PERCEPTRON,
-            keys.MULTI_LAYER_PERCEPTRON,
+        keys.SINGLE_LAYER_PERCEPTRON,
+        keys.MULTI_LAYER_PERCEPTRON,
     ):
         K.clear_session()  # Clear the TensorFlow graph
 
 
 def execute(
-        model_path: str,
-        catalog: str,
-        entity: str,
-        threshold: float,
-        name_rule: bool,
-        dir_io: str,
+    model_path: str,
+    catalog: str,
+    entity: str,
+    threshold: float,
+    name_rule: bool,
+    dir_io: str,
 ) -> Iterator[pd.Series]:
     """Run a supervised linker.
 
@@ -308,9 +307,9 @@ def execute(
     classifier = joblib.load(model_path)
 
     for (
-            wd_chunk,
-            target_chunk,
-            feature_vectors,
+        wd_chunk,
+        target_chunk,
+        feature_vectors,
     ) in _classification_set_generator(catalog, entity, dir_io):
         # The classification set must have the same feature space
         # as the training one
@@ -331,7 +330,7 @@ def execute(
 
 
 def _classification_set_generator(
-        catalog, entity, dir_io
+    catalog, entity, dir_io
 ) -> Iterator[Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]]:
     goal = 'classification'
 
@@ -387,7 +386,7 @@ def _apply_linking_rules(name_rule, predictions, target_chunk, wd_chunk):
 
 
 def _get_unique_predictions_above_threshold(
-        predictions, threshold
+    predictions, threshold
 ) -> pd.DataFrame:
     # Filter by threshold
     above_threshold = predictions[predictions >= threshold]
@@ -454,8 +453,8 @@ def _add_missing_feature_columns(classifier, feature_vectors: pd.DataFrame):
         expected_features = classifier.kernel.coef_.shape[1]
 
     elif isinstance(
-            classifier,
-            (classifiers.SingleLayerPerceptron, classifiers.MultiLayerPerceptron),
+        classifier,
+        (classifiers.SingleLayerPerceptron, classifiers.MultiLayerPerceptron),
     ):
         expected_features = classifier.kernel.input_shape[1]
 
