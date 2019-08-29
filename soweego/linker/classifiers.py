@@ -12,6 +12,13 @@ you will use its :meth:`fit() <recordlinkage.NaiveBayesClassifier.fit>`,
 :meth:`predict() <recordlinkage.NaiveBayesClassifier.predict>`, and
 :meth:`prob() <recordlinkage.NaiveBayesClassifier.prob>` methods.
 """
+import sys
+from collections import namedtuple
+
+import joblib
+from sklearn.ensemble import RandomForestClassifier
+
+from soweego.linker import link
 
 __author__ = 'Marco Fossati, Andrea Tupini'
 __email__ = 'fossati@spaziodati.eu, tupini07@gmail.com'
@@ -95,7 +102,59 @@ class SVCClassifier(SKLearnAdapter, BaseClassifier):
         # so we return the second column
         classifications = self.kernel.predict_proba(feature_vectors)[:, 1]
 
-        return pd.DataFrame(classifications, index=feature_vectors.index)
+        return pd.Series(classifications, index=feature_vectors.index)
+
+    def __repr__(self):
+        return f'{self.kernel}'
+
+
+class RandomForest(SKLearnAdapter, BaseClassifier):
+    """A Random Forest classifier.
+
+    This class implements :class:`sklearn.ensemble.RandomForestClassifier`.
+
+    It fits multiple decision trees on sub-samples of the dataset and
+    averages the result to get more accuracy and reduce over-fitting.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(RandomForest, self).__init__()
+
+        kwargs['n_estimators'] = kwargs.get('n_estimators', 350)
+        kwargs['max_features'] = kwargs.get('max_features', 'auto')
+        kwargs['bootstrap'] = kwargs.get('bootstrap', True)
+
+        self.kernel = RandomForestClassifier(*args, **kwargs)
+
+    def prob(self, feature_vectors: pd.DataFrame) -> pd.DataFrame:
+        """Classify record pairs and include the probability score
+        of being a match.
+
+        :param feature_vectors: a :class:`DataFrame <pandas.DataFrame>`
+          computed via record pairs comparison. This should be
+          :meth:`recordlinkage.Compare.compute` output.
+          See :func:`extract_features() <soweego.linker.workflow.extract_features>`
+          for more details
+        :return: the classification results
+        """
+
+        match_class = self.kernel.classes_[1]
+
+        # Invalid class label
+        assert match_class == 1, (
+            f'Invalid match class label: {match_class}.'
+            'sklearn.ensemble.RandomForestClassifier.predict_proba() expects the second class '
+            'in the trained model to be 1'
+        )
+
+        # in the result, rows are classifications and columns are classes.
+        # We are in a binary setting, so 2 classes:
+        # `0` for non-matches, `1` for matches.
+        # We only need the probability of being a match,
+        # so we return the second column
+        classifications = self.kernel.predict_proba(feature_vectors)[:, 1]
+
+        return pd.Series(classifications, index=feature_vectors.index)
 
     def __repr__(self):
         return f'{self.kernel}'
@@ -106,12 +165,12 @@ class SVCClassifier(SKLearnAdapter, BaseClassifier):
 # shared across neural network implementations.
 class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
     def _fit(
-        self,
-        feature_vectors: pd.Series,
-        answers: pd.Series = None,
-        batch_size: int = constants.BATCH_SIZE,
-        epochs: int = constants.EPOCHS,
-        validation_split: float = constants.VALIDATION_SPLIT,
+            self,
+            feature_vectors: pd.Series,
+            answers: pd.Series = None,
+            batch_size: int = constants.BATCH_SIZE,
+            epochs: int = constants.EPOCHS,
+            validation_split: float = constants.VALIDATION_SPLIT,
     ) -> None:
         model_path = os.path.join(
             constants.SHARED_FOLDER,
@@ -272,3 +331,48 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
         )
 
         self.kernel = model
+
+
+class SuperConfidentPredsEnsemble(BaseClassifier):
+    """
+    Simple ensemble wrapper used to get "super confident" predictions
+
+    TODO: finish docstring
+    """
+
+    INTERSECTION = "intersection"
+    UNION = "union"
+    AVERAGE = "average"
+
+    # TODO: saving the 'actual model' may be unnecessary. Might impact if target PC has low mem
+    # NOTE: Here we = can save also whether the results and model exist
+    _Classf_info = namedtuple("ClassifierInfo", ["model_path", "results_path", "actual_model"])
+
+    def __init__(self, catalog, entity, dir_io):
+        super().__init__()
+
+        self.available_classifiers = list(set(constants.CLASSIWFIERS.values()))
+        self.classifier_info = []
+
+        for classifier in self.available_classifiers:
+            # TODO: this is borrowed from linker.link (probably it's not the best idea, want decoupling)
+            # We possibly want to maintain a dict which tells us which classifiers have been trained or not
+            # namedict?
+            model_path, result_path = link._handle_io(classifier, catalog, entity, dir_io)
+
+            # also this may be removed
+            if model_path is None:
+                sys.exit(1)
+
+            self.classifier_info.append(
+                self._Classf_info(
+                    model_path=model_path,
+                    results_path=result_path,
+                    actual_model=joblib.load(model_path)
+                ))
+
+    def _fit(self, *args, **kwargs):
+        pass
+
+    def _predict(self, comparison_vectors):
+        pass

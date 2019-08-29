@@ -43,7 +43,7 @@ def handle_extra_cli_args(args):
 def make_buckets(dataset, bucket_size=1000):
     """Slice a dataset into a set of buckets for efficient processing."""
     buckets = [
-        dataset[i * bucket_size : (i + 1) * bucket_size]
+        dataset[i * bucket_size: (i + 1) * bucket_size]
         for i in range(0, int((len(dataset) / bucket_size + 1)))
     ]
     LOGGER.info(
@@ -65,7 +65,7 @@ def prepare_stratified_k_fold(k, dataset, positive_samples_index):
     return k_fold, binary_target_variables
 
 
-def init_model(classifier, num_features, **kwargs):
+def init_model(classifier: str, num_features: int, **kwargs):
     if classifier is keys.NAIVE_BAYES:
         # add `binarize` threshold if not already specified
         if "binarize" not in kwargs.keys():
@@ -78,6 +78,9 @@ def init_model(classifier, num_features, **kwargs):
 
     elif classifier is keys.SVM:
         model = classifiers.SVCClassifier(**kwargs)
+
+    elif classifier is keys.RANDOM_FOREST:
+        model = classifiers.RandomForest(**kwargs)
 
     elif classifier is keys.SINGLE_LAYER_PERCEPTRON:
         model = classifiers.SingleLayerPerceptron(num_features, **kwargs)
