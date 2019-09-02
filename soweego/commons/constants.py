@@ -337,12 +337,8 @@ PARAMETER_GRIDS = {
         'hidden_activation': ['relu', 'tanh', 'selu'],
         'output_activation': ['sigmoid'],
         'optimizer': ['adam', 'Adadelta', 'Nadam'],
-        'hidden_layer_dims': [
-            [128, 32],
-            [256, 128, 32],
-            [128, 32, 32]
-        ]
-    }
+        'hidden_layer_dims': [[128, 32], [256, 128, 32], [128, 32, 32]],
+    },
 }
 
 CLASSIFICATION_RETURN_SERIES = ('classification.return_type', 'series')
@@ -365,7 +361,8 @@ MLP_HIDDEN_LAYERS_DIM = [
     # specifies a two fully connected layer NN
     # an extra layer with 1 output dimension will be
     # automatically used
-    128, 32
+    128,
+    32,
 ]
 
 # precisions for the `pandas.Period` class.

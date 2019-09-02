@@ -158,14 +158,13 @@ class RandomForest(SKLearnAdapter, BaseClassifier):
 # `recordlinkage.adapters.KerasAdapter_fit`,
 # shared across neural network implementations.
 class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
-
     def _fit(
-            self,
-            feature_vectors: pd.Series,
-            answers: pd.Series = None,
-            batch_size: int = constants.BATCH_SIZE,
-            epochs: int = constants.EPOCHS,
-            validation_split: float = constants.VALIDATION_SPLIT,
+        self,
+        feature_vectors: pd.Series,
+        answers: pd.Series = None,
+        batch_size: int = constants.BATCH_SIZE,
+        epochs: int = constants.EPOCHS,
+        validation_split: float = constants.VALIDATION_SPLIT,
     ) -> None:
         model_path = os.path.join(
             constants.SHARED_FOLDER,
@@ -195,7 +194,9 @@ class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
         LOGGER.info('Fit parameters: %s', history.params)
 
     def _create_model(self, **kwargs):
-        raise NotImplementedError('Subclasses need to implement the "create_model" method.')
+        raise NotImplementedError(
+            'Subclasses need to implement the "create_model" method.'
+        )
 
     def __repr__(self):
         return (
@@ -242,34 +243,25 @@ class SingleLayerPerceptron(_BaseNeuralNetwork):
         self.metrics = kwargs.get('metrics', constants.METRICS)
         self.optimizer = kwargs.get('optimizer', constants.SLP_OPTIMIZER)
 
-        self.activation = kwargs.get(
-            'activation', constants.OUTPUT_ACTIVATION
-        )
+        self.activation = kwargs.get('activation', constants.OUTPUT_ACTIVATION)
 
-        model = KerasClassifier(self._create_model,
-                                activation=self.activation,
-                                optimizer=self.optimizer
-                                )
+        model = KerasClassifier(
+            self._create_model,
+            activation=self.activation,
+            optimizer=self.optimizer,
+        )
 
         self.kernel = model
 
-    def _create_model(self,
-                      activation=constants.OUTPUT_ACTIVATION,
-                      optimizer=constants.SLP_OPTIMIZER):
+    def _create_model(
+        self,
+        activation=constants.OUTPUT_ACTIVATION,
+        optimizer=constants.SLP_OPTIMIZER,
+    ):
         model = Sequential()
-        model.add(
-            Dense(
-                1,
-                input_dim=self.input_dim,
-                activation=activation,
-            )
-        )
+        model.add(Dense(1, input_dim=self.input_dim, activation=activation))
 
-        model.compile(
-            optimizer=optimizer,
-            loss=self.loss,
-            metrics=self.metrics,
-        )
+        model.compile(optimizer=optimizer, loss=self.loss, metrics=self.metrics)
 
         return model
 
@@ -316,27 +308,40 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
         self.metrics = kwargs.get('metrics', constants.METRICS)
         self.optimizer = kwargs.get('optimizer', constants.SLP_OPTIMIZER)
 
-        self.hidden_activation = kwargs.get('hidden_activation', constants.HIDDEN_ACTIVATION)
-        self.output_activation = kwargs.get('output_activation', constants.OUTPUT_ACTIVATION)
+        self.hidden_activation = kwargs.get(
+            'hidden_activation', constants.HIDDEN_ACTIVATION
+        )
+        self.output_activation = kwargs.get(
+            'output_activation', constants.OUTPUT_ACTIVATION
+        )
 
-        model = KerasClassifier(self._create_model,
-                                hidden_activation=self.hidden_activation,
-                                output_activation=self.output_activation
-                                )
+        model = KerasClassifier(
+            self._create_model,
+            hidden_activation=self.hidden_activation,
+            output_activation=self.output_activation,
+        )
 
         self.kernel = model
 
-    def _create_model(self,
-                      optimizer=constants.SLP_OPTIMIZER,
-                      hidden_activation=constants.HIDDEN_ACTIVATION,
-                      output_activation=constants.OUTPUT_ACTIVATION,
-                      hidden_layer_dims=constants.MLP_HIDDEN_LAYERS_DIM):
+    def _create_model(
+        self,
+        optimizer=constants.SLP_OPTIMIZER,
+        hidden_activation=constants.HIDDEN_ACTIVATION,
+        output_activation=constants.OUTPUT_ACTIVATION,
+        hidden_layer_dims=constants.MLP_HIDDEN_LAYERS_DIM,
+    ):
 
         model = Sequential()
 
         for i, dim in enumerate(hidden_layer_dims):
             if i == 0:  # is first layer
-                model.add(Dense(dim, input_dim=self.input_dim, activation=hidden_activation))
+                model.add(
+                    Dense(
+                        dim,
+                        input_dim=self.input_dim,
+                        activation=hidden_activation,
+                    )
+                )
             else:
                 model.add(Dense(dim, activation=hidden_activation))
 
@@ -344,11 +349,6 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
 
         model.add(Dense(1, activation=output_activation))
 
-        model.compile(
-            optimizer=optimizer,
-            loss=self.loss,
-            metrics=self.metrics,
-
-        )
+        model.compile(optimizer=optimizer, loss=self.loss, metrics=self.metrics)
 
         return model
