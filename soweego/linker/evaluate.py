@@ -318,8 +318,6 @@ def _run_nested(
         k_folds,
     )
 
-    # currently at least one of these are None if the classifier is
-    # SLP, MLP, or all
     clf = constants.CLASSIFIERS.get(classifier)
     param_grid = constants.PARAMETER_GRIDS.get(clf)
 
@@ -335,22 +333,6 @@ def _run_nested(
     )
 
     LOGGER.info('Evaluation done: %s', result)
-
-    # Persist best models
-    for k, rdict in enumerate(result, 1):
-        model_out = os.path.join(
-            dir_io,
-            constants.LINKER_NESTED_CV_BEST_MODEL.format(
-                catalog, entity, clf, k
-            ),
-        )
-
-        model = rdict['best_model']  # get model 'instance'
-        rdict['best_model'] = model_out  # replace it with model path
-
-        joblib.dump(model, model_out)  # persist instance
-
-        LOGGER.info("Best model for fold %d dumped to '%s'", k, model_out)
 
     performance_out = performance_out.replace('txt', 'json')
     with open(performance_out, 'w') as out:
@@ -401,20 +383,36 @@ def _nested_k_fold_with_grid_search(
 
     dataset = dataset.to_numpy()
 
-    for train_index, test_index in outer_k_fold.split(dataset, target):
+    for k, (train_index, test_index) in enumerate(
+            outer_k_fold.split(dataset, target), 1
+    ):
         # Run grid search
         grid_search.fit(dataset[train_index], target[train_index])
 
         # Let grid search compute the test score
         test_score = grid_search.score(dataset[test_index], target[test_index])
+
+        # No reason to keep trained models in memory. We will instead just dump them
+        # to a file and keep the path
         best_model = grid_search.best_estimator_
+
+        model_path = os.path.join(
+            dir_io,
+            constants.LINKER_NESTED_CV_BEST_MODEL.format(
+                catalog, entity, classifier, k
+            ),
+        )
+
+        joblib.dump(best_model, model_path)
+
+        LOGGER.info("Best model for fold %d dumped to '%s'", k, model_path)
 
         # Grid search best score is the train score
         result.append(
             {
                 f'train_{scoring}': grid_search.best_score_,
                 f'test_{scoring}': test_score,
-                'best_model': best_model,
+                'best_model': model_path,
                 'params': grid_search.best_params_,
             }
         )
@@ -550,7 +548,8 @@ def _init_model_and_get_preds(
         LOGGER.debug('Joining results with method "%s"', join_method)
         how_to_join, how_to_rem_duplicates = join_method
 
-        ensembles.assert_join_merge_keywords(how_to_join, how_to_rem_duplicates)
+        ensembles.assert_join_merge_keywords(
+            how_to_join, how_to_rem_duplicates)
 
         preds = [_fit_predict(m) for m in constants.CLASSIFIERS_FOR_ENSEMBLE]
 
