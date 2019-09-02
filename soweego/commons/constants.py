@@ -317,6 +317,9 @@ PARAMETER_GRIDS = {
     },
     keys.LINEAR_SVM: {
         # liblinear fails to converge when values are 10 and 100 in some datasets
+        'dual': [True, False],
+        'tol': [1e-3, 1e-4, 1e-5],
+        'max_iter': [1000, 2000],
         'C': [0.01, 0.1, 1.0, 10, 100]
     },
     keys.SVM: {
