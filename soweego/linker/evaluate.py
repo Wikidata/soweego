@@ -345,10 +345,10 @@ def _run_nested(
             ),
         )
 
-        model = rdict['best_model'] # get model 'instance'
-        rdict['best_model'] = model_out # replace it with model path
+        model = rdict['best_model']  # get model 'instance'
+        rdict['best_model'] = model_out  # replace it with model path
 
-        joblib.dump(model, model_out) # persist instance
+        joblib.dump(model, model_out)  # persist instance
 
         LOGGER.info("Best model for fold %d dumped to '%s'", k, model_out)
 
@@ -380,15 +380,6 @@ def _compute_performance(test_index, predictions, test_vectors_size):
 def _nested_k_fold_with_grid_search(
         classifier, param_grid, catalog, entity, k, scoring, dir_io, **kwargs
 ):
-    if classifier in (
-            # keys.SINGLE_LAYER_PERCEPTRON,
-            keys.MULTI_LAYER_PERCEPTRON,
-    ):
-        # TODO make Keras work with GridSearchCV
-        raise NotImplementedError(
-            f'Grid search for {classifier} is not supported'
-        )
-
     dataset, positive_samples_index = train.build_training_set(
         catalog, entity, dir_io
     )

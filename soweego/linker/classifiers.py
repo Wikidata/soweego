@@ -311,38 +311,44 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
     def __init__(self, input_dimension, **kwargs):
         super(MultiLayerPerceptron, self).__init__()
 
-        activations = 'activations'
-        try:
-            first, second, third = kwargs.get(
-                activations,
-                (
-                    constants.HIDDEN_ACTIVATION,
-                    constants.HIDDEN_ACTIVATION,
-                    constants.OUTPUT_ACTIVATION,
-                ),
-            )
-        except ValueError:
-            err_msg = (
-                f"Bad value for '{activations}' keyword argument. "
-                'A tuple with 3 elements is expected'
-            )
-            LOGGER.critical(err_msg)
-            raise ValueError(err_msg)
+        self.input_dim = input_dimension
+        self.loss = kwargs.get('loss', constants.LOSS)
+        self.metrics = kwargs.get('metrics', constants.METRICS)
+        self.optimizer = kwargs.get('optimizer', constants.SLP_OPTIMIZER)
 
-        model = Sequential(
-            [
-                Dense(128, input_dim=input_dimension, activation=first),
-                BatchNormalization(),
-                Dense(32, activation=second),
-                BatchNormalization(),
-                Dense(1, activation=third),
-            ]
-        )
+        self.hidden_activation = kwargs.get('hidden_activation', constants.HIDDEN_ACTIVATION)
+        self.output_activation = kwargs.get('output_activation', constants.OUTPUT_ACTIVATION)
 
-        model.compile(
-            optimizer=kwargs.get('optimizer', constants.MLP_OPTIMIZER),
-            loss=kwargs.get('loss', constants.LOSS),
-            metrics=kwargs.get('metrics', constants.METRICS),
-        )
+        model = KerasClassifier(self._create_model,
+                                hidden_activation=self.hidden_activation,
+                                output_activation=self.output_activation
+                                )
 
         self.kernel = model
+
+    def _create_model(self,
+                      optimizer=constants.SLP_OPTIMIZER,
+                      hidden_activation=constants.HIDDEN_ACTIVATION,
+                      output_activation=constants.OUTPUT_ACTIVATION,
+                      hidden_layer_dims=constants.MLP_HIDDEN_LAYERS_DIM):
+
+        model = Sequential()
+
+        for i, dim in enumerate(hidden_layer_dims):
+            if i == 0:  # is first layer
+                model.add(Dense(dim, input_dim=self.input_dim, activation=hidden_activation))
+            else:
+                model.add(Dense(dim, activation=hidden_activation))
+
+            model.add(BatchNormalization())
+
+        model.add(Dense(1, activation=output_activation))
+
+        model.compile(
+            optimizer=optimizer,
+            loss=self.loss,
+            metrics=self.metrics,
+
+        )
+
+        return model
