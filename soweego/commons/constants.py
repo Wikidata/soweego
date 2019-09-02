@@ -320,7 +320,7 @@ PARAMETER_GRIDS = {
         'dual': [True, False],
         'tol': [1e-3, 1e-4, 1e-5],
         'max_iter': [1000, 2000],
-        'C': [0.01, 0.1, 1.0, 10, 100]
+        'C': [0.01, 0.1, 1.0, 10, 100],
     },
     keys.SVM: {
         # The execution takes too long when C=100 and kernel=linear
@@ -333,7 +333,7 @@ PARAMETER_GRIDS = {
         'n_estimators': [100, 200, 350, 500],
         'criterion': ['gini', 'entropy'],
         'max_features': ['sqrt', 'log2', None],
-        'bootstrap': [True, False]
+        'bootstrap': [True, False],
     },
     keys.SINGLE_LAYER_PERCEPTRON: {
         'epochs': [100, 1000, 2000, 3000],
