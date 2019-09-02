@@ -326,6 +326,8 @@ PARAMETER_GRIDS = {
         # The execution takes too long when C=100 and kernel=linear
         'C': [0.01, 0.1, 1.0, 10],
         'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],
+        'gamma': ['auto', 'scale'],
+        'tol': [1e-3, 1e-4],
     },
     keys.RANDOM_FOREST: {
         'n_estimators': [100, 200, 350, 500],
