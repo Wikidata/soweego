@@ -324,11 +324,25 @@ PARAMETER_GRIDS = {
         'C': [0.01, 0.1, 1.0, 10],
         'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],
     },
+    keys.RANDOM_FOREST: {'n_estimators': [100, 200, 350, 500]},
     keys.SINGLE_LAYER_PERCEPTRON: {
         'epochs': [100, 1000, 2000, 3000],
         'batch_size': [256, 512, 1024, 2048],
+        'activation': ['sigmoid'],
+        'optimizer': ['adam', 'RMSprop', 'Adadelta', 'Nadam'],
     },
-    keys.RANDOM_FOREST: {'n_estimators': [100, 200, 350, 500]},
+    keys.MULTI_LAYER_PERCEPTRON: {
+        'epochs': [2000, 3000],
+        'batch_size': [512, 1024],
+        'hidden_activation': ['relu', 'tanh', 'selu'],
+        'output_activation': ['sigmoid'],
+        'optimizer': ['adam', 'Adadelta', 'Nadam'],
+        'hidden_layer_dims': [
+            [128, 32],
+            [256, 128, 32],
+            [128, 32, 32]
+        ]
+    }
 }
 
 CLASSIFICATION_RETURN_SERIES = ('classification.return_type', 'series')
@@ -347,6 +361,12 @@ BATCH_SIZE = 1024
 EPOCHS = 1000
 VALIDATION_SPLIT = 0.33
 NAIVE_BAYES_BINARIZE = 0.1
+MLP_HIDDEN_LAYERS_DIM = [
+    # specifies a two fully connected layer NN
+    # an extra layer with 1 output dimension will be
+    # automatically used
+    128, 32
+]
 
 # precisions for the `pandas.Period` class.
 # Listed from least to most precise, as defined here:
