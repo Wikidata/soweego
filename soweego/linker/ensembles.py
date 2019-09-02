@@ -4,14 +4,16 @@ from typing import List, Tuple, Union
 import pandas as pd
 from tqdm import tqdm
 
+from soweego.commons import constants
+
 LOGGER = logging.getLogger(__name__)
 
 
 def remove_duplicates_by_majority_vote(
-    df: pd.DataFrame, threshold=0.0
-) -> pd.DataFrame:
+    df: pd.Series, threshold=0.0
+) -> pd.Series:
     """
-    Takes a dataframe which represents the predictions given by multiple classifiers.
+    Takes a pd.Series which represents the predictions given by multiple classifiers.
     These predictions will most certainly have duplicate values (predictions for the
     same entity pair given by different classifiers).
 
@@ -19,10 +21,10 @@ def remove_duplicates_by_majority_vote(
     the majority of predictions is above the provided threshold then the prediction is left
     in the final set, otherwise it is removed.
 
-    :param df: The dataframe containing the predictions
+    :param df: The pd.Series containing the predictions
     :param threshold: Predictions with certainty above this threshold are considered as matches
 
-    :return: A dataframe containing the predictions filtered by majority vote
+    :return: A pd.Series containing the predictions filtered by majority vote
     """
 
     # Ensure that index is sorted
@@ -60,7 +62,7 @@ def remove_duplicates_by_majority_vote(
             )
             return False, float(preds.min())
 
-    for idx, _ in tqdm(result.iterrows(), total=len(result)):
+    for idx, _ in tqdm(result.iteritems(), total=len(result)):
         is_good, pred = is_majority_voted(idx)
 
         if is_good:
@@ -73,17 +75,15 @@ def remove_duplicates_by_majority_vote(
     return result
 
 
-def remove_duplicates_by_averaging(
-    df: pd.DataFrame, threshold=0.0
-) -> pd.DataFrame:
+def remove_duplicates_by_averaging(df: pd.Series, threshold=0.0) -> pd.Series:
     """
-    Takes a dataframe which represents the predictions given by multiple classifiers.
+    Takes a pd.Series which represents the predictions given by multiple classifiers.
     It will average all duplicate predictions.
 
-    :param df: The dataframe containing the predictions
+    :param df: The Series containing the predictions
     :param threshold: Predictions with certainty above this threshold are considered as matches
 
-    :return: A dataframe containing the averaged predictions
+    :return: A Series containing the averaged predictions
     """
 
     # Ensure that index is sorted
@@ -108,7 +108,7 @@ def remove_duplicates_by_averaging(
 
         return avg
 
-    for idx, _ in tqdm(result.iterrows(), total=len(result)):
+    for idx, _ in tqdm(result.iteritems(), total=len(result)):
         avg = get_average_for_idx(idx)
 
         if avg >= threshold:
@@ -126,15 +126,59 @@ def remove_duplicates_by_averaging(
     return result
 
 
-def join_dataframes_by_union(dfs: List[pd.DataFrame]) -> pd.DataFrame:
+def join_predictions_by_union(dfs: List[pd.Series]) -> pd.Series:
     """
     Joins dataframes via set "union"
     """
     return pd.concat(dfs, join='outer')
 
 
-def join_dataframes_by_intersection(dfs: List[pd.DataFrame]) -> pd.DataFrame:
+def join_predictions_by_intersection(dfs: List[pd.Series]) -> pd.Series:
     """
     Joins dataframes via set "intersection"
     """
     return pd.concat(dfs, join='inner')
+
+
+def assert_join_merge_keywords(how_to_join: str, how_to_rem_duplicates: str):
+    assert how_to_join in constants.SC_AVAILABLE_JOIN, (
+        'The provided join method needs to be one of: '
+        + str(constants.SC_AVAILABLE_JOIN)
+    )
+
+    assert how_to_rem_duplicates in constants.SC_AVAILABLE_COMBINE, (
+        'The provided combine method needs to be one of: '
+        + str(constants.SC_AVAILABLE_COMBINE)
+    )
+
+
+def ensemble_predictions_by_keywords(
+    all_results: List[pd.Series],
+    threshold: float,
+    how_to_join: str,
+    how_to_rem_duplicates: str,
+) -> pd.DataFrame:
+
+    for k in all_results:
+        assert isinstance(k, pd.Series), 'All predictions should be pd.Series'
+
+    merged_results: pd.DataFrame
+    if how_to_join == constants.SC_UNION:
+        merged_results = join_predictions_by_union(all_results)
+
+    elif how_to_join == constants.SC_INTERSECTION:
+        merged_results = join_predictions_by_intersection(all_results)
+
+    # and then proceed to deal with duplicates. This step also removes entries under the
+    # specified threshold
+    if how_to_rem_duplicates == constants.SC_AVERAGE:
+        merged_results = remove_duplicates_by_averaging(
+            merged_results, threshold
+        )
+
+    elif how_to_rem_duplicates == constants.SC_VOTING:
+        merged_results = remove_duplicates_by_majority_vote(
+            merged_results, threshold
+        )
+
+    return merged_results
