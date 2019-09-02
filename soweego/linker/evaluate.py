@@ -384,7 +384,7 @@ def _nested_k_fold_with_grid_search(
     dataset = dataset.to_numpy()
 
     for k, (train_index, test_index) in enumerate(
-            outer_k_fold.split(dataset, target), 1
+        outer_k_fold.split(dataset, target), 1
     ):
         # Run grid search
         grid_search.fit(dataset[train_index], target[train_index])
@@ -548,8 +548,7 @@ def _init_model_and_get_preds(
         LOGGER.debug('Joining results with method "%s"', join_method)
         how_to_join, how_to_rem_duplicates = join_method
 
-        ensembles.assert_join_merge_keywords(
-            how_to_join, how_to_rem_duplicates)
+        ensembles.assert_join_merge_keywords(how_to_join, how_to_rem_duplicates)
 
         preds = [_fit_predict(m) for m in constants.CLASSIFIERS_FOR_ENSEMBLE]
 
