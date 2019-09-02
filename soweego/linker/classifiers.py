@@ -17,6 +17,7 @@ import os
 from contextlib import redirect_stderr
 
 import pandas as pd
+from keras.wrappers.scikit_learn import KerasClassifier
 from recordlinkage.adapters import KerasAdapter, SKLearnAdapter
 from recordlinkage.base import BaseClassifier
 from sklearn.ensemble import RandomForestClassifier
@@ -29,7 +30,6 @@ __email__ = 'fossati@spaziodati.eu, tupini07@gmail.com'
 __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2019, Hjfocs, tupini07'
-
 
 with redirect_stderr(open(os.devnull, 'w')):
     # When `keras` is imported, it prints a message to stderr
@@ -158,13 +158,14 @@ class RandomForest(SKLearnAdapter, BaseClassifier):
 # `recordlinkage.adapters.KerasAdapter_fit`,
 # shared across neural network implementations.
 class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
+
     def _fit(
-        self,
-        feature_vectors: pd.Series,
-        answers: pd.Series = None,
-        batch_size: int = constants.BATCH_SIZE,
-        epochs: int = constants.EPOCHS,
-        validation_split: float = constants.VALIDATION_SPLIT,
+            self,
+            feature_vectors: pd.Series,
+            answers: pd.Series = None,
+            batch_size: int = constants.BATCH_SIZE,
+            epochs: int = constants.EPOCHS,
+            validation_split: float = constants.VALIDATION_SPLIT,
     ) -> None:
         model_path = os.path.join(
             constants.SHARED_FOLDER,
@@ -193,13 +194,16 @@ class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
 
         LOGGER.info('Fit parameters: %s', history.params)
 
+    def _create_model(self, **kwargs):
+        raise NotImplementedError('Subclasses need to implement the "create_model" method.')
+
     def __repr__(self):
         return (
             f'{self.__class__.__name__}('
-            f'optimizer={self.kernel.optimizer.__class__.__name__}, '
-            f'loss={self.kernel.loss}, '
-            f'metrics={self.kernel.metrics}, '
-            f'config={self.kernel.get_config()})'
+            f'optimizer={self.optimizer.__class__.__name__}, '
+            f'loss={self.loss}, '
+            f'metrics={self.metrics}, '
+            f'config={self._create_model().get_config()})'
         )
 
 
@@ -233,24 +237,41 @@ class SingleLayerPerceptron(_BaseNeuralNetwork):
     def __init__(self, input_dimension, **kwargs):
         super(SingleLayerPerceptron, self).__init__()
 
+        self.input_dim = input_dimension
+        self.loss = kwargs.get('loss', constants.LOSS)
+        self.metrics = kwargs.get('metrics', constants.METRICS)
+        self.optimizer = kwargs.get('optimizer', constants.SLP_OPTIMIZER)
+
+        self.activation = kwargs.get(
+            'activation', constants.OUTPUT_ACTIVATION
+        )
+
+        model = KerasClassifier(self._create_model,
+                                activation=self.activation,
+                                optimizer=self.optimizer
+                                )
+
+        self.kernel = model
+
+    def _create_model(self,
+                      activation=constants.OUTPUT_ACTIVATION,
+                      optimizer=constants.SLP_OPTIMIZER):
         model = Sequential()
         model.add(
             Dense(
                 1,
-                input_dim=input_dimension,
-                activation=kwargs.get(
-                    'activation', constants.OUTPUT_ACTIVATION
-                ),
+                input_dim=self.input_dim,
+                activation=activation,
             )
         )
 
         model.compile(
-            optimizer=kwargs.get('optimizer', constants.SLP_OPTIMIZER),
-            loss=kwargs.get('loss', constants.LOSS),
-            metrics=kwargs.get('metrics', constants.METRICS),
+            optimizer=optimizer,
+            loss=self.loss,
+            metrics=self.metrics,
         )
 
-        self.kernel = model
+        return model
 
 
 class MultiLayerPerceptron(_BaseNeuralNetwork):
