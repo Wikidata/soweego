@@ -6,7 +6,6 @@ import json
 import logging
 import os
 import sys
-from collections import defaultdict
 from typing import Tuple
 
 import click
@@ -26,7 +25,6 @@ __email__ = 'fossati@spaziodati.eu'
 __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2019, Hjfocs'
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -49,14 +47,14 @@ LOGGER = logging.getLogger(__name__)
     '--single',
     is_flag=True,
     help='Compute a single evaluation over all k folds, instead of k '
-    'evaluations.',
+         'evaluations.',
 )
 @click.option(
     '-n',
     '--nested',
     is_flag=True,
     help='Compute a nested cross-validation with hyperparameters tuning via '
-    'grid search. WARNING: this will take a lot of time.',
+         'grid search. WARNING: this will take a lot of time.',
 )
 @click.option(
     '-m',
@@ -64,7 +62,7 @@ LOGGER = logging.getLogger(__name__)
     type=click.Choice(constants.PERFORMANCE_METRICS),
     default='f1',
     help="Performance metric for nested cross-validation. "
-    "Use with '--nested'. Default: f1.",
+         "Use with '--nested'. Default: f1.",
 )
 @click.option(
     '-d',
@@ -83,30 +81,30 @@ LOGGER = logging.getLogger(__name__)
     '-jm',
     '--join-method',
     type=(
-        click.Choice(constants.SC_AVAILABLE_JOIN),
-        click.Choice(constants.SC_AVAILABLE_COMBINE),
+            click.Choice(constants.SC_AVAILABLE_JOIN),
+            click.Choice(constants.SC_AVAILABLE_COMBINE),
     ),
     default=(constants.SC_INTERSECTION, constants.SC_AVERAGE),
     help=(
-        f"Way in which the results of 'all' classifiers are merged. The first term can be 'union' or 'intersection' "
-        f"and says how the sets of predictions are joined. The second term can be 'average' or 'vote' and specify "
-        # TODO Change the default to the actual best once we know which it is
-        f"how duplicates predictions are dealt with. Only used when classifier='all'. Default: {(constants.SC_INTERSECTION, constants.SC_AVERAGE)}."
+            f"Way in which the results of 'all' classifiers are merged. The first term can be 'union' or 'intersection' "
+            f"and says how the sets of predictions are joined. The second term can be 'average' or 'vote' and specify "
+            # TODO Change the default to the actual best once we know which it is
+            f"how duplicates predictions are dealt with. Only used when classifier='all'. Default: {(constants.SC_INTERSECTION, constants.SC_AVERAGE)}."
     ),
 )
 @click.pass_context
 def cli(
-    ctx,
-    classifier,
-    catalog,
-    entity,
-    k_folds,
-    single,
-    nested,
-    metric,
-    dir_io,
-    threshold,
-    join_method,
+        ctx,
+        classifier,
+        catalog,
+        entity,
+        k_folds,
+        single,
+        nested,
+        metric,
+        dir_io,
+        threshold,
+        join_method,
 ):
     """Evaluate the performance of a supervised linker.
 
@@ -199,16 +197,16 @@ def _build_output_paths(catalog, entity, classifier, dir_io, join_method):
 
 
 def _run_average(
-    classifier,
-    catalog,
-    entity,
-    k_folds,
-    kwargs,
-    performance_out,
-    predictions_out,
-    dir_io,
-    threshold,
-    join_method,
+        classifier,
+        catalog,
+        entity,
+        k_folds,
+        kwargs,
+        performance_out,
+        predictions_out,
+        dir_io,
+        threshold,
+        join_method,
 ):
     LOGGER.info('Starting average evaluation over %d folds ...', k_folds)
 
@@ -258,16 +256,16 @@ def _run_average(
 
 
 def _run_single(
-    classifier,
-    catalog,
-    entity,
-    k_folds,
-    kwargs,
-    performance_out,
-    predictions_out,
-    dir_io,
-    threshold,
-    join_method,
+        classifier,
+        catalog,
+        entity,
+        k_folds,
+        kwargs,
+        performance_out,
+        predictions_out,
+        dir_io,
+        threshold,
+        join_method,
 ):
     LOGGER.info('Starting single evaluation over %d folds ...', k_folds)
 
@@ -301,14 +299,14 @@ def _run_single(
 
 
 def _run_nested(
-    classifier,
-    catalog,
-    entity,
-    k_folds,
-    metric,
-    kwargs,
-    performance_out,
-    dir_io,
+        classifier,
+        catalog,
+        entity,
+        k_folds,
+        metric,
+        kwargs,
+        performance_out,
+        dir_io,
 ):
     LOGGER.warning(
         'You have opted for the slowest evaluation option, '
@@ -339,7 +337,7 @@ def _run_nested(
     LOGGER.info('Evaluation done: %s', result)
 
     # Persist best models
-    for k, model in enumerate(result.pop('best_models'), 1):
+    for k, rdict in enumerate(result, 1):
         model_out = os.path.join(
             dir_io,
             constants.LINKER_NESTED_CV_BEST_MODEL.format(
@@ -347,8 +345,10 @@ def _run_nested(
             ),
         )
 
-        result['best_models'].append(model_out)
-        joblib.dump(model, model_out)
+        model = rdict['best_model'] # get model 'instance'
+        rdict['best_model'] = model_out # replace it with model path
+
+        joblib.dump(model, model_out) # persist instance
 
         LOGGER.info("Best model for fold %d dumped to '%s'", k, model_out)
 
@@ -378,18 +378,16 @@ def _compute_performance(test_index, predictions, test_vectors_size):
 
 
 def _nested_k_fold_with_grid_search(
-    classifier, param_grid, catalog, entity, k, scoring, dir_io, **kwargs
+        classifier, param_grid, catalog, entity, k, scoring, dir_io, **kwargs
 ):
     if classifier in (
-        keys.SINGLE_LAYER_PERCEPTRON,
-        keys.MULTI_LAYER_PERCEPTRON,
+            # keys.SINGLE_LAYER_PERCEPTRON,
+            keys.MULTI_LAYER_PERCEPTRON,
     ):
         # TODO make Keras work with GridSearchCV
         raise NotImplementedError(
             f'Grid search for {classifier} is not supported'
         )
-
-    result = defaultdict(list)
 
     dataset, positive_samples_index = train.build_training_set(
         catalog, entity, dir_io
@@ -408,6 +406,7 @@ def _nested_k_fold_with_grid_search(
         cv=inner_k_fold,
         verbose=2,
     )
+    result = []
 
     dataset = dataset.to_numpy()
 
@@ -415,21 +414,23 @@ def _nested_k_fold_with_grid_search(
         # Run grid search
         grid_search.fit(dataset[train_index], target[train_index])
 
-        # Grid search best score is the train score
-        result[f'train_{scoring}'].append(grid_search.best_score_)
-
         # Let grid search compute the test score
         test_score = grid_search.score(dataset[test_index], target[test_index])
-        result[f'test_{scoring}'].append(test_score)
-
         best_model = grid_search.best_estimator_
-        result['best_models'].append(best_model)
+
+        # Grid search best score is the train score
+        result.append({
+            f'train_{scoring}': grid_search.best_score_,
+            f'test_{scoring}': test_score,
+            'best_model': best_model,
+            'params': grid_search.best_params_
+        })
 
     return result
 
 
 def _average_k_fold(
-    classifier, catalog, entity, k, dir_io, join_method, threshold, **kwargs
+        classifier, catalog, entity, k, dir_io, join_method, threshold, **kwargs
 ):
     predictions, precisions, recalls, f_scores = None, [], [], []
     dataset, positive_samples_index = train.build_training_set(
@@ -440,7 +441,7 @@ def _average_k_fold(
     )
 
     for train_index, test_index in k_fold.split(
-        dataset, binary_target_variables
+            dataset, binary_target_variables
     ):
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
 
@@ -481,7 +482,7 @@ def _average_k_fold(
 
 
 def _single_k_fold(
-    classifier, catalog, entity, k, dir_io, join_method, threshold, **kwargs
+        classifier, catalog, entity, k, dir_io, join_method, threshold, **kwargs
 ):
     predictions, test_set = None, []
     dataset, positive_samples_index = train.build_training_set(
@@ -492,7 +493,7 @@ def _single_k_fold(
     )
 
     for train_index, test_index in k_fold.split(
-        dataset, binary_target_variables
+            dataset, binary_target_variables
     ):
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
         test_set.append(test)
@@ -525,13 +526,13 @@ def _single_k_fold(
 
 
 def _init_model_and_get_preds(
-    classifier: str,
-    training_set: pd.DataFrame,
-    test_set: pd.DataFrame,
-    positive_samples_index: pd.MultiIndex,
-    join_method: Tuple[str, str],
-    threshold=0.5,
-    **kwargs,
+        classifier: str,
+        training_set: pd.DataFrame,
+        test_set: pd.DataFrame,
+        positive_samples_index: pd.MultiIndex,
+        join_method: Tuple[str, str],
+        threshold=0.5,
+        **kwargs,
 ) -> pd.Series:
     LOGGER.debug(
         'Getting predictions for fold using "%s" classifier and a threshold of "%d"',
