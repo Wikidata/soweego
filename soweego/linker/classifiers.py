@@ -12,23 +12,24 @@ you will use its :meth:`fit() <recordlinkage.NaiveBayesClassifier.fit>`,
 :meth:`predict() <recordlinkage.NaiveBayesClassifier.predict>`, and
 :meth:`prob() <recordlinkage.NaiveBayesClassifier.prob>` methods.
 """
+import logging
+import os
+from contextlib import redirect_stderr
+
+import pandas as pd
+from keras.wrappers.scikit_learn import KerasClassifier
+from recordlinkage.adapters import KerasAdapter, SKLearnAdapter
+from recordlinkage.base import BaseClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
+
+from soweego.commons import constants
 
 __author__ = 'Marco Fossati, Andrea Tupini'
 __email__ = 'fossati@spaziodati.eu, tupini07@gmail.com'
 __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2019, Hjfocs, tupini07'
-
-import logging
-import os
-from contextlib import redirect_stderr
-
-import pandas as pd
-from recordlinkage.adapters import KerasAdapter, SKLearnAdapter
-from recordlinkage.base import BaseClassifier
-from sklearn.svm import SVC
-
-from soweego.commons import constants
 
 with redirect_stderr(open(os.devnull, 'w')):
     # When `keras` is imported, it prints a message to stderr
@@ -95,7 +96,59 @@ class SVCClassifier(SKLearnAdapter, BaseClassifier):
         # so we return the second column
         classifications = self.kernel.predict_proba(feature_vectors)[:, 1]
 
-        return pd.DataFrame(classifications, index=feature_vectors.index)
+        return pd.Series(classifications, index=feature_vectors.index)
+
+    def __repr__(self):
+        return f'{self.kernel}'
+
+
+class RandomForest(SKLearnAdapter, BaseClassifier):
+    """A Random Forest classifier.
+
+    This class implements :class:`sklearn.ensemble.RandomForestClassifier`.
+
+    It fits multiple decision trees on sub-samples of the dataset and
+    averages the result to get more accuracy and reduce over-fitting.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(RandomForest, self).__init__()
+
+        kwargs['n_estimators'] = kwargs.get('n_estimators', 350)
+        kwargs['max_features'] = kwargs.get('max_features', 'auto')
+        kwargs['bootstrap'] = kwargs.get('bootstrap', True)
+
+        self.kernel = RandomForestClassifier(*args, **kwargs)
+
+    def prob(self, feature_vectors: pd.DataFrame) -> pd.DataFrame:
+        """Classify record pairs and include the probability score
+        of being a match.
+
+        :param feature_vectors: a :class:`DataFrame <pandas.DataFrame>`
+          computed via record pairs comparison. This should be
+          :meth:`recordlinkage.Compare.compute` output.
+          See :func:`extract_features() <soweego.linker.workflow.extract_features>`
+          for more details
+        :return: the classification results
+        """
+
+        match_class = self.kernel.classes_[1]
+
+        # Invalid class label
+        assert match_class == 1, (
+            f'Invalid match class label: {match_class}.'
+            'sklearn.ensemble.RandomForestClassifier.predict_proba() expects the second class '
+            'in the trained model to be 1'
+        )
+
+        # in the result, rows are classifications and columns are classes.
+        # We are in a binary setting, so 2 classes:
+        # `0` for non-matches, `1` for matches.
+        # We only need the probability of being a match,
+        # so we return the second column
+        classifications = self.kernel.predict_proba(feature_vectors)[:, 1]
+
+        return pd.Series(classifications, index=feature_vectors.index)
 
     def __repr__(self):
         return f'{self.kernel}'
@@ -105,13 +158,14 @@ class SVCClassifier(SKLearnAdapter, BaseClassifier):
 # `recordlinkage.adapters.KerasAdapter_fit`,
 # shared across neural network implementations.
 class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
+
     def _fit(
-        self,
-        feature_vectors: pd.Series,
-        answers: pd.Series = None,
-        batch_size: int = constants.BATCH_SIZE,
-        epochs: int = constants.EPOCHS,
-        validation_split: float = constants.VALIDATION_SPLIT,
+            self,
+            feature_vectors: pd.Series,
+            answers: pd.Series = None,
+            batch_size: int = constants.BATCH_SIZE,
+            epochs: int = constants.EPOCHS,
+            validation_split: float = constants.VALIDATION_SPLIT,
     ) -> None:
         model_path = os.path.join(
             constants.SHARED_FOLDER,
@@ -140,13 +194,16 @@ class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
 
         LOGGER.info('Fit parameters: %s', history.params)
 
+    def _create_model(self, **kwargs):
+        raise NotImplementedError('Subclasses need to implement the "create_model" method.')
+
     def __repr__(self):
         return (
             f'{self.__class__.__name__}('
-            f'optimizer={self.kernel.optimizer.__class__.__name__}, '
-            f'loss={self.kernel.loss}, '
-            f'metrics={self.kernel.metrics}, '
-            f'config={self.kernel.get_config()})'
+            f'optimizer={self.optimizer.__class__.__name__}, '
+            f'loss={self.loss}, '
+            f'metrics={self.metrics}, '
+            f'config={self._create_model().get_config()})'
         )
 
 
@@ -180,24 +237,41 @@ class SingleLayerPerceptron(_BaseNeuralNetwork):
     def __init__(self, input_dimension, **kwargs):
         super(SingleLayerPerceptron, self).__init__()
 
+        self.input_dim = input_dimension
+        self.loss = kwargs.get('loss', constants.LOSS)
+        self.metrics = kwargs.get('metrics', constants.METRICS)
+        self.optimizer = kwargs.get('optimizer', constants.SLP_OPTIMIZER)
+
+        self.activation = kwargs.get(
+            'activation', constants.OUTPUT_ACTIVATION
+        )
+
+        model = KerasClassifier(self._create_model,
+                                activation=self.activation,
+                                optimizer=self.optimizer
+                                )
+
+        self.kernel = model
+
+    def _create_model(self,
+                      activation=constants.OUTPUT_ACTIVATION,
+                      optimizer=constants.SLP_OPTIMIZER):
         model = Sequential()
         model.add(
             Dense(
                 1,
-                input_dim=input_dimension,
-                activation=kwargs.get(
-                    'activation', constants.OUTPUT_ACTIVATION
-                ),
+                input_dim=self.input_dim,
+                activation=activation,
             )
         )
 
         model.compile(
-            optimizer=kwargs.get('optimizer', constants.SLP_OPTIMIZER),
-            loss=kwargs.get('loss', constants.LOSS),
-            metrics=kwargs.get('metrics', constants.METRICS),
+            optimizer=optimizer,
+            loss=self.loss,
+            metrics=self.metrics,
         )
 
-        self.kernel = model
+        return model
 
 
 class MultiLayerPerceptron(_BaseNeuralNetwork):
@@ -237,38 +311,44 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
     def __init__(self, input_dimension, **kwargs):
         super(MultiLayerPerceptron, self).__init__()
 
-        activations = 'activations'
-        try:
-            first, second, third = kwargs.get(
-                activations,
-                (
-                    constants.HIDDEN_ACTIVATION,
-                    constants.HIDDEN_ACTIVATION,
-                    constants.OUTPUT_ACTIVATION,
-                ),
-            )
-        except ValueError:
-            err_msg = (
-                f"Bad value for '{activations}' keyword argument. "
-                'A tuple with 3 elements is expected'
-            )
-            LOGGER.critical(err_msg)
-            raise ValueError(err_msg)
+        self.input_dim = input_dimension
+        self.loss = kwargs.get('loss', constants.LOSS)
+        self.metrics = kwargs.get('metrics', constants.METRICS)
+        self.optimizer = kwargs.get('optimizer', constants.SLP_OPTIMIZER)
 
-        model = Sequential(
-            [
-                Dense(128, input_dim=input_dimension, activation=first),
-                BatchNormalization(),
-                Dense(32, activation=second),
-                BatchNormalization(),
-                Dense(1, activation=third),
-            ]
-        )
+        self.hidden_activation = kwargs.get('hidden_activation', constants.HIDDEN_ACTIVATION)
+        self.output_activation = kwargs.get('output_activation', constants.OUTPUT_ACTIVATION)
 
-        model.compile(
-            optimizer=kwargs.get('optimizer', constants.MLP_OPTIMIZER),
-            loss=kwargs.get('loss', constants.LOSS),
-            metrics=kwargs.get('metrics', constants.METRICS),
-        )
+        model = KerasClassifier(self._create_model,
+                                hidden_activation=self.hidden_activation,
+                                output_activation=self.output_activation
+                                )
 
         self.kernel = model
+
+    def _create_model(self,
+                      optimizer=constants.SLP_OPTIMIZER,
+                      hidden_activation=constants.HIDDEN_ACTIVATION,
+                      output_activation=constants.OUTPUT_ACTIVATION,
+                      hidden_layer_dims=constants.MLP_HIDDEN_LAYERS_DIM):
+
+        model = Sequential()
+
+        for i, dim in enumerate(hidden_layer_dims):
+            if i == 0:  # is first layer
+                model.add(Dense(dim, input_dim=self.input_dim, activation=hidden_activation))
+            else:
+                model.add(Dense(dim, activation=hidden_activation))
+
+            model.add(BatchNormalization())
+
+        model.add(Dense(1, activation=output_activation))
+
+        model.compile(
+            optimizer=optimizer,
+            loss=self.loss,
+            metrics=self.metrics,
+
+        )
+
+        return model
