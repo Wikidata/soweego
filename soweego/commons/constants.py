@@ -327,7 +327,12 @@ PARAMETER_GRIDS = {
         'C': [0.01, 0.1, 1.0, 10],
         'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],
     },
-    keys.RANDOM_FOREST: {'n_estimators': [100, 200, 350, 500]},
+    keys.RANDOM_FOREST: {
+        'n_estimators': [100, 200, 350, 500],
+        'criterion': ['gini', 'entropy'],
+        'max_features': ['sqrt', 'log2', None],
+        'bootstrap': [True, False]
+    },
     keys.SINGLE_LAYER_PERCEPTRON: {
         'epochs': [100, 1000, 2000, 3000],
         'batch_size': [256, 512, 1024, 2048],
