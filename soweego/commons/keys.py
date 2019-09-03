@@ -104,5 +104,4 @@ SINGLE_LAYER_PERCEPTRON = 'single_layer_perceptron'
 MULTI_LAYER_PERCEPTRON = 'multi_layer_perceptron'
 
 # For ensembles
-ALL_CLASSIFIER = 'all'
 VOTING_CLASSIFIER = 'voting_classifier'
