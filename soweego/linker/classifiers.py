@@ -20,10 +20,10 @@ import pandas as pd
 from keras.wrappers.scikit_learn import KerasClassifier
 from recordlinkage.adapters import KerasAdapter, SKLearnAdapter
 from recordlinkage.base import BaseClassifier
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.svm import SVC
 
-from soweego.commons import constants
+from soweego.commons import constants, utils
 
 __author__ = 'Marco Fossati, Andrea Tupini'
 __email__ = 'fossati@spaziodati.eu, tupini07@gmail.com'
@@ -154,17 +154,76 @@ class RandomForest(SKLearnAdapter, BaseClassifier):
         return f'{self.kernel}'
 
 
+class VoteClassifier(SKLearnAdapter, BaseClassifier):
+    # TODO: Write docstring
+    def __init__(self, num_features, **kwargs):
+        # "    If ‘hard’, uses predicted class labels for majority rule voting. Else if ‘soft’,
+        # predicts the class label based on the argmax of the sums of the predicted probabilities,
+        # which is recommended for an ensemble of well-calibrated classifiers."
+        super(VoteClassifier, self).__init__()
+        voting = kwargs.get('voting', 'soft')
+
+        estimators = []
+        for clf in constants.CLASSIFIERS_FOR_ENSEMBLE:
+            # model_path = os.path.join(
+            #     dir_io,
+            #     constants.LINKER_MODEL.format(catalog, entity, clf),
+            # )
+            #
+            # model = joblib.load(model_path)
+
+            model = utils.init_model(clf, num_features=num_features, **kwargs)
+
+            estimators.append((clf, model.kernel))
+
+        self.kernel = VotingClassifier(estimators=estimators,
+                                       voting=voting)
+
+    def prob(self, feature_vectors: pd.DataFrame) -> pd.DataFrame:
+        """Classify record pairs and include the probability score
+        of being a match.
+
+        :param feature_vectors: a :class:`DataFrame <pandas.DataFrame>`
+          computed via record pairs comparison. This should be
+          :meth:`recordlinkage.Compare.compute` output.
+          See :func:`extract_features() <soweego.linker.workflow.extract_features>`
+          for more details
+        :return: the classification results
+        """
+
+        match_class = self.kernel.classes_[1]
+
+        # Invalid class label
+        assert match_class == 1, (
+            f'Invalid match class label: {match_class}.'
+            'sklearn.ensemble.RandomForestClassifier.predict_proba() expects the second class '
+            'in the trained model to be 1'
+        )
+
+        # in the result, rows are classifications and columns are classes.
+        # We are in a binary setting, so 2 classes:
+        # `0` for non-matches, `1` for matches.
+        # We only need the probability of being a match,
+        # so we return the second column
+        classifications = self.kernel.predict_proba(feature_vectors)[:, 1]
+
+        return pd.Series(classifications, index=feature_vectors.index)
+
+    def __repr__(self):
+        return f'{self.kernel}'
+
+
 # Base class that implements the training method
 # `recordlinkage.adapters.KerasAdapter_fit`,
 # shared across neural network implementations.
 class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
     def _fit(
-        self,
-        feature_vectors: pd.Series,
-        answers: pd.Series = None,
-        batch_size: int = constants.BATCH_SIZE,
-        epochs: int = constants.EPOCHS,
-        validation_split: float = constants.VALIDATION_SPLIT,
+            self,
+            feature_vectors: pd.Series,
+            answers: pd.Series = None,
+            batch_size: int = constants.BATCH_SIZE,
+            epochs: int = constants.EPOCHS,
+            validation_split: float = constants.VALIDATION_SPLIT,
     ) -> None:
         model_path = os.path.join(
             constants.SHARED_FOLDER,
@@ -254,9 +313,9 @@ class SingleLayerPerceptron(_BaseNeuralNetwork):
         self.kernel = model
 
     def _create_model(
-        self,
-        activation=constants.OUTPUT_ACTIVATION,
-        optimizer=constants.SLP_OPTIMIZER,
+            self,
+            activation=constants.OUTPUT_ACTIVATION,
+            optimizer=constants.SLP_OPTIMIZER,
     ):
         model = Sequential()
         model.add(Dense(1, input_dim=self.input_dim, activation=activation))
@@ -324,11 +383,11 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
         self.kernel = model
 
     def _create_model(
-        self,
-        optimizer=constants.SLP_OPTIMIZER,
-        hidden_activation=constants.HIDDEN_ACTIVATION,
-        output_activation=constants.OUTPUT_ACTIVATION,
-        hidden_layer_dims=constants.MLP_HIDDEN_LAYERS_DIM,
+            self,
+            optimizer=constants.SLP_OPTIMIZER,
+            hidden_activation=constants.HIDDEN_ACTIVATION,
+            output_activation=constants.OUTPUT_ACTIVATION,
+            hidden_layer_dims=constants.MLP_HIDDEN_LAYERS_DIM,
     ):
 
         model = Sequential()
