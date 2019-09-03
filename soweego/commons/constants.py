@@ -290,19 +290,20 @@ CLASSIFIERS = {
     'random_forest': keys.RANDOM_FOREST,
     'single_layer_perceptron': keys.SINGLE_LAYER_PERCEPTRON,
     'multi_layer_perceptron': keys.MULTI_LAYER_PERCEPTRON,
+    'voting_classifier': keys.VOTING_CLASSIFIER,
     'nb': keys.NAIVE_BAYES,  # Shorthand
     'svm': keys.SVM,  # Shorthand
     'lsvm': keys.LINEAR_SVM,  # Shorthand
     'rfc': keys.RANDOM_FOREST,  # Shorthand
     'slp': keys.SINGLE_LAYER_PERCEPTRON,  # Shorthand
     'mlp': keys.MULTI_LAYER_PERCEPTRON,  # Shorthand
+    'vc': keys.VOTING_CLASSIFIER,  # Shorthand
 }
 
 # holds mention of 'classifier ensemble'
-EXTENDED_CLASSIFIERS = {**CLASSIFIERS, 'all': keys.ALL_CLASSIFIERS}
 CLASSIFIERS_FOR_ENSEMBLE = [
     keys.NAIVE_BAYES,
-    keys.LINEAR_SVM,
+    # keys.LINEAR_SVM,
     keys.RANDOM_FOREST,
     keys.SINGLE_LAYER_PERCEPTRON,
     keys.MULTI_LAYER_PERCEPTRON,
@@ -316,10 +317,10 @@ PARAMETER_GRIDS = {
         'binarize': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
     },
     keys.LINEAR_SVM: {
-        # liblinear fails to converge when values are 10 and 100 in some datasets
         'dual': [True, False],
         'tol': [1e-3, 1e-4, 1e-5],
         'max_iter': [1000, 2000],
+        # liblinear fails to converge when C values are 10 and 100 in some datasets
         'C': [0.01, 0.1, 1.0, 10, 100],
     },
     keys.SVM: {
@@ -390,10 +391,6 @@ PD_PERIOD_PRECISIONS = [
 ]
 
 # available methods to join predictions (super-confident predictions)
-SC_UNION = 'union'
-SC_INTERSECTION = 'intersection'
-SC_AVERAGE = 'average'
-SC_VOTING = 'vote'
-
-SC_AVAILABLE_JOIN = [SC_UNION, SC_INTERSECTION]
-SC_AVAILABLE_COMBINE = [SC_VOTING, SC_AVERAGE]
+VC_HARD = 'hard'
+VC_SOFT = 'soft'
+VC_METHODS = [VC_SOFT, VC_HARD]
