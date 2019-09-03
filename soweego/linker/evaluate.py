@@ -389,7 +389,7 @@ def _nested_k_fold_with_grid_search(
 
 
 def _average_k_fold(
-        classifier, catalog, entity, k, dir_io, join_method, threshold, **kwargs
+        classifier, catalog, entity, k, dir_io, threshold, **kwargs
 ):
     predictions, precisions, recalls, f_scores = None, [], [], []
     dataset, positive_samples_index = train.build_training_set(
