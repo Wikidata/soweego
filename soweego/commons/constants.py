@@ -285,6 +285,7 @@ BASELINE_NAMES = os.path.join(RESULTS_FOLDER, BASELINE_NAMES_FILENAME)
 
 CLASSIFIERS = {
     'naive_bayes': keys.NAIVE_BAYES,
+    'logistic_regression': keys.LOGISTIC_REGRESSION,
     'support_vector_machines': keys.SVM,
     'linear_support_vector_machines': keys.LINEAR_SVM,
     'random_forest': keys.RANDOM_FOREST,
@@ -292,6 +293,7 @@ CLASSIFIERS = {
     'multi_layer_perceptron': keys.MULTI_LAYER_PERCEPTRON,
     'voting_classifier': keys.VOTING_CLASSIFIER,
     'nb': keys.NAIVE_BAYES,  # Shorthand
+    'lr': keys.LOGISTIC_REGRESSION,  # Shorthand
     'svm': keys.SVM,  # Shorthand
     'lsvm': keys.LINEAR_SVM,  # Shorthand
     'rfc': keys.RANDOM_FOREST,  # Shorthand
@@ -315,6 +317,13 @@ PARAMETER_GRIDS = {
     keys.NAIVE_BAYES: {
         'alpha': [0.0001, 0.001, 0.01, 0.1, 1],
         'binarize': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+    },
+    keys.LOGISTIC_REGRESSION: {
+        'tol': [1e-3, 1e-4, 1e-5],
+        'C': [0.01, 0.1, 1.0, 10, 100],
+        'class_weight': [None, 'balanced'],
+        'solver': ['liblinear', 'lbfgs', 'saga', 'sag'],
+        'max_iter': [100, 200],
     },
     keys.LINEAR_SVM: {
         'dual': [True, False],
@@ -367,7 +376,6 @@ METRICS = ['accuracy']
 BATCH_SIZE = 1024
 EPOCHS = 1000
 VALIDATION_SPLIT = 0.33
-NAIVE_BAYES_BINARIZE = 0.1
 MLP_HIDDEN_LAYERS_DIM = [
     # specifies a two fully connected layer NN
     # an extra layer with 1 output dimension will be
@@ -375,6 +383,9 @@ MLP_HIDDEN_LAYERS_DIM = [
     128,
     32,
 ]
+
+# Options for other models
+NAIVE_BAYES_BINARIZE = 0.1
 
 # precisions for the `pandas.Period` class.
 # Listed from least to most precise, as defined here:

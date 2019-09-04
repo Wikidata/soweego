@@ -97,6 +97,7 @@ REAL_NAME = 'real_name'
 
 # Supervised classification
 NAIVE_BAYES = 'naive_bayes'
+LOGISTIC_REGRESSION = 'logistic_regression'
 LINEAR_SVM = 'linear_support_vector_machines'
 SVM = 'support_vector_machines'
 RANDOM_FOREST = 'random_forest'
