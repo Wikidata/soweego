@@ -305,7 +305,7 @@ def _add_missing_feature_columns(classifier, feature_vectors: pd.DataFrame):
 
     else:
         err_msg = (
-            f'Unsupported classifier: {classifier.__name__}. '
+            f'Unsupported classifier: {classifier.__class__.__name__}. '
             f'It should be one of {set(constants.CLASSIFIERS)}'
         )
         LOGGER.critical(err_msg)
