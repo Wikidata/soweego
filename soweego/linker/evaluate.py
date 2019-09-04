@@ -46,14 +46,14 @@ LOGGER = logging.getLogger(__name__)
     '--single',
     is_flag=True,
     help='Compute a single evaluation over all k folds, instead of k '
-         'evaluations.',
+    'evaluations.',
 )
 @click.option(
     '-n',
     '--nested',
     is_flag=True,
     help='Compute a nested cross-validation with hyperparameters tuning via '
-         'grid search. WARNING: this will take a lot of time.',
+    'grid search. WARNING: this will take a lot of time.',
 )
 @click.option(
     '-m',
@@ -61,7 +61,7 @@ LOGGER = logging.getLogger(__name__)
     type=click.Choice(constants.PERFORMANCE_METRICS),
     default='f1',
     help="Performance metric for nested cross-validation. "
-         "Use with '--nested'. Default: f1.",
+    "Use with '--nested'. Default: f1.",
 )
 @click.option(
     '-d',
@@ -78,16 +78,16 @@ LOGGER = logging.getLogger(__name__)
 )
 @click.pass_context
 def cli(
-        ctx,
-        classifier,
-        catalog,
-        entity,
-        k_folds,
-        single,
-        nested,
-        metric,
-        dir_io,
-        threshold
+    ctx,
+    classifier,
+    catalog,
+    entity,
+    k_folds,
+    single,
+    nested,
+    metric,
+    dir_io,
+    threshold,
 ):
     """Evaluate the performance of a supervised linker.
 
@@ -128,7 +128,7 @@ def cli(
             performance_out,
             predictions_out,
             dir_io,
-            threshold
+            threshold,
         )
 
     else:
@@ -169,15 +169,15 @@ def _build_output_paths(catalog, entity, classifier, dir_io):
 
 
 def _run_average(
-        classifier,
-        catalog,
-        entity,
-        k_folds,
-        kwargs,
-        performance_out,
-        predictions_out,
-        dir_io,
-        threshold,
+    classifier,
+    catalog,
+    entity,
+    k_folds,
+    kwargs,
+    performance_out,
+    predictions_out,
+    dir_io,
+    threshold,
 ):
     LOGGER.info('Starting average evaluation over %d folds ...', k_folds)
 
@@ -226,15 +226,15 @@ def _run_average(
 
 
 def _run_single(
-        classifier,
-        catalog,
-        entity,
-        k_folds,
-        kwargs,
-        performance_out,
-        predictions_out,
-        dir_io,
-        threshold
+    classifier,
+    catalog,
+    entity,
+    k_folds,
+    kwargs,
+    performance_out,
+    predictions_out,
+    dir_io,
+    threshold,
 ):
     LOGGER.info('Starting single evaluation over %d folds ...', k_folds)
 
@@ -267,14 +267,14 @@ def _run_single(
 
 
 def _run_nested(
-        classifier,
-        catalog,
-        entity,
-        k_folds,
-        metric,
-        kwargs,
-        performance_out,
-        dir_io,
+    classifier,
+    catalog,
+    entity,
+    k_folds,
+    metric,
+    kwargs,
+    performance_out,
+    dir_io,
 ):
     LOGGER.warning(
         'You have opted for the slowest evaluation option, '
@@ -328,7 +328,7 @@ def _compute_performance(test_index, predictions, test_vectors_size):
 
 
 def _nested_k_fold_with_grid_search(
-        classifier, param_grid, catalog, entity, k, scoring, dir_io, **kwargs
+    classifier, param_grid, catalog, entity, k, scoring, dir_io, **kwargs
 ):
     dataset, positive_samples_index = train.build_training_set(
         catalog, entity, dir_io
@@ -352,7 +352,7 @@ def _nested_k_fold_with_grid_search(
     dataset = dataset.to_numpy()
 
     for k, (train_index, test_index) in enumerate(
-            outer_k_fold.split(dataset, target), 1
+        outer_k_fold.split(dataset, target), 1
     ):
         # Run grid search
         grid_search.fit(dataset[train_index], target[train_index])
@@ -389,7 +389,7 @@ def _nested_k_fold_with_grid_search(
 
 
 def _average_k_fold(
-        classifier, catalog, entity, k, dir_io, threshold, **kwargs
+    classifier, catalog, entity, k, dir_io, threshold, **kwargs
 ):
     predictions, precisions, recalls, f_scores = None, [], [], []
     dataset, positive_samples_index = train.build_training_set(
@@ -400,7 +400,7 @@ def _average_k_fold(
     )
 
     for train_index, test_index in k_fold.split(
-            dataset, binary_target_variables
+        dataset, binary_target_variables
     ):
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
 
@@ -439,9 +439,7 @@ def _average_k_fold(
     )
 
 
-def _single_k_fold(
-        classifier, catalog, entity, k, dir_io, threshold, **kwargs
-):
+def _single_k_fold(classifier, catalog, entity, k, dir_io, threshold, **kwargs):
     predictions, test_set = None, []
     dataset, positive_samples_index = train.build_training_set(
         catalog, entity, dir_io
@@ -451,7 +449,7 @@ def _single_k_fold(
     )
 
     for train_index, test_index in k_fold.split(
-            dataset, binary_target_variables
+        dataset, binary_target_variables
     ):
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
         test_set.append(test)
@@ -483,12 +481,12 @@ def _single_k_fold(
 
 
 def _init_model_and_get_preds(
-        classifier: str,
-        training_set: pd.DataFrame,
-        test_set: pd.DataFrame,
-        positive_samples_index: pd.MultiIndex,
-        threshold=0.5,
-        **kwargs,
+    classifier: str,
+    training_set: pd.DataFrame,
+    test_set: pd.DataFrame,
+    positive_samples_index: pd.MultiIndex,
+    threshold=0.5,
+    **kwargs,
 ) -> pd.Series:
     LOGGER.debug(
         'Getting predictions for fold using "%s" classifier and a threshold of "%d"',
