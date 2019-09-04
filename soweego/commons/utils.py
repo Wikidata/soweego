@@ -73,6 +73,9 @@ def init_model(classifier: str, num_features: int, **kwargs):
 
         model = rl.NaiveBayesClassifier(**kwargs)
 
+    elif classifier is keys.LOGISTIC_REGRESSION:
+        model = rl.LogisticRegressionClassifier(**kwargs)
+
     elif classifier is keys.LINEAR_SVM:
         model = rl.SVMClassifier(**kwargs)
 
