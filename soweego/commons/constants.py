@@ -305,7 +305,7 @@ CLASSIFIERS = {
 # holds mention of 'classifier ensemble'
 CLASSIFIERS_FOR_ENSEMBLE = [
     keys.NAIVE_BAYES,
-    # keys.LINEAR_SVM,
+    keys.LOGISTIC_REGRESSION,
     keys.RANDOM_FOREST,
     keys.SINGLE_LAYER_PERCEPTRON,
     keys.MULTI_LAYER_PERCEPTRON,
