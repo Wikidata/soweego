@@ -43,7 +43,7 @@ def handle_extra_cli_args(args):
 def make_buckets(dataset, bucket_size=1000):
     """Slice a dataset into a set of buckets for efficient processing."""
     buckets = [
-        dataset[i * bucket_size: (i + 1) * bucket_size]
+        dataset[i * bucket_size : (i + 1) * bucket_size]
         for i in range(0, int((len(dataset) / bucket_size + 1)))
     ]
     LOGGER.info(

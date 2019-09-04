@@ -176,8 +176,7 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
 
             estimators.append((clf, model.kernel))
 
-        self.kernel = VotingClassifier(estimators=estimators,
-                                       voting=voting)
+        self.kernel = VotingClassifier(estimators=estimators, voting=voting)
 
     def prob(self, feature_vectors: pd.DataFrame) -> pd.DataFrame:
         """Classify record pairs and include the probability score
@@ -218,12 +217,12 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
 # shared across neural network implementations.
 class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
     def _fit(
-            self,
-            feature_vectors: pd.Series,
-            answers: pd.Series = None,
-            batch_size: int = constants.BATCH_SIZE,
-            epochs: int = constants.EPOCHS,
-            validation_split: float = constants.VALIDATION_SPLIT,
+        self,
+        feature_vectors: pd.Series,
+        answers: pd.Series = None,
+        batch_size: int = constants.BATCH_SIZE,
+        epochs: int = constants.EPOCHS,
+        validation_split: float = constants.VALIDATION_SPLIT,
     ) -> None:
         model_path = os.path.join(
             constants.SHARED_FOLDER,
@@ -313,9 +312,9 @@ class SingleLayerPerceptron(_BaseNeuralNetwork):
         self.kernel = model
 
     def _create_model(
-            self,
-            activation=constants.OUTPUT_ACTIVATION,
-            optimizer=constants.SLP_OPTIMIZER,
+        self,
+        activation=constants.OUTPUT_ACTIVATION,
+        optimizer=constants.SLP_OPTIMIZER,
     ):
         model = Sequential()
         model.add(Dense(1, input_dim=self.input_dim, activation=activation))
@@ -383,11 +382,11 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
         self.kernel = model
 
     def _create_model(
-            self,
-            optimizer=constants.SLP_OPTIMIZER,
-            hidden_activation=constants.HIDDEN_ACTIVATION,
-            output_activation=constants.OUTPUT_ACTIVATION,
-            hidden_layer_dims=constants.MLP_HIDDEN_LAYERS_DIM,
+        self,
+        optimizer=constants.SLP_OPTIMIZER,
+        hidden_activation=constants.HIDDEN_ACTIVATION,
+        output_activation=constants.OUTPUT_ACTIVATION,
+        hidden_layer_dims=constants.MLP_HIDDEN_LAYERS_DIM,
     ):
 
         model = Sequential()
