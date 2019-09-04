@@ -288,6 +288,9 @@ def _add_missing_feature_columns(classifier, feature_vectors: pd.DataFrame):
         # This seems to be the only easy way for Naïve Bayes
         expected_features = len(classifier.kernel._binarizers)
 
+    elif isinstance(classifier, rl.LogisticRegressionClassifier):
+        expected_features = classifier.kernel.coef_.shape[1]
+
     elif isinstance(classifier, classifiers.SVCClassifier):
         expected_features = classifier.kernel.shape_fit_[1]
 

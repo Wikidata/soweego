@@ -345,7 +345,7 @@ def _nested_k_fold_with_grid_search(
         scoring=scoring,
         n_jobs=-1,
         cv=inner_k_fold,
-        verbose=2,
+        verbose=1,
     )
     result = []
 
