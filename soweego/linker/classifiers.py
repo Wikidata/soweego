@@ -160,6 +160,7 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
     most total probability (the argmax of the sum of predictions),
     aka 'soft' voting.
     """
+
     def __init__(self, num_features, **kwargs):
         super(VoteClassifier, self).__init__()
         voting = kwargs.get('voting', 'soft')
