@@ -295,7 +295,6 @@ class SingleLayerPerceptron(_BaseNeuralNetwork):
         self.metrics = kwargs.get('metrics', constants.METRICS)
         self.optimizer = kwargs.get('optimizer')
 
-
         model = KerasClassifier(
             self._create_model,
             activation=self.activation,
@@ -305,9 +304,7 @@ class SingleLayerPerceptron(_BaseNeuralNetwork):
         self.kernel = model
 
     def _create_model(
-            self,
-            activation=constants.OUTPUT_ACTIVATION,
-            optimizer=None,
+        self, activation=constants.OUTPUT_ACTIVATION, optimizer=None
     ):
         if optimizer is None:
             optimizer = self.optimizer
@@ -378,11 +375,11 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
         self.kernel = model
 
     def _create_model(
-            self,
-            optimizer=constants.MLP_OPTIMIZER,
-            hidden_activation=constants.HIDDEN_ACTIVATION,
-            output_activation=constants.OUTPUT_ACTIVATION,
-            hidden_layer_dims=constants.MLP_HIDDEN_LAYERS_DIM,
+        self,
+        optimizer=constants.MLP_OPTIMIZER,
+        hidden_activation=constants.HIDDEN_ACTIVATION,
+        output_activation=constants.OUTPUT_ACTIVATION,
+        hidden_layer_dims=constants.MLP_HIDDEN_LAYERS_DIM,
     ):
 
         model = Sequential()
