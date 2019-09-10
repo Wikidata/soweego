@@ -386,10 +386,7 @@ MLP_HIDDEN_LAYERS_DIM = [
 ]
 
 # Hyperparameters for other models
-NAIVE_BAYES_PARAMS = {
-    'alpha': 0.0001,
-    'binarize': 0.2
-}
+NAIVE_BAYES_PARAMS = {'alpha': 0.0001, 'binarize': 0.2}
 
 LOGISTIC_REGRESSION_PARAMS = {
     'tol': 0.001,
