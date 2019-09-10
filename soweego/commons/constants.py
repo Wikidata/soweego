@@ -370,7 +370,6 @@ FEATURE_MISSING_VALUE = 0.0
 # Neural networks-specific
 OUTPUT_ACTIVATION = 'sigmoid'
 HIDDEN_ACTIVATION = 'relu'
-SLP_OPTIMIZER = 'adam'
 MLP_OPTIMIZER = 'adadelta'
 LOSS = 'binary_crossentropy'
 METRICS = ['accuracy']
@@ -411,6 +410,13 @@ RANDOM_FOREST_PARAMS = {
     'criterion': 'entropy',
     'max_features': None,
     'bootstrap': True,
+}
+
+SINGLE_LAYER_PERCEPTRON_PARAMS = {
+    'epochs': 1000,
+    'batch_size': 256,
+    'activation': 'sigmoid',
+    'optimizer': 'Nadam',
 }
 
 # precisions for the `pandas.Period` class.

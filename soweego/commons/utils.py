@@ -69,15 +69,15 @@ def init_model(classifier: str, num_features: int, **kwargs):
     if classifier is keys.NAIVE_BAYES:
         # add `binarize` threshold if not already specified
 
-        kwargs = {**kwargs, **constants.NAIVE_BAYES_PARAMS}
+        kwargs = {**constants.NAIVE_BAYES_PARAMS, **kwargs}
         model = rl.NaiveBayesClassifier(**kwargs)
 
     elif classifier is keys.LOGISTIC_REGRESSION:
-        kwargs = {**kwargs, **constants.LOGISTIC_REGRESSION_PARAMS}
+        kwargs = {**constants.LOGISTIC_REGRESSION_PARAMS, **kwargs}
         model = rl.LogisticRegressionClassifier(**kwargs)
 
     elif classifier is keys.LINEAR_SVM:
-        kwargs = {**kwargs, **constants.LINEAR_SVM_PARAMS}
+        kwargs = {**constants.LINEAR_SVM_PARAMS, **kwargs}
         model = rl.SVMClassifier(**kwargs)
 
     elif classifier is keys.SVM:
