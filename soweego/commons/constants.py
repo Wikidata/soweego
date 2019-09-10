@@ -385,9 +385,20 @@ MLP_HIDDEN_LAYERS_DIM = [
     32,
 ]
 
-# Options for other models
-NAIVE_BAYES_BINARIZE = 0.2
-NAIVE_BAYES_ALPHA = 0.0001
+# Hyperparameters for other models
+NAIVE_BAYES_PARAMS = {
+    'alpha': 0.0001,
+    'binarize': 0.2
+}
+
+LOGISTIC_REGRESSION_PARAMS = {
+    'tol': 0.001,
+    'C': 1.0,
+    'class_weight': None,
+    'solver': 'liblinear',
+    'max_iter': 100,
+}
+
 
 
 # precisions for the `pandas.Period` class.
