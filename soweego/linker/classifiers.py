@@ -155,11 +155,12 @@ class RandomForest(SKLearnAdapter, BaseClassifier):
 
 
 class VoteClassifier(SKLearnAdapter, BaseClassifier):
-    # TODO: Write docstring
+    """Basic ensemble classifier which chooses the correct prediction by
+    using majority voting (aka 'hard' voting) or chooses the label which has the
+    most total probability (the argmax of the sum of predictions),
+    aka 'soft' voting.
+    """
     def __init__(self, num_features, **kwargs):
-        # "    If ‘hard’, uses predicted class labels for majority rule voting. Else if ‘soft’,
-        # predicts the class label based on the argmax of the sums of the predicted probabilities,
-        # which is recommended for an ensemble of well-calibrated classifiers."
         super(VoteClassifier, self).__init__()
         voting = kwargs.get('voting', 'soft')
 
