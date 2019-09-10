@@ -399,6 +399,13 @@ LOGISTIC_REGRESSION_PARAMS = {
     'max_iter': 100,
 }
 
+LINEAR_SVM_PARAMS = {
+    'dual': True,
+    'tol': 0.001,
+    'max_iter': 1000,
+    'C': 1.0,
+}
+
 RANDOM_FOREST_PARAMS = {
     'n_estimators': 500,
     'criterion': 'entropy',

@@ -77,6 +77,7 @@ def init_model(classifier: str, num_features: int, **kwargs):
         model = rl.LogisticRegressionClassifier(**kwargs)
 
     elif classifier is keys.LINEAR_SVM:
+        kwargs = {**kwargs, **constants.LINEAR_SVM_PARAMS}
         model = rl.SVMClassifier(**kwargs)
 
     elif classifier is keys.SVM:
