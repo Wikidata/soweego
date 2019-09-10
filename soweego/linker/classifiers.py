@@ -293,6 +293,8 @@ class SingleLayerPerceptron(_BaseNeuralNetwork):
         self.input_dim = input_dimension
         self.loss = kwargs.get('loss', constants.LOSS)
         self.metrics = kwargs.get('metrics', constants.METRICS)
+        self.optimizer = kwargs.get('optimizer')
+
 
         model = KerasClassifier(
             self._create_model,
@@ -305,8 +307,11 @@ class SingleLayerPerceptron(_BaseNeuralNetwork):
     def _create_model(
             self,
             activation=constants.OUTPUT_ACTIVATION,
-            optimizer=constants.SLP_OPTIMIZER,
+            optimizer=None,
     ):
+        if optimizer is None:
+            optimizer = self.optimizer
+
         model = Sequential()
         model.add(Dense(1, input_dim=self.input_dim, activation=activation))
 
@@ -374,7 +379,7 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
 
     def _create_model(
             self,
-            optimizer=constants.SLP_OPTIMIZER,
+            optimizer=constants.MLP_OPTIMIZER,
             hidden_activation=constants.HIDDEN_ACTIVATION,
             output_activation=constants.OUTPUT_ACTIVATION,
             hidden_layer_dims=constants.MLP_HIDDEN_LAYERS_DIM,
