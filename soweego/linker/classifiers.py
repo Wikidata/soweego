@@ -114,10 +114,7 @@ class RandomForest(SKLearnAdapter, BaseClassifier):
     def __init__(self, *args, **kwargs):
         super(RandomForest, self).__init__()
 
-        kwargs['n_estimators'] = kwargs.get('n_estimators', 350)
-        kwargs['max_features'] = kwargs.get('max_features', 'auto')
-        kwargs['bootstrap'] = kwargs.get('bootstrap', True)
-
+        kwargs = {**kwargs, **constants.RANDOM_FOREST_PARAMS}
         self.kernel = RandomForestClassifier(*args, **kwargs)
 
     def prob(self, feature_vectors: pd.DataFrame) -> pd.DataFrame:

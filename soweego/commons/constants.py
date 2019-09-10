@@ -399,7 +399,12 @@ LOGISTIC_REGRESSION_PARAMS = {
     'max_iter': 100,
 }
 
-
+RANDOM_FOREST_PARAMS = {
+    'n_estimators': 500,
+    'criterion': 'entropy',
+    'max_features': None,
+    'bootstrap': True,
+}
 
 # precisions for the `pandas.Period` class.
 # Listed from least to most precise, as defined here:
