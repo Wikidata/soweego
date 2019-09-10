@@ -277,6 +277,7 @@ def _upload(chunk, chunk_number, catalog, entity, sandbox):
 
 def _add_missing_feature_columns(classifier, feature_vectors: pd.DataFrame):
     # Handle amount of features depending on the classifier
+    expected_features: int
     if isinstance(classifier, rl.NaiveBayesClassifier):
         # This seems to be the only easy way for Naïve Bayes
         expected_features = len(classifier.kernel._binarizers)
@@ -292,6 +293,10 @@ def _add_missing_feature_columns(classifier, feature_vectors: pd.DataFrame):
 
     elif isinstance(classifier, classifiers.RandomForest):
         expected_features = classifier.kernel.n_features_
+
+    elif isinstance(classifier, classifiers.VoteClassifier):
+        # just use the default shape of the features
+        expected_features = feature_vectors.shape[1]
 
     elif isinstance(
         classifier,
