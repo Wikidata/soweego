@@ -166,13 +166,6 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
 
         estimators = []
         for clf in constants.CLASSIFIERS_FOR_ENSEMBLE:
-            # model_path = os.path.join(
-            #     dir_io,
-            #     constants.LINKER_MODEL.format(catalog, entity, clf),
-            # )
-            #
-            # model = joblib.load(model_path)
-
             model = utils.init_model(clf, num_features=num_features, **kwargs)
 
             estimators.append((clf, model.kernel))
