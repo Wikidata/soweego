@@ -43,7 +43,7 @@ def handle_extra_cli_args(args):
 def make_buckets(dataset, bucket_size=1000):
     """Slice a dataset into a set of buckets for efficient processing."""
     buckets = [
-        dataset[i * bucket_size : (i + 1) * bucket_size]
+        dataset[i * bucket_size: (i + 1) * bucket_size]
         for i in range(0, int((len(dataset) / bucket_size + 1)))
     ]
     LOGGER.info(
@@ -68,8 +68,9 @@ def prepare_stratified_k_fold(k, dataset, positive_samples_index):
 def init_model(classifier: str, num_features: int, **kwargs):
     if classifier is keys.NAIVE_BAYES:
         # add `binarize` threshold if not already specified
-        if "binarize" not in kwargs.keys():
-            kwargs["binarize"] = constants.NAIVE_BAYES_BINARIZE
+
+        kwargs['binarize'] = kwargs.get('binarize', constants.NAIVE_BAYES_BINARIZE)
+        kwargs['alpha'] = kwargs.get('alpha', constants.NAIVE_BAYES_ALPHA)
 
         model = rl.NaiveBayesClassifier(**kwargs)
 

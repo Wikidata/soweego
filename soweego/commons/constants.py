@@ -366,6 +366,7 @@ CLASSIFICATION_RETURN_INDEX = ('classification.return_type', 'index')
 CONFIDENCE_THRESHOLD = 0.5
 FEATURE_MISSING_VALUE = 0.0
 
+### Hyperparameters for classifiers
 # Neural networks-specific
 OUTPUT_ACTIVATION = 'sigmoid'
 HIDDEN_ACTIVATION = 'relu'
@@ -385,7 +386,9 @@ MLP_HIDDEN_LAYERS_DIM = [
 ]
 
 # Options for other models
-NAIVE_BAYES_BINARIZE = 0.1
+NAIVE_BAYES_BINARIZE = 0.2
+NAIVE_BAYES_ALPHA = 0.0001
+
 
 # precisions for the `pandas.Period` class.
 # Listed from least to most precise, as defined here:
