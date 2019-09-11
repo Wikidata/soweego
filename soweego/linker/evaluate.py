@@ -2,18 +2,10 @@
 # -*- coding: utf-8 -*-
 
 """Evaluate supervised linking algorithms."""
-
-__author__ = 'Marco Fossati'
-__email__ = 'fossati@spaziodati.eu'
-__version__ = '1.0'
-__license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2019, Hjfocs'
-
 import json
 import logging
 import os
 import sys
-from collections import defaultdict
 
 import click
 import joblib
@@ -23,8 +15,14 @@ from numpy import mean, std
 from pandas import concat
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
 
-from soweego.commons import constants, keys, target_database, utils
+from soweego.commons import constants, target_database, utils
 from soweego.linker import train
+
+__author__ = 'Marco Fossati'
+__email__ = 'fossati@spaziodati.eu'
+__version__ = '1.0'
+__license__ = 'GPL-3.0'
+__copyright__ = 'Copyleft 2019, Hjfocs'
 
 LOGGER = logging.getLogger(__name__)
 
@@ -47,14 +45,14 @@ LOGGER = logging.getLogger(__name__)
     '--single',
     is_flag=True,
     help='Compute a single evaluation over all k folds, instead of k '
-    'evaluations.',
+         'evaluations.',
 )
 @click.option(
     '-n',
     '--nested',
     is_flag=True,
     help='Compute a nested cross-validation with hyperparameters tuning via '
-    'grid search. WARNING: this will take a lot of time.',
+         'grid search. WARNING: this will take a lot of time.',
 )
 @click.option(
     '-m',
@@ -62,7 +60,7 @@ LOGGER = logging.getLogger(__name__)
     type=click.Choice(constants.PERFORMANCE_METRICS),
     default='f1',
     help="Performance metric for nested cross-validation. "
-    "Use with '--nested'. Default: f1.",
+         "Use with '--nested'. Default: f1.",
 )
 @click.option(
     '-d',
@@ -73,7 +71,15 @@ LOGGER = logging.getLogger(__name__)
 )
 @click.pass_context
 def cli(
-    ctx, classifier, catalog, entity, k_folds, single, nested, metric, dir_io
+        ctx,
+        classifier,
+        catalog,
+        entity,
+        k_folds,
+        single,
+        nested,
+        metric,
+        dir_io,
 ):
     """Evaluate the performance of a supervised linker.
 
@@ -102,10 +108,9 @@ def cli(
             performance_out,
             dir_io,
         )
-        sys.exit(0)
 
     # -s, --single
-    if single:
+    elif single:
         _run_single(
             classifier,
             catalog,
@@ -116,10 +121,44 @@ def cli(
             predictions_out,
             dir_io,
         )
-        sys.exit(0)
 
-    # Default: average evaluation over k-fold
-    _run_average(
+    else:
+        # Default: average evaluation over k-fold
+        _run_average(
+            classifier,
+            catalog,
+            entity,
+            k_folds,
+            kwargs,
+            performance_out,
+            predictions_out,
+            dir_io,
+        )
+
+    sys.exit(0)
+
+
+def _build_output_paths(catalog, entity, classifier, dir_io):
+    # If we're getting the result from an 'ensemble' (all classifiers) then
+    # use the appropriate output file
+
+    classifier = constants.CLASSIFIERS.get(classifier)
+
+    performance = constants.LINKER_PERFORMANCE.format(
+        catalog, entity, classifier
+    )
+    predictions = constants.LINKER_EVALUATION_PREDICTIONS.format(
+        catalog, entity, classifier
+    )
+
+    performance_outpath = os.path.join(dir_io, performance)
+    predictions_outpath = os.path.join(dir_io, predictions)
+    os.makedirs(os.path.dirname(predictions_outpath), exist_ok=True)
+
+    return performance_outpath, predictions_outpath
+
+
+def _run_average(
         classifier,
         catalog,
         entity,
@@ -128,33 +167,6 @@ def cli(
         performance_out,
         predictions_out,
         dir_io,
-    )
-
-
-def _build_output_paths(catalog, entity, classifier, dir_io):
-    performance_outpath = os.path.join(
-        dir_io, constants.LINKER_PERFORMANCE.format(catalog, entity, classifier)
-    )
-    predictions_outpath = os.path.join(
-        dir_io,
-        constants.LINKER_EVALUATION_PREDICTIONS.format(
-            catalog, entity, classifier
-        ),
-    )
-    os.makedirs(os.path.dirname(predictions_outpath), exist_ok=True)
-
-    return performance_outpath, predictions_outpath
-
-
-def _run_average(
-    classifier,
-    catalog,
-    entity,
-    k_folds,
-    kwargs,
-    performance_out,
-    predictions_out,
-    dir_io,
 ):
     LOGGER.info('Starting average evaluation over %d folds ...', k_folds)
 
@@ -202,14 +214,14 @@ def _run_average(
 
 
 def _run_single(
-    classifier,
-    catalog,
-    entity,
-    k_folds,
-    kwargs,
-    performance_out,
-    predictions_out,
-    dir_io,
+        classifier,
+        catalog,
+        entity,
+        k_folds,
+        kwargs,
+        performance_out,
+        predictions_out,
+        dir_io,
 ):
     LOGGER.info('Starting single evaluation over %d folds ...', k_folds)
 
@@ -241,14 +253,14 @@ def _run_single(
 
 
 def _run_nested(
-    classifier,
-    catalog,
-    entity,
-    k_folds,
-    metric,
-    kwargs,
-    performance_out,
-    dir_io,
+        classifier,
+        catalog,
+        entity,
+        k_folds,
+        metric,
+        kwargs,
+        performance_out,
+        dir_io,
 ):
     LOGGER.warning(
         'You have opted for the slowest evaluation option, '
@@ -260,11 +272,13 @@ def _run_nested(
         k_folds,
     )
 
-    clf = constants.CLASSIFIERS[classifier]
+    clf = constants.CLASSIFIERS.get(classifier)
     param_grid = constants.PARAMETER_GRIDS.get(clf)
 
     if param_grid is None:
-        err_msg = f'Hyperparameter tuning for {clf} not supported'
+        err_msg = (
+            f'Hyperparameter tuning for classifier "{clf}" is not supported'
+        )
         LOGGER.critical(err_msg)
         raise NotImplementedError(err_msg)
 
@@ -273,20 +287,6 @@ def _run_nested(
     )
 
     LOGGER.info('Evaluation done: %s', result)
-
-    # Persist best models
-    for k, model in enumerate(result.pop('best_models'), 1):
-        model_out = os.path.join(
-            dir_io,
-            constants.LINKER_NESTED_CV_BEST_MODEL.format(
-                catalog, entity, classifier, k
-            ),
-        )
-
-        result['best_models'].append(model_out)
-        joblib.dump(model, model_out)
-
-        LOGGER.info("Best model for fold %d dumped to '%s'", k, model_out)
 
     performance_out = performance_out.replace('txt', 'json')
     with open(performance_out, 'w') as out:
@@ -314,19 +314,8 @@ def _compute_performance(test_index, predictions, test_vectors_size):
 
 
 def _nested_k_fold_with_grid_search(
-    classifier, param_grid, catalog, entity, k, scoring, dir_io, **kwargs
+        classifier, param_grid, catalog, entity, k, scoring, dir_io, **kwargs
 ):
-    if classifier in (
-        keys.SINGLE_LAYER_PERCEPTRON,
-        keys.MULTI_LAYER_PERCEPTRON,
-    ):
-        # TODO make Keras work with GridSearchCV
-        raise NotImplementedError(
-            f'Grid search for {classifier} is not supported'
-        )
-
-    result = defaultdict(list)
-
     dataset, positive_samples_index = train.build_training_set(
         catalog, entity, dir_io
     )
@@ -342,24 +331,45 @@ def _nested_k_fold_with_grid_search(
         scoring=scoring,
         n_jobs=-1,
         cv=inner_k_fold,
-        verbose=2,
+        verbose=1,
     )
+    result = []
 
     dataset = dataset.to_numpy()
 
-    for train_index, test_index in outer_k_fold.split(dataset, target):
+    for k, (train_index, test_index) in enumerate(
+            outer_k_fold.split(dataset, target), 1
+    ):
         # Run grid search
         grid_search.fit(dataset[train_index], target[train_index])
 
-        # Grid search best score is the train score
-        result[f'train_{scoring}'].append(grid_search.best_score_)
-
         # Let grid search compute the test score
         test_score = grid_search.score(dataset[test_index], target[test_index])
-        result[f'test_{scoring}'].append(test_score)
 
+        # No reason to keep trained models in memory. We will instead just dump them
+        # to a file and keep the path
         best_model = grid_search.best_estimator_
-        result['best_models'].append(best_model)
+
+        model_path = os.path.join(
+            dir_io,
+            constants.LINKER_NESTED_CV_BEST_MODEL.format(
+                catalog, entity, classifier, k
+            ),
+        )
+
+        joblib.dump(best_model, model_path)
+
+        LOGGER.info("Best model for fold %d dumped to '%s'", k, model_path)
+
+        # Grid search best score is the train score
+        result.append(
+            {
+                f'train_{scoring}': grid_search.best_score_,
+                f'test_{scoring}': test_score,
+                'best_model': model_path,
+                'params': grid_search.best_params_,
+            }
+        )
 
     return result
 
@@ -374,7 +384,7 @@ def _average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
     )
 
     for train_index, test_index in k_fold.split(
-        dataset, binary_target_variables
+            dataset, binary_target_variables
     ):
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
 
@@ -419,7 +429,7 @@ def _single_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
     )
 
     for train_index, test_index in k_fold.split(
-        dataset, binary_target_variables
+            dataset, binary_target_variables
     ):
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
         test_set.append(test)
