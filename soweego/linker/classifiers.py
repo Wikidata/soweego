@@ -209,12 +209,12 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
 # shared across neural network implementations.
 class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
     def _fit(
-            self,
-            feature_vectors: pd.Series,
-            answers: pd.Series = None,
-            batch_size: int = None,
-            epochs: int = None,
-            validation_split: float = constants.VALIDATION_SPLIT,
+        self,
+        feature_vectors: pd.Series,
+        answers: pd.Series = None,
+        batch_size: int = None,
+        epochs: int = None,
+        validation_split: float = constants.VALIDATION_SPLIT,
     ) -> None:
 
         # if batch size or epochs have not been provided as arguments, and
@@ -394,11 +394,11 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
         self.kernel = model
 
     def _create_model(
-            self,
-            optimizer=constants.MLP_OPTIMIZER,
-            hidden_activation=constants.HIDDEN_ACTIVATION,
-            output_activation=constants.OUTPUT_ACTIVATION,
-            hidden_layer_dims=constants.MLP_HIDDEN_LAYERS_DIM,
+        self,
+        optimizer=constants.MLP_OPTIMIZER,
+        hidden_activation=constants.HIDDEN_ACTIVATION,
+        output_activation=constants.OUTPUT_ACTIVATION,
+        hidden_layer_dims=constants.MLP_HIDDEN_LAYERS_DIM,
     ):
 
         model = Sequential()
