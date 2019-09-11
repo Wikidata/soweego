@@ -209,13 +209,23 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
 # shared across neural network implementations.
 class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
     def _fit(
-        self,
-        feature_vectors: pd.Series,
-        answers: pd.Series = None,
-        batch_size: int = constants.BATCH_SIZE,
-        epochs: int = constants.EPOCHS,
-        validation_split: float = constants.VALIDATION_SPLIT,
+            self,
+            feature_vectors: pd.Series,
+            answers: pd.Series = None,
+            batch_size: int = None,
+            epochs: int = None,
+            validation_split: float = constants.VALIDATION_SPLIT,
     ) -> None:
+
+        # if batch size or epochs have not been provided as arguments, and
+        # the current instance has them as attributes, then use those. If not
+        # then use the defaults defined in constants
+        if batch_size is None:
+            batch_size = self.batch_size
+
+        if epochs is None:
+            epochs = self.epochs
+
         model_path = os.path.join(
             constants.SHARED_FOLDER,
             constants.NEURAL_NETWORK_CHECKPOINT_MODEL.format(
@@ -293,6 +303,10 @@ class SingleLayerPerceptron(_BaseNeuralNetwork):
         self.input_dim = input_dimension
         self.loss = kwargs.get('loss', constants.LOSS)
         self.metrics = kwargs.get('metrics', constants.METRICS)
+
+        self.epochs = kwargs.get('epochs')
+        self.batch_size = kwargs.get('batch_size')
+        self.activation = kwargs.get('activation')
         self.optimizer = kwargs.get('optimizer')
 
         model = KerasClassifier(
@@ -304,10 +318,13 @@ class SingleLayerPerceptron(_BaseNeuralNetwork):
         self.kernel = model
 
     def _create_model(
-        self, activation=constants.OUTPUT_ACTIVATION, optimizer=None
+            self, activation=None, optimizer=None
     ):
         if optimizer is None:
             optimizer = self.optimizer
+
+        if activation is None:
+            activation = self.activation
 
         model = Sequential()
         model.add(Dense(1, input_dim=self.input_dim, activation=activation))
@@ -375,11 +392,11 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
         self.kernel = model
 
     def _create_model(
-        self,
-        optimizer=constants.MLP_OPTIMIZER,
-        hidden_activation=constants.HIDDEN_ACTIVATION,
-        output_activation=constants.OUTPUT_ACTIVATION,
-        hidden_layer_dims=constants.MLP_HIDDEN_LAYERS_DIM,
+            self,
+            optimizer=constants.MLP_OPTIMIZER,
+            hidden_activation=constants.HIDDEN_ACTIVATION,
+            output_activation=constants.OUTPUT_ACTIVATION,
+            hidden_layer_dims=constants.MLP_HIDDEN_LAYERS_DIM,
     ):
 
         model = Sequential()
