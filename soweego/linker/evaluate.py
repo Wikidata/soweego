@@ -391,8 +391,6 @@ def _average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
         model = utils.init_model(classifier, dataset.shape[1], **kwargs)
         model.fit(training, positive_samples_index & training.index)
 
-        import pudb; pudb.set_trace()
-
         preds = model.predict(test)
 
         K.clear_session()  # Free memory

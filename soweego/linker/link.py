@@ -302,7 +302,7 @@ def _add_missing_feature_columns(classifier, feature_vectors: pd.DataFrame):
         classifier,
         (classifiers.SingleLayerPerceptron, classifiers.MultiLayerPerceptron),
     ):
-        expected_features = classifier.kernel.input_shape[1]
+        expected_features = classifier.input_dim
 
     else:
         err_msg = (
