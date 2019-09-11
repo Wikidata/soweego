@@ -231,7 +231,11 @@ NN_CHECKPOINT_FOLDER = 'best_model_checkpoint'
 # File names
 NN_CHECKPOINT_FILENAME = '{}_best_checkpoint_model.hdf5'
 EVALUATION_PERFORMANCE_FILENAME = '{}_{}_{}_performance.txt'
+EVALUATION_JOINED_PERFORMANCE_FILENAME = '{}_{}_ALL_{}_{}_performance.txt'
 EVALUATION_PREDICTIONS_FILENAME = '{}_{}_{}_evaluation_links.csv.gz'
+EVALUATION_JOINED_PREDICTIONS_FILENAME = (
+    '{}_{}_ALL_{}_{}_evaluation_links.csv.gz'
+)
 RESULT_FILENAME = '{}_{}_{}_links.csv.gz'
 RESULT_JOINED_FILENAME = '{}_{}_ALL_{}_{}_links.csv.gz'
 NESTED_CV_BEST_MODEL_FILENAME = '{}_{}_{}_best_model_k{:02}.pkl'
@@ -261,9 +265,16 @@ LINKER_RESULT_JOINED = os.path.join(RESULTS_FOLDER, RESULT_JOINED_FILENAME)
 LINKER_EVALUATION_PREDICTIONS = os.path.join(
     RESULTS_FOLDER, EVALUATION_PREDICTIONS_FILENAME
 )
+LINKER_EVALUATION_JOINED_PREDICTIONS = os.path.join(
+    RESULTS_FOLDER, EVALUATION_JOINED_PREDICTIONS_FILENAME
+)
 LINKER_PERFORMANCE = os.path.join(
     RESULTS_FOLDER, EVALUATION_PERFORMANCE_FILENAME
 )
+LINKER_JOINED_PERFORMANCE = os.path.join(
+    RESULTS_FOLDER, EVALUATION_JOINED_PERFORMANCE_FILENAME
+)
+
 NEURAL_NETWORK_CHECKPOINT_MODEL = os.path.join(
     NN_CHECKPOINT_FOLDER, NN_CHECKPOINT_FILENAME
 )
@@ -274,19 +285,31 @@ BASELINE_NAMES = os.path.join(RESULTS_FOLDER, BASELINE_NAMES_FILENAME)
 
 CLASSIFIERS = {
     'naive_bayes': keys.NAIVE_BAYES,
+    'logistic_regression': keys.LOGISTIC_REGRESSION,
     'support_vector_machines': keys.SVM,
     'linear_support_vector_machines': keys.LINEAR_SVM,
+    'random_forest': keys.RANDOM_FOREST,
     'single_layer_perceptron': keys.SINGLE_LAYER_PERCEPTRON,
     'multi_layer_perceptron': keys.MULTI_LAYER_PERCEPTRON,
+    'voting_classifier': keys.VOTING_CLASSIFIER,
     'nb': keys.NAIVE_BAYES,  # Shorthand
+    'lr': keys.LOGISTIC_REGRESSION,  # Shorthand
     'svm': keys.SVM,  # Shorthand
     'lsvm': keys.LINEAR_SVM,  # Shorthand
+    'rfc': keys.RANDOM_FOREST,  # Shorthand
     'slp': keys.SINGLE_LAYER_PERCEPTRON,  # Shorthand
     'mlp': keys.MULTI_LAYER_PERCEPTRON,  # Shorthand
+    'vc': keys.VOTING_CLASSIFIER,  # Shorthand
 }
 
 # holds mention of 'classifier ensemble'
-EXTENDED_CLASSIFIERS = {**CLASSIFIERS, 'all': 'all'}
+CLASSIFIERS_FOR_ENSEMBLE = [
+    keys.NAIVE_BAYES,
+    keys.LOGISTIC_REGRESSION,
+    keys.RANDOM_FOREST,
+    keys.SINGLE_LAYER_PERCEPTRON,
+    keys.MULTI_LAYER_PERCEPTRON,
+]
 
 PERFORMANCE_METRICS = ['precision', 'recall', 'f1']
 
@@ -295,18 +318,46 @@ PARAMETER_GRIDS = {
         'alpha': [0.0001, 0.001, 0.01, 0.1, 1],
         'binarize': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
     },
+    keys.LOGISTIC_REGRESSION: {
+        'tol': [1e-3, 1e-4, 1e-5],
+        'C': [0.01, 0.1, 1.0, 10, 100],
+        'class_weight': [None, 'balanced'],
+        'solver': ['liblinear', 'lbfgs', 'saga', 'sag'],
+        'max_iter': [100, 200],
+    },
     keys.LINEAR_SVM: {
-        # liblinear fails to converge when values are 10 and 100 in some datasets
-        'C': [0.01, 0.1, 1.0, 10, 100]
+        'dual': [True, False],
+        'tol': [1e-3, 1e-4, 1e-5],
+        'max_iter': [1000, 2000],
+        # liblinear fails to converge when C values are 10 and 100 in some datasets
+        'C': [0.01, 0.1, 1.0, 10, 100],
     },
     keys.SVM: {
         # The execution takes too long when C=100 and kernel=linear
         'C': [0.01, 0.1, 1.0, 10],
         'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],
+        'gamma': ['auto', 'scale'],
+        'tol': [1e-3, 1e-4],
+    },
+    keys.RANDOM_FOREST: {
+        'n_estimators': [100, 200, 350, 500],
+        'criterion': ['gini', 'entropy'],
+        'max_features': ['sqrt', 'log2', None],
+        'bootstrap': [True, False],
     },
     keys.SINGLE_LAYER_PERCEPTRON: {
         'epochs': [100, 1000, 2000, 3000],
         'batch_size': [256, 512, 1024, 2048],
+        'activation': ['sigmoid'],
+        'optimizer': ['adam', 'RMSprop', 'Adadelta', 'Nadam'],
+    },
+    keys.MULTI_LAYER_PERCEPTRON: {
+        'epochs': [2000, 3000],
+        'batch_size': [512, 1024],
+        'hidden_activation': ['relu', 'tanh', 'selu'],
+        'output_activation': ['sigmoid'],
+        'optimizer': ['adam', 'Adadelta', 'Nadam'],
+        'hidden_layer_dims': [[128, 32], [256, 128, 32], [128, 32, 32]],
     },
 }
 
@@ -315,17 +366,50 @@ CLASSIFICATION_RETURN_INDEX = ('classification.return_type', 'index')
 CONFIDENCE_THRESHOLD = 0.5
 FEATURE_MISSING_VALUE = 0.0
 
+### Hyperparameters for classifiers
 # Neural networks-specific
 OUTPUT_ACTIVATION = 'sigmoid'
 HIDDEN_ACTIVATION = 'relu'
-SLP_OPTIMIZER = 'adam'
 MLP_OPTIMIZER = 'adadelta'
 LOSS = 'binary_crossentropy'
 METRICS = ['accuracy']
 BATCH_SIZE = 1024
 EPOCHS = 1000
 VALIDATION_SPLIT = 0.33
-NAIVE_BAYES_BINARIZE = 0.1
+MLP_HIDDEN_LAYERS_DIM = [
+    # specifies a two fully connected layer NN
+    # an extra layer with 1 output dimension will be
+    # automatically used
+    128,
+    32,
+]
+
+# Hyperparameters for other models
+NAIVE_BAYES_PARAMS = {'alpha': 0.0001, 'binarize': 0.2}
+
+LOGISTIC_REGRESSION_PARAMS = {
+    'tol': 0.001,
+    'C': 1.0,
+    'class_weight': None,
+    'solver': 'liblinear',
+    'max_iter': 100,
+}
+
+LINEAR_SVM_PARAMS = {'dual': True, 'tol': 0.001, 'max_iter': 1000, 'C': 1.0}
+
+RANDOM_FOREST_PARAMS = {
+    'n_estimators': 500,
+    'criterion': 'entropy',
+    'max_features': None,
+    'bootstrap': True,
+}
+
+SINGLE_LAYER_PERCEPTRON_PARAMS = {
+    'epochs': 1000,
+    'batch_size': 256,
+    'activation': 'sigmoid',
+    'optimizer': 'Nadam',
+}
 
 # precisions for the `pandas.Period` class.
 # Listed from least to most precise, as defined here:
@@ -342,10 +426,6 @@ PD_PERIOD_PRECISIONS = [
 ]
 
 # available methods to join predictions (super-confident predictions)
-SC_UNION = 'union'
-SC_INTERSECTION = 'intersection'
-SC_AVERAGE = 'average'
-SC_VOTING = 'vote'
-
-SC_AVAILABLE_JOIN = [SC_UNION, SC_INTERSECTION]
-SC_AVAILABLE_COMBINE = [SC_VOTING, SC_AVERAGE]
+VC_HARD = 'hard'
+VC_SOFT = 'soft'
+VC_METHODS = [VC_SOFT, VC_HARD]

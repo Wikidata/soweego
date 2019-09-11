@@ -2,29 +2,28 @@
 # -*- coding: utf-8 -*-
 
 """Evaluate supervised linking algorithms."""
-
-__author__ = 'Marco Fossati'
-__email__ = 'fossati@spaziodati.eu'
-__version__ = '1.0'
-__license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2019, Hjfocs'
-
 import json
 import logging
 import os
 import sys
-from collections import defaultdict
 
 import click
 import joblib
+import pandas as pd
 import recordlinkage as rl
 from keras import backend as K
 from numpy import mean, std
 from pandas import concat
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
 
-from soweego.commons import constants, keys, target_database, utils
+from soweego.commons import constants, target_database, utils
 from soweego.linker import train
+
+__author__ = 'Marco Fossati'
+__email__ = 'fossati@spaziodati.eu'
+__version__ = '1.0'
+__license__ = 'GPL-3.0'
+__copyright__ = 'Copyleft 2019, Hjfocs'
 
 LOGGER = logging.getLogger(__name__)
 
@@ -71,9 +70,24 @@ LOGGER = logging.getLogger(__name__)
     default=constants.SHARED_FOLDER,
     help=f'Input/output directory, default: {constants.SHARED_FOLDER}.',
 )
+@click.option(
+    '-t',
+    '--threshold',
+    default=constants.CONFIDENCE_THRESHOLD,
+    help=f"Probability score threshold, default: {constants.CONFIDENCE_THRESHOLD}.",
+)
 @click.pass_context
 def cli(
-    ctx, classifier, catalog, entity, k_folds, single, nested, metric, dir_io
+    ctx,
+    classifier,
+    catalog,
+    entity,
+    k_folds,
+    single,
+    nested,
+    metric,
+    dir_io,
+    threshold,
 ):
     """Evaluate the performance of a supervised linker.
 
@@ -84,7 +98,7 @@ def cli(
     if kwargs is None:
         sys.exit(1)
 
-    rl.set_option(*constants.CLASSIFICATION_RETURN_INDEX)
+    rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
 
     performance_out, predictions_out = _build_output_paths(
         catalog, entity, classifier, dir_io
@@ -102,10 +116,9 @@ def cli(
             performance_out,
             dir_io,
         )
-        sys.exit(0)
 
     # -s, --single
-    if single:
+    elif single:
         _run_single(
             classifier,
             catalog,
@@ -115,32 +128,41 @@ def cli(
             performance_out,
             predictions_out,
             dir_io,
+            threshold,
         )
-        sys.exit(0)
 
-    # Default: average evaluation over k-fold
-    _run_average(
-        classifier,
-        catalog,
-        entity,
-        k_folds,
-        kwargs,
-        performance_out,
-        predictions_out,
-        dir_io,
-    )
+    else:
+        # Default: average evaluation over k-fold
+        _run_average(
+            classifier,
+            catalog,
+            entity,
+            k_folds,
+            kwargs,
+            performance_out,
+            predictions_out,
+            dir_io,
+            threshold,
+        )
+
+    sys.exit(0)
 
 
 def _build_output_paths(catalog, entity, classifier, dir_io):
-    performance_outpath = os.path.join(
-        dir_io, constants.LINKER_PERFORMANCE.format(catalog, entity, classifier)
+    # If we're getting the result from an 'ensemble' (all classifiers) then
+    # use the appropriate output file
+
+    classifier = constants.CLASSIFIERS.get(classifier)
+
+    performance = constants.LINKER_PERFORMANCE.format(
+        catalog, entity, classifier
     )
-    predictions_outpath = os.path.join(
-        dir_io,
-        constants.LINKER_EVALUATION_PREDICTIONS.format(
-            catalog, entity, classifier
-        ),
+    predictions = constants.LINKER_EVALUATION_PREDICTIONS.format(
+        catalog, entity, classifier
     )
+
+    performance_outpath = os.path.join(dir_io, performance)
+    predictions_outpath = os.path.join(dir_io, predictions)
     os.makedirs(os.path.dirname(predictions_outpath), exist_ok=True)
 
     return performance_outpath, predictions_outpath
@@ -155,6 +177,7 @@ def _run_average(
     performance_out,
     predictions_out,
     dir_io,
+    threshold,
 ):
     LOGGER.info('Starting average evaluation over %d folds ...', k_folds)
 
@@ -164,6 +187,7 @@ def _run_average(
         entity,
         k_folds,
         dir_io,
+        threshold,
         **kwargs,
     )
 
@@ -210,6 +234,7 @@ def _run_single(
     performance_out,
     predictions_out,
     dir_io,
+    threshold,
 ):
     LOGGER.info('Starting single evaluation over %d folds ...', k_folds)
 
@@ -219,6 +244,7 @@ def _run_single(
         entity,
         k_folds,
         dir_io,
+        threshold,
         **kwargs,
     )
 
@@ -260,11 +286,13 @@ def _run_nested(
         k_folds,
     )
 
-    clf = constants.CLASSIFIERS[classifier]
+    clf = constants.CLASSIFIERS.get(classifier)
     param_grid = constants.PARAMETER_GRIDS.get(clf)
 
     if param_grid is None:
-        err_msg = f'Hyperparameter tuning for {clf} not supported'
+        err_msg = (
+            f'Hyperparameter tuning for classifier "{clf}" is not supported'
+        )
         LOGGER.critical(err_msg)
         raise NotImplementedError(err_msg)
 
@@ -273,20 +301,6 @@ def _run_nested(
     )
 
     LOGGER.info('Evaluation done: %s', result)
-
-    # Persist best models
-    for k, model in enumerate(result.pop('best_models'), 1):
-        model_out = os.path.join(
-            dir_io,
-            constants.LINKER_NESTED_CV_BEST_MODEL.format(
-                catalog, entity, classifier, k
-            ),
-        )
-
-        result['best_models'].append(model_out)
-        joblib.dump(model, model_out)
-
-        LOGGER.info("Best model for fold %d dumped to '%s'", k, model_out)
 
     performance_out = performance_out.replace('txt', 'json')
     with open(performance_out, 'w') as out:
@@ -316,17 +330,6 @@ def _compute_performance(test_index, predictions, test_vectors_size):
 def _nested_k_fold_with_grid_search(
     classifier, param_grid, catalog, entity, k, scoring, dir_io, **kwargs
 ):
-    if classifier in (
-        keys.SINGLE_LAYER_PERCEPTRON,
-        keys.MULTI_LAYER_PERCEPTRON,
-    ):
-        # TODO make Keras work with GridSearchCV
-        raise NotImplementedError(
-            f'Grid search for {classifier} is not supported'
-        )
-
-    result = defaultdict(list)
-
     dataset, positive_samples_index = train.build_training_set(
         catalog, entity, dir_io
     )
@@ -342,29 +345,52 @@ def _nested_k_fold_with_grid_search(
         scoring=scoring,
         n_jobs=-1,
         cv=inner_k_fold,
-        verbose=2,
+        verbose=1,
     )
+    result = []
 
     dataset = dataset.to_numpy()
 
-    for train_index, test_index in outer_k_fold.split(dataset, target):
+    for k, (train_index, test_index) in enumerate(
+        outer_k_fold.split(dataset, target), 1
+    ):
         # Run grid search
         grid_search.fit(dataset[train_index], target[train_index])
 
-        # Grid search best score is the train score
-        result[f'train_{scoring}'].append(grid_search.best_score_)
-
         # Let grid search compute the test score
         test_score = grid_search.score(dataset[test_index], target[test_index])
-        result[f'test_{scoring}'].append(test_score)
 
+        # No reason to keep trained models in memory. We will instead just dump them
+        # to a file and keep the path
         best_model = grid_search.best_estimator_
-        result['best_models'].append(best_model)
+
+        model_path = os.path.join(
+            dir_io,
+            constants.LINKER_NESTED_CV_BEST_MODEL.format(
+                catalog, entity, classifier, k
+            ),
+        )
+
+        joblib.dump(best_model, model_path)
+
+        LOGGER.info("Best model for fold %d dumped to '%s'", k, model_path)
+
+        # Grid search best score is the train score
+        result.append(
+            {
+                f'train_{scoring}': grid_search.best_score_,
+                f'test_{scoring}': test_score,
+                'best_model': model_path,
+                'params': grid_search.best_params_,
+            }
+        )
 
     return result
 
 
-def _average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
+def _average_k_fold(
+    classifier, catalog, entity, k, dir_io, threshold, **kwargs
+):
     predictions, precisions, recalls, f_scores = None, [], [], []
     dataset, positive_samples_index = train.build_training_set(
         catalog, entity, dir_io
@@ -378,10 +404,14 @@ def _average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
     ):
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
 
-        model = utils.init_model(classifier, dataset.shape[1], **kwargs)
-        model.fit(training, positive_samples_index & training.index)
-
-        preds = model.predict(test)
+        preds = _init_model_and_get_preds(
+            classifier,
+            training,
+            test,
+            positive_samples_index,
+            threshold,
+            **kwargs,
+        )
 
         K.clear_session()  # Free memory
 
@@ -409,7 +439,7 @@ def _average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
     )
 
 
-def _single_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
+def _single_k_fold(classifier, catalog, entity, k, dir_io, threshold, **kwargs):
     predictions, test_set = None, []
     dataset, positive_samples_index = train.build_training_set(
         catalog, entity, dir_io
@@ -424,10 +454,14 @@ def _single_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
         test_set.append(test)
 
-        model = utils.init_model(classifier, dataset.shape[1], **kwargs)
-        model.fit(training, positive_samples_index & training.index)
-
-        preds = model.predict(test)
+        preds = _init_model_and_get_preds(
+            classifier,
+            training,
+            test,
+            positive_samples_index,
+            threshold,
+            **kwargs,
+        )
 
         K.clear_session()  # Free memory
 
@@ -444,3 +478,35 @@ def _single_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
             positive_samples_index & test_set.index, predictions, len(test_set)
         ),
     )
+
+
+def _init_model_and_get_preds(
+    classifier: str,
+    training_set: pd.DataFrame,
+    test_set: pd.DataFrame,
+    positive_samples_index: pd.MultiIndex,
+    threshold=0.5,
+    **kwargs,
+) -> pd.Series:
+    LOGGER.debug(
+        'Getting predictions for fold using "%s" classifier and a threshold of "%d"',
+        classifier,
+        threshold,
+    )
+
+    def _fit_predict(clsf: str):
+        model = utils.init_model(
+            clsf, len(training_set.columns), **kwargs  # num features
+        )
+        model.fit(training_set, positive_samples_index & training_set.index)
+
+        return (
+            # LSVM doesn't support probability scores
+            model.predict(test_set)
+            if isinstance(model, rl.SVMClassifier)
+            else model.prob(test_set)
+        )
+
+    preds = _fit_predict(classifier)
+
+    return preds[preds >= threshold].index
