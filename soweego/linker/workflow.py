@@ -46,12 +46,11 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
-
 LOGGER = logging.getLogger(__name__)
 
 
 def build_wikidata(
-    goal: str, catalog: str, entity: str, dir_io: str
+        goal: str, catalog: str, entity: str, dir_io: str
 ) -> JsonReader:
     """Build a Wikidata dataset for training or classification purposes:
     workflow step 1.
@@ -135,7 +134,7 @@ def build_wikidata(
 
 
 def build_target(
-    goal: str, catalog: str, entity: str, identifiers: Set[str]
+        goal: str, catalog: str, entity: str, identifiers: Set[str]
 ) -> Iterator[pd.DataFrame]:
     """Build a target catalog dataset for training or classification purposes:
     workflow step 1.
@@ -193,7 +192,7 @@ def build_target(
 
 
 def preprocess_wikidata(
-    goal: str, wikidata_reader: JsonReader
+        goal: str, wikidata_reader: JsonReader
 ) -> Iterator[pd.DataFrame]:
     """Preprocess a Wikidata dataset: workflow step 2.
 
@@ -269,7 +268,7 @@ def preprocess_wikidata(
 
 
 def preprocess_target(
-    goal: str, target_reader: Iterator[pd.DataFrame]
+        goal: str, target_reader: Iterator[pd.DataFrame]
 ) -> pd.DataFrame:
     """Preprocess a target catalog dataset: workflow step 2.
 
@@ -338,10 +337,10 @@ def preprocess_target(
 
 
 def extract_features(
-    candidate_pairs: pd.MultiIndex,
-    wikidata: pd.DataFrame,
-    target: pd.DataFrame,
-    path_io: str,
+        candidate_pairs: pd.MultiIndex,
+        wikidata: pd.DataFrame,
+        target: pd.DataFrame,
+        path_io: str,
 ) -> pd.DataFrame:
     """Extract feature vectors by comparing pairs of
     *(Wikidata, target catalog)* records.
@@ -586,7 +585,7 @@ def _rename_or_drop_tid_columns(target):
 
 
 def _shared_preprocessing(
-    df: pd.DataFrame, will_handle_birth_date: bool, will_handle_death_date: bool
+        df: pd.DataFrame, will_handle_birth_date: bool, will_handle_death_date: bool
 ) -> pd.DataFrame:
     LOGGER.info('Normalizing columns with names ...')
     for column in constants.NAME_FIELDS:
@@ -754,7 +753,7 @@ def _occupations_to_set(df):
     def to_set(itm):
         # if it is an empty array (from source), or an
         # empty string (from target)
-        if not itm:
+        if not itm or (isinstance(itm, float) and pd.isna(itm)):
             return set()
 
         # when coming from the DB, the occupations for target
