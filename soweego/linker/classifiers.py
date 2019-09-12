@@ -376,7 +376,7 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
         self.input_dim = input_dimension
         self.loss = kwargs.get('loss', constants.LOSS)
         self.metrics = kwargs.get('metrics', constants.METRICS)
-        self.optimizer = kwargs.get('optimizer', constants.SLP_OPTIMIZER)
+        self.optimizer = kwargs.get('optimizer', 'Nadam')
 
         self.hidden_activation = kwargs.get(
             'hidden_activation', constants.HIDDEN_ACTIVATION

@@ -352,8 +352,8 @@ PARAMETER_GRIDS = {
         'optimizer': ['adam', 'RMSprop', 'Adadelta', 'Nadam'],
     },
     keys.MULTI_LAYER_PERCEPTRON: {
-        'epochs': [2000, 3000],
-        'batch_size': [512, 1024],
+        'epochs': [1000, 2000],
+        'batch_size': [512],
         'hidden_activation': ['relu', 'tanh', 'selu'],
         'output_activation': ['sigmoid'],
         'optimizer': ['adam', 'Adadelta', 'Nadam'],
