@@ -367,24 +367,13 @@ CONFIDENCE_THRESHOLD = 0.5
 FEATURE_MISSING_VALUE = 0.0
 
 ### Hyperparameters for classifiers
-# Neural networks-specific
-OUTPUT_ACTIVATION = 'sigmoid'
-HIDDEN_ACTIVATION = 'relu'
-MLP_OPTIMIZER = 'adadelta'
+# General Neural Networks parameters
 LOSS = 'binary_crossentropy'
 METRICS = ['accuracy']
 BATCH_SIZE = 1024
-EPOCHS = 1000
 VALIDATION_SPLIT = 0.33
-MLP_HIDDEN_LAYERS_DIM = [
-    # specifies a two fully connected layer NN
-    # an extra layer with 1 output dimension will be
-    # automatically used
-    128,
-    32,
-]
 
-# Hyperparameters for other models
+# Hyperparameters for specific models
 NAIVE_BAYES_PARAMS = {'alpha': 0.0001, 'binarize': 0.2}
 
 LOGISTIC_REGRESSION_PARAMS = {
@@ -409,6 +398,20 @@ SINGLE_LAYER_PERCEPTRON_PARAMS = {
     'batch_size': 256,
     'activation': 'sigmoid',
     'optimizer': 'Nadam',
+}
+
+MULTI_LAYER_PERCEPTRON_PARAMS = {
+    'epochs': 1000,
+    'batch_size': 512,
+    'hidden_activation': 'selu',
+    'output_activation': 'sigmoid',
+    'optimizer': 'Adadelta',
+    'hidden_layer_dims': [
+        # specifies a two fully connected layer NN
+        # an extra layer with 1 output dimension will be
+        # automatically used
+        128, 32
+    ],
 }
 
 # precisions for the `pandas.Period` class.

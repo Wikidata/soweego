@@ -209,12 +209,12 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
 # shared across neural network implementations.
 class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
     def _fit(
-        self,
-        feature_vectors: pd.Series,
-        answers: pd.Series = None,
-        batch_size: int = None,
-        epochs: int = None,
-        validation_split: float = constants.VALIDATION_SPLIT,
+            self,
+            feature_vectors: pd.Series,
+            answers: pd.Series = None,
+            batch_size: int = None,
+            epochs: int = None,
+            validation_split: float = constants.VALIDATION_SPLIT,
     ) -> None:
 
         # if batch size or epochs have not been provided as arguments, and
@@ -373,33 +373,51 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
     def __init__(self, input_dimension, **kwargs):
         super(MultiLayerPerceptron, self).__init__()
 
+        kwargs = {**constants.MULTI_LAYER_PERCEPTRON_PARAMS, **kwargs}
+
         self.input_dim = input_dimension
+
         self.loss = kwargs.get('loss', constants.LOSS)
         self.metrics = kwargs.get('metrics', constants.METRICS)
-        self.optimizer = kwargs.get('optimizer', 'Nadam')
 
-        self.hidden_activation = kwargs.get(
-            'hidden_activation', constants.HIDDEN_ACTIVATION
-        )
-        self.output_activation = kwargs.get(
-            'output_activation', constants.OUTPUT_ACTIVATION
-        )
+        self.epochs = kwargs.get('epochs')
+        self.batch_size = kwargs.get('batch_size')
+        self.optimizer = kwargs.get('optimizer')
+
+        self.hidden_activation = kwargs.get('hidden_activation')
+        self.output_activation = kwargs.get('output_activation')
+
+        self.hidden_layer_dims = kwargs.get('hidden_layer_dims')
 
         model = KerasClassifier(
             self._create_model,
+            optimizer=self.optimizer,
             hidden_activation=self.hidden_activation,
             output_activation=self.output_activation,
+            hidden_layer_dims=self.hidden_layer_dims,
         )
 
         self.kernel = model
 
     def _create_model(
-        self,
-        optimizer=constants.MLP_OPTIMIZER,
-        hidden_activation=constants.HIDDEN_ACTIVATION,
-        output_activation=constants.OUTPUT_ACTIVATION,
-        hidden_layer_dims=constants.MLP_HIDDEN_LAYERS_DIM,
+            self,
+            optimizer=None,
+            hidden_activation=None,
+            output_activation=None,
+            hidden_layer_dims=None,
     ):
+
+        if optimizer is None:
+            optimizer = self.optimizer
+
+        if hidden_activation is None:
+            hidden_activation = self.hidden_activation
+
+        if output_activation is None:
+            output_activation = self.output_activation
+
+        if hidden_layer_dims is None:
+            hidden_layer_dims = self.hidden_layer_dims
 
         model = Sequential()
 
