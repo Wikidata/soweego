@@ -358,7 +358,6 @@ FEATURE_MISSING_VALUE = 0.0
 # General Neural Networks parameters
 LOSS = 'binary_crossentropy'
 METRICS = ['accuracy']
-BATCH_SIZE = 1024
 VALIDATION_SPLIT = 0.33
 
 # Hyperparameters for specific models
