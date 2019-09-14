@@ -415,8 +415,3 @@ PD_PERIOD_PRECISIONS = [
     'U',  # up to the microsecond
     'N',  # up to the nanosecond
 ]
-
-# available methods to join predictions (super-confident predictions)
-VC_HARD = 'hard'
-VC_SOFT = 'soft'
-VC_METHODS = [VC_SOFT, VC_HARD]
