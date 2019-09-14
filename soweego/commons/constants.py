@@ -410,7 +410,8 @@ MULTI_LAYER_PERCEPTRON_PARAMS = {
         # specifies a two fully connected layer NN
         # an extra layer with 1 output dimension will be
         # automatically used
-        128, 32
+        128,
+        32,
     ],
 }
 
