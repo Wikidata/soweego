@@ -128,14 +128,6 @@ def execute(
         initialization
     :return: the trained model
     """
-    if tune and classifier in (
-        keys.SINGLE_LAYER_PERCEPTRON,
-        keys.MULTI_LAYER_PERCEPTRON,
-    ):
-        # TODO make Keras work with GridSearchCV
-        raise NotImplementedError(
-            f'Grid search for {classifier} is not supported'
-        )
 
     feature_vectors, positive_samples_index = build_training_set(
         catalog, entity, dir_io
