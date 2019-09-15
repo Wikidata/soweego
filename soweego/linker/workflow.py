@@ -46,7 +46,6 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
-
 LOGGER = logging.getLogger(__name__)
 
 
@@ -754,7 +753,7 @@ def _occupations_to_set(df):
     def to_set(itm):
         # if it is an empty array (from source), or an
         # empty string (from target)
-        if not itm:
+        if not itm or (isinstance(itm, float) and pd.isna(itm)):
             return set()
 
         # when coming from the DB, the occupations for target
