@@ -160,7 +160,7 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
 
     def __init__(self, num_features, **kwargs):
         super(VoteClassifier, self).__init__()
-        voting = kwargs.get('voting', 'soft')
+        voting = kwargs.get('voting', 'hard')
 
         estimators = []
         for clf in constants.CLASSIFIERS_FOR_ENSEMBLE:
@@ -168,7 +168,7 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
 
             estimators.append((clf, model.kernel))
 
-        self.kernel = VotingClassifier(estimators=estimators, voting=voting)
+        self.kernel = VotingClassifier(estimators=estimators, voting=voting, n_jobs=-1)
 
     def prob(self, feature_vectors: pd.DataFrame) -> pd.DataFrame:
         """Classify record pairs and include the probability score
@@ -196,7 +196,10 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
         # `0` for non-matches, `1` for matches.
         # We only need the probability of being a match,
         # so we return the second column
-        classifications = self.kernel.predict_proba(feature_vectors)[:, 1]
+        if self.kernel.voting == 'hard':
+            classifications = self.kernel.predict(feature_vectors)
+        else:
+            classifications = self.kernel.predict_proba(feature_vectors)[:, 1]
 
         return pd.Series(classifications, index=feature_vectors.index)
 
@@ -209,12 +212,12 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
 # shared across neural network implementations.
 class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
     def _fit(
-        self,
-        feature_vectors: pd.Series,
-        answers: pd.Series = None,
-        batch_size: int = None,
-        epochs: int = None,
-        validation_split: float = constants.VALIDATION_SPLIT,
+            self,
+            feature_vectors: pd.Series,
+            answers: pd.Series = None,
+            batch_size: int = None,
+            epochs: int = None,
+            validation_split: float = constants.VALIDATION_SPLIT,
     ) -> None:
 
         # if batch size or epochs have not been provided as arguments, and
@@ -272,6 +275,14 @@ class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
         )
 
 
+# Small wrapper around 'KerasClassifier'. It's only use is to overwrite
+# the predict method so that the returned output is (n_samples) instead of
+# (n_sameples, n_features)
+class _KerasClassifierWrapper(KerasClassifier):
+    def predict(self, x, **kwargs):
+        return super(_KerasClassifierWrapper, self).predict(x, **kwargs)[:, 0]
+
+
 class SingleLayerPerceptron(_BaseNeuralNetwork):
     """A single-layer perceptron classifier.
 
@@ -313,7 +324,7 @@ class SingleLayerPerceptron(_BaseNeuralNetwork):
         self.activation = kwargs.get('activation')
         self.optimizer = kwargs.get('optimizer')
 
-        model = KerasClassifier(
+        model = _KerasClassifierWrapper(
             self._create_model,
             activation=self.activation,
             optimizer=self.optimizer,
@@ -389,7 +400,7 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
 
         self.hidden_layer_dims = kwargs.get('hidden_layer_dims')
 
-        model = KerasClassifier(
+        model = _KerasClassifierWrapper(
             self._create_model,
             optimizer=self.optimizer,
             hidden_activation=self.hidden_activation,
@@ -400,11 +411,11 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
         self.kernel = model
 
     def _create_model(
-        self,
-        optimizer=None,
-        hidden_activation=None,
-        output_activation=None,
-        hidden_layer_dims=None,
+            self,
+            optimizer=None,
+            hidden_activation=None,
+            output_activation=None,
+            hidden_layer_dims=None,
     ):
 
         if optimizer is None:
