@@ -393,13 +393,13 @@ MULTI_LAYER_PERCEPTRON_PARAMS = {
     'hidden_activation': 'selu',
     'output_activation': 'sigmoid',
     'optimizer': 'Adadelta',
-    'hidden_layer_dims': [
+    'hidden_layer_dims': (
         # specifies a two fully connected layer NN
         # an extra layer with 1 output dimension will be
         # automatically used
         128,
         32,
-    ],
+    ),
 }
 
 # precisions for the `pandas.Period` class.
