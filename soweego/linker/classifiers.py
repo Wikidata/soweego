@@ -168,7 +168,9 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
 
             estimators.append((clf, model.kernel))
 
-        self.kernel = VotingClassifier(estimators=estimators, voting=voting, n_jobs=-1)
+        self.kernel = VotingClassifier(estimators=estimators,
+                                       voting=voting,
+                                       n_jobs=None)
 
     def prob(self, feature_vectors: pd.DataFrame) -> pd.DataFrame:
         """Classify record pairs and include the probability score
