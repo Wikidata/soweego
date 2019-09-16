@@ -294,10 +294,6 @@ def _add_missing_feature_columns(classifier, feature_vectors: pd.DataFrame):
     elif isinstance(classifier, classifiers.RandomForest):
         expected_features = classifier.kernel.n_features_
 
-    elif isinstance(classifier, classifiers.VoteClassifier):
-        # just use the default shape of the features
-        expected_features = feature_vectors.shape[1]
-
     elif isinstance(
             classifier,
             (classifiers.SingleLayerPerceptron,
