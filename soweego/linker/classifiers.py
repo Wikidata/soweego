@@ -17,9 +17,11 @@ import os
 from contextlib import redirect_stderr
 
 import pandas as pd
+from mlens.ensemble import SuperLearner
 from recordlinkage.adapters import KerasAdapter, SKLearnAdapter
 from recordlinkage.base import BaseClassifier
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
+from sklearn.metrics import accuracy_score
 from sklearn.svm import SVC
 
 from soweego.commons import constants, utils
@@ -419,6 +421,69 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
         self.kernel = VotingClassifier(estimators=estimators,
                                        voting=voting,
                                        n_jobs=None)
+
+    def prob(self, feature_vectors: pd.DataFrame) -> pd.DataFrame:
+        """Classify record pairs and include the probability score
+        of being a match.
+
+        :param feature_vectors: a :class:`DataFrame <pandas.DataFrame>`
+          computed via record pairs comparison. This should be
+          :meth:`recordlinkage.Compare.compute` output.
+          See :func:`extract_features() <soweego.linker.workflow.extract_features>`
+          for more details
+        :return: the classification results
+        """
+
+        match_class = self.kernel.classes_[1]
+
+        # Invalid class label
+        assert match_class == 1, (
+            f'Invalid match class label: {match_class}.'
+            'sklearn.ensemble.RandomForestClassifier.predict_proba() expects the second class '
+            'in the trained model to be 1'
+        )
+
+        if self.kernel.voting == 'hard':
+            classifications = self.kernel.predict(feature_vectors)
+        else:
+            # get only the probability that pairs are a match
+            classifications = self.kernel.predict_proba(feature_vectors)[:, 1]
+
+        return pd.Series(classifications, index=feature_vectors.index)
+
+    def __repr__(self):
+        return f'{self.kernel}'
+
+
+class GateEnsambleClassifier(SKLearnAdapter, BaseClassifier):
+    """Ensemble of classifiers, whose predictions are joined by using
+    a further meta-learner, which decides the final output based on the
+    prediction of the base classifiers.
+    """
+
+    def __init__(self, num_features, **kwargs):
+        super(GateEnsambleClassifier, self).__init__()
+        voting = kwargs.get('voting', 'hard')
+
+        self.num_features = num_features
+
+        estimators = []
+        for clf in constants.CLASSIFIERS_FOR_ENSEMBLE:
+            model = utils.init_model(clf, num_features=num_features, **kwargs)
+
+            estimators.append((clf, model.kernel))
+
+        self.kernel = SuperLearner(scorer=accuracy_score,
+                                   verbose=2,
+                                   n_jobs=1)
+
+        self.kernel.add(estimators)
+
+        self.kernel.add_meta(
+            SingleLayerPerceptron(
+                len(estimators)
+                , **kwargs).kernel
+        )
 
     def prob(self, feature_vectors: pd.DataFrame) -> pd.DataFrame:
         """Classify record pairs and include the probability score

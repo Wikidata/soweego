@@ -280,6 +280,7 @@ CLASSIFIERS = {
     'single_layer_perceptron': keys.SINGLE_LAYER_PERCEPTRON,
     'multi_layer_perceptron': keys.MULTI_LAYER_PERCEPTRON,
     'voting_classifier': keys.VOTING_CLASSIFIER,
+    'gate_classifier': keys.GATE_CLASSIFIER,
     'nb': keys.NAIVE_BAYES,  # Shorthand
     'lr': keys.LOGISTIC_REGRESSION,  # Shorthand
     'svm': keys.SVM,  # Shorthand
@@ -288,6 +289,7 @@ CLASSIFIERS = {
     'slp': keys.SINGLE_LAYER_PERCEPTRON,  # Shorthand
     'mlp': keys.MULTI_LAYER_PERCEPTRON,  # Shorthand
     'vc': keys.VOTING_CLASSIFIER,  # Shorthand
+    'gc': keys.GATE_CLASSIFIER,  # Shorthand
 }
 
 # holds mention of 'classifier ensemble'

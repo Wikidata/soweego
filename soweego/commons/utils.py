@@ -95,6 +95,9 @@ def init_model(classifier: str, num_features: int, **kwargs):
     elif classifier is keys.VOTING_CLASSIFIER:
         model = classifiers.VoteClassifier(num_features, **kwargs)
 
+    elif classifier is keys.GATE_CLASSIFIER:
+        model = classifiers.GateEnsambleClassifier(num_features, **kwargs)
+
     else:
         err_msg = (
             f'Classifier not supported: {classifier}. '
