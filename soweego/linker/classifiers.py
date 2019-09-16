@@ -17,7 +17,6 @@ import os
 from contextlib import redirect_stderr
 
 import pandas as pd
-from keras.wrappers.scikit_learn import KerasClassifier
 from recordlinkage.adapters import KerasAdapter, SKLearnAdapter
 from recordlinkage.base import BaseClassifier
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
@@ -36,10 +35,87 @@ with redirect_stderr(open(os.devnull, 'w')):
     # saying which backend it's using. To avoid this, we
     # redirect stderr to `devnull` for the statements in this block.
     from keras.callbacks import EarlyStopping, ModelCheckpoint
+    from keras.wrappers.scikit_learn import KerasClassifier
     from keras.layers import Dense, BatchNormalization
     from keras.models import Sequential
 
 LOGGER = logging.getLogger(__name__)
+
+
+# Small wrapper around 'KerasClassifier'. It's only use is to overwrite
+# the predict method so that the returned output is (n_samples) instead of
+# (n_sameples, n_features)
+class _KerasClassifierWrapper(KerasClassifier):
+    def predict(self, x, **kwargs):
+        return super(_KerasClassifierWrapper, self).predict(x, **kwargs)[:, 0]
+
+
+# Base class that implements the training method
+# `recordlinkage.adapters.KerasAdapter_fit`,
+# shared across neural network implementations.
+class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
+    def _fit(
+            self,
+            feature_vectors: pd.Series,
+            answers: pd.Series = None,
+            batch_size: int = None,
+            epochs: int = None,
+            validation_split: float = constants.VALIDATION_SPLIT,
+    ) -> None:
+
+        # if batch size or epochs have not been provided as arguments, and
+        # the current instance has them as attributes, then use those. If not
+        # then use the defaults defined in constants
+        if batch_size is None:
+            batch_size = self.batch_size
+
+        if epochs is None:
+            epochs = self.epochs
+
+        model_path = os.path.join(
+            constants.SHARED_FOLDER,
+            constants.NEURAL_NETWORK_CHECKPOINT_MODEL.format(
+                self.__class__.__name__
+            ),
+        )
+        os.makedirs(os.path.dirname(model_path), exist_ok=True)
+
+        history = self.kernel.fit(
+            x=feature_vectors,
+            y=answers,
+            validation_split=validation_split,
+            batch_size=batch_size,
+            epochs=epochs,
+            verbose=0,
+            callbacks=[
+                EarlyStopping(
+                    monitor='val_loss',
+                    patience=100,
+                    verbose=2,
+                    restore_best_weights=True,
+                ),
+                ModelCheckpoint(model_path, save_best_only=True),
+            ],
+        )
+
+        LOGGER.info('Fit parameters: %s', history.params)
+
+    def _create_model(self, **kwargs):
+        raise NotImplementedError(
+            'Subclasses need to implement the "create_model" method.'
+        )
+
+    def _predict(self, values):
+        return self.kernel.predict(values)[:, 0]
+
+    def __repr__(self):
+        return (
+            f'{self.__class__.__name__}('
+            f'optimizer={self.optimizer.__class__.__name__}, '
+            f'loss={self.loss}, '
+            f'metrics={self.metrics}, '
+            f'config={self._create_model().get_config()})'
+        )
 
 
 class SVCClassifier(SKLearnAdapter, BaseClassifier):
@@ -149,138 +225,6 @@ class RandomForest(SKLearnAdapter, BaseClassifier):
 
     def __repr__(self):
         return f'{self.kernel}'
-
-
-class VoteClassifier(SKLearnAdapter, BaseClassifier):
-    """Basic ensemble classifier which chooses the correct prediction by
-    using majority voting (aka 'hard' voting) or chooses the label which has the
-    most total probability (the argmax of the sum of predictions),
-    aka 'soft' voting.
-    """
-
-    def __init__(self, num_features, **kwargs):
-        super(VoteClassifier, self).__init__()
-        voting = kwargs.get('voting', 'hard')
-
-        self.num_features = num_features
-
-        estimators = []
-        for clf in constants.CLASSIFIERS_FOR_ENSEMBLE:
-            model = utils.init_model(clf, num_features=num_features, **kwargs)
-
-            estimators.append((clf, model.kernel))
-
-        self.kernel = VotingClassifier(estimators=estimators,
-                                       voting=voting,
-                                       n_jobs=None)
-
-    def prob(self, feature_vectors: pd.DataFrame) -> pd.DataFrame:
-        """Classify record pairs and include the probability score
-        of being a match.
-
-        :param feature_vectors: a :class:`DataFrame <pandas.DataFrame>`
-          computed via record pairs comparison. This should be
-          :meth:`recordlinkage.Compare.compute` output.
-          See :func:`extract_features() <soweego.linker.workflow.extract_features>`
-          for more details
-        :return: the classification results
-        """
-
-        match_class = self.kernel.classes_[1]
-
-        # Invalid class label
-        assert match_class == 1, (
-            f'Invalid match class label: {match_class}.'
-            'sklearn.ensemble.RandomForestClassifier.predict_proba() expects the second class '
-            'in the trained model to be 1'
-        )
-
-        if self.kernel.voting == 'hard':
-            classifications = self.kernel.predict(feature_vectors)
-        else:
-            # get only the probability that pairs are a match
-            classifications = self.kernel.predict_proba(feature_vectors)[:, 1]
-
-        return pd.Series(classifications, index=feature_vectors.index)
-
-    def __repr__(self):
-        return f'{self.kernel}'
-
-
-# Base class that implements the training method
-# `recordlinkage.adapters.KerasAdapter_fit`,
-# shared across neural network implementations.
-class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
-    def _fit(
-            self,
-            feature_vectors: pd.Series,
-            answers: pd.Series = None,
-            batch_size: int = None,
-            epochs: int = None,
-            validation_split: float = constants.VALIDATION_SPLIT,
-    ) -> None:
-
-        # if batch size or epochs have not been provided as arguments, and
-        # the current instance has them as attributes, then use those. If not
-        # then use the defaults defined in constants
-        if batch_size is None:
-            batch_size = self.batch_size
-
-        if epochs is None:
-            epochs = self.epochs
-
-        model_path = os.path.join(
-            constants.SHARED_FOLDER,
-            constants.NEURAL_NETWORK_CHECKPOINT_MODEL.format(
-                self.__class__.__name__
-            ),
-        )
-        os.makedirs(os.path.dirname(model_path), exist_ok=True)
-
-        history = self.kernel.fit(
-            x=feature_vectors,
-            y=answers,
-            validation_split=validation_split,
-            batch_size=batch_size,
-            epochs=epochs,
-            verbose=0,
-            callbacks=[
-                EarlyStopping(
-                    monitor='val_loss',
-                    patience=100,
-                    verbose=2,
-                    restore_best_weights=True,
-                ),
-                ModelCheckpoint(model_path, save_best_only=True),
-            ],
-        )
-
-        LOGGER.info('Fit parameters: %s', history.params)
-
-    def _create_model(self, **kwargs):
-        raise NotImplementedError(
-            'Subclasses need to implement the "create_model" method.'
-        )
-
-    def _predict(self, values):
-        return self.kernel.predict(values)[:, 0]
-
-    def __repr__(self):
-        return (
-            f'{self.__class__.__name__}('
-            f'optimizer={self.optimizer.__class__.__name__}, '
-            f'loss={self.loss}, '
-            f'metrics={self.metrics}, '
-            f'config={self._create_model().get_config()})'
-        )
-
-
-# Small wrapper around 'KerasClassifier'. It's only use is to overwrite
-# the predict method so that the returned output is (n_samples) instead of
-# (n_sameples, n_features)
-class _KerasClassifierWrapper(KerasClassifier):
-    def predict(self, x, **kwargs):
-        return super(_KerasClassifierWrapper, self).predict(x, **kwargs)[:, 0]
 
 
 class SingleLayerPerceptron(_BaseNeuralNetwork):
@@ -451,3 +395,59 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
         model.compile(optimizer=optimizer, loss=self.loss, metrics=self.metrics)
 
         return model
+
+
+class VoteClassifier(SKLearnAdapter, BaseClassifier):
+    """Basic ensemble classifier which chooses the correct prediction by
+    using majority voting (aka 'hard' voting) or chooses the label which has the
+    most total probability (the argmax of the sum of predictions),
+    aka 'soft' voting.
+    """
+
+    def __init__(self, num_features, **kwargs):
+        super(VoteClassifier, self).__init__()
+        voting = kwargs.get('voting', 'hard')
+
+        self.num_features = num_features
+
+        estimators = []
+        for clf in constants.CLASSIFIERS_FOR_ENSEMBLE:
+            model = utils.init_model(clf, num_features=num_features, **kwargs)
+
+            estimators.append((clf, model.kernel))
+
+        self.kernel = VotingClassifier(estimators=estimators,
+                                       voting=voting,
+                                       n_jobs=None)
+
+    def prob(self, feature_vectors: pd.DataFrame) -> pd.DataFrame:
+        """Classify record pairs and include the probability score
+        of being a match.
+
+        :param feature_vectors: a :class:`DataFrame <pandas.DataFrame>`
+          computed via record pairs comparison. This should be
+          :meth:`recordlinkage.Compare.compute` output.
+          See :func:`extract_features() <soweego.linker.workflow.extract_features>`
+          for more details
+        :return: the classification results
+        """
+
+        match_class = self.kernel.classes_[1]
+
+        # Invalid class label
+        assert match_class == 1, (
+            f'Invalid match class label: {match_class}.'
+            'sklearn.ensemble.RandomForestClassifier.predict_proba() expects the second class '
+            'in the trained model to be 1'
+        )
+
+        if self.kernel.voting == 'hard':
+            classifications = self.kernel.predict(feature_vectors)
+        else:
+            # get only the probability that pairs are a match
+            classifications = self.kernel.predict_proba(feature_vectors)[:, 1]
+
+        return pd.Series(classifications, index=feature_vectors.index)
+
+    def __repr__(self):
+        return f'{self.kernel}'
