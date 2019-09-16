@@ -162,6 +162,8 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
         super(VoteClassifier, self).__init__()
         voting = kwargs.get('voting', 'hard')
 
+        self.num_features = num_features
+
         estimators = []
         for clf in constants.CLASSIFIERS_FOR_ENSEMBLE:
             model = utils.init_model(clf, num_features=num_features, **kwargs)
@@ -193,14 +195,10 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
             'in the trained model to be 1'
         )
 
-        # in the result, rows are classifications and columns are classes.
-        # We are in a binary setting, so 2 classes:
-        # `0` for non-matches, `1` for matches.
-        # We only need the probability of being a match,
-        # so we return the second column
         if self.kernel.voting == 'hard':
             classifications = self.kernel.predict(feature_vectors)
         else:
+            # get only the probability that pairs are a match
             classifications = self.kernel.predict_proba(feature_vectors)[:, 1]
 
         return pd.Series(classifications, index=feature_vectors.index)
@@ -312,12 +310,12 @@ class SingleLayerPerceptron(_BaseNeuralNetwork):
 
     """
 
-    def __init__(self, input_dimension, **kwargs):
+    def __init__(self, num_features, **kwargs):
         super(SingleLayerPerceptron, self).__init__()
 
         kwargs = {**constants.SINGLE_LAYER_PERCEPTRON_PARAMS, **kwargs}
 
-        self.input_dim = input_dimension
+        self.num_features = num_features
         self.loss = kwargs.get('loss', constants.LOSS)
         self.metrics = kwargs.get('metrics', constants.METRICS)
 
@@ -342,7 +340,7 @@ class SingleLayerPerceptron(_BaseNeuralNetwork):
             activation = self.activation
 
         model = Sequential()
-        model.add(Dense(1, input_dim=self.input_dim, activation=activation))
+        model.add(Dense(1, input_dim=self.num_features, activation=activation))
 
         model.compile(optimizer=optimizer, loss=self.loss, metrics=self.metrics)
 
@@ -383,12 +381,12 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
 
     """
 
-    def __init__(self, input_dimension, **kwargs):
+    def __init__(self, num_features, **kwargs):
         super(MultiLayerPerceptron, self).__init__()
 
         kwargs = {**constants.MULTI_LAYER_PERCEPTRON_PARAMS, **kwargs}
 
-        self.input_dim = input_dimension
+        self.num_features = num_features
 
         self.loss = kwargs.get('loss', constants.LOSS)
         self.metrics = kwargs.get('metrics', constants.METRICS)
@@ -439,7 +437,7 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
                 model.add(
                     Dense(
                         dim,
-                        input_dim=self.input_dim,
+                        input_dim=self.num_features,
                         activation=hidden_activation,
                     )
                 )
