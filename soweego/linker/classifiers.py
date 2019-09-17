@@ -210,6 +210,7 @@ class RandomForest(SKLearnAdapter, BaseClassifier):
         match_class = self.kernel.classes_[1]
 
         # Invalid class label
+
         assert match_class == 1, (
             f'Invalid match class label: {match_class}.'
             'sklearn.ensemble.RandomForestClassifier.predict_proba() expects the second class '
@@ -439,7 +440,7 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
         # Invalid class label
         assert match_class == 1, (
             f'Invalid match class label: {match_class}.'
-            'sklearn.ensemble.RandomForestClassifier.predict_proba() expects the second class '
+            'sklearn.ensemble.VoteClassifier.predict_proba() expects the second class '
             'in the trained model to be 1'
         )
 
@@ -463,26 +464,34 @@ class GateEnsambleClassifier(SKLearnAdapter, BaseClassifier):
 
     def __init__(self, num_features, **kwargs):
         super(GateEnsambleClassifier, self).__init__()
-        voting = kwargs.get('voting', 'hard')
+
+        kwargs = {**constants.GATED_ENSEMBLE_PARAMS, **kwargs}
 
         self.num_features = num_features
+        self.num_folds = kwargs.pop('folds', 2)
+        self.meta_layer = kwargs.pop('meta_layer')
 
         estimators = []
         for clf in constants.CLASSIFIERS_FOR_ENSEMBLE:
-            model = utils.init_model(clf, num_features=num_features, **kwargs)
+            model = utils.init_model(clf, num_features=self.num_features, **kwargs)
 
             estimators.append((clf, model.kernel))
 
         self.kernel = SuperLearner(scorer=accuracy_score,
                                    verbose=2,
-                                   n_jobs=1)
+                                   n_jobs=1,
+                                   folds=self.num_folds)
 
-        self.kernel.add(estimators)
+        # use as output the probability of a given class (not just
+        # the class itself)
+        self.kernel.add(estimators, proba=True)
 
         self.kernel.add_meta(
-            SingleLayerPerceptron(
-                len(estimators)
-                , **kwargs).kernel
+            utils.init_model(
+                self.meta_layer,
+                len(estimators) * self.num_folds,
+                **kwargs
+            ).kernel
         )
 
     def prob(self, feature_vectors: pd.DataFrame) -> pd.DataFrame:
@@ -496,21 +505,7 @@ class GateEnsambleClassifier(SKLearnAdapter, BaseClassifier):
           for more details
         :return: the classification results
         """
-
-        match_class = self.kernel.classes_[1]
-
-        # Invalid class label
-        assert match_class == 1, (
-            f'Invalid match class label: {match_class}.'
-            'sklearn.ensemble.RandomForestClassifier.predict_proba() expects the second class '
-            'in the trained model to be 1'
-        )
-
-        if self.kernel.voting == 'hard':
-            classifications = self.kernel.predict(feature_vectors)
-        else:
-            # get only the probability that pairs are a match
-            classifications = self.kernel.predict_proba(feature_vectors)[:, 1]
+        classifications = self.kernel.predict(feature_vectors)
 
         return pd.Series(classifications, index=feature_vectors.index)
 
