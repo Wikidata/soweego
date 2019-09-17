@@ -404,6 +404,12 @@ MULTI_LAYER_PERCEPTRON_PARAMS = {
     ),
 }
 
+# Parameters for ensemble
+GATED_ENSEMBLE_PARAMS = {
+    'folds': 2,
+    'meta_layer': keys.SINGLE_LAYER_PERCEPTRON
+}
+
 # precisions for the `pandas.Period` class.
 # Listed from least to most precise, as defined here:
 # http://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#dateoffset-objects
