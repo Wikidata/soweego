@@ -108,7 +108,7 @@ class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
         )
 
     def _predict(self, values):
-        return self.kernel.predict(values)[:, 0]
+        return self.kernel.predict(values)
 
     def __repr__(self):
         return (
