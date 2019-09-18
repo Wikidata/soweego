@@ -508,4 +508,8 @@ class GateEnsambleClassifier(SKLearnAdapter, BaseClassifier):
         return pd.Series(classifications, index=feature_vectors.index)
 
     def __repr__(self):
-        return f'{self.kernel}'
+        return (
+            f'{self.__class__.__name__}('
+            f'num_folds={self.num_folds}, '
+            f'meta_layer={self.meta_layer}) '
+        )
