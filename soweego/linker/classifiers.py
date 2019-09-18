@@ -513,3 +513,96 @@ class GateEnsambleClassifier(SKLearnAdapter, BaseClassifier):
             f'num_folds={self.num_folds}, '
             f'meta_layer={self.meta_layer}) '
         )
+
+
+class StackedEnsambleClassifier(SKLearnAdapter, BaseClassifier):
+    """Ensemble of stacked classifiers, meaning that classifiers are arranged in layers
+    with the next layer getting as input *the output of the last layer + the input data*.
+    The predictions of the final layer are merged with a meta-learner (the same happens for
+    ~:class:`soweego.linker.GateEnsambleClassifier`), which decides the final
+    output based on the prediction of the base classifiers.
+    """
+
+    def __init__(self, num_features, **kwargs):
+        super(StackedEnsambleClassifier, self).__init__()
+
+        kwargs = {**constants.STACKED_ENSEMBLE_PARAMS, **kwargs}
+
+        self.num_features = num_features
+        self.num_folds = kwargs.pop('folds', 2)
+        self.meta_layer = kwargs.pop('meta_layer')
+        self.layer_1_feature_propagation = kwargs.pop('layer_1_feature_propagation')
+        self.layer_2_feature_propagation = kwargs.pop('layer_2_feature_propagation')
+
+        def init_estimators(num_features):
+            estimators = []
+            for clf in constants.CLASSIFIERS_FOR_ENSEMBLE:
+                model = utils.init_model(clf, num_features=num_features, **kwargs)
+
+                estimators.append((clf, model.kernel))
+            return estimators
+        import pudb; pudb.set_trace()
+        self.kernel = SuperLearner(verbose=2,
+                                   n_jobs=1,
+                                   folds=self.num_folds)
+
+        estimators_layer_1 = init_estimators(self.num_features)
+
+        if self.layer_1_feature_propagation:
+            self.layer_1_feature_propagation = [0, self.num_features - 1]
+        else:
+            self.layer_1_feature_propagation = None
+
+        n_extra_l1_features = (self.layer_1_feature_propagation[1]
+                               if self.layer_1_feature_propagation
+                               else 0)
+        estimators_layer_2 = init_estimators(len(estimators_layer_1)  + n_extra_l1_features)
+
+        if self.layer_2_feature_propagation:
+            self.layer_2_feature_propagation = [0, n_extra_l1_features]
+        else:
+            self.layer_2_feature_propagation = None
+
+        n_extra_l2_features = self.layer_2_feature_propagation[1] if self.layer_2_feature_propagation else 0
+
+        # layer 1
+        self.kernel.add(estimators_layer_1,
+                        proba=True,
+                        propagate_features=self.layer_1_feature_propagation)
+
+        # layer 2
+        self.kernel.add(estimators_layer_2,
+                        proba=True,
+                        propagate_features=self.layer_2_feature_propagation)
+
+        self.kernel.add_meta(
+            utils.init_model(
+                self.meta_layer,
+                (len(estimators_layer_1) * self.num_folds) + n_extra_l2_features,
+                **kwargs
+            ).kernel
+        )
+
+    def prob(self, feature_vectors: pd.DataFrame) -> pd.DataFrame:
+        """Classify record pairs and include the probability score
+        of being a match.
+
+        :param feature_vectors: a :class:`DataFrame <pandas.DataFrame>`
+          computed via record pairs comparison. This should be
+          :meth:`recordlinkage.Compare.compute` output.
+          See :func:`extract_features() <soweego.linker.workflow.extract_features>`
+          for more details
+        :return: the classification results
+        """
+        classifications = self.kernel.predict(feature_vectors)
+
+        return pd.Series(classifications, index=feature_vectors.index)
+
+    def __repr__(self):
+        return (
+            f'{self.__class__.__name__}('
+            f'num_folds={self.num_folds}, '
+            f'meta_layer={self.meta_layer}, '
+            f'layer_1_feature_propagation={self.layer_1_feature_propagation}, '
+            f'layer_2_feature_propagation={self.layer_2_feature_propagation}) '
+        )
