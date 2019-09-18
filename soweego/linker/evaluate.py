@@ -378,6 +378,7 @@ def _average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
 
         model = utils.init_model(classifier, dataset.shape[1], **kwargs)
+
         model.fit(training, positive_samples_index & training.index)
 
         preds = model.predict(test)

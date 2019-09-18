@@ -21,7 +21,6 @@ from mlens.ensemble import SuperLearner
 from recordlinkage.adapters import KerasAdapter, SKLearnAdapter
 from recordlinkage.base import BaseClassifier
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
-from sklearn.metrics import accuracy_score
 from sklearn.svm import SVC
 
 from soweego.commons import constants, utils
@@ -477,8 +476,7 @@ class GateEnsambleClassifier(SKLearnAdapter, BaseClassifier):
 
             estimators.append((clf, model.kernel))
 
-        self.kernel = SuperLearner(scorer=accuracy_score,
-                                   verbose=2,
+        self.kernel = SuperLearner(verbose=2,
                                    n_jobs=1,
                                    folds=self.num_folds)
 
