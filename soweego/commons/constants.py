@@ -415,8 +415,6 @@ GATED_ENSEMBLE_PARAMS = {
 STACKED_ENSEMBLE_PARAMS = {
     'folds': 2,
     'meta_layer': keys.SINGLE_LAYER_PERCEPTRON,
-    'layer_1_feature_propagation': True,
-    'layer_2_feature_propagation': False
 }
 
 # precisions for the `pandas.Period` class.

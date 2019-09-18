@@ -114,8 +114,7 @@ class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
             f'{self.__class__.__name__}('
             f'optimizer={self.optimizer.__class__.__name__}, '
             f'loss={self.loss}, '
-            f'metrics={self.metrics}, '
-            f'config={self._create_model().get_config()})'
+            f'metrics={self.metrics})'
         )
 
 
@@ -517,7 +516,7 @@ class GateEnsambleClassifier(SKLearnAdapter, BaseClassifier):
 
 class StackedEnsambleClassifier(SKLearnAdapter, BaseClassifier):
     """Ensemble of stacked classifiers, meaning that classifiers are arranged in layers
-    with the next layer getting as input *the output of the last layer + the input data*.
+    with the next layer getting as input the output of the last layer.
     The predictions of the final layer are merged with a meta-learner (the same happens for
     ~:class:`soweego.linker.GateEnsambleClassifier`), which decides the final
     output based on the prediction of the base classifiers.
@@ -531,8 +530,6 @@ class StackedEnsambleClassifier(SKLearnAdapter, BaseClassifier):
         self.num_features = num_features
         self.num_folds = kwargs.pop('folds', 2)
         self.meta_layer = kwargs.pop('meta_layer')
-        self.layer_1_feature_propagation = kwargs.pop('layer_1_feature_propagation')
-        self.layer_2_feature_propagation = kwargs.pop('layer_2_feature_propagation')
 
         def init_estimators(num_features):
             estimators = []
@@ -541,44 +538,23 @@ class StackedEnsambleClassifier(SKLearnAdapter, BaseClassifier):
 
                 estimators.append((clf, model.kernel))
             return estimators
-        import pudb; pudb.set_trace()
+
         self.kernel = SuperLearner(verbose=2,
                                    n_jobs=1,
                                    folds=self.num_folds)
 
-        estimators_layer_1 = init_estimators(self.num_features)
+        l1_estimators = init_estimators(self.num_features)
+        self.kernel.add(l1_estimators,
+                        proba=True)
 
-        if self.layer_1_feature_propagation:
-            self.layer_1_feature_propagation = [0, self.num_features - 1]
-        else:
-            self.layer_1_feature_propagation = None
-
-        n_extra_l1_features = (self.layer_1_feature_propagation[1]
-                               if self.layer_1_feature_propagation
-                               else 0)
-        estimators_layer_2 = init_estimators(len(estimators_layer_1)  + n_extra_l1_features)
-
-        if self.layer_2_feature_propagation:
-            self.layer_2_feature_propagation = [0, n_extra_l1_features]
-        else:
-            self.layer_2_feature_propagation = None
-
-        n_extra_l2_features = self.layer_2_feature_propagation[1] if self.layer_2_feature_propagation else 0
-
-        # layer 1
-        self.kernel.add(estimators_layer_1,
-                        proba=True,
-                        propagate_features=self.layer_1_feature_propagation)
-
-        # layer 2
-        self.kernel.add(estimators_layer_2,
-                        proba=True,
-                        propagate_features=self.layer_2_feature_propagation)
+        l2_estimators = init_estimators(len(l1_estimators) * self.num_folds)
+        self.kernel.add(l2_estimators,
+                        proba=True)
 
         self.kernel.add_meta(
             utils.init_model(
                 self.meta_layer,
-                (len(estimators_layer_1) * self.num_folds) + n_extra_l2_features,
+                len(l2_estimators) * self.num_folds,
                 **kwargs
             ).kernel
         )
@@ -602,7 +578,5 @@ class StackedEnsambleClassifier(SKLearnAdapter, BaseClassifier):
         return (
             f'{self.__class__.__name__}('
             f'num_folds={self.num_folds}, '
-            f'meta_layer={self.meta_layer}, '
-            f'layer_1_feature_propagation={self.layer_1_feature_propagation}, '
-            f'layer_2_feature_propagation={self.layer_2_feature_propagation}) '
+            f'meta_layer={self.meta_layer}) '
         )
