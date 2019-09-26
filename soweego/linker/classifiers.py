@@ -161,7 +161,7 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
 
     def __init__(self, num_features, **kwargs):
         super(VoteClassifier, self).__init__()
-        voting = kwargs.get('voting', 'soft')
+        voting = kwargs.get('voting')
 
         estimators = []
         for clf in constants.CLASSIFIERS_FOR_ENSEMBLE:
