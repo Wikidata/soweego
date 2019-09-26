@@ -286,7 +286,7 @@ CLASSIFIERS = {
     'lr': keys.LOGISTIC_REGRESSION,  # Shorthand
     'svm': keys.SVM,  # Shorthand
     'lsvm': keys.LINEAR_SVM,  # Shorthand
-    'rfc': keys.RANDOM_FOREST,  # Shorthand
+    'rf': keys.RANDOM_FOREST,  # Shorthand
     'slp': keys.SINGLE_LAYER_PERCEPTRON,  # Shorthand
     'mlp': keys.MULTI_LAYER_PERCEPTRON,  # Shorthand
     'vc': keys.VOTING_CLASSIFIER,  # Shorthand
@@ -407,6 +407,10 @@ MULTI_LAYER_PERCEPTRON_PARAMS = {
 }
 
 # Parameters for ensemble
+VOTE_CLASSIFIER_PARAMS = {
+    "voting": "hard"
+}
+
 GATED_ENSEMBLE_PARAMS = {
     'folds': 2,
     'meta_layer': keys.SINGLE_LAYER_PERCEPTRON

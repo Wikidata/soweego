@@ -12,6 +12,13 @@ you will use its :meth:`fit() <recordlinkage.NaiveBayesClassifier.fit>`,
 :meth:`predict() <recordlinkage.NaiveBayesClassifier.predict>`, and
 :meth:`prob() <recordlinkage.NaiveBayesClassifier.prob>` methods.
 """
+
+__author__ = 'Marco Fossati, Andrea Tupini'
+__email__ = 'fossati@spaziodati.eu, tupini07@gmail.com'
+__version__ = '1.0'
+__license__ = 'GPL-3.0'
+__copyright__ = 'Copyleft 2019, Hjfocs, tupini07'
+
 import logging
 import os
 from contextlib import redirect_stderr
@@ -24,12 +31,6 @@ from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.svm import SVC
 
 from soweego.commons import constants, utils
-
-__author__ = 'Marco Fossati, Andrea Tupini'
-__email__ = 'fossati@spaziodati.eu, tupini07@gmail.com'
-__version__ = '1.0'
-__license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2019, Hjfocs, tupini07'
 
 with redirect_stderr(open(os.devnull, 'w')):
     # When `keras` is imported, it prints a message to stderr
@@ -183,7 +184,7 @@ class RandomForest(SKLearnAdapter, BaseClassifier):
 
     This class implements :class:`sklearn.ensemble.RandomForestClassifier`.
 
-    It fits multiple decision trees on sub-samples of the dataset and
+    It fits multiple decision trees on sub-samples (aka, parts) of the dataset and
     averages the result to get more accuracy and reduce over-fitting.
     """
 

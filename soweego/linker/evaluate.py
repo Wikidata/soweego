@@ -2,6 +2,13 @@
 # -*- coding: utf-8 -*-
 
 """Evaluate supervised linking algorithms."""
+
+__author__ = 'Marco Fossati'
+__email__ = 'fossati@spaziodati.eu'
+__version__ = '1.0'
+__license__ = 'GPL-3.0'
+__copyright__ = 'Copyleft 2019, Hjfocs'
+
 import json
 import logging
 import os
@@ -17,12 +24,6 @@ from sklearn.model_selection import GridSearchCV, StratifiedKFold
 
 from soweego.commons import constants, target_database, utils
 from soweego.linker import train
-
-__author__ = 'Marco Fossati'
-__email__ = 'fossati@spaziodati.eu'
-__version__ = '1.0'
-__license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2019, Hjfocs'
 
 LOGGER = logging.getLogger(__name__)
 
@@ -126,8 +127,6 @@ def cli(
             predictions_out,
             dir_io,
         )
-
-    sys.exit(0)
 
 
 def _build_output_paths(catalog, entity, classifier, dir_io):
