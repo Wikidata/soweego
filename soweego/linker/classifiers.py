@@ -108,7 +108,7 @@ class RandomForest(SKLearnAdapter, BaseClassifier):
 
     This class implements :class:`sklearn.ensemble.RandomForestClassifier`.
 
-    It fits multiple decision trees on sub-samples of the dataset and
+    It fits multiple decision trees on sub-samples (aka, parts) of the dataset and
     averages the result to get more accuracy and reduce over-fitting.
     """
 
