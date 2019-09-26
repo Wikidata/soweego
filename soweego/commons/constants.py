@@ -402,9 +402,7 @@ MULTI_LAYER_PERCEPTRON_PARAMS = {
     ),
 }
 
-VOTE_CLASSIFIER_PARAMS = {
-    "voting": "hard"
-}
+VOTE_CLASSIFIER_PARAMS = {"voting": "hard"}
 
 # precisions for the `pandas.Period` class.
 # Listed from least to most precise, as defined here:
