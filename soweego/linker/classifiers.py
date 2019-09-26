@@ -188,7 +188,7 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
         # Invalid class label
         assert match_class == 1, (
             f'Invalid match class label: {match_class}.'
-            'sklearn.ensemble.RandomForestClassifier.predict_proba() expects the second class '
+            'sklearn.ensemble.VoteClassifier.predict_proba() expects the second class '
             'in the trained model to be 1'
         )
 
