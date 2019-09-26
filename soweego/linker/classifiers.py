@@ -12,6 +12,13 @@ you will use its :meth:`fit() <recordlinkage.NaiveBayesClassifier.fit>`,
 :meth:`predict() <recordlinkage.NaiveBayesClassifier.predict>`, and
 :meth:`prob() <recordlinkage.NaiveBayesClassifier.prob>` methods.
 """
+
+__author__ = 'Marco Fossati, Andrea Tupini'
+__email__ = 'fossati@spaziodati.eu, tupini07@gmail.com'
+__version__ = '1.0'
+__license__ = 'GPL-3.0'
+__copyright__ = 'Copyleft 2019, Hjfocs, tupini07'
+
 import logging
 import os
 from contextlib import redirect_stderr
@@ -24,12 +31,6 @@ from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.svm import SVC
 
 from soweego.commons import constants, utils
-
-__author__ = 'Marco Fossati, Andrea Tupini'
-__email__ = 'fossati@spaziodati.eu, tupini07@gmail.com'
-__version__ = '1.0'
-__license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2019, Hjfocs, tupini07'
 
 with redirect_stderr(open(os.devnull, 'w')):
     # When `keras` is imported, it prints a message to stderr
@@ -209,12 +210,12 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
 # shared across neural network implementations.
 class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
     def _fit(
-        self,
-        feature_vectors: pd.Series,
-        answers: pd.Series = None,
-        batch_size: int = None,
-        epochs: int = None,
-        validation_split: float = constants.VALIDATION_SPLIT,
+            self,
+            feature_vectors: pd.Series,
+            answers: pd.Series = None,
+            batch_size: int = None,
+            epochs: int = None,
+            validation_split: float = constants.VALIDATION_SPLIT,
     ) -> None:
 
         # if batch size or epochs have not been provided as arguments, and
@@ -400,11 +401,11 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
         self.kernel = model
 
     def _create_model(
-        self,
-        optimizer=None,
-        hidden_activation=None,
-        output_activation=None,
-        hidden_layer_dims=None,
+            self,
+            optimizer=None,
+            hidden_activation=None,
+            output_activation=None,
+            hidden_layer_dims=None,
     ):
 
         if optimizer is None:
