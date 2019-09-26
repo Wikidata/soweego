@@ -146,7 +146,7 @@ class SVCClassifier(SKLearnAdapter, BaseClassifier):
 
         self.kernel = SVC(*args, **kwargs)
 
-    def prob(self, feature_vectors: pd.DataFrame) -> pd.DataFrame:
+    def prob(self, feature_vectors: pd.DataFrame) -> pd.Series:
         """Classify record pairs and include the probability score
         of being a match.
 
@@ -194,7 +194,7 @@ class RandomForest(SKLearnAdapter, BaseClassifier):
         kwargs = {**constants.RANDOM_FOREST_PARAMS, **kwargs}
         self.kernel = RandomForestClassifier(*args, **kwargs)
 
-    def prob(self, feature_vectors: pd.DataFrame) -> pd.DataFrame:
+    def prob(self, feature_vectors: pd.DataFrame) -> pd.Series:
         """Classify record pairs and include the probability score
         of being a match.
 
@@ -422,7 +422,7 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
                                        voting=voting,
                                        n_jobs=None)
 
-    def prob(self, feature_vectors: pd.DataFrame) -> pd.DataFrame:
+    def prob(self, feature_vectors: pd.DataFrame) -> pd.Series:
         """Classify record pairs and include the probability score
         of being a match.
 
@@ -492,7 +492,7 @@ class GateEnsambleClassifier(SKLearnAdapter, BaseClassifier):
             ).kernel
         )
 
-    def prob(self, feature_vectors: pd.DataFrame) -> pd.DataFrame:
+    def prob(self, feature_vectors: pd.DataFrame) -> pd.Series:
         """Classify record pairs and include the probability score
         of being a match.
 
@@ -560,7 +560,7 @@ class StackedEnsambleClassifier(SKLearnAdapter, BaseClassifier):
             ).kernel
         )
 
-    def prob(self, feature_vectors: pd.DataFrame) -> pd.DataFrame:
+    def prob(self, feature_vectors: pd.DataFrame) -> pd.Series:
         """Classify record pairs and include the probability score
         of being a match.
 
