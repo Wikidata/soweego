@@ -26,15 +26,8 @@ from pandas import read_sql
 from pandas.io.json.json import JsonReader
 from sqlalchemy.orm import Query
 
-from soweego.commons import (
-    constants,
-    data_gathering,
-    keys,
-    target_database,
-    text_utils,
-    url_utils,
-    utils,
-)
+from soweego.commons import (constants, data_gathering, keys, target_database,
+                             text_utils, url_utils, utils)
 from soweego.commons.db_manager import DBManager
 from soweego.commons.logging import log_dataframe_info
 from soweego.linker import features
@@ -45,7 +38,6 @@ __email__ = 'fossati@spaziodati.eu'
 __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -755,6 +747,13 @@ def _occupations_to_set(df):
         # if it is an empty array (from source), or an
         # empty string (from target)
         if not itm:
+            return set()
+        
+        # sanity check: itm should not be NaN
+        if isinstance(itm, float) and pd.isna(itm):
+            LOGGER.warning(
+                "Unexpected 'NaN' value while converting lists of occupations to sets. Treating it as an empty set."
+            )
             return set()
 
         # when coming from the DB, the occupations for target
