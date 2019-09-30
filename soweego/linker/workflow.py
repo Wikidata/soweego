@@ -46,7 +46,6 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
-
 LOGGER = logging.getLogger(__name__)
 
 
@@ -755,6 +754,13 @@ def _occupations_to_set(df):
         # if it is an empty array (from source), or an
         # empty string (from target)
         if not itm:
+            return set()
+
+        # sanity check: itm should not be NaN
+        if isinstance(itm, float) and pd.isna(itm):
+            LOGGER.warning(
+                "Unexpected 'NaN' value while converting lists of occupations to sets. Treating it as an empty set."
+            )
             return set()
 
         # when coming from the DB, the occupations for target
