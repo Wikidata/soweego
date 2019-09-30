@@ -753,7 +753,14 @@ def _occupations_to_set(df):
     def to_set(itm):
         # if it is an empty array (from source), or an
         # empty string (from target)
-        if not itm or (isinstance(itm, float) and pd.isna(itm)):
+        if not itm:
+            return set()
+        
+        # sanity check: itm should not be NaN
+        if isinstance(itm, float) and pd.isna(itm):
+            LOGGER.warning(
+                "Received a 'NaN' item, expecting a string or list instead. Will treat it as an empty set.
+            )
             return set()
 
         # when coming from the DB, the occupations for target
