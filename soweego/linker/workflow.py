@@ -26,8 +26,15 @@ from pandas import read_sql
 from pandas.io.json.json import JsonReader
 from sqlalchemy.orm import Query
 
-from soweego.commons import (constants, data_gathering, keys, target_database,
-                             text_utils, url_utils, utils)
+from soweego.commons import (
+    constants,
+    data_gathering,
+    keys,
+    target_database,
+    text_utils,
+    url_utils,
+    utils,
+)
 from soweego.commons.db_manager import DBManager
 from soweego.commons.logging import log_dataframe_info
 from soweego.linker import features
@@ -748,7 +755,7 @@ def _occupations_to_set(df):
         # empty string (from target)
         if not itm:
             return set()
-        
+
         # sanity check: itm should not be NaN
         if isinstance(itm, float) and pd.isna(itm):
             LOGGER.warning(
