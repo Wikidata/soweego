@@ -209,7 +209,6 @@ class RandomForest(SKLearnAdapter, BaseClassifier):
         match_class = self.kernel.classes_[1]
 
         # Invalid class label
-
         assert match_class == 1, (
             f'Invalid match class label: {match_class}.'
             'sklearn.ensemble.RandomForestClassifier.predict_proba() expects the second class '
@@ -408,7 +407,10 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
 
     def __init__(self, num_features, **kwargs):
         super(VoteClassifier, self).__init__()
-        voting = kwargs.get('voting', 'hard')
+
+        kwargs = {**constants.VOTE_CLASSIFIER_PARAMS, **kwargs}
+
+        voting = kwargs.pop('voting')
 
         self.num_features = num_features
 
