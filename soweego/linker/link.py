@@ -104,6 +104,9 @@ def cli(
     if actual_classifier in (
             keys.SINGLE_LAYER_PERCEPTRON,
             keys.MULTI_LAYER_PERCEPTRON,
+            keys.VOTING_CLASSIFIER,
+            keys.GATE_CLASSIFIER,
+            keys.STACK_CLASSIFIER,
     ):
         K.clear_session()  # Clear the TensorFlow graph
 
