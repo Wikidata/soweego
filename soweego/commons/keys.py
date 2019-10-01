@@ -106,3 +106,5 @@ MULTI_LAYER_PERCEPTRON = 'multi_layer_perceptron'
 
 # For ensembles
 VOTING_CLASSIFIER = 'voting_classifier'
+GATE_CLASSIFIER = 'gate_classifier'
+STACK_CLASSIFIER = 'stack_classifier'

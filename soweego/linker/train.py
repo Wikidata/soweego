@@ -50,7 +50,7 @@ LOGGER = logging.getLogger(__name__)
     '--k-folds',
     default=5,
     help="Number of folds for hyperparameters tuning. Use with '--tune'. "
-    "Default: 5.",
+         "Default: 5.",
 )
 @click.option(
     '-d',
@@ -85,11 +85,15 @@ def cli(ctx, classifier, catalog, entity, tune, k_folds, dir_io):
 
     LOGGER.info("%s model dumped to '%s'", classifier, outfile)
 
-    # Free memory in case of neural networks:
+    # Free memory in case of neural networks or
+    # ensembles which use them:
     # can be done only after the model dump
     if actual_classifier in (
-        keys.SINGLE_LAYER_PERCEPTRON,
-        keys.MULTI_LAYER_PERCEPTRON,
+            keys.SINGLE_LAYER_PERCEPTRON,
+            keys.MULTI_LAYER_PERCEPTRON,
+            keys.VOTING_CLASSIFIER,
+            keys.GATE_CLASSIFIER,
+            keys.STACK_CLASSIFIER,
     ):
         K.clear_session()  # Clear the TensorFlow graph
 
@@ -97,13 +101,13 @@ def cli(ctx, classifier, catalog, entity, tune, k_folds, dir_io):
 
 
 def execute(
-    classifier: str,
-    catalog: str,
-    entity: str,
-    tune: bool,
-    k: int,
-    dir_io: str,
-    **kwargs,
+        classifier: str,
+        catalog: str,
+        entity: str,
+        tune: bool,
+        k: int,
+        dir_io: str,
+        **kwargs,
 ) -> BaseClassifier:
     """Train a supervised linker.
 
@@ -150,7 +154,7 @@ def execute(
 
 
 def build_training_set(
-    catalog: str, entity: str, dir_io: str
+        catalog: str, entity: str, dir_io: str
 ) -> Tuple[pd.DataFrame, pd.MultiIndex]:
     """Build a training set.
 
@@ -232,11 +236,11 @@ def build_training_set(
 
 
 def _grid_search(
-    k: int,
-    feature_vectors: pd.DataFrame,
-    positive_samples_index: pd.MultiIndex,
-    classifier: str,
-    **kwargs,
+        k: int,
+        feature_vectors: pd.DataFrame,
+        positive_samples_index: pd.MultiIndex,
+        classifier: str,
+        **kwargs,
 ) -> Dict:
     k_fold, target = utils.prepare_stratified_k_fold(
         k, feature_vectors, positive_samples_index
