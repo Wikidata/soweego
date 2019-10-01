@@ -57,12 +57,12 @@ class _KerasClassifierWrapper(KerasClassifier):
 # shared across neural network implementations.
 class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
     def _fit(
-            self,
-            feature_vectors: pd.Series,
-            answers: pd.Series = None,
-            batch_size: int = None,
-            epochs: int = None,
-            validation_split: float = constants.VALIDATION_SPLIT,
+        self,
+        feature_vectors: pd.Series,
+        answers: pd.Series = None,
+        batch_size: int = None,
+        epochs: int = None,
+        validation_split: float = constants.VALIDATION_SPLIT,
     ) -> None:
 
         # if batch size or epochs have not been provided as arguments, and
@@ -356,11 +356,11 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
         self.kernel = model
 
     def _create_model(
-            self,
-            optimizer=None,
-            hidden_activation=None,
-            output_activation=None,
-            hidden_layer_dims=None,
+        self,
+        optimizer=None,
+        hidden_activation=None,
+        output_activation=None,
+        hidden_layer_dims=None,
     ):
 
         if optimizer is None:
@@ -420,9 +420,9 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
 
             estimators.append((clf, model.kernel))
 
-        self.kernel = VotingClassifier(estimators=estimators,
-                                       voting=voting,
-                                       n_jobs=None)
+        self.kernel = VotingClassifier(
+            estimators=estimators, voting=voting, n_jobs=None
+        )
 
     def prob(self, feature_vectors: pd.DataFrame) -> pd.Series:
         """Classify record pairs and include the probability score
@@ -474,13 +474,13 @@ class GateEnsambleClassifier(SKLearnAdapter, BaseClassifier):
 
         estimators = []
         for clf in constants.CLASSIFIERS_FOR_ENSEMBLE:
-            model = utils.init_model(clf, num_features=self.num_features, **kwargs)
+            model = utils.init_model(
+                clf, num_features=self.num_features, **kwargs
+            )
 
             estimators.append((clf, model.kernel))
 
-        self.kernel = SuperLearner(verbose=2,
-                                   n_jobs=1,
-                                   folds=self.num_folds)
+        self.kernel = SuperLearner(verbose=2, n_jobs=1, folds=self.num_folds)
 
         # use as output the probability of a given class (not just
         # the class itself)
@@ -488,9 +488,7 @@ class GateEnsambleClassifier(SKLearnAdapter, BaseClassifier):
 
         self.kernel.add_meta(
             utils.init_model(
-                self.meta_layer,
-                len(estimators) * self.num_folds,
-                **kwargs
+                self.meta_layer, len(estimators) * self.num_folds, **kwargs
             ).kernel
         )
 
@@ -537,28 +535,24 @@ class StackedEnsambleClassifier(SKLearnAdapter, BaseClassifier):
         def init_estimators(num_features):
             estimators = []
             for clf in constants.CLASSIFIERS_FOR_ENSEMBLE:
-                model = utils.init_model(clf, num_features=num_features, **kwargs)
+                model = utils.init_model(
+                    clf, num_features=num_features, **kwargs
+                )
 
                 estimators.append((clf, model.kernel))
             return estimators
 
-        self.kernel = SuperLearner(verbose=2,
-                                   n_jobs=1,
-                                   folds=self.num_folds)
+        self.kernel = SuperLearner(verbose=2, n_jobs=1, folds=self.num_folds)
 
         l1_estimators = init_estimators(self.num_features)
-        self.kernel.add(l1_estimators,
-                        proba=True)
+        self.kernel.add(l1_estimators, proba=True)
 
         l2_estimators = init_estimators(len(l1_estimators) * self.num_folds)
-        self.kernel.add(l2_estimators,
-                        proba=True)
+        self.kernel.add(l2_estimators, proba=True)
 
         self.kernel.add_meta(
             utils.init_model(
-                self.meta_layer,
-                len(l2_estimators) * self.num_folds,
-                **kwargs
+                self.meta_layer, len(l2_estimators) * self.num_folds, **kwargs
             ).kernel
         )
 
