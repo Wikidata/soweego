@@ -64,7 +64,7 @@ LOGGER = logging.getLogger(__name__)
     help=f'Input/output directory, default: {constants.SHARED_FOLDER}.',
 )
 def cli(
-        classifier, catalog, entity, threshold, name_rule, upload, sandbox, dir_io
+    classifier, catalog, entity, threshold, name_rule, upload, sandbox, dir_io
 ):
     """Run a supervised linker.
 
@@ -92,7 +92,7 @@ def cli(
     rl.set_option(*constants.CLASSIFICATION_RETURN_SERIES)
 
     for i, chunk in enumerate(
-            execute(model_path, catalog, entity, threshold, name_rule, dir_io)
+        execute(model_path, catalog, entity, threshold, name_rule, dir_io)
     ):
         chunk.to_csv(result_path, mode='a', header=False)
 
@@ -102,11 +102,11 @@ def cli(
     # Free memory in case of neural networks:
     # can be done only after classification
     if actual_classifier in (
-            keys.SINGLE_LAYER_PERCEPTRON,
-            keys.MULTI_LAYER_PERCEPTRON,
-            keys.VOTING_CLASSIFIER,
-            keys.GATE_CLASSIFIER,
-            keys.STACK_CLASSIFIER,
+        keys.SINGLE_LAYER_PERCEPTRON,
+        keys.MULTI_LAYER_PERCEPTRON,
+        keys.VOTING_CLASSIFIER,
+        keys.GATE_CLASSIFIER,
+        keys.STACK_CLASSIFIER,
     ):
         K.clear_session()  # Clear the TensorFlow graph
 
@@ -114,12 +114,12 @@ def cli(
 
 
 def execute(
-        model_path: str,
-        catalog: str,
-        entity: str,
-        threshold: float,
-        name_rule: bool,
-        dir_io: str,
+    model_path: str,
+    catalog: str,
+    entity: str,
+    threshold: float,
+    name_rule: bool,
+    dir_io: str,
 ) -> Iterator[pd.Series]:
     """Run a supervised linker.
 
@@ -145,9 +145,9 @@ def execute(
     classifier = joblib.load(model_path)
 
     for (
-            wd_chunk,
-            target_chunk,
-            feature_vectors,
+        wd_chunk,
+        target_chunk,
+        feature_vectors,
     ) in _classification_set_generator(catalog, entity, dir_io):
         # The classification set must have the same feature space
         # as the training one
@@ -168,7 +168,7 @@ def execute(
 
 
 def _classification_set_generator(
-        catalog, entity, dir_io
+    catalog, entity, dir_io
 ) -> Iterator[Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]]:
     goal = 'classification'
 
@@ -224,7 +224,7 @@ def _apply_linking_rules(name_rule, predictions, target_chunk, wd_chunk):
 
 
 def _get_unique_predictions_above_threshold(
-        predictions, threshold
+    predictions, threshold
 ) -> pd.DataFrame:
     # Filter by threshold
     above_threshold = predictions[predictions >= threshold]

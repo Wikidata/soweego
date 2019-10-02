@@ -407,14 +407,9 @@ MULTI_LAYER_PERCEPTRON_PARAMS = {
 }
 
 # Parameters for ensemble
-VOTE_CLASSIFIER_PARAMS = {
-    "voting": "hard"
-}
+VOTE_CLASSIFIER_PARAMS = {"voting": "hard"}
 
-GATED_ENSEMBLE_PARAMS = {
-    'folds': 2,
-    'meta_layer': keys.SINGLE_LAYER_PERCEPTRON
-}
+GATED_ENSEMBLE_PARAMS = {'folds': 2, 'meta_layer': keys.SINGLE_LAYER_PERCEPTRON}
 
 STACKED_ENSEMBLE_PARAMS = {
     'folds': 2,
