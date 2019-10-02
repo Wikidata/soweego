@@ -92,4 +92,5 @@ intersphinx_mapping = {
     'requests': ('https://2.python-requests.org/en/stable/', None),
     'sqlalchemy': ('https://docs.sqlalchemy.org/en/13/', None),
     'sklearn': ('https://scikit-learn.org/stable/', None),
+    'mlens': ('https://mlens.readthedocs.io/en/0.1.x/', None),
 }
