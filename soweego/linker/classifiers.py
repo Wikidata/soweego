@@ -23,6 +23,7 @@ import logging
 import os
 from contextlib import redirect_stderr
 
+import numpy as np
 import pandas as pd
 from mlens.ensemble import SuperLearner
 from recordlinkage.adapters import KerasAdapter, SKLearnAdapter
@@ -117,6 +118,68 @@ class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
             f'loss={self.loss}, '
             f'metrics={self.metrics})'
         )
+
+
+class _MLensAdapter(SKLearnAdapter, BaseClassifier):
+    """
+    Wrapper around :class:`recordlinkage.SKLearnAdapter`, and
+    :class:`BaseClassifier` to be used as parent class for any classifier
+    which uses as kernel a subclass of :class:`mlens.ensemble.base.BaseEnsemble`.
+
+    This *adapter* correctly implements the *prob* and *_predict* methods so
+    the classifier can be properly used with the *recordlinkage* framework.
+    """
+
+    def __init__(self, **kwargs):
+        super(_MLensAdapter, self).__init__()
+
+    def _check_correct_pred_shape(self, preds: np.ndarray):
+        """
+        Sanity check to see that the *meta* model in the ensemble
+        actually gave as an output two possible classes.
+        """
+        n_classes = preds.shape[1]
+        if n_classes != 2:
+            err_msg = "We're doing binary classification and we expect " \
+                      f"probabilities for only two classes, however " \
+                      f"we received '{n_classes}' classes."
+            LOGGER.critical(err_msg)
+            raise AssertionError(err_msg)
+
+    def prob(self, feature_vectors: pd.DataFrame) -> pd.Series:
+        """Classify record pairs and include the probability score
+        of being a match.
+
+        :param feature_vectors: a :class:`DataFrame <pandas.DataFrame>`
+          computed via record pairs comparison. This should be
+          :meth:`recordlinkage.Compare.compute` output.
+          See :func:`extract_features() <soweego.linker.workflow.extract_features>`
+          for more details
+        :return: the classification results
+        """
+
+        # mlens `predict` method returns probabilities
+        classifications = self.kernel.predict(feature_vectors)
+        self._check_correct_pred_shape(classifications)
+
+        # we're only interested in the probability for the positive
+        # case
+        classifications = classifications[:, 1]
+
+        return pd.Series(classifications, index=feature_vectors.index)
+
+    def _predict(self, features) -> np.ndarray:
+        prediction = super(_MLensAdapter, self)._predict(features)
+        self._check_correct_pred_shape(prediction)
+
+        prediction = prediction[:, 1]
+
+        # mlens `predict` method returns probabilities. Since we're
+        # dealing with a binary classification problem we just get the
+        # probabilities for the positive case and round them to [0,1].
+        prediction = np.array(list(round(x) for x in prediction))
+
+        return prediction
 
 
 class SVCClassifier(SKLearnAdapter, BaseClassifier):
@@ -457,7 +520,7 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
         return f'{self.kernel}'
 
 
-class GateEnsambleClassifier(SKLearnAdapter, BaseClassifier):
+class GateEnsambleClassifier(_MLensAdapter):
     """Ensemble of classifiers, whose predictions are joined by using
     a further meta-learner, which decides the final output based on the
     prediction of the base classifiers.
@@ -491,23 +554,8 @@ class GateEnsambleClassifier(SKLearnAdapter, BaseClassifier):
                 self.meta_layer,
                 len(estimators) * self.num_folds,
                 **kwargs
-            ).kernel
+            ).kernel, proba=True
         )
-
-    def prob(self, feature_vectors: pd.DataFrame) -> pd.Series:
-        """Classify record pairs and include the probability score
-        of being a match.
-
-        :param feature_vectors: a :class:`DataFrame <pandas.DataFrame>`
-          computed via record pairs comparison. This should be
-          :meth:`recordlinkage.Compare.compute` output.
-          See :func:`extract_features() <soweego.linker.workflow.extract_features>`
-          for more details
-        :return: the classification results
-        """
-        classifications = self.kernel.predict(feature_vectors)
-
-        return pd.Series(classifications, index=feature_vectors.index)
 
     def __repr__(self):
         return (
@@ -517,7 +565,7 @@ class GateEnsambleClassifier(SKLearnAdapter, BaseClassifier):
         )
 
 
-class StackedEnsambleClassifier(SKLearnAdapter, BaseClassifier):
+class StackedEnsambleClassifier(_MLensAdapter):
     """Ensemble of stacked classifiers, meaning that classifiers are arranged in layers
     with the next layer getting as input the output of the last layer.
     The predictions of the final layer are merged with a meta-learner (the same happens for
@@ -561,21 +609,6 @@ class StackedEnsambleClassifier(SKLearnAdapter, BaseClassifier):
                 **kwargs
             ).kernel
         )
-
-    def prob(self, feature_vectors: pd.DataFrame) -> pd.Series:
-        """Classify record pairs and include the probability score
-        of being a match.
-
-        :param feature_vectors: a :class:`DataFrame <pandas.DataFrame>`
-          computed via record pairs comparison. This should be
-          :meth:`recordlinkage.Compare.compute` output.
-          See :func:`extract_features() <soweego.linker.workflow.extract_features>`
-          for more details
-        :return: the classification results
-        """
-        classifications = self.kernel.predict(feature_vectors)
-
-        return pd.Series(classifications, index=feature_vectors.index)
 
     def __repr__(self):
         return (
