@@ -470,9 +470,6 @@ class VotingClassifier(SKLearnAdapter, BaseClassifier):
     average predicted probabilities to pick the final prediction.
     See scikit's
     `user guide <https://scikit-learn.org/stable/modules/ensemble.html#voting-classifier>`_.
-    using majority voting (aka 'hard' voting) or chooses the label which has the
-    most total probability (the argmax of the sum of predictions),
-    aka 'soft' voting.
     """
 
     def __init__(self, num_features, **kwargs):
