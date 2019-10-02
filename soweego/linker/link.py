@@ -104,6 +104,9 @@ def cli(
     if actual_classifier in (
         keys.SINGLE_LAYER_PERCEPTRON,
         keys.MULTI_LAYER_PERCEPTRON,
+        keys.VOTING_CLASSIFIER,
+        keys.GATED_CLASSIFIER,
+        keys.STACKED_CLASSIFIER,
     ):
         K.clear_session()  # Clear the TensorFlow graph
 
@@ -294,15 +297,15 @@ def _add_missing_feature_columns(classifier, feature_vectors: pd.DataFrame):
     elif isinstance(classifier, classifiers.RandomForest):
         expected_features = classifier.kernel.n_features_
 
-    elif isinstance(classifier, classifiers.VoteClassifier):
-        # just use the default shape of the features
-        expected_features = feature_vectors.shape[1]
-
     elif isinstance(
-        classifier,
-        (classifiers.SingleLayerPerceptron, classifiers.MultiLayerPerceptron),
+            classifier,
+            (classifiers.SingleLayerPerceptron,
+             classifiers.MultiLayerPerceptron,
+             classifiers.VotingClassifier,
+             classifiers.GatedEnsembleClassifier,
+             classifiers.StackedEnsembleClassifier),
     ):
-        expected_features = classifier.input_dim
+        expected_features = classifier.num_features
 
     else:
         err_msg = (
