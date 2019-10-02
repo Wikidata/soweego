@@ -96,10 +96,10 @@ def init_model(classifier: str, num_features: int, **kwargs):
         model = classifiers.VoteClassifier(num_features, **kwargs)
 
     elif classifier is keys.GATE_CLASSIFIER:
-        model = classifiers.GateEnsambleClassifier(num_features, **kwargs)
+        model = classifiers.GateEnsembleClassifier(num_features, **kwargs)
 
     elif classifier is keys.STACK_CLASSIFIER:
-        model = classifiers.StackedEnsambleClassifier(num_features, **kwargs)
+        model = classifiers.StackedEnsembleClassifier(num_features, **kwargs)
 
     else:
         err_msg = (

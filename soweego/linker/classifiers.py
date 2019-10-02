@@ -522,7 +522,7 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
         return f'{self.kernel}'
 
 
-class GateEnsambleClassifier(_MLensAdapter):
+class GateEnsembleClassifier(_MLensAdapter):
     """Ensemble of classifiers, whose predictions are joined by using
     a further meta-learner, which decides the final output based on the
     prediction of the base classifiers.
@@ -532,7 +532,7 @@ class GateEnsambleClassifier(_MLensAdapter):
     """
 
     def __init__(self, num_features, **kwargs):
-        super(GateEnsambleClassifier, self).__init__()
+        super(GateEnsembleClassifier, self).__init__()
 
         kwargs = {**constants.GATED_ENSEMBLE_PARAMS, **kwargs}
 
@@ -570,11 +570,11 @@ class GateEnsambleClassifier(_MLensAdapter):
         )
 
 
-class StackedEnsambleClassifier(_MLensAdapter):
+class StackedEnsembleClassifier(_MLensAdapter):
     """Ensemble of stacked classifiers, meaning that classifiers are arranged in layers
     with the next layer getting as input the output of the last layer.
     The predictions of the final layer are merged with a meta-learner (the same happens for
-    ~:class:`soweego.linker.GateEnsambleClassifier`), which decides the final
+    ~:class:`soweego.linker.GateEnsembleClassifier`), which decides the final
     output based on the prediction of the base classifiers.
 
     This classifier uses :class:`mlens.ensemble.super_learner.SuperLearner`
@@ -582,7 +582,7 @@ class StackedEnsambleClassifier(_MLensAdapter):
     """
 
     def __init__(self, num_features, **kwargs):
-        super(StackedEnsambleClassifier, self).__init__()
+        super(StackedEnsembleClassifier, self).__init__()
 
         kwargs = {**constants.STACKED_ENSEMBLE_PARAMS, **kwargs}
 
