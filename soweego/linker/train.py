@@ -92,8 +92,8 @@ def cli(ctx, classifier, catalog, entity, tune, k_folds, dir_io):
         keys.SINGLE_LAYER_PERCEPTRON,
         keys.MULTI_LAYER_PERCEPTRON,
         keys.VOTING_CLASSIFIER,
-        keys.GATE_CLASSIFIER,
-        keys.STACK_CLASSIFIER,
+        keys.GATED_CLASSIFIER,
+        keys.STACKED_CLASSIFIER,
     ):
         K.clear_session()  # Clear the TensorFlow graph
 

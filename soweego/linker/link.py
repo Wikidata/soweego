@@ -105,8 +105,8 @@ def cli(
         keys.SINGLE_LAYER_PERCEPTRON,
         keys.MULTI_LAYER_PERCEPTRON,
         keys.VOTING_CLASSIFIER,
-        keys.GATE_CLASSIFIER,
-        keys.STACK_CLASSIFIER,
+        keys.GATED_CLASSIFIER,
+        keys.STACKED_CLASSIFIER,
     ):
         K.clear_session()  # Clear the TensorFlow graph
 
@@ -302,7 +302,7 @@ def _add_missing_feature_columns(classifier, feature_vectors: pd.DataFrame):
             (classifiers.SingleLayerPerceptron,
              classifiers.MultiLayerPerceptron,
              classifiers.VoteClassifier,
-             classifiers.GateEnsembleClassifier,
+             classifiers.GatedEnsembleClassifier,
              classifiers.StackedEnsembleClassifier),
     ):
         expected_features = classifier.num_features
