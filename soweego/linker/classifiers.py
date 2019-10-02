@@ -466,6 +466,8 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
     using majority voting (aka 'hard' voting) or chooses the label which has the
     most total probability (the argmax of the sum of predictions),
     aka 'soft' voting.
+
+    Under the hood this classifier uses a :class:`sklearn.ensemble.voting.VotingClassifier`.
     """
 
     def __init__(self, num_features, **kwargs):
@@ -524,6 +526,9 @@ class GateEnsambleClassifier(_MLensAdapter):
     """Ensemble of classifiers, whose predictions are joined by using
     a further meta-learner, which decides the final output based on the
     prediction of the base classifiers.
+
+    This classifier uses :class:`mlens.ensemble.super_learner.SuperLearner`
+    to implement the *gating* functionality.
     """
 
     def __init__(self, num_features, **kwargs):
@@ -571,6 +576,9 @@ class StackedEnsambleClassifier(_MLensAdapter):
     The predictions of the final layer are merged with a meta-learner (the same happens for
     ~:class:`soweego.linker.GateEnsambleClassifier`), which decides the final
     output based on the prediction of the base classifiers.
+
+    This classifier uses :class:`mlens.ensemble.super_learner.SuperLearner`
+    to implement the *stacking* functionality.
     """
 
     def __init__(self, num_features, **kwargs):
