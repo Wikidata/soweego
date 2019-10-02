@@ -44,9 +44,9 @@ with redirect_stderr(open(os.devnull, 'w')):
 LOGGER = logging.getLogger(__name__)
 
 
-# Small wrapper around 'KerasClassifier'. It's only use is to overwrite
+# Small wrapper around 'KerasClassifier'. Its only use is to overwrite
 # the predict method so that the returned output is (n_samples) instead of
-# (n_sameples, n_features)
+# (n_samples, n_features)
 class _KerasClassifierWrapper(KerasClassifier):
     def predict(self, x, **kwargs):
         return super(_KerasClassifierWrapper, self).predict(x, **kwargs)[:, 0]
@@ -399,7 +399,14 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
 
 
 class VoteClassifier(SKLearnAdapter, BaseClassifier):
-    """Basic ensemble classifier which chooses the correct prediction by
+    """An ensemble classifier.
+    
+    This class implements :class:`sklearn.ensemble.VotingClassifier`.
+    
+    It combines a set of classifiers and uses majority vote or
+    average predicted probabilities to pick the final prediction.
+    See scikit's
+    `user guide <https://scikit-learn.org/stable/modules/ensemble.html#voting-classifier>`_.
     using majority voting (aka 'hard' voting) or chooses the label which has the
     most total probability (the argmax of the sum of predictions),
     aka 'soft' voting.
