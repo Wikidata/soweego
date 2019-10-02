@@ -298,12 +298,14 @@ def _add_missing_feature_columns(classifier, feature_vectors: pd.DataFrame):
         expected_features = classifier.kernel.n_features_
 
     elif isinstance(
-            classifier,
-            (classifiers.SingleLayerPerceptron,
-             classifiers.MultiLayerPerceptron,
-             classifiers.VotingClassifier,
-             classifiers.GatedEnsembleClassifier,
-             classifiers.StackedEnsembleClassifier),
+        classifier,
+        (
+            classifiers.SingleLayerPerceptron,
+            classifiers.MultiLayerPerceptron,
+            classifiers.VotingClassifier,
+            classifiers.GatedEnsembleClassifier,
+            classifiers.StackedEnsembleClassifier,
+        ),
     ):
         expected_features = classifier.num_features
 

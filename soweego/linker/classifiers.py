@@ -140,9 +140,11 @@ class _MLensAdapter(SKLearnAdapter, BaseClassifier):
         """
         n_classes = preds.shape[1]
         if n_classes != 2:
-            err_msg = "We're doing binary classification and we expect " \
-                      f"probabilities for only two classes, however " \
-                      f"we received '{n_classes}' classes."
+            err_msg = (
+                "We're doing binary classification and we expect "
+                f"probabilities for only two classes, however "
+                f"we received '{n_classes}' classes."
+            )
             LOGGER.critical(err_msg)
             raise AssertionError(err_msg)
 
@@ -558,10 +560,9 @@ class GatedEnsembleClassifier(_MLensAdapter):
 
         self.kernel.add_meta(
             utils.init_model(
-                self.meta_layer,
-                len(estimators) * self.num_folds,
-                **kwargs
-            ).kernel, proba=True
+                self.meta_layer, len(estimators) * self.num_folds, **kwargs
+            ).kernel,
+            proba=True,
         )
 
     def __repr__(self):
@@ -613,7 +614,8 @@ class StackedEnsembleClassifier(_MLensAdapter):
         self.kernel.add_meta(
             utils.init_model(
                 self.meta_layer, len(l2_estimators) * self.num_folds, **kwargs
-            ).kernel, proba=True
+            ).kernel,
+            proba=True,
         )
 
     def __repr__(self):
