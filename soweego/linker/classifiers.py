@@ -473,7 +473,7 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
     def __init__(self, num_features, **kwargs):
         super(VoteClassifier, self).__init__()
 
-        kwargs = {**constants.VOTE_CLASSIFIER_PARAMS, **kwargs}
+        kwargs = {**constants.VOTING_CLASSIFIER_PARAMS, **kwargs}
 
         voting = kwargs.pop('voting')
 
