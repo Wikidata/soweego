@@ -461,7 +461,7 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
         return model
 
 
-class VoteClassifier(SKLearnAdapter, BaseClassifier):
+class VotingClassifier(SKLearnAdapter, BaseClassifier):
     """Basic ensemble classifier which chooses the correct prediction by
     using majority voting (aka 'hard' voting) or chooses the label which has the
     most total probability (the argmax of the sum of predictions),
@@ -471,7 +471,7 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
     """
 
     def __init__(self, num_features, **kwargs):
-        super(VoteClassifier, self).__init__()
+        super(VotingClassifier, self).__init__()
 
         kwargs = {**constants.VOTING_CLASSIFIER_PARAMS, **kwargs}
 
@@ -506,7 +506,7 @@ class VoteClassifier(SKLearnAdapter, BaseClassifier):
         # Invalid class label
         assert match_class == 1, (
             f'Invalid match class label: {match_class}.'
-            'sklearn.ensemble.VoteClassifier.predict_proba() expects the second class '
+            'sklearn.ensemble.VotingClassifier.predict_proba() expects the second class '
             'in the trained model to be 1'
         )
 

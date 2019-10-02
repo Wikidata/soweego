@@ -93,7 +93,7 @@ def init_model(classifier: str, num_features: int, **kwargs):
         model = classifiers.MultiLayerPerceptron(num_features, **kwargs)
 
     elif classifier is keys.VOTING_CLASSIFIER:
-        model = classifiers.VoteClassifier(num_features, **kwargs)
+        model = classifiers.VotingClassifier(num_features, **kwargs)
 
     elif classifier is keys.GATED_CLASSIFIER:
         model = classifiers.GatedEnsembleClassifier(num_features, **kwargs)

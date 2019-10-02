@@ -301,7 +301,7 @@ def _add_missing_feature_columns(classifier, feature_vectors: pd.DataFrame):
             classifier,
             (classifiers.SingleLayerPerceptron,
              classifiers.MultiLayerPerceptron,
-             classifiers.VoteClassifier,
+             classifiers.VotingClassifier,
              classifiers.GatedEnsembleClassifier,
              classifiers.StackedEnsembleClassifier),
     ):
