@@ -45,10 +45,11 @@ LOGGER = logging.getLogger(__name__)
 SITE = pywikibot.Site('wikidata', 'wikidata')
 REPO = SITE.data_repository()
 
-# (stated in, CATALOG) reference object
-STATED_IN_REFERENCE = pywikibot.Claim(
-    REPO, vocabulary.STATED_IN, is_reference=True
+# (based on heuristic, artificial intelligence) reference object
+BASED_ON_HEURISTIC_REFERENCE = pywikibot.Claim(
+    REPO, vocabulary.BASED_ON_HEURISTIC, is_reference=True
 )
+BASED_ON_HEURISTIC_REFERENCE.setTarget(vocabulary.ARTIFICIAL_INTELLIGENCE)
 
 # (retrieved, TIMESTAMP) reference object
 TODAY = date.today()
@@ -648,18 +649,16 @@ def _add(subject_item, predicate, value, stated_in, person_pid, person_tid):
         'Added (%s, %s, %s) statement', subject_item.getID(), predicate, value
     )
 
-
+# FIXME remove stated_in arg
 def _reference(claim, stated_in, person_pid, person_tid):
-    STATED_IN_REFERENCE.setTarget(pywikibot.ItemPage(REPO, stated_in))
-
     if None in (person_pid, person_tid):
         reference_log = (
-            f'({STATED_IN_REFERENCE.getID()}, {stated_in}), '
+            f'({BASED_ON_HEURISTIC_REFERENCE.getID()}, {vocabulary.ARTIFICIAL_INTELLIGENCE}), '
             f'({RETRIEVED_REFERENCE.getID()}, {TODAY})'
         )
 
         try:
-            claim.addSources([STATED_IN_REFERENCE, RETRIEVED_REFERENCE])
+            claim.addSources([BASED_ON_HEURISTIC_REFERENCE, RETRIEVED_REFERENCE])
 
             LOGGER.info('Added %s reference node', reference_log)
         except APIError as error:
@@ -671,14 +670,14 @@ def _reference(claim, stated_in, person_pid, person_tid):
         tid_reference.setTarget(person_tid)
 
         reference_log = (
-            f'({STATED_IN_REFERENCE.getID()}, {stated_in}), '
+            f'({BASED_ON_HEURISTIC_REFERENCE.getID()}, {vocabulary.ARTIFICIAL_INTELLIGENCE}), '
             f'({person_pid}, {person_tid}), '
             f'({RETRIEVED_REFERENCE.getID()}, {TODAY})'
         )
 
         try:
             claim.addSources(
-                [STATED_IN_REFERENCE, tid_reference, RETRIEVED_REFERENCE]
+                [BASED_ON_HEURISTIC_REFERENCE, tid_reference, RETRIEVED_REFERENCE]
             )
 
             LOGGER.info('Added %s reference node', reference_log)
