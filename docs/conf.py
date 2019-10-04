@@ -89,7 +89,7 @@ intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
     'pandas': ('https://pandas.pydata.org/pandas-docs/stable/', None),
     'recordlinkage': ('https://recordlinkage.readthedocs.io/en/latest/', None),
-    'requests': ('https://2.python-requests.org/en/stable/', None),
+     'requests': ('https://requests.readthedocs.io/en/stable/', None),
     'sqlalchemy': ('https://docs.sqlalchemy.org/en/13/', None),
     'sklearn': ('https://scikit-learn.org/stable/', None),
     'mlens': ('https://mlens.readthedocs.io/en/0.1.x/', None),
