@@ -28,7 +28,8 @@ import pandas as pd
 from mlens.ensemble import SuperLearner
 from recordlinkage.adapters import KerasAdapter, SKLearnAdapter
 from recordlinkage.base import BaseClassifier
-from sklearn.ensemble import RandomForestClassifier, VotingClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import VotingClassifier as SKVotingClassifier
 from sklearn.svm import SVC
 
 from soweego.commons import constants, utils
@@ -466,7 +467,7 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
 class VotingClassifier(SKLearnAdapter, BaseClassifier):
     """An ensemble classifier.
 
-    This class implements :class:`sklearn.ensemble.voting.VotingClassifier`.
+    This class implements :class:`sklearn.ensemble.VotingClassifier`.
 
     It combines a set of classifiers and uses majority vote or
     average predicted probabilities to pick the final prediction.
@@ -489,7 +490,8 @@ class VotingClassifier(SKLearnAdapter, BaseClassifier):
 
             estimators.append((clf, model.kernel))
 
-        self.kernel = VotingClassifier(
+        # use as kernel the VotingClassifier coming from sklearn
+        self.kernel = SKVotingClassifier(
             estimators=estimators, voting=voting, n_jobs=None
         )
 
@@ -531,7 +533,7 @@ class GatedEnsembleClassifier(_MLensAdapter):
     a further meta-learner, which decides the final output based on the
     prediction of the base classifiers.
 
-    This classifier uses :class:`mlens.ensemble.super_learner.SuperLearner`
+    This classifier uses :class:`mlens.ensemble.SuperLearner`
     to implement the *gating* functionality.
     """
 
@@ -580,7 +582,7 @@ class StackedEnsembleClassifier(_MLensAdapter):
     ~:class:`soweego.linker.GatedEnsembleClassifier`), which decides the final
     output based on the prediction of the base classifiers.
 
-    This classifier uses :class:`mlens.ensemble.super_learner.SuperLearner`
+    This classifier uses :class:`mlens.ensemble.SuperLearner`
     to implement the *stacking* functionality.
     """
 
