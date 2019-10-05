@@ -49,7 +49,9 @@ REPO = SITE.data_repository()
 BASED_ON_HEURISTIC_REFERENCE = pywikibot.Claim(
     REPO, vocabulary.BASED_ON_HEURISTIC, is_reference=True
 )
-BASED_ON_HEURISTIC_REFERENCE.setTarget(vocabulary.ARTIFICIAL_INTELLIGENCE)
+BASED_ON_HEURISTIC_REFERENCE.setTarget(
+        pywikibot.ItemPage(REPO, vocabulary.ARTIFICIAL_INTELLIGENCE)
+        )
 
 # (retrieved, TIMESTAMP) reference object
 TODAY = date.today()
@@ -160,7 +162,6 @@ def identifiers_cli(catalog, entity, identifiers, sandbox):
 
 
 @click.command()
-@click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
 @click.argument('statements', type=click.File())
 @click.option(
     '-s',
@@ -180,7 +181,7 @@ def people_cli(statements, sandbox):
 
     $ echo Q312387,P463,Q483407 > joey.csv
 
-    $ python -m soweego ingester people discogs joey.csv
+    $ python -m soweego ingester people joey.csv
 
     Result:
 
