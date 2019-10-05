@@ -705,20 +705,18 @@ def _match_dates_by_precision(
 def _upload_result(
     catalog, entity, to_deprecate, urls_to_add, ext_ids_to_add, sandbox
 ):
-    catalog_qid = _upload(catalog, entity, to_deprecate, urls_to_add, sandbox)
+    _upload(catalog, entity, to_deprecate, urls_to_add, sandbox)
     LOGGER.info('Starting addition of external IDs to Wikidata ...')
-    wikidata_bot.add_people_statements(ext_ids_to_add, catalog_qid, sandbox)
+    wikidata_bot.add_people_statements(ext_ids_to_add, sandbox)
 
 
 def _upload(catalog, entity, to_deprecate, to_add, sandbox):
-    catalog_qid = target_database.get_catalog_qid(catalog)
     LOGGER.info('Starting deprecation of %s IDs ...', catalog)
     wikidata_bot.delete_or_deprecate_identifiers(
         'deprecate', catalog, entity, to_deprecate, sandbox
     )
     LOGGER.info('Starting addition of statements to Wikidata ...')
-    wikidata_bot.add_people_statements(to_add, catalog_qid, sandbox)
-    return catalog_qid
+    wikidata_bot.add_people_statements(to_add, sandbox)
 
 
 def _dump_deprecated(data, outpath):

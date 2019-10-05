@@ -20,8 +20,12 @@ SANDBOX_3 = 'Q15397819'
 INSTANCE_OF = 'P31'
 OCCUPATION = 'P106'
 
-# Properties used for references
-STATED_IN = 'P248'
+# References nodes terms
+# 'stated in' was replaced with 'based on heuristic'
+# upon community discussion.
+# See https://github.com/Wikidata/soweego/issues/373
+BASED_ON_HEURISTIC = 'P887'
+ARTIFICIAL_INTELLIGENCE = 'Q11660'
 RETRIEVED = 'P813'
 
 # Target catalog items
