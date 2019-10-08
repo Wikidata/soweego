@@ -454,17 +454,25 @@ def _handle_addition(claims, subject_item, predicate, value, case_insensitive=Fa
             _reference(claim, person_pid, person_tid)
 
 
-def _essential_checks(subject, predicate, value, person_pid=None, person_tid=None):
-    item = pywikibot.ItemPage(REPO, subject)
+def _handle_redirect_and_dead(qid):
+    item = pywikibot.ItemPage(REPO, qid)
 
-    # Handle redirects
     while item.isRedirectPage():
         item = item.getRedirectTarget()
 
     try:
         data = item.get()
     except NoPage:
-        LOGGER.warning("%s doesn't exist anymore", subject)
+        LOGGER.warning("%s doesn't exist anymore", qid)
+        return None, None
+
+    return item, data
+
+
+def _essential_checks(subject, predicate, value, person_pid=None, person_tid=None):
+    item, data = _handle_redirect_and_dead(subject)
+
+    if item is None and data is None:
         return None, None
 
     # No data at all
@@ -582,9 +590,18 @@ def _reference(claim, person_pid, person_tid):
 
 
 def _delete_or_deprecate(action, qid, tid, catalog, catalog_pid) -> None:
-    item = pywikibot.ItemPage(REPO, qid)
-    item_data = item.get()
-    item_claims = item_data.get('claims')
+    item, data = _handle_redirect_and_dead(qid)
+
+    if item is None and data is None:
+        LOGGER.error(
+            'Cannot %s %s identifier %s',
+            action,
+            catalog,
+            tid,
+        )
+        return
+    
+    item_claims = data.get('claims')
     # This should not happen:
     # the input item is supposed to have at least an identifier claim.
     # We never know, Wikidata is alive.
@@ -597,6 +614,7 @@ def _delete_or_deprecate(action, qid, tid, catalog, catalog_pid) -> None:
             tid,
         )
         return
+    
     identifier_claims = item_claims.get(catalog_pid)
     # Same comment as the previous one
     if not identifier_claims:
@@ -609,6 +627,7 @@ def _delete_or_deprecate(action, qid, tid, catalog, catalog_pid) -> None:
             tid,
         )
         return
+    
     for claim in identifier_claims:
         if claim.getTarget() == tid:
             if action == 'delete':
@@ -621,3 +640,4 @@ def _delete_or_deprecate(action, qid, tid, catalog, catalog_pid) -> None:
     LOGGER.info(
         '%s %s identifier statement from %s', action.title() + 'd', catalog, qid
     )
+
