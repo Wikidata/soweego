@@ -17,7 +17,7 @@ df = pd.DataFrame(columns=[
     "Min", "25%", "50%", "75%", "Max"
 ])
 
-files = glob("*_links.csv.gz")
+files = [x for x in glob("*_links.csv.gz") if "evaluation" not in x]
 all_links = pd.DataFrame(columns=[
     "Catalog",
     "Entity",
@@ -27,13 +27,15 @@ all_links = pd.DataFrame(columns=[
     "Prediction"
 ])
 
-non_binary_classifiers = [
+continuous_classifiers = [
     "voting_classifier_soft",
     "logistic_regression",
     "multi_layer_perceptron",
     "naive_bayes",
     "single_layer_perceptron",
-    "random_forest"
+    "random_forest",
+    "gated_classifier",
+    "stacked_classifier",
 ]
 
 # For every "links" file
@@ -44,7 +46,7 @@ for f in files:
     entity = et[:et.index("_")]
 
     model = "_".join(et.split("_")[1:-1])
-
+    print(f)
     current_preds = pd.read_csv(f,
                                 header=None,
                                 names=['QID', 'TID', 'Prediction'],
@@ -128,7 +130,7 @@ for cent in for_graph["Catalog/Entity"].unique():
 
         print(f"Drawing cent {cent} , model {mod}, i{i} j{j}")
 
-        if mod in non_binary_classifiers:
+        if mod in continuous_classifiers:
             sns.kdeplot(capl["Prediction"],
                         bw=.009,
                         shade=False,
@@ -160,7 +162,7 @@ for axi in itertools.product([0, 1, 2], [0, 1, 2]):
 
     only_ent_catalog = for_graph[for_graph["Catalog/Entity"] == ce]
     data: pd.DataFrame = None
-    for m in set(models) - set(non_binary_classifiers):
+    for m in set(models) - set(continuous_classifiers):
         print(m)
         d = only_ent_catalog[only_ent_catalog["Model"] == m]
 
