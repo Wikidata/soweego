@@ -473,7 +473,8 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
 
 
 class VotingClassifier(SKLearnAdapter, BaseClassifier):
-    """An ensemble classifier.
+    """A basic ensemble classifier which uses a voting procedure to decide the final
+    outcome of a prediction.
 
     This class implements :class:`sklearn.ensemble.VotingClassifier`.
 
@@ -481,6 +482,16 @@ class VotingClassifier(SKLearnAdapter, BaseClassifier):
     average predicted probabilities to pick the final prediction.
     See scikit's
     `user guide <https://scikit-learn.org/stable/modules/ensemble.html#voting-classifier>`_.
+
+    The parameter `voting` can have as values either **"hard"** or **"soft"**.
+
+    - **hard** - the label predicted by the majority of base classifiers is used as the
+        final prediction. Note that this does not return probabilities, only the final
+        label.
+    - **soft** - the probability that a pair is a match is taken from all base classifiers
+        and then averaged. This average is what is returned by the classifier.
+
+    By default `voting=soft`.
     """
 
     def __init__(self, num_features, **kwargs):
