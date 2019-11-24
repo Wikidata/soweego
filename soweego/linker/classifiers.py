@@ -54,8 +54,9 @@ class _KerasClassifierWrapper(KerasClassifier):
         return super(_KerasClassifierWrapper, self).predict(x, **kwargs)[:, 0]
 
 
-def _get_proba_sklearn_base_classifier(clf: BaseClassifier,
-                                       features: pd.DataFrame) -> pd.Series:
+def _get_proba_sklearn_base_classifier(
+    clf: BaseClassifier, features: pd.DataFrame
+) -> pd.Series:
     """Returns the probabilities of a positive match by applying the
     classifier to the provided feature vectors"""
 
@@ -83,12 +84,12 @@ def _get_proba_sklearn_base_classifier(clf: BaseClassifier,
 # shared across neural network implementations.
 class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
     def _fit(
-            self,
-            feature_vectors: pd.Series,
-            answers: pd.Series = None,
-            batch_size: int = None,
-            epochs: int = None,
-            validation_split: float = constants.VALIDATION_SPLIT,
+        self,
+        feature_vectors: pd.Series,
+        answers: pd.Series = None,
+        batch_size: int = None,
+        epochs: int = None,
+        validation_split: float = constants.VALIDATION_SPLIT,
     ) -> None:
 
         # if batch size or epochs have not been provided as arguments, and
@@ -423,11 +424,11 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
         self.kernel = model
 
     def _create_model(
-            self,
-            optimizer=None,
-            hidden_activation=None,
-            output_activation=None,
-            hidden_layer_dims=None,
+        self,
+        optimizer=None,
+        hidden_activation=None,
+        output_activation=None,
+        hidden_layer_dims=None,
     ):
 
         if optimizer is None:
