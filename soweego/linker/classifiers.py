@@ -563,10 +563,12 @@ class GatedEnsembleClassifier(_MLensAdapter):
         generating the training set for the **meta_layer**. The default
         value for this is `2`.
 
-        For a better explanation of this parameter, see **Polley, Eric C.
+        For a better explanation of this parameter, see:
+
+        *Polley, Eric C.
         and van der Laan, Mark J., “Super Learner In Prediction” (May 2010).
         U.C. Berkeley Division of Biostatistics Working Paper Series.
-        Working Paper 266**
+        Working Paper 266*
         `<https://biostats.bepress.com/ucbbiostat/paper266/>`_
     """
 
@@ -617,6 +619,23 @@ class StackedEnsembleClassifier(_MLensAdapter):
 
     This classifier uses :class:`mlens.ensemble.SuperLearner`
     to implement the *stacking* functionality.
+
+    The parameters, and their default values, are:
+
+    - **meta_layer**: Name of the classifier to use as a *meta layer*. By
+        default this is `single_layer_perceptron`
+    - **folds**: The number of folds to use for cross validation when
+        generating the training set for the **meta_layer**. The default
+        value for this is `2`.
+
+        For a better explanation of this parameter, see:
+
+        *Polley, Eric C.
+        and van der Laan, Mark J., “Super Learner In Prediction” (May 2010).
+        U.C. Berkeley Division of Biostatistics Working Paper Series.
+        Working Paper 266*
+        `<https://biostats.bepress.com/ucbbiostat/paper266/>`_
+
     """
 
     def __init__(self, num_features, **kwargs):
