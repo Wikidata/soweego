@@ -248,10 +248,18 @@ class SVCClassifier(SKLearnAdapter, BaseClassifier):
 class RandomForest(SKLearnAdapter, BaseClassifier):
     """A Random Forest classifier.
 
-    This class implements :class:`sklearn.ensemble.RandomForestClassifier`.
+    This class implements :class:`sklearn.ensemble.RandomForestClassifier`, and receives
+    the same parameters.
 
     It fits multiple decision trees on sub-samples (aka, parts) of the dataset and
     averages the result to get more accuracy and reduce over-fitting.
+
+    The default parameters are:
+
+    - **n_estimators**: 500
+    - **criterion**: entropy
+    - **max_features**: None
+    - **bootstrap**: True
     """
 
     def __init__(self, *args, **kwargs):
