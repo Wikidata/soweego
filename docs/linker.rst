@@ -62,3 +62,10 @@
 
 .. automodule:: soweego.linker.link
    :members:
+
+
+:mod:`~soweego.linker.evaluate`
+-------------------------------
+
+.. automodule:: soweego.linker.evaluate
+   :members:
