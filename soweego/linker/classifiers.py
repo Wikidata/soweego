@@ -54,17 +54,41 @@ class _KerasClassifierWrapper(KerasClassifier):
         return super(_KerasClassifierWrapper, self).predict(x, **kwargs)[:, 0]
 
 
+def _get_proba_sklearn_base_classifier(clf: BaseClassifier,
+                                       features: pd.DataFrame) -> pd.Series:
+    """Returns the probabilities of a positive match by applying the
+    classifier to the provided feature vectors"""
+
+    match_class = clf.kernel.classes_[1]
+
+    # Invalid class label
+    assert match_class == 1, (
+        f'Invalid match class label: {match_class}.'
+        'clf.predict_proba() expects the second class '
+        'in the trained model to be 1'
+    )
+
+    # in the result, rows are classifications and columns are classes.
+    # We are in a binary setting, so 2 classes:
+    # `0` for non-matches, `1` for matches.
+    # We only need the probability of being a match,
+    # so we return the second column
+    classifications = clf.kernel.predict_proba(features)[:, 1]
+
+    return pd.Series(classifications, index=features.index)
+
+
 # Base class that implements the training method
 # `recordlinkage.adapters.KerasAdapter_fit`,
 # shared across neural network implementations.
 class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
     def _fit(
-        self,
-        feature_vectors: pd.Series,
-        answers: pd.Series = None,
-        batch_size: int = None,
-        epochs: int = None,
-        validation_split: float = constants.VALIDATION_SPLIT,
+            self,
+            feature_vectors: pd.Series,
+            answers: pd.Series = None,
+            batch_size: int = None,
+            epochs: int = None,
+            validation_split: float = constants.VALIDATION_SPLIT,
     ) -> None:
 
         # if batch size or epochs have not been provided as arguments, and
@@ -223,23 +247,8 @@ class SVCClassifier(SKLearnAdapter, BaseClassifier):
           for more details
         :return: the classification results
         """
-        match_class = self.kernel.classes_[1]
-        # Invalid class label
-        assert match_class == 1, (
-            f'Invalid match class label: {match_class}.'
-            'sklearn.svm.SVC.predict_proba() expects the second class '
-            'in the trained model to be 1'
-        )
 
-        # `SVC.predict_proba` returns a matrix
-        # where rows are classifications and columns are classes.
-        # We are in a binary setting, so 2 classes:
-        # `0` for non-matches, `1` for matches.
-        # We only need the probability of being a match,
-        # so we return the second column
-        classifications = self.kernel.predict_proba(feature_vectors)[:, 1]
-
-        return pd.Series(classifications, index=feature_vectors.index)
+        return _get_proba_sklearn_base_classifier(self, feature_vectors)
 
     def __repr__(self):
         return f'{self.kernel}'
@@ -280,23 +289,7 @@ class RandomForest(SKLearnAdapter, BaseClassifier):
         :return: the classification results
         """
 
-        match_class = self.kernel.classes_[1]
-
-        # Invalid class label
-        assert match_class == 1, (
-            f'Invalid match class label: {match_class}.'
-            'sklearn.ensemble.RandomForestClassifier.predict_proba() expects the second class '
-            'in the trained model to be 1'
-        )
-
-        # in the result, rows are classifications and columns are classes.
-        # We are in a binary setting, so 2 classes:
-        # `0` for non-matches, `1` for matches.
-        # We only need the probability of being a match,
-        # so we return the second column
-        classifications = self.kernel.predict_proba(feature_vectors)[:, 1]
-
-        return pd.Series(classifications, index=feature_vectors.index)
+        return _get_proba_sklearn_base_classifier(self, feature_vectors)
 
     def __repr__(self):
         return f'{self.kernel}'
@@ -430,11 +423,11 @@ class MultiLayerPerceptron(_BaseNeuralNetwork):
         self.kernel = model
 
     def _create_model(
-        self,
-        optimizer=None,
-        hidden_activation=None,
-        output_activation=None,
-        hidden_layer_dims=None,
+            self,
+            optimizer=None,
+            hidden_activation=None,
+            output_activation=None,
+            hidden_layer_dims=None,
     ):
 
         if optimizer is None:
