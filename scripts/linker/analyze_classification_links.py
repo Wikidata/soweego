@@ -93,12 +93,12 @@ for _, gg in df.groupby('Model'):
     # F1.Mean    F1.STD Prec.Mean  Prec.STD Recall.Mean Recall.STD
     summaries.append({
         "Model": gg["Model"].values[0],
-        "Average Mean": "%.6f" % gg['Mean'].apply(lambda x: float(x)).mean(),
-        "Average STD": "%.6f" % gg['STD'].apply(lambda x: float(x)).mean(),
-        "Average 25%": "%.6f" % gg['25%'].apply(lambda x: float(x)).mean(),
-        "Average 50%": "%.6f" % gg['50%'].apply(lambda x: float(x)).mean(),
-        "Average 75%": "%.6f" % gg['75%'].apply(lambda x: float(x)).mean(),
-        "Average Max": "%.6f" % gg['Max'].apply(lambda x: float(x)).mean(),
+        "Average Mean": "%.6f" % gg['Mean'].astype(float).mean(),
+        "Average STD": "%.6f" % gg['STD'].astype(float).mean(),
+        "Average 25%": "%.6f" % gg['25%'].astype(float).mean(),
+        "Average 50%": "%.6f" % gg['50%'].astype(float).mean(),
+        "Average 75%": "%.6f" % gg['75%'].astype(float).mean(),
+        "Average Max": "%.6f" % gg['Max'].astype(float).mean(),
     })
 
 summaries = pd.DataFrame(summaries).sort_values(by="Average Mean", ascending=False)
