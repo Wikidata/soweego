@@ -280,6 +280,8 @@ CLASSIFIERS = {
     'single_layer_perceptron': keys.SINGLE_LAYER_PERCEPTRON,
     'multi_layer_perceptron': keys.MULTI_LAYER_PERCEPTRON,
     'voting_classifier': keys.VOTING_CLASSIFIER,
+    'gated_classifier': keys.GATED_CLASSIFIER,
+    'stacked_classifier': keys.STACKED_CLASSIFIER,
     'nb': keys.NAIVE_BAYES,  # Shorthand
     'lr': keys.LOGISTIC_REGRESSION,  # Shorthand
     'svm': keys.SVM,  # Shorthand
@@ -288,6 +290,8 @@ CLASSIFIERS = {
     'slp': keys.SINGLE_LAYER_PERCEPTRON,  # Shorthand
     'mlp': keys.MULTI_LAYER_PERCEPTRON,  # Shorthand
     'vc': keys.VOTING_CLASSIFIER,  # Shorthand
+    'gc': keys.GATED_CLASSIFIER,  # Shorthand
+    'sc': keys.STACKED_CLASSIFIER,  # Shorthand
 }
 
 # holds mention of 'classifier ensemble'
@@ -402,7 +406,15 @@ MULTI_LAYER_PERCEPTRON_PARAMS = {
     ),
 }
 
-VOTE_CLASSIFIER_PARAMS = {"voting": "hard"}
+# Parameters for ensemble
+VOTING_CLASSIFIER_PARAMS = {"voting": "soft"}
+
+GATED_ENSEMBLE_PARAMS = {'folds': 2, 'meta_layer': keys.SINGLE_LAYER_PERCEPTRON}
+
+STACKED_ENSEMBLE_PARAMS = {
+    'folds': 2,
+    'meta_layer': keys.SINGLE_LAYER_PERCEPTRON,
+}
 
 # precisions for the `pandas.Period` class.
 # Listed from least to most precise, as defined here:

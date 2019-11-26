@@ -85,11 +85,15 @@ def cli(ctx, classifier, catalog, entity, tune, k_folds, dir_io):
 
     LOGGER.info("%s model dumped to '%s'", classifier, outfile)
 
-    # Free memory in case of neural networks:
+    # Free memory in case of neural networks or
+    # ensembles which use them:
     # can be done only after the model dump
     if actual_classifier in (
         keys.SINGLE_LAYER_PERCEPTRON,
         keys.MULTI_LAYER_PERCEPTRON,
+        keys.VOTING_CLASSIFIER,
+        keys.GATED_CLASSIFIER,
+        keys.STACKED_CLASSIFIER,
     ):
         K.clear_session()  # Clear the TensorFlow graph
 
