@@ -526,7 +526,9 @@ def _handle_redirect_and_dead(qid):
     return item, data
 
 
-def _essential_checks(subject, predicate, value, person_pid=None, person_tid=None):
+def _essential_checks(
+    subject, predicate, value, person_pid=None, person_tid=None
+):
     item, data = _handle_redirect_and_dead(subject)
 
     if item is None and data is None:
@@ -659,14 +661,9 @@ def _delete_or_deprecate(action, qid, tid, catalog, catalog_pid) -> None:
     item, data = _handle_redirect_and_dead(qid)
 
     if item is None and data is None:
-        LOGGER.error(
-            'Cannot %s %s identifier %s',
-            action,
-            catalog,
-            tid,
-        )
+        LOGGER.error('Cannot %s %s identifier %s', action, catalog, tid)
         return
-    
+
     item_claims = data.get('claims')
     # This should not happen:
     # the input item is supposed to have at least an identifier claim.
@@ -680,7 +677,7 @@ def _delete_or_deprecate(action, qid, tid, catalog, catalog_pid) -> None:
             tid,
         )
         return
-    
+
     identifier_claims = item_claims.get(catalog_pid)
     # Same comment as the previous one
     if not identifier_claims:
@@ -693,7 +690,7 @@ def _delete_or_deprecate(action, qid, tid, catalog, catalog_pid) -> None:
             tid,
         )
         return
-    
+
     for claim in identifier_claims:
         if claim.getTarget() == tid:
             if action == 'delete':
@@ -706,4 +703,3 @@ def _delete_or_deprecate(action, qid, tid, catalog, catalog_pid) -> None:
     LOGGER.info(
         '%s %s identifier statement from %s', action.title() + 'd', catalog, qid
     )
-
