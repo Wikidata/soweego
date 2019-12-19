@@ -50,8 +50,8 @@ BASED_ON_HEURISTIC_REFERENCE = pywikibot.Claim(
     REPO, vocabulary.BASED_ON_HEURISTIC, is_reference=True
 )
 BASED_ON_HEURISTIC_REFERENCE.setTarget(
-        pywikibot.ItemPage(REPO, vocabulary.ARTIFICIAL_INTELLIGENCE)
-        )
+    pywikibot.ItemPage(REPO, vocabulary.ARTIFICIAL_INTELLIGENCE)
+)
 
 # (retrieved, TIMESTAMP) reference object
 TODAY = date.today()
@@ -239,9 +239,18 @@ def works_cli(catalog, statements, sandbox):
     for statement in statements:
         work, predicate, person, person_tid = statement.rstrip().split(',')
         if sandbox:
-            _add_or_reference_works(vocabulary.SANDBOX_1, predicate, person, person_pid, person_tid, is_imdb)
+            _add_or_reference_works(
+                vocabulary.SANDBOX_1,
+                predicate,
+                person,
+                person_pid,
+                person_tid,
+                is_imdb,
+            )
         else:
-            _add_or_reference_works(work, predicate, person, person_pid, person_tid, is_imdb)
+            _add_or_reference_works(
+                work, predicate, person, person_pid, person_tid, is_imdb
+            )
 
 
 def add_identifiers(
@@ -315,9 +324,18 @@ def add_works_statements(
             'Processing (%s, %s, %s) statement', work, predicate, person
         )
         if sandbox:
-            _add_or_reference_works(vocabulary.SANDBOX_1, predicate, person, person_pid, person_tid, is_imdb=is_imdb)
+            _add_or_reference_works(
+                vocabulary.SANDBOX_1,
+                predicate,
+                person,
+                person_pid,
+                person_tid,
+                is_imdb=is_imdb,
+            )
         else:
-            _add_or_reference_works(work, predicate, person, person_pid, person_tid, is_imdb=is_imdb)
+            _add_or_reference_works(
+                work, predicate, person, person_pid, person_tid, is_imdb=is_imdb
+            )
 
 
 def delete_or_deprecate_identifiers(
@@ -358,7 +376,14 @@ def delete_or_deprecate_identifiers(
                 _delete_or_deprecate(action, qid, tid, catalog, catalog_pid)
 
 
-def _add_or_reference_works(work: str, predicate: str, person: str, person_pid: str, person_tid: str, is_imdb=False) -> None:
+def _add_or_reference_works(
+    work: str,
+    predicate: str,
+    person: str,
+    person_pid: str,
+    person_tid: str,
+    is_imdb=False,
+) -> None:
     # Parse value into an item in case of QID
     qid = search(QID_REGEX, person)
     if not qid:
@@ -372,17 +397,33 @@ def _add_or_reference_works(work: str, predicate: str, person: str, person_pid: 
         return
     person = pywikibot.ItemPage(REPO, qid.group())
 
-    subject_item, claims = _essential_checks(work, predicate, person, person_pid=person_pid, person_tid=person_tid)
+    subject_item, claims = _essential_checks(
+        work, predicate, person, person_pid=person_pid, person_tid=person_tid
+    )
     if None in (subject_item, claims):
         return
 
     # IMDB-specific check: claims with same object item -> add reference
     if is_imdb:
         for pred in vocabulary.MOVIE_PIDS:
-            if _check_for_same_value(claims, work, pred, person, person_pid=person_pid, person_tid=person_tid):
+            if _check_for_same_value(
+                claims,
+                work,
+                pred,
+                person,
+                person_pid=person_pid,
+                person_tid=person_tid,
+            ):
                 return
 
-    _handle_addition(claims, subject_item, predicate, person, person_pid=person_pid, person_tid=person_tid)
+    _handle_addition(
+        claims,
+        subject_item,
+        predicate,
+        person,
+        person_pid=person_pid,
+        person_tid=person_tid,
+    )
 
 
 def _add_or_reference(subject: str, predicate: str, value: str) -> None:
@@ -395,7 +436,9 @@ def _add_or_reference(subject: str, predicate: str, value: str) -> None:
 
     # If 'official website' property has the same value -> add reference
     # See https://www.wikidata.org/wiki/User_talk:Jura1#Thanks_for_your_feedback_on_User:Soweego_bot_task_2
-    if _check_for_same_value(claims, subject, vocabulary.OFFICIAL_WEBSITE, value):
+    if _check_for_same_value(
+        claims, subject, vocabulary.OFFICIAL_WEBSITE, value
+    ):
         return
 
     # Handle case-insensitive IDs: Facebook, Twitter
@@ -405,10 +448,24 @@ def _add_or_reference(subject: str, predicate: str, value: str) -> None:
         vocabulary.TWITTER_USERNAME_PID,
     )
 
-    _handle_addition(claims, subject_item, predicate, value, case_insensitive=case_insensitive)
+    _handle_addition(
+        claims,
+        subject_item,
+        predicate,
+        value,
+        case_insensitive=case_insensitive,
+    )
 
 
-def _handle_addition(claims, subject_item, predicate, value, case_insensitive=False, person_pid=None, person_tid=None):
+def _handle_addition(
+    claims,
+    subject_item,
+    predicate,
+    value,
+    case_insensitive=False,
+    person_pid=None,
+    person_tid=None,
+):
     given_predicate_claims = claims.get(predicate)
     subject_qid = subject_item.getID()
 
@@ -491,7 +548,9 @@ def _essential_checks(subject, predicate, value, person_pid=None, person_tid=Non
     return item, claims
 
 
-def _check_for_same_value(subject_claims, subject, predicate, value, person_pid=None, person_tid=None):
+def _check_for_same_value(
+    subject_claims, subject, predicate, value, person_pid=None, person_tid=None
+):
     given_predicate_claims = subject_claims.get(predicate)
     if given_predicate_claims:
         for claim in given_predicate_claims:
@@ -552,6 +611,7 @@ def _add(subject_item, predicate, value, person_pid, person_tid):
         'Added (%s, %s, %s) statement', subject_item.getID(), predicate, value
     )
 
+
 def _reference(claim, person_pid, person_tid):
     if None in (person_pid, person_tid):
         reference_log = (
@@ -560,7 +620,9 @@ def _reference(claim, person_pid, person_tid):
         )
 
         try:
-            claim.addSources([BASED_ON_HEURISTIC_REFERENCE, RETRIEVED_REFERENCE])
+            claim.addSources(
+                [BASED_ON_HEURISTIC_REFERENCE, RETRIEVED_REFERENCE]
+            )
 
             LOGGER.info('Added %s reference node', reference_log)
         except APIError as error:
@@ -579,7 +641,11 @@ def _reference(claim, person_pid, person_tid):
 
         try:
             claim.addSources(
-                [BASED_ON_HEURISTIC_REFERENCE, tid_reference, RETRIEVED_REFERENCE]
+                [
+                    BASED_ON_HEURISTIC_REFERENCE,
+                    tid_reference,
+                    RETRIEVED_REFERENCE,
+                ]
             )
 
             LOGGER.info('Added %s reference node', reference_log)
