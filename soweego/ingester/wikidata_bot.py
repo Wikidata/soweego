@@ -76,11 +76,15 @@ IDENTIFIERS_SUMMARY = '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot|bot t
 
 # Approved task 2: URL-based validation, criterion 2
 # https://www.wikidata.org/wiki/Wikidata:Requests_for_permissions/Bot/Soweego_bot_2
-URL_VALIDATION_SUMMARY = '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot_2|bot task 2]]'
+URL_VALIDATION_SUMMARY = (
+    '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot_2|bot task 2]]'
+)
 
 # Approved task 3: works by people
 # https://www.wikidata.org/wiki/Wikidata:Requests_for_permissions/Bot/Soweego_bot_3
-WORKS_SUMMARY = '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot_3|bot task 3]]'
+WORKS_SUMMARY = (
+    '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot_3|bot task 3]]'
+)
 ###
 # END: Edit summaries
 ###
@@ -265,12 +269,17 @@ def works_cli(catalog, statements, sandbox):
                 person_pid,
                 person_tid,
                 is_imdb=is_imdb,
-                summary=WORKS_SUMMARY
+                summary=WORKS_SUMMARY,
             )
         else:
             _add_or_reference_works(
-                work, predicate, person, person_pid, person_tid,
-                is_imdb=is_imdb, summary=WORKS_SUMMARY
+                work,
+                predicate,
+                person,
+                person_pid,
+                person_tid,
+                is_imdb=is_imdb,
+                summary=WORKS_SUMMARY,
             )
 
 
@@ -298,13 +307,14 @@ def add_identifiers(
                 qid,
             )
             _add_or_reference(
-                vocabulary.SANDBOX_1, catalog_pid, tid,
-                summary=IDENTIFIERS_SUMMARY
+                vocabulary.SANDBOX_1,
+                catalog_pid,
+                tid,
+                summary=IDENTIFIERS_SUMMARY,
             )
         else:
             _add_or_reference(
-                qid, catalog_pid, tid,
-                summary=IDENTIFIERS_SUMMARY
+                qid, catalog_pid, tid, summary=IDENTIFIERS_SUMMARY
             )
 
 
@@ -358,12 +368,17 @@ def add_works_statements(
                 person_pid,
                 person_tid,
                 is_imdb=is_imdb,
-                summary=WORKS_SUMMARY
+                summary=WORKS_SUMMARY,
             )
         else:
             _add_or_reference_works(
-                work, predicate, person, person_pid, person_tid,
-                is_imdb=is_imdb, summary=WORKS_SUMMARY
+                work,
+                predicate,
+                person,
+                person_pid,
+                person_tid,
+                is_imdb=is_imdb,
+                summary=WORKS_SUMMARY,
             )
 
 
@@ -412,7 +427,7 @@ def _add_or_reference_works(
     person_pid: str,
     person_tid: str,
     is_imdb=False,
-    summary=None
+    summary=None,
 ) -> None:
     # Parse value into an item in case of QID
     qid = search(QID_REGEX, person)
@@ -428,8 +443,12 @@ def _add_or_reference_works(
     person = pywikibot.ItemPage(REPO, qid.group())
 
     subject_item, claims = _essential_checks(
-        work, predicate, person,
-        person_pid=person_pid, person_tid=person_tid, summary=summary
+        work,
+        predicate,
+        person,
+        person_pid=person_pid,
+        person_tid=person_tid,
+        summary=summary,
     )
     if None in (subject_item, claims):
         return
@@ -438,22 +457,29 @@ def _add_or_reference_works(
     if is_imdb:
         for pred in vocabulary.MOVIE_PIDS:
             if _check_for_same_value(
-                claims, work, pred, person,
-                person_pid=person_pid, person_tid=person_tid, summary=summary
+                claims,
+                work,
+                pred,
+                person,
+                person_pid=person_pid,
+                person_tid=person_tid,
+                summary=summary,
             ):
                 return
 
     _handle_addition(
-        claims, subject_item, predicate, person,
-        person_pid=person_pid, person_tid=person_tid, summary=summary
+        claims,
+        subject_item,
+        predicate,
+        person,
+        person_pid=person_pid,
+        person_tid=person_tid,
+        summary=summary,
     )
 
 
 def _add_or_reference(
-    subject: str,
-    predicate: str,
-    value: str,
-    summary=None
+    subject: str, predicate: str, value: str, summary=None
 ) -> None:
     subject_item, claims = _essential_checks(
         subject, predicate, value, summary=summary
@@ -484,7 +510,7 @@ def _add_or_reference(
         predicate,
         value,
         case_insensitive=case_insensitive,
-        summary=summary
+        summary=summary,
     )
 
 
@@ -496,7 +522,7 @@ def _handle_addition(
     case_insensitive=False,
     person_pid=None,
     person_tid=None,
-    summary=None
+    summary=None,
 ):
     given_predicate_claims = claims.get(predicate)
     subject_qid = subject_item.getID()
@@ -505,8 +531,12 @@ def _handle_addition(
     if not given_predicate_claims:
         LOGGER.debug('%s has no %s claim', subject_qid, predicate)
         _add(
-            subject_item, predicate, value,
-            person_pid, person_tid, summary=summary
+            subject_item,
+            predicate,
+            value,
+            person_pid,
+            person_tid,
+            summary=summary,
         )
         return
 
@@ -529,8 +559,12 @@ def _handle_addition(
             '%s has no %s claim with value %s', subject_qid, predicate, value
         )
         _add(
-            subject_item, predicate, value,
-            person_pid, person_tid, summary=summary
+            subject_item,
+            predicate,
+            value,
+            person_pid,
+            person_tid,
+            summary=summary,
         )
         return
 
@@ -541,10 +575,7 @@ def _handle_addition(
     if case_insensitive:
         for claim in given_predicate_claims:
             if claim.getTarget().lower() == value:
-                _reference(
-                    claim, person_pid, person_tid,
-                    summary=summary
-                )
+                _reference(claim, person_pid, person_tid, summary=summary)
                 return
 
     for claim in given_predicate_claims:
@@ -568,8 +599,7 @@ def _handle_redirect_and_dead(qid):
 
 
 def _essential_checks(
-    subject, predicate, value,
-    person_pid=None, person_tid=None, summary=None
+    subject, predicate, value, person_pid=None, person_tid=None, summary=None
 ):
     item, data = _handle_redirect_and_dead(subject)
 
@@ -593,8 +623,13 @@ def _essential_checks(
 
 
 def _check_for_same_value(
-    subject_claims, subject, predicate, value,
-    person_pid=None, person_tid=None, summary=None
+    subject_claims,
+    subject,
+    predicate,
+    value,
+    person_pid=None,
+    person_tid=None,
+    summary=None,
 ):
     given_predicate_claims = subject_claims.get(predicate)
     if given_predicate_claims:
@@ -606,10 +641,7 @@ def _check_for_same_value(
                     predicate,
                     value,
                 )
-                _reference(
-                    claim, person_pid, person_tid,
-                    summary=summary
-                )
+                _reference(claim, person_pid, person_tid, summary=summary)
                 return True
     return False
 
@@ -670,7 +702,7 @@ def _reference(claim, person_pid, person_tid, summary=None):
         try:
             claim.addSources(
                 [BASED_ON_HEURISTIC_REFERENCE, RETRIEVED_REFERENCE],
-                summary=summary
+                summary=summary,
             )
 
             LOGGER.info('Added %s reference node', reference_log)
@@ -695,7 +727,7 @@ def _reference(claim, person_pid, person_tid, summary=None):
                     tid_reference,
                     RETRIEVED_REFERENCE,
                 ],
-                summary=summary
+                summary=summary,
             )
 
             LOGGER.info('Added %s reference node', reference_log)
