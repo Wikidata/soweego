@@ -357,6 +357,9 @@ def _lookup_label(item_value):
     if not response_body:
         LOGGER.warning('Failed label lookup for %s', item_value)
         return None
+    if not response_body.get('entities'):
+        LOGGER.warning('No entities for %s', item_value)
+        return None
     labels = response_body['entities'][item_value].get('labels')
     if not labels:
         LOGGER.info('No label for %s', item_value)
@@ -878,7 +881,8 @@ def _extract_value_from_claim(pid_claim, pid, qid):
             qid,
             pid,
         )
-        LOGGER.debug("Unexpected claim with 'novalue' snak type: %s", pid_claim)
+        LOGGER.debug(
+            "Unexpected claim with 'novalue' snak type: %s", pid_claim)
         return None
     data_value = main_snak.get('datavalue')
     if not data_value:

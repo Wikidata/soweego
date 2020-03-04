@@ -23,7 +23,7 @@ from soweego.validator import cli as validator_cli
 
 # set env variable to ignore tensorflow warnings
 # (only errors are printed)
-tf.logging.set_verbosity(tf.logging.ERROR)
+tf.get_logger().setLevel(logging.ERROR)
 
 
 CLI_COMMANDS = {
