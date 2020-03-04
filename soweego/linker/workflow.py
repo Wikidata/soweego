@@ -304,8 +304,7 @@ def preprocess_target(
     # 1. Drop target DB internal ID columns
     LOGGER.info("Dropping '%s' columns ...", keys.INTERNAL_ID)
     target.drop(columns=keys.INTERNAL_ID, inplace=True)
-    log_dataframe_info(
-        LOGGER, target, f"Dropped '{keys.INTERNAL_ID}'' columns")
+    log_dataframe_info(LOGGER, target, f"Dropped '{keys.INTERNAL_ID}'' columns")
 
     # 2. Rename non-null catalog ID column & drop others
     _rename_or_drop_tid_columns(target)
@@ -477,8 +476,7 @@ def _add_url_features(feature_extractor):
 
     # Exact match on URLs
     feature_extractor.add(
-        features.ExactMatch(url_column, url_column,
-                            label=f'{url_column}_exact')
+        features.ExactMatch(url_column, url_column, label=f'{url_column}_exact')
     )
 
     # Match on URL tokens

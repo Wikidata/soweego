@@ -881,8 +881,7 @@ def _extract_value_from_claim(pid_claim, pid, qid):
             qid,
             pid,
         )
-        LOGGER.debug(
-            "Unexpected claim with 'novalue' snak type: %s", pid_claim)
+        LOGGER.debug("Unexpected claim with 'novalue' snak type: %s", pid_claim)
         return None
     data_value = main_snak.get('datavalue')
     if not data_value:

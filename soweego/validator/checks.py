@@ -179,9 +179,12 @@ def links_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
             catalog, entity, wd_cache=wd_links
         )
     else:
-        ids_to_be_deprecated, ids_to_be_added, urls_to_be_added, wd_links = links(
-            catalog, entity
-        )
+        (
+            ids_to_be_deprecated,
+            ids_to_be_added,
+            urls_to_be_added,
+            wd_links,
+        ) = links(catalog, entity)
 
     # Nothing to do: the catalog doesn't contain links
     if ids_to_be_deprecated is None:
@@ -430,9 +433,10 @@ def links(
     _validate(keys.LINKS, wd_links, target_links, to_be_deprecated, to_be_added)
 
     # Separate external IDs from URLs
-    ext_ids_to_be_added, urls_to_be_added = data_gathering.extract_ids_from_urls(
-        to_be_added, ext_id_pids_to_urls
-    )
+    (
+        ext_ids_to_be_added,
+        urls_to_be_added,
+    ) = data_gathering.extract_ids_from_urls(to_be_added, ext_id_pids_to_urls)
 
     LOGGER.info(
         'Validation completed. Target: %s %s. '
