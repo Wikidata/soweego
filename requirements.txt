@@ -18,7 +18,7 @@ decorator==4.4.1
 docutils==0.16
 entrypoints==0.3
 flake8==3.7.9
-gast==0.3.3
+gast==0.2.2  # Required by tensorflow 2.1.0
 google-auth==1.11.0
 google-auth-oauthlib==0.4.1
 google-pasta==0.1.8
