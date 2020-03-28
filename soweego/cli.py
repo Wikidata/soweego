@@ -30,6 +30,9 @@ logging.getLogger('tensorflow').setLevel(logging.ERROR)
 # C++ log up to W(arning)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+# Silence ML-Ensemble, see http://ml-ensemble.com/docs/config.html
+os.environ['MLENS_VERBOSE'] = '0'
+
 
 CLI_COMMANDS = {
     'importer': importer_cli.cli,
