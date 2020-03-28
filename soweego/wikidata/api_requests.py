@@ -362,7 +362,8 @@ def _lookup_label(item_value):
     if entity is None:
         LOGGER.warning(
             "Skipping unexpected JSON response with no %s "
-            "in the 'entities' key", item_value
+            "in the 'entities' key",
+            item_value,
         )
         return None
 
