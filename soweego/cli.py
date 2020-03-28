@@ -10,9 +10,18 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import logging
+import os
+
+# Silence requests log up to INFO
+logging.getLogger('requests').setLevel(logging.WARNING)
+
+# Silence tensorflow, see https://tinyurl.com/qnud7j8
+# Python log up to WARNING
+logging.getLogger('tensorflow').setLevel(logging.ERROR)
+# C++ log up to W(arning)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 import click
-import tensorflow as tf
 
 from soweego import commons
 from soweego import pipeline as pipeline_cli
@@ -20,10 +29,6 @@ from soweego.importer import cli as importer_cli
 from soweego.ingester import cli as ingester_cli
 from soweego.linker import cli as linker_cli
 from soweego.validator import cli as validator_cli
-
-# set env variable to ignore tensorflow warnings
-# (only errors are printed)
-tf.logging.set_verbosity(tf.logging.ERROR)
 
 
 CLI_COMMANDS = {
@@ -33,9 +38,6 @@ CLI_COMMANDS = {
     'sync': validator_cli.cli,
     'run': pipeline_cli.cli,
 }
-
-# Avoid verbose requests logging
-logging.getLogger('requests').setLevel(logging.WARNING)
 
 
 @click.group(commands=CLI_COMMANDS)

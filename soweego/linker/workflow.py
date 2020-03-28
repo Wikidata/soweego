@@ -23,7 +23,7 @@ import pandas as pd
 import recordlinkage as rl
 from numpy import nan
 from pandas import read_sql
-from pandas.io.json.json import JsonReader
+from pandas.io.json._json import JsonReader
 from sqlalchemy.orm import Query
 
 from soweego.commons import (
