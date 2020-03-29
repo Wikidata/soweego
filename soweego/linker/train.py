@@ -17,7 +17,7 @@ from typing import Dict, Tuple
 import click
 import joblib
 import pandas as pd
-from keras import backend as K
+from tensorflow.keras import backend as K
 from recordlinkage.base import BaseClassifier
 from sklearn.model_selection import GridSearchCV
 

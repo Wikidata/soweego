@@ -19,7 +19,7 @@ import click
 import joblib
 import pandas as pd
 import recordlinkage as rl
-from keras import backend as K
+from tensorflow.keras import backend as K
 from numpy import full, nan
 
 from soweego.commons import constants, keys, target_database
