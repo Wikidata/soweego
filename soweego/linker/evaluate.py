@@ -17,7 +17,7 @@ import sys
 import click
 import joblib
 import recordlinkage as rl
-from tensorflow.keras import backend as K
+from keras import backend as K
 from numpy import mean, std
 from pandas import concat
 from sklearn.model_selection import GridSearchCV, StratifiedKFold

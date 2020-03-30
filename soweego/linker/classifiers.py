@@ -38,10 +38,10 @@ with redirect_stderr(open(os.devnull, 'w')):
     # When `keras` is imported, it prints a message to stderr
     # saying which backend it's using. To avoid this, we
     # redirect stderr to `devnull` for the statements in this block.
-    from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
-    from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
-    from tensorflow.keras.layers import Dense, BatchNormalization
-    from tensorflow.keras.models import Sequential
+    from keras.callbacks import EarlyStopping, ModelCheckpoint
+    from keras.wrappers.scikit_learn import KerasClassifier
+    from keras.layers import Dense, BatchNormalization
+    from keras.models import Sequential
 
 LOGGER = logging.getLogger(__name__)
 
