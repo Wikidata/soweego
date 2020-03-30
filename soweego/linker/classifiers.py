@@ -115,7 +115,7 @@ class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
             validation_split=validation_split,
             batch_size=batch_size,
             epochs=epochs,
-            verbose=0,
+            verbose=1,
             callbacks=[
                 EarlyStopping(
                     monitor='val_loss',
