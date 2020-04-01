@@ -158,7 +158,15 @@ def _run_average(
 ):
     LOGGER.info('Starting average evaluation over %d folds ...', k_folds)
 
-    predictions, p_mean, p_std, r_mean, r_std, fscore_mean, fscore_std = _average_k_fold(
+    (
+        predictions,
+        p_mean,
+        p_std,
+        r_mean,
+        r_std,
+        fscore_mean,
+        fscore_std,
+    ) = _average_k_fold(
         constants.CLASSIFIERS[classifier],
         catalog,
         entity,

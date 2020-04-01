@@ -353,12 +353,22 @@ def _lookup_label(item_value):
         'format': 'json',
         'props': 'labels',
     }
-    response_body = _make_request([item_value], request_params)
-    if not response_body:
-        LOGGER.warning('Failed label lookup for %s', item_value)
+
+    entities = _sanity_check([item_value], request_params)
+    if entities is None:
         return None
-    labels = response_body['entities'][item_value].get('labels')
-    if not labels:
+
+    entity = entities.get(item_value)
+    if entity is None:
+        LOGGER.warning(
+            "Skipping unexpected JSON response with no %s "
+            "in the 'entities' key",
+            item_value,
+        )
+        return None
+
+    labels = entity.get('labels')
+    if labels is None:
         LOGGER.info('No label for %s', item_value)
         return None
 
