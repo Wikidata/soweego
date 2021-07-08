@@ -9,6 +9,7 @@ pywikibot
 recordlinkage
 regex
 sqlalchemy
+tensorflow
 tqdm
 # Dev
 autoflake
