@@ -11,7 +11,10 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 from soweego.commons import keys
 
-# Sandbox items in production site
+# Sandbox item on test.wikidata.org
+SOWEEGO_SANDBOX = 'Q215647'
+
+# Sandbox items on www.wikidata.org
 SANDBOX_1 = 'Q4115189'
 SANDBOX_2 = 'Q13406268'
 SANDBOX_3 = 'Q15397819'
@@ -21,11 +24,11 @@ INSTANCE_OF = 'P31'
 OCCUPATION = 'P106'
 
 # References nodes terms
-# 'stated in' was replaced with 'based on heuristic'
-# upon community discussion.
+# 'based on heuristic' was introduced upon community discussion
 # See https://github.com/Wikidata/soweego/issues/373
 BASED_ON_HEURISTIC = 'P887'
 ARTIFICIAL_INTELLIGENCE = 'Q11660'
+STATED_IN = 'P248'
 RETRIEVED = 'P813'
 
 # Target catalog items
