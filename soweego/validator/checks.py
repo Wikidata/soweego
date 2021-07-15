@@ -591,7 +591,7 @@ def _validate(criterion, wd, target_generator, to_be_deprecated, to_be_added):
                         qid,
                         extra_data,
                     )
-                    to_be_added[qid].update(extra_data)
+                    to_be_added[(qid, tid,)].update(extra_data)
                 else:
                     LOGGER.debug('%s has no extra %s', tid, criterion)
 
@@ -711,7 +711,7 @@ def _upload_result(
 ):
     _upload(catalog, entity, to_deprecate, urls_to_add, sandbox)
     LOGGER.info('Starting addition of external IDs to Wikidata ...')
-    wikidata_bot.add_people_statements(ext_ids_to_add, sandbox)
+    wikidata_bot.add_people_statements(catalog, ext_ids_to_add, sandbox)
 
 
 def _upload(catalog, entity, to_deprecate, to_add, sandbox):
@@ -720,7 +720,7 @@ def _upload(catalog, entity, to_deprecate, to_add, sandbox):
         'deprecate', catalog, entity, to_deprecate, sandbox
     )
     LOGGER.info('Starting addition of statements to Wikidata ...')
-    wikidata_bot.add_people_statements(to_add, sandbox)
+    wikidata_bot.add_people_statements(catalog, to_add, sandbox)
 
 
 def _dump_deprecated(data, outpath):
