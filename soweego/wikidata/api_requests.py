@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """Set of specific Web API requests for Wikidata data collection."""
+
 import json
 import logging
 import os
@@ -12,6 +13,7 @@ from multiprocessing.pool import Pool
 from typing import Dict, Iterator, List, Set, TextIO, Tuple, Union
 from urllib.parse import urlunsplit
 
+import lxml.html
 import requests
 from requests.exceptions import RequestException
 from tqdm import tqdm
@@ -31,7 +33,60 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 LOGGER = logging.getLogger(__name__)
 
 WIKIDATA_API_URL = 'https://www.wikidata.org/w/api.php'
+# Good ol' blacklist:
+# https://www.wikidata.org/wiki/Wikidata:Primary_sources_tool/URL_blacklist
+URL_BLACKLIST_PAGE = 'Wikidata:Primary_sources_tool/URL_blacklist'
 BUCKET_SIZE = 500
+
+
+def get_url_blacklist() -> set:
+    """Retrieve a blacklist with URL domains of low-quality sources
+
+    :return: the set of blacklisted domains
+    """
+    params = {
+        'action': 'parse',
+        'format': 'json',
+        'prop': 'text',
+        'page': URL_BLACKLIST_PAGE
+    }
+    response_body = _make_request(params)
+
+    # Failed API request
+    if response_body is None:
+        return None
+
+    # Paranoid checks over the response JSON keys
+    parse = response_body.get('parse')
+    if parse is None:
+        LOGGER.error(
+            "Unexpected JSON response with no 'parse' key: %s",
+            response_body
+        )
+        return None
+
+    text = parse.get('text')
+    if text is None:
+        LOGGER.error(
+            "Unexpected JSON response with no 'text' key: %s",
+            response_body
+        )
+        return None
+
+    star = text.get('*')  # Interesting nonsense key
+    if star is None:
+        LOGGER.error(
+            "Unexpected JSON response with no '*' key: %s",
+            response_body
+        )
+        return None
+
+    # The parsed page should be a <div> element
+    html = lxml.html.fromstring(star)
+    # <li> elements should be blacklisted Web domains: take 'em all
+    blacklist = [elem.text for elem in html.xpath('//li')]
+
+    return set(blacklist)
 
 
 def get_biodata(qids: Set[str]) -> Iterator[Tuple[str, str, str]]:
@@ -330,7 +385,8 @@ def parse_value(
 
 
 def _sanity_check(bucket, request_params):
-    response_body = _make_request(bucket, request_params)
+    request_params['ids'] = '|'.join(bucket)
+    response_body = _make_request(request_params)
     # Failed API request
     if not response_body:
         return None
@@ -815,8 +871,7 @@ def _get_credentials_from_file() -> Tuple[Union[str, None], Union[str, None]]:
     )
 
 
-def _make_request(bucket, params):
-    params['ids'] = '|'.join(bucket)
+def _make_request(params):
     session = requests.Session()
     session.cookies = build_session().cookies
 
