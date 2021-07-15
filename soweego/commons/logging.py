@@ -15,11 +15,14 @@ import json
 import logging
 import logging.config
 import os
+from datetime import datetime
 from io import StringIO
 from urllib.parse import unquote_plus
 
 import tqdm
 
+# Unix-friendly timestamp to be used as log file name
+TIMESTAMP = datetime.now().strftime('%Y-%m-%d_%H.%M.%S.%f')
 LEVELS = {
     'DEBUG': logging.DEBUG,
     'INFO': logging.INFO,
@@ -50,7 +53,7 @@ DEFAULT_CONFIG = {
         'debug_file_handler': {
             'formatter': 'soweego',
             'level': 'DEBUG',
-            'filename': 'debug.log',
+            'filename': f'{TIMESTAMP}.log',
             'mode': 'w',
             'class': 'logging.FileHandler',
             'encoding': 'utf8',
