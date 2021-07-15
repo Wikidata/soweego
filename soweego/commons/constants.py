@@ -56,7 +56,7 @@ CREDENTIALS_LOCATION = '/app/shared/credentials.json'
 
 # As per https://meta.wikimedia.org/wiki/User-Agent_policy
 HTTP_USER_AGENT = (
-    'soweego/1.0 ([[:m:Grants:Project/Hjfocs/soweego]]; [[:m:User:Hjfocs]])'
+    'soweego/2.0 ([[:m:Grants:Project/Hjfocs/soweego_2]]; [[:m:User:Hjfocs]])'
 )
 
 # Wikidata items & properties regexes
