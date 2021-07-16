@@ -235,9 +235,9 @@ def get_external_id_from_url(url, ext_id_pids_to_urls):
                     )
                     return url_fragment, pid
                 ext_id_match = (
-                    re.search(formatter_regex, url_fragment)
+                    re.match(formatter_regex, url_fragment)
                     if isinstance(formatter_regex, re.Pattern)
-                    else regex.search(formatter_regex, url_fragment)
+                    else regex.match(formatter_regex, url_fragment)
                 )
                 if not ext_id_match:
                     LOGGER.debug(
