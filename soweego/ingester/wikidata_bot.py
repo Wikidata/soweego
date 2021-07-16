@@ -33,7 +33,7 @@ from typing import Iterable
 import click
 import pywikibot
 from pywikibot.data.api import APIError
-from pywikibot.exceptions import NoPage
+from pywikibot.exceptions import Error, NoPage
 
 from soweego.commons import target_database
 from soweego.commons.constants import QID_REGEX
@@ -771,12 +771,12 @@ def _reference(claim, catalog_qid, person_pid, person_tid, summary=None):
 
         try:
             claim.addSources(
-                [BASED_ON_HEURISTIC_REFERENCE, STATED_IN_REFERENCE, RETRIEVED_REFERENCE],
+                [based_on_heuristic_reference, stated_in_reference, retrieved_reference],
                 summary=summary,
             )
 
             LOGGER.info('Added %s reference node', reference_log)
-        except APIError as error:
+        except (APIError, Error,) as error:
             LOGGER.warning(
                 'Could not add %s reference node: %s', reference_log, error
             )
@@ -786,25 +786,25 @@ def _reference(claim, catalog_qid, person_pid, person_tid, summary=None):
         tid_reference.setTarget(person_tid)
 
         reference_log = (
-            f'({BASED_ON_HEURISTIC_REFERENCE.getID()}, {vocabulary.ARTIFICIAL_INTELLIGENCE}), '
-            f'({STATED_IN_REFERENCE.getID()}, {catalog_qid}), '
+            f'({based_on_heuristic_reference.getID()}, {vocabulary.ARTIFICIAL_INTELLIGENCE}), '
+            f'({stated_in_reference.getID()}, {catalog_qid}), '
             f'({person_pid}, {person_tid}), '
-            f'({RETRIEVED_REFERENCE.getID()}, {TODAY})'
+            f'({retrieved_reference.getID()}, {TODAY})'
         )
 
         try:
             claim.addSources(
                 [
-                    BASED_ON_HEURISTIC_REFERENCE,
-                    STATED_IN_REFERENCE,
+                    based_on_heuristic_reference,
+                    stated_in_reference,
                     tid_reference,
-                    RETRIEVED_REFERENCE,
+                    retrieved_reference,
                 ],
                 summary=summary,
             )
 
             LOGGER.info('Added %s reference node', reference_log)
-        except APIError as error:
+        except (APIError, Error,) as error:
             LOGGER.warning(
                 'Could not add %s reference node: %s', reference_log, error
             )
