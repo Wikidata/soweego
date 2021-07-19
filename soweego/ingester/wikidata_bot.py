@@ -24,6 +24,7 @@ __version__ = '1.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
+import csv
 import json
 import logging
 from datetime import date
@@ -213,8 +214,9 @@ def people_cli(catalog, statements, sandbox):
             vocabulary.SANDBOX_2
         )
 
-    for statement in statements:
-        person, predicate, value, person_tid = statement.rstrip().split(',')
+    stmt_reader = csv.reader(statements)
+    for statement in stmt_reader:
+        person, predicate, value, person_tid = statement
         if sandbox:
             _add_or_reference(
                 vocabulary.SANDBOX_2, predicate, value,
@@ -264,8 +266,9 @@ def works_cli(catalog, statements, sandbox):
     if sandbox:
         LOGGER.info('Running on the Wikidata sandbox item ...')
 
-    for statement in statements:
-        work, predicate, person, person_tid = statement.rstrip().split(',')
+    stmt_reader = csv.reader(statements)
+    for statement in stmt_reader:
+        work, predicate, person, person_tid = statement
         if sandbox:
             _add_or_reference_works(
                 vocabulary.SANDBOX_1,
