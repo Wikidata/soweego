@@ -24,6 +24,7 @@ from soweego.commons import constants, data_gathering, keys, target_database
 from soweego.commons.db_manager import DBManager
 from soweego.ingester import wikidata_bot
 from soweego.wikidata import vocabulary
+from soweego.wikidata.api_requests import get_url_blacklist
 
 LOGGER = logging.getLogger(__name__)
 
@@ -124,11 +125,15 @@ def dead_ids_cli(catalog, entity, deprecate, sandbox, dump_wikidata, dir_io):
     'entity', type=click.Choice(target_database.supported_entities())
 )
 @click.option(
+    '-b', '--blacklist',
+    is_flag=True,
+    help='Filter low-quality URLs through a blacklist.'
+)
+@click.option(
     '-u', '--upload', is_flag=True, help='Upload the output to Wikidata.'
 )
 @click.option(
-    '-s',
-    '--sandbox',
+    '-s', '--sandbox',
     is_flag=True,
     help='Perform all edits on the Wikidata sandbox item Q4115189.',
 )
@@ -143,7 +148,9 @@ def dead_ids_cli(catalog, entity, deprecate, sandbox, dump_wikidata, dir_io):
     default=constants.SHARED_FOLDER,
     help=f'Input/output directory, default: {constants.SHARED_FOLDER}.',
 )
-def links_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
+def links_cli(
+    catalog, entity, blacklist, upload, sandbox, dump_wikidata, dir_io
+):
     """Validate identifiers against links.
 
     Dump 3 output files:
@@ -155,6 +162,8 @@ def links_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
     3. URLs to be added. Format: (CSV) QID,P973,URL
 
     You can pass the '-u' flag to upload the output to Wikidata.
+
+    The '-b' flag applies a URL blacklist of low-quality Web domains.
     """
     # Output paths
     deprecated_path = os.path.join(
@@ -176,7 +185,7 @@ def links_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
             wd_links = _load_wd_cache(wdin)
         # Discard the last return value: Wikidata cache
         ids_to_be_deprecated, ids_to_be_added, urls_to_be_added, _ = links(
-            catalog, entity, wd_cache=wd_links
+            catalog, entity, blacklist, wd_cache=wd_links
         )
     else:
         (
@@ -184,7 +193,7 @@ def links_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
             ids_to_be_added,
             urls_to_be_added,
             wd_links,
-        ) = links(catalog, entity)
+        ) = links(catalog, entity, blacklist)
 
     # Nothing to do: the catalog doesn't contain links
     if ids_to_be_deprecated is None:
@@ -369,7 +378,7 @@ def dead_ids(
 
 
 def links(
-    catalog: str, entity: str, wd_cache=None
+    catalog: str, entity: str, url_blacklist=False, wd_cache=None
 ) -> Tuple[DefaultDict, List, List, Dict]:
     """Validate identifiers against available links.
 
@@ -395,8 +404,10 @@ def links(
     :param entity: ``{'actor', 'band', 'director', 'musician', 'producer',
       'writer', 'audiovisual_work', 'musical_work'}``.
       A supported entity
+    :param url_blacklist: (optional) whether to apply a blacklist
+      of URL domains. Default: ``False``
     :param wd_cache: (optional) a ``dict`` of links gathered from Wikidata
-      in a previous run
+      in a previous run. Default: ``None``
     :return: 4 objects
 
       1. ``dict`` of identifiers that should be deprecated
@@ -437,6 +448,10 @@ def links(
         ext_ids_to_be_added,
         urls_to_be_added,
     ) = data_gathering.extract_ids_from_urls(to_be_added, ext_id_pids_to_urls)
+
+    # Apply URL blacklist
+    if url_blacklist:
+        urls_to_be_added = _apply_url_blacklist(urls_to_be_added)
 
     LOGGER.info(
         'Validation completed. Target: %s %s. '
@@ -518,6 +533,26 @@ def bio(
     _validate(keys.BIODATA, wd_bio, target_bio, to_be_deprecated, to_be_added)
 
     return to_be_deprecated, _bio_to_be_added_generator(to_be_added), wd_bio
+
+
+def _apply_url_blacklist(url_statements):
+    LOGGER.info('Applying URL blacklist ...')
+    initial_input_size = len(url_statements)
+    blacklist = get_url_blacklist()
+
+    # O(nm) complexity: n = len(blacklist); m = len(url_statements)
+    # Expected order of magnitude: n = 10^2; m = 10^5
+    for domain in blacklist:  # 10^2
+        url_statements = list(filter(  # Slurp the filter or it won't work
+            lambda stmt: domain not in stmt[2],
+            url_statements  # 10^5
+        ))
+
+    LOGGER.info(
+        'Filtered %.2f%%  URLs',
+        (initial_input_size - len(url_statements)) / initial_input_size * 100
+    )
+    return url_statements
 
 
 def _bio_to_be_added_generator(to_be_added):

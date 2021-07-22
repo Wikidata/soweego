@@ -84,9 +84,10 @@ def get_url_blacklist() -> set:
     # The parsed page should be a <div> element
     html = lxml.html.fromstring(star)
     # <li> elements should be blacklisted Web domains: take 'em all
-    blacklist = [elem.text for elem in html.xpath('//li')]
+    blacklist = set([elem.text for elem in html.xpath('//li')])
 
-    return set(blacklist)
+    LOGGER.info('Got URL blacklist with %d Web domains', len(blacklist))
+    return blacklist
 
 
 def get_biodata(qids: Set[str]) -> Iterator[Tuple[str, str, str]]:
