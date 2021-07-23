@@ -18,6 +18,7 @@ from typing import Iterable
 
 import regex
 from sqlalchemy import or_
+from tqdm import tqdm
 
 from soweego.commons import constants, keys, target_database, url_utils
 from soweego.commons.db_manager import DBManager
@@ -427,29 +428,52 @@ def gather_relevant_pids():
     url_pids = set()
     for result in sparql_queries.url_pids():
         url_pids.add(result)
+
     ext_id_pids_to_urls = defaultdict(dict)
-    for result in sparql_queries.external_id_pids_and_urls():
-        for pid, formatters in result.items():
-            for formatter_url, formatter_regex in formatters.items():
-                if formatter_regex:
-                    try:
-                        compiled_regex = re.compile(formatter_regex)
-                    except re.error:
-                        LOGGER.debug(
-                            "Using 'regex' third-party library. Formatter regex not supported by the 're' standard library: %s",
-                            formatter_regex,
-                        )
-                        try:
-                            compiled_regex = regex.compile(formatter_regex)
-                        except regex.error:
-                            LOGGER.debug(
-                                "Giving up. Formatter regex not supported by 'regex': %s",
-                                formatter_regex,
-                            )
-                            compiled_regex = None
-                else:
-                    compiled_regex = None
-                ext_id_pids_to_urls[pid][formatter_url] = compiled_regex
+    for (pid, formatter_url, id_regex, url_regex,) in sparql_queries.external_id_pids_and_urls():
+# TODO refactor this block, duplicate with the next
+        if id_regex is not None:
+            try:
+                compiled_id_regex = re.compile(id_regex)
+            except re.error:
+                LOGGER.debug(
+                    "Using 'regex' third-party library. ID regex not supported by the 're' standard library: %s",
+                    id_regex,
+                )
+                try:
+                    compiled_id_regex = regex.compile(id_regex)
+                except regex.error:
+                    LOGGER.debug(
+                        "Giving up. ID regex not supported by 'regex': %s",
+                        id_regex,
+                    )
+                    compiled_id_regex = None
+        else:
+            compiled_id_regex = None
+
+        if url_regex is not None:
+            try:
+                compiled_url_regex = re.compile(url_regex)
+            except re.error:
+                LOGGER.debug(
+                    "Using 'regex' third-party library. URL regex not supported by the 're' standard library: %s",
+                    url_regex,
+                )
+                try:
+                    compiled_url_regex = regex.compile(url_regex)
+                except regex.error:
+                    LOGGER.debug(
+                        "Giving up. URL regex not supported by 'regex' neither: %s",
+                        url_regex,
+                    )
+                    compiled_url_regex = None
+        else:
+            compiled_url_regex = None
+
+        ext_id_pids_to_urls[pid][formatter_url] = (
+            compiled_id_regex, compiled_url_regex,
+        )
+
     return url_pids, ext_id_pids_to_urls
 
 
@@ -496,13 +520,13 @@ def extract_ids_from_urls(to_be_added, ext_id_pids_to_urls):
     LOGGER.info('Starting extraction of IDs from target links to be added ...')
     ext_ids_to_add = []
     urls_to_add = []
-    for (qid, tid,), urls in to_be_added.items():
+    for (qid, tid,), urls in tqdm(to_be_added.items(), total=len(to_be_added)):
         for url in urls:
-            ext_id, pid = url_utils.get_external_id_from_url(
+            (ext_id, pid,) = url_utils.get_external_id_from_url(
                 url, ext_id_pids_to_urls
             )
-            if ext_id:
+            if ext_id is not None:
                 ext_ids_to_add.append((qid, pid, ext_id, tid,))
             else:
                 urls_to_add.append((qid, vocabulary.DESCRIBED_AT_URL, url, tid,))
-    return ext_ids_to_add, urls_to_add
+    return (ext_ids_to_add, urls_to_add,)
