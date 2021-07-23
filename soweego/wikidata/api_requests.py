@@ -137,7 +137,7 @@ def get_links(
     :param url_pids: a set of PIDs holding URL values.
       Returned by :py:func:`soweego.wikidata.sparql_queries.url_pids`
     :param ext_id_pids_to_urls: a
-      ``{PID: {formatter_URL: formatter_regex} }`` dict.
+      ``{PID: {formatter_URL: (id_regex, url_regex,)} }`` dict.
       Returned by
       :py:func:`soweego.wikidata.sparql_queries.external_id_pids_and_urls`
     :return: the generator yielding ``(QID, URL)`` pairs
@@ -204,7 +204,7 @@ def get_data_for_linker(
     :param url_pids: a set of PIDs holding URL values.
       Returned by :py:func:`soweego.wikidata.sparql_queries.url_pids`
     :param ext_id_pids_to_urls: a
-      ``{PID: {formatter_URL: formatter_regex} }`` dict.
+      ``{PID: {formatter_URL: (id_regex, url_regex,)} }`` dict.
       Returned by
       :py:func:`soweego.wikidata.sparql_queries.external_id_pids_and_urls`
     :param fileout: a file stream open for writing
