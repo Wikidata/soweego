@@ -37,6 +37,7 @@ PROPERTY_BINDING = '?property'
 LINK_BINDING = '?link'
 FORMATTER_URL_BINDING = '?formatter_url'
 FORMATTER_REGEX_BINDING = '?formatter_regex'
+URL_REGEX_BINDING = '?url_regex'
 
 URL_PID_TERMS = ' '.join(['wdt:%s' % pid for pid in vocabulary.URL_PIDS])
 
@@ -91,6 +92,11 @@ EXT_ID_PIDS_AND_URLS_TEMPLATE = (
     + PROPERTY_BINDING
     + ' wdt:P1793 '
     + FORMATTER_REGEX_BINDING
+    + ' . }'
+    + ' . OPTIONAL { '
+    + PROPERTY_BINDING
+    + ' wdt:P8966 '
+    + URL_REGEX_BINDING
     + ' . } . }'
 )
 SUBCLASSES_OF_TEMPLATE = (
@@ -155,13 +161,26 @@ def external_id_pids_and_urls() -> Iterator[Dict]:
             formatter_regex = formatter_regex_dict.get('value')
             if not formatter_regex:
                 LOGGER.warning(
-                    'Skipping malformed query result: no formatter regex in %s',
+                    'Skipping malformed query result: no ID regex in %s',
                     formatter_regex_dict,
                 )
                 continue
         else:
             formatter_regex = None
             LOGGER.debug('No formatter regex in %s', result)
+
+        url_regex_dict = result.get(URL_REGEX_BINDING.lstrip('?'))
+        if url_regex_dict:
+            url_regex = url_regex_dict.get('value')
+            if not url_regex:
+                LOGGER.warning(
+                    'Skipping malformed query result: no URL regex in %s',
+                    url_regex_dict,
+                )
+                continue
+        else:
+            url_regex = None
+            LOGGER.debug('No URL regex in %s', result)
 
         pid_uri_dict = result.get(PROPERTY_BINDING.lstrip('?'))
         if not pid_uri_dict:
@@ -188,7 +207,7 @@ def external_id_pids_and_urls() -> Iterator[Dict]:
             )
             continue
 
-        yield {pid.group(): {formatter_url: formatter_regex}}
+        yield (pid.group(), formatter_url, formatter_regex, url_regex,)
 
 
 def run_query(
