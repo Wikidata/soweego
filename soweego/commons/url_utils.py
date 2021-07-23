@@ -207,57 +207,94 @@ def tokenize(url, domain_only=False) -> set:
 
 
 def get_external_id_from_url(url, ext_id_pids_to_urls):
-    LOGGER.debug('Trying to extract an identifier from URL <%s>', url)
-    url = url.rstrip('/')
-    # Always use HTTPS
-    if not url.startswith('https'):
-        url = url.replace('http', 'https')
+    LOGGER.debug('Trying to extract an identifier from <%s>', url)
+
+    # Tidy up: remove trailing slash & use HTTPS
+    tidy = url.rstrip('/')
+    if not tidy.startswith('https'):
+        tidy = tidy.replace('http', 'https')
+
+    # Start extraction
     for pid, formatters in ext_id_pids_to_urls.items():
-        for formatter_url, formatter_regex in formatters.items():
+        for formatter_url, (id_regex, url_regex,) in formatters.items():
+
+            # Optimal case: match the original input URL against a full URL regex
+            if url_regex is not None:
+# TODO refactor this block, duplicate with the next
+                match = (
+                    re.match(url_regex, url)
+                    if isinstance(url_regex, re.Pattern)
+                    else regex.match(url_regex, url)
+                )
+                if match is not None:
+                    groups = match.groups()
+                    # This shouldn't happend, but who knows?
+                    if len(groups) > 1:
+                        LOGGER.debug(
+                            'Found multiple matching groups, '
+                            'will use the first: %s',
+                            groups
+                        )
+                    ext_id = groups[0]
+                    LOGGER.debug(
+                        'Input URL matches the full URL regex. '
+                        'URL: %s -> ID: %s - URL regex: %s',
+                        url, ext_id, url_regex,
+                    )
+                    return (ext_id, pid,)
+
+            # No URL regex: best matching effort using the tidy URL
+            # Look for matching head & tail
             before, _, after = formatter_url.partition('$1')
             after = after.rstrip('/')
-            if url.startswith(before) and url.endswith(after):
+            if tidy.startswith(before) and tidy.endswith(after):
                 LOGGER.debug(
-                    'Input URL matches external ID formatter URL: <%s> -> <%s>',
-                    url,
-                    formatter_url,
+                    'Clean URL matches external ID formatter URL: <%s> -> <%s>',
+                    tidy, formatter_url,
                 )
                 url_fragment = (
-                    url[len(before) : -len(after)]
+                    tidy[len(before) : -len(after)]
                     if len(after)
-                    else url[len(before) :]
+                    else tidy[len(before) :]
                 )
-                if not formatter_regex:
+
+                # No ID regex: use the partitioned substring
+                if id_regex is None:
                     LOGGER.debug(
-                        'Missing formatter regex, will assume the URL substring as the ID. URL: %s - URL substring: %s',
-                        url,
-                        url_fragment,
+                        'Missing ID regex, '
+                        'will assume the URL substring as the ID. '
+                        'URL: %s -> substring: %s',
+                        tidy, url_fragment,
                     )
                     return url_fragment, pid
-                ext_id_match = (
-                    re.match(formatter_regex, url_fragment)
-                    if isinstance(formatter_regex, re.Pattern)
-                    else regex.match(formatter_regex, url_fragment)
+
+                # Use `re.match` instead of `re.search`
+                # More precision, less recall:
+                # valid IDs may be left in the URLs output
+                match = (
+                    re.match(id_regex, url_fragment)
+                    if isinstance(id_regex, re.Pattern)
+                    else regex.match(id_regex, url_fragment)
                 )
-                if not ext_id_match:
+                # Give up if the ID regex doesn't match
+                if match is None:
                     LOGGER.debug(
-                        "Skipping target URL <%s> with fragment '%s' not matching the expected formatter regex %s",
-                        url,
-                        url_fragment,
-                        formatter_regex.pattern,
+                        "Skipping clean URL <%s> with substring '%s' "
+                        "not matching the expected ID regex %s",
+                        tidy, url_fragment, id_regex.pattern,
                     )
-                    return None, None
-                ext_id = ext_id_match.group()
+                    return (None, None,)
+
+                ext_id = match.group()
                 LOGGER.debug(
-                    'URL: %s - URL substring: %s - formatter regex: %s - extracted ID: %s',
-                    url,
-                    url_fragment,
-                    formatter_regex,
-                    ext_id,
+                    'Clean URL: %s -> ID: %s - substring: %s - ID regex: %s',
+                    tidy, ext_id, url_fragment, id_regex,
                 )
-                return ext_id, pid
-    LOGGER.debug('Could not extract any identifier from cleaned URL <%s>', url)
-    return None, None
+                return (ext_id, pid,)
+
+    # Nothing worked: give up
+    LOGGER.debug('Could not extract any identifier from <%s>', url)
+    return (None, None,)
 
 
 def is_wiki_link(url):
