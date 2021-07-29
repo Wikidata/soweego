@@ -14,6 +14,7 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2021, Hjfocs'
 
 import csv
+import json
 import os
 import sys
 from collections import defaultdict, OrderedDict
@@ -66,6 +67,7 @@ def main(args):
     file_in = args[1]
     catalog_and_entity = os.path.split(file_in)[1].partition('_urls')[0]
     file_out = f'{catalog_and_entity}_web_domains_table.mediawiki'
+    json_out = f'{catalog_and_entity}.json'
     header = HEADER.replace('TARGET', catalog_and_entity.replace('_', ' ').title())
     prefix = CATALOG_URL_PREFIXES.get(catalog_and_entity)
 
@@ -91,6 +93,9 @@ def main(args):
 
     rank = OrderedDict(sorted(freq.items(), key=lambda x: x[1], reverse=True))
 
+    with open(json_out, 'w') as jout:
+        json.dump(rank, jout)
+
     with open(file_out, 'w') as fout:
         fout.write(header)
 
@@ -101,7 +106,7 @@ def main(args):
             examples = sample(urls[domain], N_EXAMPLES)
             buffer = []
             for i, (url, tid,) in enumerate(examples, 1):
-                buffer.append(f'{i}. [{url} URL], [{prefix}{tid} record]<br />')
+                buffer.append(f'{i}. [{url} URL], [{prefix}{tid} record]; ')
 
             fout.write(ROW.format(
                 domain=domain, freq=freq, examples=''.join(buffer)
