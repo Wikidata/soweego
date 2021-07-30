@@ -212,7 +212,7 @@ def get_external_id_from_url(url, ext_id_pids_to_urls):
     # Tidy up: remove trailing slash & use HTTPS
     tidy = url.rstrip('/')
     if not tidy.startswith('https'):
-        tidy = tidy.replace('http', 'https')
+        tidy = tidy.replace('http', 'https', 1)
 
     # Start extraction
     for pid, formatters in ext_id_pids_to_urls.items():
