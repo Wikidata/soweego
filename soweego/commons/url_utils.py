@@ -222,7 +222,6 @@ def get_external_id_from_url(url, ext_id_pids_to_urls):
 
             # Optimal case: match the original input URL against a full URL regex
             if url_regex is not None:
-# TODO refactor this block, duplicate with the next
                 match = (
                     re.match(url_regex, url)
                     if isinstance(url_regex, re.Pattern)
