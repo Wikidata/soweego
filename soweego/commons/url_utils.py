@@ -11,6 +11,7 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import logging
 import re
+from functools import lru_cache
 from urllib.parse import unquote, urlsplit
 
 import regex
@@ -98,6 +99,7 @@ def validate(url):
     return valid_url.group()
 
 
+@lru_cache()
 def resolve(url):
     # Don't show warnings in case of unverified HTTPS requests
     disable_warnings(InsecureRequestWarning)
