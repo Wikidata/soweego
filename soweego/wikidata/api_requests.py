@@ -56,28 +56,13 @@ def get_url_blacklist() -> set:
     if response_body is None:
         return None
 
-    # Paranoid checks over the response JSON keys
-    parse = response_body.get('parse')
-    if parse is None:
+    # Handle malformed JSON response
+	try:
+        star = response_body['parse']['text']['*']  # Interesting nonsense key
+    except KeyError as e:
         LOGGER.error(
-            "Unexpected JSON response with no 'parse' key: %s",
-            response_body
-        )
-        return None
-
-    text = parse.get('text')
-    if text is None:
-        LOGGER.error(
-            "Unexpected JSON response with no 'text' key: %s",
-            response_body
-        )
-        return None
-
-    star = text.get('*')  # Interesting nonsense key
-    if star is None:
-        LOGGER.error(
-            "Unexpected JSON response with no '*' key: %s",
-            response_body
+                "Missing key %s from JSON response: %s",
+                e, response_body
         )
         return None
 
