@@ -431,50 +431,37 @@ def gather_relevant_pids():
 
     ext_id_pids_to_urls = defaultdict(dict)
     for (pid, formatter_url, id_regex, url_regex,) in sparql_queries.external_id_pids_and_urls():
-# TODO refactor this block, duplicate with the next
-        if id_regex is not None:
-            try:
-                compiled_id_regex = re.compile(id_regex)
-            except re.error:
-                LOGGER.debug(
-                    "Using 'regex' third-party library. ID regex not supported by the 're' standard library: %s",
-                    id_regex,
-                )
-                try:
-                    compiled_id_regex = regex.compile(id_regex)
-                except regex.error:
-                    LOGGER.debug(
-                        "Giving up. ID regex not supported by 'regex': %s",
-                        id_regex,
-                    )
-                    compiled_id_regex = None
-        else:
-            compiled_id_regex = None
-
-        if url_regex is not None:
-            try:
-                compiled_url_regex = re.compile(url_regex)
-            except re.error:
-                LOGGER.debug(
-                    "Using 'regex' third-party library. URL regex not supported by the 're' standard library: %s",
-                    url_regex,
-                )
-                try:
-                    compiled_url_regex = regex.compile(url_regex)
-                except regex.error:
-                    LOGGER.debug(
-                        "Giving up. URL regex not supported by 'regex' neither: %s",
-                        url_regex,
-                    )
-                    compiled_url_regex = None
-        else:
-            compiled_url_regex = None
+        compiled_id_regex = _compile(id_regex, 'ID')
+        compiled_url_regex = _compile(url_regex, 'URL')
 
         ext_id_pids_to_urls[pid][formatter_url] = (
             compiled_id_regex, compiled_url_regex,
         )
 
     return url_pids, ext_id_pids_to_urls
+
+
+def _compile(regexp, id_or_url):
+    if regexp is None:
+        return None
+
+    try:
+        compiled = re.compile(regexp)
+    except re.error:
+        LOGGER.debug(
+            "Using 'regex' third-party library. %s regex not supported by the 're' standard library: %s",
+            id_or_url, regexp,
+        )
+        try:
+            compiled = regex.compile(regexp)
+        except regex.error:
+            LOGGER.debug(
+                "Giving up. %s regex not supported by 'regex': %s",
+                id_or_url, regexp,
+            )
+            return None
+
+    return compiled
 
 
 def gather_target_ids(entity, catalog, catalog_pid, aggregated):
