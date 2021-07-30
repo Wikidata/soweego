@@ -57,12 +57,12 @@ def get_url_blacklist() -> set:
         return None
 
     # Handle malformed JSON response
-	try:
+    try:
         star = response_body['parse']['text']['*']  # Interesting nonsense key
     except KeyError as e:
         LOGGER.error(
-                "Missing key %s from JSON response: %s",
-                e, response_body
+            "Missing key %s from JSON response: %s",
+            e, response_body,
         )
         return None
 
