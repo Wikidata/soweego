@@ -230,7 +230,7 @@ def get_external_id_from_url(url, ext_id_pids_to_urls):
                     groups = match.groups()
                     # This shouldn't happend, but who knows?
                     if len(groups) > 1:
-                        LOGGER.debug(
+                        LOGGER.warning(
                             'Found multiple matching groups, '
                             'will use the first: %s',
                             groups
