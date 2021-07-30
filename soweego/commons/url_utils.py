@@ -230,12 +230,14 @@ def get_external_id_from_url(url, ext_id_pids_to_urls):
                 )
                 if match is not None:
                     groups = match.groups()
-                    # This shouldn't happend, but who knows?
-                    if len(groups) > 1:
+                    # This shouldn't happen, but who knows?
+                    # For some reason, we have plenty of groups
+                    # with `None` as the second element
+                    if len(groups) > 1 and groups[1] is not None:
                         LOGGER.warning(
-                            'Found multiple matching groups, '
-                            'will use the first: %s',
-                            groups
+                            'Found multiple matching groups in <%s>: '
+                            'Will use the first of %s',
+                            url, groups,
                         )
                     ext_id = groups[0]
                     LOGGER.debug(
