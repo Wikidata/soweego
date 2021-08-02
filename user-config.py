@@ -12,3 +12,4 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 family = 'wikidata'
 mylang = 'wikidata'
 usernames['wikidata']['wikidata'] = 'Soweego bot'
+maxlag = 7  # See https://phabricator.wikimedia.org/T242081#5834758
