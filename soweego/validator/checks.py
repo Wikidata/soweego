@@ -157,11 +157,14 @@ def links_cli(
 
     Dump 3 output files:
 
-    1. target identifiers to be deprecated. Format: (JSON) {identifier: [list of QIDs]}
+    1. catalog IDs to be deprecated. JSON format:
+    {catalog_ID: [list of QIDs]}
 
-    2. third-party identifiers to be added. Format: (CSV) QID,identifier_PID,identifier
+    2. third-party IDs to be added. CSV format:
+    QID,third-party_PID,third-party_ID,catalog_ID
 
-    3. URLs to be added. Format: (CSV) QID,P973,URL
+    3. URLs to be added. CSV format:
+    QID,P973,URL,catalog_ID
 
     You can pass the '-u' flag to upload the output to Wikidata.
 
@@ -257,9 +260,11 @@ def bio_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
 
     Dump 2 output files:
 
-    1. target identifiers to be deprecated. Format: (JSON) {identifier: [list of QIDs]}
+    1. catalog IDs to be deprecated. JSON format:
+    {catalog_ID: [list of QIDs]}
 
-    2. statements to be added. Format: (CSV) QID,metadata_PID,value
+    2. statements to be added. CSV format:
+    QID,PID,value,catalog_ID
 
     You can pass the '-u' flag to upload the output to Wikidata.
     """
