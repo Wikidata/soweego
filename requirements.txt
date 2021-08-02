@@ -75,7 +75,7 @@ pymysql==0.9.3            # via -r requirements.in
 pyparsing==2.4.6          # via packaging
 python-dateutil==2.8.1    # via pandas
 pytz==2019.3              # via babel, pandas
-pywikibot==3.0.20200326   # via -r requirements.in
+pywikibot==3.0.20200703   # MANUALLY SET
 pyyaml==5.3.1             # via keras
 recordlinkage==0.14       # via -r requirements.in
 regex==2020.2.20          # via -r requirements.in, black

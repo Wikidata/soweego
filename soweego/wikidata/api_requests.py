@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """Set of specific Web API requests for Wikidata data collection."""
+
 import json
 import logging
 import os
@@ -12,6 +13,7 @@ from multiprocessing.pool import Pool
 from typing import Dict, Iterator, List, Set, TextIO, Tuple, Union
 from urllib.parse import urlunsplit
 
+import lxml.html
 import requests
 from requests.exceptions import RequestException
 from tqdm import tqdm
@@ -31,7 +33,46 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 LOGGER = logging.getLogger(__name__)
 
 WIKIDATA_API_URL = 'https://www.wikidata.org/w/api.php'
+# Good ol' blacklist:
+# https://www.wikidata.org/wiki/Wikidata:Primary_sources_tool/URL_blacklist
+URL_BLACKLIST_PAGE = 'Wikidata:Primary_sources_tool/URL_blacklist'
 BUCKET_SIZE = 500
+
+
+def get_url_blacklist() -> set:
+    """Retrieve a blacklist with URL domains of low-quality sources
+
+    :return: the set of blacklisted domains
+    """
+    params = {
+        'action': 'parse',
+        'format': 'json',
+        'prop': 'text',
+        'page': URL_BLACKLIST_PAGE
+    }
+    response_body = _make_request(params)
+
+    # Failed API request
+    if response_body is None:
+        return None
+
+    # Handle malformed JSON response
+    try:
+        star = response_body['parse']['text']['*']  # Interesting nonsense key
+    except KeyError as e:
+        LOGGER.error(
+            "Missing key %s from JSON response: %s",
+            e, response_body,
+        )
+        return None
+
+    # The parsed page should be a <div> element
+    html = lxml.html.fromstring(star)
+    # <li> elements should be blacklisted Web domains: take 'em all
+    blacklist = set([elem.text for elem in html.xpath('//li')])
+
+    LOGGER.info('Got URL blacklist with %d Web domains', len(blacklist))
+    return blacklist
 
 
 def get_biodata(qids: Set[str]) -> Iterator[Tuple[str, str, str]]:
@@ -81,7 +122,7 @@ def get_links(
     :param url_pids: a set of PIDs holding URL values.
       Returned by :py:func:`soweego.wikidata.sparql_queries.url_pids`
     :param ext_id_pids_to_urls: a
-      ``{PID: {formatter_URL: formatter_regex} }`` dict.
+      ``{PID: {formatter_URL: (id_regex, url_regex,)} }`` dict.
       Returned by
       :py:func:`soweego.wikidata.sparql_queries.external_id_pids_and_urls`
     :return: the generator yielding ``(QID, URL)`` pairs
@@ -148,7 +189,7 @@ def get_data_for_linker(
     :param url_pids: a set of PIDs holding URL values.
       Returned by :py:func:`soweego.wikidata.sparql_queries.url_pids`
     :param ext_id_pids_to_urls: a
-      ``{PID: {formatter_URL: formatter_regex} }`` dict.
+      ``{PID: {formatter_URL: (id_regex, url_regex,)} }`` dict.
       Returned by
       :py:func:`soweego.wikidata.sparql_queries.external_id_pids_and_urls`
     :param fileout: a file stream open for writing
@@ -330,7 +371,8 @@ def parse_value(
 
 
 def _sanity_check(bucket, request_params):
-    response_body = _make_request(bucket, request_params)
+    request_params['ids'] = '|'.join(bucket)
+    response_body = _make_request(request_params)
     # Failed API request
     if not response_body:
         return None
@@ -815,8 +857,7 @@ def _get_credentials_from_file() -> Tuple[Union[str, None], Union[str, None]]:
     )
 
 
-def _make_request(bucket, params):
-    params['ids'] = '|'.join(bucket)
+def _make_request(params):
     session = requests.Session()
     session.cookies = build_session().cookies
 
