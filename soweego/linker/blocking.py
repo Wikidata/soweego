@@ -161,7 +161,7 @@ def _full_text_search(
 def _fire_queries(
     wikidata_column: pd.Series, target_db_entity: constants.DB_ENTITY
 ):
-    with Pool() as pool:
+    with Pool(4) as pool:
         for result in tqdm(
             pool.imap_unordered(
                 _full_text_search,

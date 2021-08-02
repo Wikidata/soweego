@@ -8,14 +8,20 @@ WORKDIR /app
 COPY requirements.txt /app/requirements.txt
 
 # Install any needed packages specified in requirements.txt
-RUN pip install --trusted-host pypi.python.org -r requirements.txt
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
 
 # Run some configuration scripts
 COPY docker/config/ /config/
 
-RUN cd /config && sh run_all_folder_scripts.sh
+RUN apt-get update && apt-get -y install jq less tmux
+ADD https://raw.githubusercontent.com/marfox/dotfiles/master/debian.bashrc /root
+ADD https://raw.githubusercontent.com/marfox/dotfiles/master/.bash_aliases /root
+ADD https://raw.githubusercontent.com/marfox/dotfiles/master/.tmux.conf /root
+RUN mv /root/debian.bashrc /root/.bashrc
 
 WORKDIR /app/soweego/
 
 # Run a BASH shell when the container launches
 CMD ["/bin/bash"]
+
