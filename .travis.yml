@@ -8,7 +8,7 @@ script:
     - |
         if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
             git config --global user.name "travis"
-            git config --global user.email "travis@soweego.eqiad.wmflabs"
+            git config --global user.email "travis@soweego"
             git config --global push.default simple
             git checkout -B $TRAVIS_PULL_REQUEST_BRANCH
             git commit -am "format code & organize imports"
