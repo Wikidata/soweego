@@ -207,7 +207,12 @@ def external_id_pids_and_urls() -> Iterator[Dict]:
             )
             continue
 
-        yield (pid.group(), formatter_url, formatter_regex, url_regex,)
+        yield (
+            pid.group(),
+            formatter_url,
+            formatter_regex,
+            url_regex,
+        )
 
 
 def run_query(

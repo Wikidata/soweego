@@ -48,7 +48,7 @@ def get_url_blacklist() -> set:
         'action': 'parse',
         'format': 'json',
         'prop': 'text',
-        'page': URL_BLACKLIST_PAGE
+        'page': URL_BLACKLIST_PAGE,
     }
     response_body = _make_request(params)
 
@@ -61,8 +61,7 @@ def get_url_blacklist() -> set:
         star = response_body['parse']['text']['*']  # Interesting nonsense key
     except KeyError as e:
         LOGGER.error(
-            "Missing key %s from JSON response: %s",
-            e, response_body,
+            "Missing key %s from JSON response: %s", e, response_body,
         )
         return None
 

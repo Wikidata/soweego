@@ -236,15 +236,21 @@ def get_external_id_from_url(url, ext_id_pids_to_urls):
                         LOGGER.warning(
                             'Found multiple matching groups in <%s>: '
                             'Will use the first of %s',
-                            url, groups,
+                            url,
+                            groups,
                         )
                     ext_id = groups[0]
                     LOGGER.debug(
                         'Input URL matches the full URL regex. '
                         'URL: %s -> ID: %s - URL regex: %s',
-                        url, ext_id, url_regex,
+                        url,
+                        ext_id,
+                        url_regex,
                     )
-                    return (ext_id, pid,)
+                    return (
+                        ext_id,
+                        pid,
+                    )
 
             # No URL regex: best matching effort using the tidy URL
             # Look for matching head & tail
@@ -253,7 +259,8 @@ def get_external_id_from_url(url, ext_id_pids_to_urls):
             if tidy.startswith(before) and tidy.endswith(after):
                 LOGGER.debug(
                     'Clean URL matches external ID formatter URL: <%s> -> <%s>',
-                    tidy, formatter_url,
+                    tidy,
+                    formatter_url,
                 )
                 url_fragment = (
                     tidy[len(before) : -len(after)]
@@ -267,7 +274,8 @@ def get_external_id_from_url(url, ext_id_pids_to_urls):
                         'Missing ID regex, '
                         'will assume the URL substring as the ID. '
                         'URL: %s -> substring: %s',
-                        tidy, url_fragment,
+                        tidy,
+                        url_fragment,
                     )
                     return url_fragment, pid
 
@@ -284,20 +292,34 @@ def get_external_id_from_url(url, ext_id_pids_to_urls):
                     LOGGER.debug(
                         "Skipping clean URL <%s> with substring '%s' "
                         "not matching the expected ID regex %s",
-                        tidy, url_fragment, id_regex.pattern,
+                        tidy,
+                        url_fragment,
+                        id_regex.pattern,
                     )
-                    return (None, None,)
+                    return (
+                        None,
+                        None,
+                    )
 
                 ext_id = match.group()
                 LOGGER.debug(
                     'Clean URL: %s -> ID: %s - substring: %s - ID regex: %s',
-                    tidy, ext_id, url_fragment, id_regex,
+                    tidy,
+                    ext_id,
+                    url_fragment,
+                    id_regex,
                 )
-                return (ext_id, pid,)
+                return (
+                    ext_id,
+                    pid,
+                )
 
     # Nothing worked: give up
     LOGGER.debug('Could not extract any identifier from <%s>', url)
-    return (None, None,)
+    return (
+        None,
+        None,
+    )
 
 
 def is_wiki_link(url):
