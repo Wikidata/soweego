@@ -65,9 +65,7 @@ IDENTIFIERS_SUMMARY = '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot|bot t
 
 # Approved task 2: URL-based validation, criterion 2
 # https://www.wikidata.org/wiki/Wikidata:Requests_for_permissions/Bot/Soweego_bot_2
-URL_VALIDATION_SUMMARY = (
-    '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot_2|bot task 2]] with extra P887 and catalog ID reference'
-)
+URL_VALIDATION_SUMMARY = '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot_2|bot task 2]] with extra P887 and catalog ID reference'
 
 # Approved task 3: works by people
 # https://www.wikidata.org/wiki/Wikidata:Requests_for_permissions/Bot/Soweego_bot_3
@@ -210,8 +208,7 @@ def people_cli(catalog, statements, sandbox):
 
     if sandbox:
         LOGGER.info(
-            'Running on the Wikidata sandbox item %s ...',
-            vocabulary.SANDBOX_2
+            'Running on the Wikidata sandbox item %s ...', vocabulary.SANDBOX_2
         )
 
     stmt_reader = csv.reader(statements)
@@ -219,15 +216,23 @@ def people_cli(catalog, statements, sandbox):
         person, predicate, value, person_tid = statement
         if sandbox:
             _add_or_reference(
-                vocabulary.SANDBOX_2, predicate, value,
-                catalog_qid, person_pid, person_tid,
-                summary=URL_VALIDATION_SUMMARY
+                vocabulary.SANDBOX_2,
+                predicate,
+                value,
+                catalog_qid,
+                person_pid,
+                person_tid,
+                summary=URL_VALIDATION_SUMMARY,
             )
         else:
             _add_or_reference(
-                person, predicate, value,
-                catalog_qid, person_pid, person_tid,
-                summary=URL_VALIDATION_SUMMARY
+                person,
+                predicate,
+                value,
+                catalog_qid,
+                person_pid,
+                person_tid,
+                summary=URL_VALIDATION_SUMMARY,
             )
 
 
@@ -326,7 +331,9 @@ def add_identifiers(
             )
 
 
-def add_people_statements(catalog: str, statements: Iterable, sandbox: bool) -> None:
+def add_people_statements(
+    catalog: str, statements: Iterable, sandbox: bool
+) -> None:
     """Add statements to existing Wikidata people.
 
     Statements typically come from validation criteria 2 or 3
@@ -349,15 +356,23 @@ def add_people_statements(catalog: str, statements: Iterable, sandbox: bool) -> 
         )
         if sandbox:
             _add_or_reference(
-                vocabulary.SANDBOX_2, predicate, value,
-                catalog_qid, person_pid, person_tid,
-                summary=URL_VALIDATION_SUMMARY
+                vocabulary.SANDBOX_2,
+                predicate,
+                value,
+                catalog_qid,
+                person_pid,
+                person_tid,
+                summary=URL_VALIDATION_SUMMARY,
             )
         else:
             _add_or_reference(
-                subject, predicate, value,
-                catalog_qid, person_pid, person_tid,
-                summary=URL_VALIDATION_SUMMARY
+                subject,
+                predicate,
+                value,
+                catalog_qid,
+                person_pid,
+                person_tid,
+                summary=URL_VALIDATION_SUMMARY,
             )
 
 
@@ -501,12 +516,22 @@ def _add_or_reference_works(
 
 
 def _add_or_reference(
-    subject: str, predicate: str, value: str,
-    catalog_qid: str, person_pid: str, person_tid: str, summary=None
+    subject: str,
+    predicate: str,
+    value: str,
+    catalog_qid: str,
+    person_pid: str,
+    person_tid: str,
+    summary=None,
 ) -> None:
     subject_item, claims = _essential_checks(
-        subject, predicate, value, catalog_qid,
-        person_pid=person_pid, person_tid=person_tid, summary=summary
+        subject,
+        predicate,
+        value,
+        catalog_qid,
+        person_pid=person_pid,
+        person_tid=person_tid,
+        summary=summary,
     )
 
     if None in (subject_item, claims):
@@ -518,8 +543,11 @@ def _add_or_reference(
     # See https://www.wikidata.org/wiki/User_talk:Jura1#Thanks_for_your_feedback_on_User:Soweego_bot_task_2
     if _check_for_same_value(
         claims,
-        subject, vocabulary.OFFICIAL_WEBSITE, value, catalog_qid,
-        summary=summary
+        subject,
+        vocabulary.OFFICIAL_WEBSITE,
+        value,
+        catalog_qid,
+        summary=summary,
     ):
         return
 
@@ -607,12 +635,16 @@ def _handle_addition(
     if case_insensitive:
         for claim in given_predicate_claims:
             if claim.getTarget().lower() == value:
-                _reference(claim, catalog_qid, person_pid, person_tid, summary=summary)
+                _reference(
+                    claim, catalog_qid, person_pid, person_tid, summary=summary
+                )
                 return
 
     for claim in given_predicate_claims:
         if claim.getTarget() == value:
-            _reference(claim, catalog_qid, person_pid, person_tid, summary=summary)
+            _reference(
+                claim, catalog_qid, person_pid, person_tid, summary=summary
+            )
 
 
 def _handle_redirect_and_dead(qid):
@@ -631,8 +663,13 @@ def _handle_redirect_and_dead(qid):
 
 
 def _essential_checks(
-    subject, predicate, value, catalog_qid,
-    person_pid=None, person_tid=None, summary=None
+    subject,
+    predicate,
+    value,
+    catalog_qid,
+    person_pid=None,
+    person_tid=None,
+    summary=None,
 ):
     item, data = _handle_redirect_and_dead(subject)
 
@@ -643,9 +680,13 @@ def _essential_checks(
     if not data:
         LOGGER.warning('%s has no data at all', subject)
         _add(
-            item, predicate, value,
-            catalog_qid, person_pid, person_tid,
-            summary=summary
+            item,
+            predicate,
+            value,
+            catalog_qid,
+            person_pid,
+            person_tid,
+            summary=summary,
         )
         return None, None
 
@@ -654,9 +695,13 @@ def _essential_checks(
     if not claims:
         LOGGER.warning('%s has no claims', subject)
         _add(
-            item, predicate, value,
-            catalog_qid, person_pid, person_tid,
-            summary=summary
+            item,
+            predicate,
+            value,
+            catalog_qid,
+            person_pid,
+            person_tid,
+            summary=summary,
         )
         return None, None
 
@@ -684,9 +729,7 @@ def _check_for_same_value(
                     value,
                 )
                 _reference(
-                    claim,
-                    catalog_qid, person_pid, person_tid,
-                    summary=summary
+                    claim, catalog_qid, person_pid, person_tid, summary=summary
                 )
                 return True
     return False
@@ -728,9 +771,13 @@ def _get_works_args(catalog):
 
 
 def _add(
-    subject_item, predicate, value,
-    catalog_qid, person_pid, person_tid,
-    summary=None
+    subject_item,
+    predicate,
+    value,
+    catalog_qid,
+    person_pid,
+    person_tid,
+    summary=None,
 ):
     claim = pywikibot.Claim(REPO, predicate)
     claim.setTarget(value)
@@ -774,7 +821,11 @@ def _reference(claim, catalog_qid, person_pid, person_tid, summary=None):
 
         try:
             claim.addSources(
-                [based_on_heuristic_reference, stated_in_reference, retrieved_reference],
+                [
+                    based_on_heuristic_reference,
+                    stated_in_reference,
+                    retrieved_reference,
+                ],
                 summary=summary,
             )
 

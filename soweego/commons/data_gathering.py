@@ -430,12 +430,18 @@ def gather_relevant_pids():
         url_pids.add(result)
 
     ext_id_pids_to_urls = defaultdict(dict)
-    for (pid, formatter_url, id_regex, url_regex,) in sparql_queries.external_id_pids_and_urls():
+    for (
+        pid,
+        formatter_url,
+        id_regex,
+        url_regex,
+    ) in sparql_queries.external_id_pids_and_urls():
         compiled_id_regex = _compile(id_regex, 'ID')
         compiled_url_regex = _compile(url_regex, 'URL')
 
         ext_id_pids_to_urls[pid][formatter_url] = (
-            compiled_id_regex, compiled_url_regex,
+            compiled_id_regex,
+            compiled_url_regex,
         )
 
     return url_pids, ext_id_pids_to_urls
@@ -450,14 +456,16 @@ def _compile(regexp, id_or_url):
     except re.error:
         LOGGER.debug(
             "Using 'regex' third-party library. %s regex not supported by the 're' standard library: %s",
-            id_or_url, regexp,
+            id_or_url,
+            regexp,
         )
         try:
             compiled = regex.compile(regexp)
         except regex.error:
             LOGGER.debug(
                 "Giving up. %s regex not supported by 'regex': %s",
-                id_or_url, regexp,
+                id_or_url,
+                regexp,
             )
             return None
 
@@ -515,5 +523,10 @@ def extract_ids_from_urls(to_be_added, ext_id_pids_to_urls):
             if ext_id is not None:
                 ext_ids_to_add.append((qid, pid, ext_id, tid,))
             else:
-                urls_to_add.append((qid, vocabulary.DESCRIBED_AT_URL, url, tid,))
-    return (ext_ids_to_add, urls_to_add,)
+                urls_to_add.append(
+                    (qid, vocabulary.DESCRIBED_AT_URL, url, tid,)
+                )
+    return (
+        ext_ids_to_add,
+        urls_to_add,
+    )

@@ -125,15 +125,17 @@ def dead_ids_cli(catalog, entity, deprecate, sandbox, dump_wikidata, dir_io):
     'entity', type=click.Choice(target_database.supported_entities())
 )
 @click.option(
-    '-b', '--blacklist',
+    '-b',
+    '--blacklist',
     is_flag=True,
-    help='Filter low-quality URLs through a blacklist.'
+    help='Filter low-quality URLs through a blacklist.',
 )
 @click.option(
     '-u', '--upload', is_flag=True, help='Upload the output to Wikidata.'
 )
 @click.option(
-    '-s', '--sandbox',
+    '-s',
+    '--sandbox',
     is_flag=True,
     help='Perform all edits on the Wikidata sandbox item Q4115189.',
 )
@@ -543,14 +545,15 @@ def _apply_url_blacklist(url_statements):
     # O(nm) complexity: n = len(blacklist); m = len(url_statements)
     # Expected order of magnitude: n = 10^2; m = 10^5
     for domain in blacklist:  # 10^2
-        url_statements = list(filter(  # Slurp the filter or it won't work
-            lambda stmt: domain not in stmt[2],
-            url_statements  # 10^5
-        ))
+        url_statements = list(
+            filter(  # Slurp the filter or it won't work
+                lambda stmt: domain not in stmt[2], url_statements  # 10^5
+            )
+        )
 
     LOGGER.info(
         'Filtered %.2f%%  URLs',
-        (initial_input_size - len(url_statements)) / initial_input_size * 100
+        (initial_input_size - len(url_statements)) / initial_input_size * 100,
     )
     return url_statements
 
