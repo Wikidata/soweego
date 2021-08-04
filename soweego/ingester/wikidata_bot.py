@@ -61,11 +61,13 @@ TIMESTAMP = pywikibot.WbTime(
 ###
 # Approved task 1: identifiers addition
 # https://www.wikidata.org/wiki/Wikidata:Requests_for_permissions/Bot/Soweego_bot
-IDENTIFIERS_SUMMARY = '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot|bot task 1]] with P887 reference, see [[Topic:V6cc1thgo09otfw5#flow-post-v7i05rpdja1b3wzk|discussion]]'
+IDENTIFIERS_SUMMARY = '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot|bot task 1]] '
+'with P887 reference, see [[Topic:V6cc1thgo09otfw5#flow-post-v7i05rpdja1b3wzk|discussion]]'
 
 # Approved task 2: URL-based validation, criterion 2
 # https://www.wikidata.org/wiki/Wikidata:Requests_for_permissions/Bot/Soweego_bot_2
-URL_VALIDATION_SUMMARY = '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot_2|bot task 2]] with extra P887 and catalog ID reference'
+URL_VALIDATION_SUMMARY = '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot_2|bot task 2]] '
+'with extra P887 and catalog ID reference'
 
 # Approved task 3: works by people
 # https://www.wikidata.org/wiki/Wikidata:Requests_for_permissions/Bot/Soweego_bot_3
@@ -198,7 +200,7 @@ def people_cli(catalog, statements, sandbox):
 
     claim (Joey Ramone, member of, Ramones)
 
-    reference (based on heuristic, artificial intelligence),
+    reference (based on heuristic, record linkage),
               (stated in, Discogs),
               (Discogs artist ID, 264375),
               (retrieved, today)
@@ -789,17 +791,20 @@ def _add(
     )
 
 
-def _reference(claim, catalog_qid, person_pid, person_tid, summary=None):
+def _reference(
+    claim, catalog_qid, person_pid, person_tid, heuristic,
+    summary=None
+):
     # Reference node
     # create `pywikibot.Claim` instances at runtime:
     # pywikibot would cry if the same instances get uploaded multiple times
     # over the same item
-    # (based on heuristic, artificial intelligence) reference claim
+    # (based on heuristic, `heuristic`) reference claim: depends on the task
     based_on_heuristic_reference = pywikibot.Claim(
         REPO, vocabulary.BASED_ON_HEURISTIC, is_reference=True
     )
     based_on_heuristic_reference.setTarget(
-        pywikibot.ItemPage(REPO, vocabulary.ARTIFICIAL_INTELLIGENCE)
+        pywikibot.ItemPage(REPO, heuristic)
     )
     # (stated in, CATALOG) reference claim
     stated_in_reference = pywikibot.Claim(
@@ -814,7 +819,7 @@ def _reference(claim, catalog_qid, person_pid, person_tid, summary=None):
 
     if None in (person_pid, person_tid,):
         reference_log = (
-            f'({based_on_heuristic_reference.getID()}, {vocabulary.ARTIFICIAL_INTELLIGENCE}), '
+            f'({based_on_heuristic_reference.getID()}, {heuristic}), '
             f'({stated_in_reference.getID()}, {catalog_qid}), '
             f'({retrieved_reference.getID()}, {TODAY})'
         )
@@ -840,7 +845,7 @@ def _reference(claim, catalog_qid, person_pid, person_tid, summary=None):
         tid_reference.setTarget(person_tid)
 
         reference_log = (
-            f'({based_on_heuristic_reference.getID()}, {vocabulary.ARTIFICIAL_INTELLIGENCE}), '
+            f'({based_on_heuristic_reference.getID()}, {heuristic}), '
             f'({stated_in_reference.getID()}, {catalog_qid}), '
             f'({person_pid}, {person_tid}), '
             f'({retrieved_reference.getID()}, {TODAY})'
