@@ -550,8 +550,8 @@ def _apply_url_blacklist(url_statements):
     # O(nm) complexity: n = len(blacklist); m = len(url_statements)
     # Expected order of magnitude: n = 10^2; m = 10^5
     for domain in blacklist:  # 10^2
-        url_statements = list(
-            filter(  # Slurp the filter or it won't work
+        url_statements = list(  # Slurp the filter or it won't work
+            filter(
                 lambda stmt: domain not in stmt[2], url_statements  # 10^5
             )
         )
@@ -564,9 +564,9 @@ def _apply_url_blacklist(url_statements):
 
 
 def _bio_to_be_added_generator(to_be_added):
-    for qid, values in to_be_added.items():
+    for (qid, tid,), values in to_be_added.items():
         for pid, value in values:
-            yield qid, pid, value
+            yield (qid, pid, value, tid,)
 
 
 def _validate(criterion, wd, target_generator, to_be_deprecated, to_be_added):
@@ -650,11 +650,11 @@ def _validate(criterion, wd, target_generator, to_be_deprecated, to_be_added):
 def _compute_shared_and_extra(criterion, wd_data, target_data):
     # Properly compare dates when checking biographical data
     if criterion == keys.BIODATA:
-        wd_dates = _extract_dates(wd_data)
-        target_dates = _extract_dates(target_data)
+        wd_dates, wd_other = _extract_dates(wd_data)
+        target_dates, target_other = _extract_dates(target_data)
         shared_dates, extra_dates = _compare_dates(wd_dates, target_dates)
-        shared = wd_data.intersection(target_data).union(shared_dates)
-        extra = target_data.difference(wd_data).union(extra_dates)
+        shared = wd_other.intersection(target_other).union(shared_dates)
+        extra = target_other.difference(wd_other).union(extra_dates)
     else:
         shared = wd_data.intersection(target_data)
         extra = target_data.difference(wd_data)
@@ -667,49 +667,50 @@ def _extract_dates(data):
     for pid, value in data:
         if pid in (vocabulary.DATE_OF_BIRTH, vocabulary.DATE_OF_DEATH):
             dates.add((pid, value))
-    # Remove dates from input set
-    data.difference_update(dates)
-    return dates
+    # Separate dates from other data
+    return dates, data.difference(dates)
 
 
 def _compare_dates(wd, target):
+    # Ensure unique comparisons, regardless of different precisions.
+    # For instance:
+    # `wd` has '1986-01-01/9' and '1986-11-29/11'
+    # `target` has '1986-01-01/9'
+    # `shared_dates` will have one element
     shared_dates, extra_dates = set(), set()
 
-    for wd_elem, t_elem in zip_longest(wd, target):
-        # Skip pair with None elements
-        if None in (wd_elem, t_elem):
-            continue
+    for wd_elem in wd:
+        for t_elem in target:
+            wd_pid, wd_val = wd_elem
+            t_pid, t_val = t_elem
 
-        wd_pid, wd_val = wd_elem
-        t_pid, t_val = t_elem
+            # Don't compare birth with death dates
+            if wd_pid != t_pid:
+                continue
 
-        # Don't compare birth with death dates
-        if wd_pid != t_pid:
-            continue
+            # Skip unexpected `None` values
+            if None in (wd_val, t_val):
+                LOGGER.warning(
+                    'Skipping unexpected %s date pair with missing value(s)',
+                    (wd_elem, t_elem),
+                )
+                continue
 
-        # Skip unexpected None values
-        if None in (wd_val, t_val):
-            LOGGER.warning(
-                'Skipping unexpected %s date pair with missing value(s)',
-                (wd_elem, t_elem),
+            wd_timestamp, wd_precision = wd_val.split('/')
+            t_timestamp, t_precision = t_val.split('/')
+
+            shared_date, extra_date = _match_dates_by_precision(
+                min(int(wd_precision), int(t_precision)),
+                wd_elem,
+                wd_timestamp,
+                t_elem,
+                t_timestamp,
             )
-            continue
 
-        wd_timestamp, wd_precision = wd_val.split('/')
-        t_timestamp, t_precision = t_val.split('/')
-
-        shared_date, extra_date = _match_dates_by_precision(
-            min(int(wd_precision), int(t_precision)),
-            wd_elem,
-            wd_timestamp,
-            t_elem,
-            t_timestamp,
-        )
-
-        if shared_date is not None:
-            shared_dates.add(shared_date)
-        if extra_date is not None:
-            extra_dates.add(extra_date)
+            if shared_date is not None:
+                shared_dates.add(shared_date)
+            if extra_date is not None:
+                extra_dates.add(extra_date)
 
     return shared_dates, extra_dates
 
@@ -740,6 +741,7 @@ def _match_dates_by_precision(
             (wd_timestamp, t_timestamp),
             (wd_simplified, t_simplified),
         )
+        # WD data has the priority
         shared = wd_elem
     else:
         LOGGER.debug('Target has an extra date: %s', t_timestamp)
@@ -791,12 +793,11 @@ def _dump_csv_output(data, outpath, log_msg_subject):
 
 def _load_wd_cache(file_handle):
     raw_cache = json.load(file_handle)
-    LOGGER.info("Loaded Wikidata cache from '%s'", file_handle.name)
     cache = {}
     for qid, data in raw_cache.items():
         for data_type, value_list in data.items():
             # Biodata has values that are a list
-            if isinstance(value_list[0], list):
+            if value_list and isinstance(value_list[0], list):
                 value_set = set()
                 for value in value_list:
                     if isinstance(value[1], list):
@@ -814,6 +815,7 @@ def _load_wd_cache(file_handle):
                     cache[qid][data_type] = set(value_list)
                 else:
                     cache[qid] = {data_type: set(value_list)}
+    LOGGER.info("Loaded Wikidata cache from '%s'", file_handle.name)
     return cache
 
 
