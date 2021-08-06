@@ -51,18 +51,24 @@ REPO = SITE.data_repository()
 #######################
 # Approved task 1: identifiers addition
 # https://www.wikidata.org/wiki/Wikidata:Requests_for_permissions/Bot/Soweego_bot
-IDENTIFIERS_SUMMARY = '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot|bot task 1]] '
-'with P887 reference, see [[Topic:V6cc1thgo09otfw5#flow-post-v7i05rpdja1b3wzk|discussion]]'
+IDENTIFIERS_SUMMARY = (
+    '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot|bot task 1]] '
+    'with P887 reference, '
+    'see [[Topic:V6cc1thgo09otfw5#flow-post-v7i05rpdja1b3wzk|discussion]]'
+)
 
 # Approved task 2: URLs validation, criterion 2
 # https://www.wikidata.org/wiki/Wikidata:Requests_for_permissions/Bot/Soweego_bot_2
-LINKS_VALIDATION_SUMMARY = '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot_2|bot task 2]] '
-'with extra P887 and catalog ID reference'
+LINKS_VALIDATION_SUMMARY = (
+    '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot_2|bot task 2]] '
+    'with extra P887 and catalog ID reference'
+)
 
 # Approved task 3: works by people
 # https://www.wikidata.org/wiki/Wikidata:Requests_for_permissions/Bot/Soweego_bot_3
 WORKS_SUMMARY = (
-    '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot_3|bot task 3]]'
+    '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot_3|bot task 3]] '
+    'with extra P887 reference'
 )
 
 # Biographical data validation, criterion 3
@@ -122,7 +128,7 @@ def delete_cli(catalog, entity, invalid_identifiers, sandbox):
     '-s',
     '--sandbox',
     is_flag=True,
-    help='Perform all edits on the Wikidata sandbox item Q4115189.',
+    help='Perform all edits on the Wikidata sandbox item {vocabulary.SANDBOX_2}.',
 )
 def deprecate_cli(catalog, entity, invalid_identifiers, sandbox):
     """Deprecate invalid identifiers.
@@ -148,7 +154,7 @@ def deprecate_cli(catalog, entity, invalid_identifiers, sandbox):
     '-s',
     '--sandbox',
     is_flag=True,
-    help='Perform all edits on the Wikidata sandbox item Q4115189.',
+    help=f'Perform all edits on the Wikidata sandbox item {vocabulary.SANDBOX_2}.',
 )
 def identifiers_cli(catalog, entity, identifiers, sandbox):
     """Add identifiers.
@@ -168,12 +174,8 @@ def identifiers_cli(catalog, entity, identifiers, sandbox):
 
     claim (Richard Hell, Discogs artist ID, 266995)
 
-    reference (based on heuristic, artificial intelligence),
-              (retrieved, today)
+    reference (based on heuristic, artificial intelligence), (retrieved, today)
     """
-    if sandbox:
-        LOGGER.info('Running on the Wikidata sandbox item ...')
-
     add_identifiers(json.load(identifiers), catalog, entity, sandbox)
 
 
@@ -211,10 +213,7 @@ def people_cli(catalog, statements, criterion, sandbox):
 
     claim (Joey Ramone, member of, Ramones)
 
-    reference (based on heuristic, record linkage),
-              (stated in, Discogs),
-              (Discogs artist ID, 264375),
-              (retrieved, today)
+    reference (based on heuristic, record linkage), (stated in, Discogs), (Discogs artist ID, 264375), (retrieved, today)
     """
     sandbox_item = vocabulary.SANDBOX_2
     # See https://www.wikidata.org/wiki/Wikidata:Project_chat/Archive/2021/07#URLs_statistics_for_Discogs_(Q504063)_and_MusicBrainz_(Q14005)
@@ -274,8 +273,7 @@ def works_cli(catalog, statements, sandbox):
 
     claim (C'mon Everybody, performer, Eddie Cochran)
 
-    reference (based on heuristic, record linkage),
-              (Discogs artist ID, 139984), (retrieved, today)
+    reference (based on heuristic, record linkage), (stated in, Discogs), (Discogs artist ID, 139984), (retrieved, today)
     """
     sandbox_item = vocabulary.SANDBOX_2
     catalog_qid = target_database.get_catalog_qid(catalog)
@@ -308,7 +306,7 @@ def add_identifiers(
       'writer', 'audiovisual_work', 'musical_work'}``.
       A supported entity
     :param sandbox: whether to perform edits on the
-      `Wikidata sandbox <https://www.wikidata.org/wiki/Q4115189>`_ item
+      `Wikidata sandbox 2 <https://www.wikidata.org/wiki/Q13406268>`_ item
     """
     sandbox_item = vocabulary.SANDBOX_2
     catalog_pid = target_database.get_catalog_pid(catalog, entity)
@@ -428,21 +426,18 @@ def delete_or_deprecate_identifiers(
       A supported entity
     :param invalid: a ``{invalid_catalog_identifier: [list of QIDs]}`` dictionary
     :param sandbox: whether to perform edits on the
-      `Wikidata sandbox <https://www.wikidata.org/wiki/Q4115189>`_ item
+      `Wikidata sandbox 2 <https://www.wikidata.org/wiki/Q13406268>`_ item
     """
+    sandbox_item = vocabulary.SANDBOX_2
     catalog_pid = target_database.get_catalog_pid(catalog, entity)
 
     for tid, qids in invalid.items():
         for qid in qids:
+            actual_qid = qid if not sandbox else sandbox_item
             LOGGER.info(
                 'Will %s %s identifier: %s -> %s', action, catalog, tid, qid
             )
-            if sandbox:
-                _delete_or_deprecate(
-                    action, vocabulary.SANDBOX_1, tid, catalog, catalog_pid
-                )
-            else:
-                _delete_or_deprecate(action, qid, tid, catalog, catalog_pid)
+            _delete_or_deprecate(action, actual_qid, tid, catalog, catalog_pid)
 
 
 def _add_or_reference_works(statement: tuple, heuristic: str, catalog_qid: str, catalog_pid: str, catalog_id: str,
@@ -489,6 +484,7 @@ def _add_or_reference_works(statement: tuple, heuristic: str, catalog_qid: str, 
         predicate,
         person_item,
         heuristic,
+        catalog_qid=catalog_qid,
         catalog_pid=catalog_pid,
         catalog_id=catalog_id,
         edit_summary=edit_summary,
