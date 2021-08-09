@@ -102,7 +102,7 @@ SUPPORTED_TARGETS = target_database.supported_targets() ^ {TWITTER}
     '-s',
     '--sandbox',
     is_flag=True,
-    help=f'Perform all edits on the Wikidata sandbox 2 item {vocabulary.SANDBOX_2}.',
+    help=f'Perform all edits on the Wikidata sandbox item {vocabulary.SANDBOX_2}.',
 )
 def delete_cli(catalog, entity, invalid_identifiers, sandbox):
     """Delete invalid identifiers.
