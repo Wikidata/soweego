@@ -102,7 +102,7 @@ SUPPORTED_TARGETS = target_database.supported_targets() ^ {TWITTER}
     '-s',
     '--sandbox',
     is_flag=True,
-    help='Perform all edits on the Wikidata sandbox item Q4115189.',
+    help=f'Perform all edits on the Wikidata sandbox 2 item {vocabulary.SANDBOX_2}.',
 )
 def delete_cli(catalog, entity, invalid_identifiers, sandbox):
     """Delete invalid identifiers.
@@ -111,7 +111,10 @@ def delete_cli(catalog, entity, invalid_identifiers, sandbox):
     Format: { catalog_identifier: [ list of QIDs ] }
     """
     if sandbox:
-        LOGGER.info('Running on the Wikidata sandbox item ...')
+        LOGGER.info(
+            'Running on the Wikidata sandbox item %s ...',
+            vocabulary.SANDBOX_2
+        )
 
     delete_or_deprecate_identifiers(
         'delete', catalog, entity, json.load(invalid_identifiers), sandbox
@@ -128,7 +131,7 @@ def delete_cli(catalog, entity, invalid_identifiers, sandbox):
     '-s',
     '--sandbox',
     is_flag=True,
-    help='Perform all edits on the Wikidata sandbox item {vocabulary.SANDBOX_2}.',
+    help=f'Perform all edits on the Wikidata sandbox item {vocabulary.SANDBOX_2}.',
 )
 def deprecate_cli(catalog, entity, invalid_identifiers, sandbox):
     """Deprecate invalid identifiers.
@@ -137,7 +140,10 @@ def deprecate_cli(catalog, entity, invalid_identifiers, sandbox):
     Format: { catalog_identifier: [ list of QIDs ] }
     """
     if sandbox:
-        LOGGER.info('Running on the Wikidata sandbox item ...')
+        LOGGER.info(
+            'Running on the Wikidata sandbox item %s ...',
+            vocabulary.SANDBOX_2
+        )
 
     delete_or_deprecate_identifiers(
         'deprecate', catalog, entity, json.load(invalid_identifiers), sandbox
@@ -324,9 +330,8 @@ def add_identifiers(
             edit_summary=IDENTIFIERS_SUMMARY)
 
 
-# TODO handle edit summary
 def add_people_statements(
-    catalog: str, statements: Iterable, sandbox: bool
+    catalog: str, statements: Iterable, criterion: str, sandbox: bool
 ) -> None:
     """Add statements to existing Wikidata people.
 
@@ -334,13 +339,24 @@ def add_people_statements(
     as per :func:`soweego.validator.checks.links` and
     :func:`soweego.validator.checks.bio`.
 
-    :param statements: iterable of
-      (subject, predicate, value, catalog ID) tuples
     :param catalog: ``{'discogs', 'imdb', 'musicbrainz', 'twitter'}``.
       A supported catalog
+    :param statements: iterable of
+      (subject, predicate, value, catalog ID) tuples
+    :param criterion: ``{'links', 'bio'}``. A supported validation criterion
     :param sandbox: whether to perform edits on the
       `Wikidata sandbox <https://www.wikidata.org/wiki/Q13406268>`_ item
     """
+    if criterion == 'links':
+        edit_summary = LINKS_VALIDATION_SUMMARY
+    elif criterion == 'bio':
+        edit_summary = BIO_VALIDATION_SUMMARY
+    else:
+        raise ValueError(
+            f"Invalid criterion: '{criterion}'. "
+            "Please use either 'links' or 'bio'"
+        )
+
     sandbox_item = vocabulary.SANDBOX_2
     catalog_qid = target_database.get_catalog_qid(catalog)
     person_pid = target_database.get_person_pid(catalog)
@@ -361,7 +377,7 @@ def add_people_statements(
             catalog_qid=catalog_qid,
             catalog_pid=person_pid,
             catalog_id=catalog_id,
-            edit_summary=LINKS_VALIDATION_SUMMARY
+            edit_summary=edit_summary
         )
 
 
