@@ -5,17 +5,16 @@
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
-__version__ = '1.0'
+__version__ = '2.0'
 __license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2018, Hjfocs'
+__copyright__ = 'Copyleft 2021, Hjfocs'
 
 import csv
 import json
 import logging
 import os
 from collections import defaultdict
-from itertools import zip_longest
-from typing import DefaultDict, Dict, Iterator, List, Tuple
+from typing import DefaultDict, Dict, Iterator, Tuple, Union
 
 import click
 from sqlalchemy.exc import SQLAlchemyError
@@ -59,7 +58,7 @@ WD_BIO_FILENAME = '{}_{}_bio_data_in_wikidata.json'
     '-s',
     '--sandbox',
     is_flag=True,
-    help='Perform all deprecations on the Wikidata sandbox item Q4115189.',
+    help=f'Perform all deprecations on the Wikidata sandbox item {vocabulary.SANDBOX_2}.',
 )
 @click.option(
     '--dump-wikidata',
@@ -114,7 +113,10 @@ def dead_ids_cli(catalog, entity, deprecate, sandbox, dump_wikidata, dir_io):
 
     # Deprecate dead ids in Wikidata
     if deprecate:
-        _upload_result(catalog, entity, dead, None, None, sandbox)
+        LOGGER.info('Starting deprecation of %s IDs ...', catalog)
+        wikidata_bot.delete_or_deprecate_identifiers(
+            'deprecate', catalog, entity, dead, sandbox
+        )
 
 
 @click.command()
@@ -137,7 +139,7 @@ def dead_ids_cli(catalog, entity, deprecate, sandbox, dump_wikidata, dir_io):
     '-s',
     '--sandbox',
     is_flag=True,
-    help='Perform all edits on the Wikidata sandbox item Q4115189.',
+    help=f'Perform all edits on the Wikidata sandbox item {vocabulary.SANDBOX_2}.',
 )
 @click.option(
     '--dump-wikidata',
@@ -189,13 +191,13 @@ def links_cli(
         with open(wd_links_path) as wdin:
             wd_links = _load_wd_cache(wdin)
         # Discard the last return value: Wikidata cache
-        ids_to_be_deprecated, ids_to_be_added, urls_to_be_added, _ = links(
+        ids_to_be_deprecated, ext_ids_to_be_added, urls_to_be_added, _ = links(
             catalog, entity, blacklist, wd_cache=wd_links
         )
     else:
         (
             ids_to_be_deprecated,
-            ids_to_be_added,
+            ext_ids_to_be_added,
             urls_to_be_added,
             wd_links,
         ) = links(catalog, entity, blacklist)
@@ -211,18 +213,23 @@ def links_cli(
 
     # Dump output files
     _dump_deprecated(ids_to_be_deprecated, deprecated_path)
-    _dump_csv_output(ids_to_be_added, ids_path, 'third-party IDs')
+    _dump_csv_output(ext_ids_to_be_added, ids_path, 'third-party IDs')
     _dump_csv_output(urls_to_be_added, urls_path, 'URLs')
 
     # Upload the output to Wikidata
     if upload:
-        _upload_result(
-            catalog,
-            entity,
-            ids_to_be_deprecated,
-            urls_to_be_added,
-            ids_to_be_added,
-            sandbox,
+        criterion = 'links'
+        LOGGER.info('Starting deprecation of %s IDs ...', catalog)
+        wikidata_bot.delete_or_deprecate_identifiers(
+            'deprecate', catalog, entity, ids_to_be_deprecated, sandbox
+        )
+        LOGGER.info('Starting addition of external IDs to Wikidata ...')
+        wikidata_bot.add_people_statements(
+            catalog, ext_ids_to_be_added, criterion, sandbox
+        )
+        LOGGER.info('Starting addition of statements to Wikidata ...')
+        wikidata_bot.add_people_statements(
+            catalog, urls_to_be_added, criterion, sandbox
         )
 
 
@@ -240,7 +247,7 @@ def links_cli(
     '-s',
     '--sandbox',
     is_flag=True,
-    help='Perform all edits on the Wikidata sandbox item Q4115189.',
+    help=f'Perform all edits on the Wikidata sandbox item {vocabulary.SANDBOX_2}.',
 )
 @click.option(
     '--dump-wikidata',
@@ -302,7 +309,15 @@ def bio_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
 
     # Upload the output to Wikidata
     if upload:
-        _upload(catalog, entity, to_be_deprecated, to_be_added, sandbox)
+        criterion = 'bio'
+        LOGGER.info('Starting deprecation of %s IDs ...', catalog)
+        wikidata_bot.delete_or_deprecate_identifiers(
+            'deprecate', catalog, entity, to_be_deprecated, sandbox
+        )
+        LOGGER.info('Starting addition of statements to Wikidata ...')
+        wikidata_bot.add_people_statements(
+            catalog, to_be_added, criterion, sandbox
+        )
 
 
 def dead_ids(
@@ -386,7 +401,7 @@ def dead_ids(
 
 def links(
     catalog: str, entity: str, url_blacklist=False, wd_cache=None
-) -> Tuple[DefaultDict, List, List, Dict]:
+) -> Union[Tuple[defaultdict, list, list, dict], Tuple[None, None, None, None]]:
     """Validate identifiers against available links.
 
     Also generate statements based on additional links
@@ -477,7 +492,7 @@ def links(
 
 def bio(
     catalog: str, entity: str, wd_cache=None
-) -> Tuple[DefaultDict, Iterator, Dict]:
+) -> Union[Tuple[defaultdict, Iterator, dict], Tuple[None, None, None]]:
     """Validate identifiers against available biographical data.
 
     Look for:
@@ -566,7 +581,7 @@ def _apply_url_blacklist(url_statements):
 def _bio_to_be_added_generator(to_be_added):
     for (qid, tid,), values in to_be_added.items():
         for pid, value in values:
-            yield (qid, pid, value, tid,)
+            yield qid, pid, value, tid
 
 
 def _validate(criterion, wd, target_generator, to_be_deprecated, to_be_added):
@@ -749,23 +764,6 @@ def _match_dates_by_precision(
         # t_elem[0] is the PID
         extra = (t_elem[0], t_timestamp)
     return shared, extra
-
-
-def _upload_result(
-    catalog, entity, to_deprecate, urls_to_add, ext_ids_to_add, sandbox
-):
-    _upload(catalog, entity, to_deprecate, urls_to_add, sandbox)
-    LOGGER.info('Starting addition of external IDs to Wikidata ...')
-    wikidata_bot.add_people_statements(catalog, ext_ids_to_add, sandbox)
-
-
-def _upload(catalog, entity, to_deprecate, to_add, sandbox):
-    LOGGER.info('Starting deprecation of %s IDs ...', catalog)
-    wikidata_bot.delete_or_deprecate_identifiers(
-        'deprecate', catalog, entity, to_deprecate, sandbox
-    )
-    LOGGER.info('Starting addition of statements to Wikidata ...')
-    wikidata_bot.add_people_statements(catalog, to_add, sandbox)
 
 
 def _dump_deprecated(data, outpath):
