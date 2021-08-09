@@ -218,6 +218,11 @@ def links_cli(
 
     # Upload the output to Wikidata
     if upload:
+        if sandbox:
+            LOGGER.info(
+                'Running on the Wikidata sandbox item %s ...',
+                vocabulary.SANDBOX_2
+            )
         criterion = 'links'
         LOGGER.info('Starting deprecation of %s IDs ...', catalog)
         wikidata_bot.delete_or_deprecate_identifiers(
@@ -309,6 +314,11 @@ def bio_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
 
     # Upload the output to Wikidata
     if upload:
+        if sandbox:
+            LOGGER.info(
+                'Running on the Wikidata sandbox item %s ...',
+                vocabulary.SANDBOX_2
+            )
         criterion = 'bio'
         LOGGER.info('Starting deprecation of %s IDs ...', catalog)
         wikidata_bot.delete_or_deprecate_identifiers(
