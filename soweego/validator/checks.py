@@ -678,6 +678,8 @@ def _compute_shared_and_extra(criterion, wd_data, target_data):
         wd_dates, wd_other = _extract_dates(wd_data)
         target_dates, target_other = _extract_dates(target_data)
         shared_dates, extra_dates = _compare_dates(wd_dates, target_dates)
+        import ipdb; ipdb.set_trace()
+        # FIXME data model has changed: _compare_others
         shared = wd_other.intersection(target_other).union(shared_dates)
         extra = target_other.difference(wd_other).union(extra_dates)
     else:
@@ -685,6 +687,14 @@ def _compute_shared_and_extra(criterion, wd_data, target_data):
         extra = target_data.difference(wd_data)
 
     return shared, extra
+
+def _compare_others(wd, target):
+    shared, extra = set(), set()
+    wd_matches, target_matches = [], []
+
+    for i, wd_elem in enumerate(wd):
+        for j, t_elem in enumerate(target):
+
 
 
 def _extract_dates(data):
@@ -697,6 +707,7 @@ def _extract_dates(data):
 
 
 def _compare_dates(wd, target):
+def _compare(what, wd, target):
     # Ensure unique comparisons, regardless of different precisions.
     # For instance:
     # `wd` has '1986-01-01/9' and '1986-11-29/11'
@@ -721,11 +732,13 @@ def _compare_dates(wd, target):
             # Skip unexpected `None` values
             if None in (wd_val, t_val):
                 LOGGER.warning(
-                    'Skipping unexpected %s date pair with missing value(s)',
+                    'Skipping unexpected %s pair with missing value(s)',
                     (wd_elem, t_elem),
                 )
                 continue
 
+            if what == 'dates':
+            # FIXME extract function
             wd_timestamp, wd_precision = wd_val.split('/')
             t_timestamp, t_precision = t_val.split('/')
 

@@ -20,7 +20,7 @@ import regex
 from sqlalchemy import or_
 from tqdm import tqdm
 
-from soweego.commons import constants, keys, target_database, url_utils
+from soweego.commons import constants, keys, target_database, text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer import models
 from soweego.wikidata import api_requests, sparql_queries, vocabulary
@@ -382,27 +382,30 @@ def gather_wikidata_biodata(wikidata):
     for qid, pid, value in api_requests.get_biodata(wikidata.keys()):
         parsed = api_requests.parse_value(value)
         if not wikidata[qid].get(keys.BIODATA):
-            wikidata[qid][keys.BIODATA] = set()
-        # `parsed` is a set of labels if the value is a QID
-        # see api_requests.parse_value
+            wikidata[qid][keys.BIODATA] = []
+        # If `parsed` is a set, we have item labels,
+        # see `api_requests.parse_value` behavior
         if isinstance(parsed, set):
-            # The English label for gender should be enough
-            gender = parsed & {keys.MALE, keys.FEMALE}
-            if gender:
-                wikidata[qid][keys.BIODATA].add((pid, gender.pop()))
-            else:
-                # Add a (pid, label) tuple for each element
-                # for better recall
-                for element in parsed:
-                    wikidata[qid][keys.BIODATA].add((pid, element))
-        # `parsed` is a tuple (timestamp, precision) id the value is a date
+            # Keep track of the value QID
+            # Dict key checks are already done in `api_requests.parse_value`,
+            # so no need to redo it here
+            v_qid = value['id']
+            # Normalize & de-duplicate labels
+            # `text_utils.normalize` returns a tuple with two forms
+            # (non-lower, lower): take the lowercased one
+            labels = {text_utils.normalize(label)[1] for label in parsed}
+            # e.g., (P19, Q641, {'venezia', 'venice', ...})
+            wikidata[qid][keys.BIODATA].append(
+                (pid, v_qid, labels)
+            )
+        # If `parsed` is a tuple, we have a (timestamp, precision) date
         elif isinstance(parsed, tuple):
             timestamp, precision = parsed[0], parsed[1]
             # Get rid of time, useless
             timestamp = timestamp.split('T')[0]
-            wikidata[qid][keys.BIODATA].add((pid, f'{timestamp}/{precision}'))
+            wikidata[qid][keys.BIODATA].append((pid, f'{timestamp}/{precision}'))
         else:
-            wikidata[qid][keys.BIODATA].add((pid, parsed))
+            wikidata[qid][keys.BIODATA].append((pid, parsed))
         total += 1
 
     LOGGER.info('Got %d statements', total)
