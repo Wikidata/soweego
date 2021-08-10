@@ -19,7 +19,7 @@ from typing import DefaultDict, Dict, Iterator, Tuple, Union
 import click
 from sqlalchemy.exc import SQLAlchemyError
 
-from soweego.commons import constants, data_gathering, keys, target_database
+from soweego.commons import constants, data_gathering, keys, target_database, text_utils
 from soweego.commons.db_manager import DBManager
 from soweego.ingester import wikidata_bot
 from soweego.wikidata import vocabulary
@@ -673,28 +673,25 @@ def _validate(criterion, wd, target_generator, to_be_deprecated, to_be_added):
 
 
 def _compute_shared_and_extra(criterion, wd_data, target_data):
-    # Properly compare dates when checking biographical data
-    if criterion == keys.BIODATA:
-        wd_dates, wd_other = _extract_dates(wd_data)
-        target_dates, target_other = _extract_dates(target_data)
-        shared_dates, extra_dates = _compare_dates(wd_dates, target_dates)
-        import ipdb; ipdb.set_trace()
-        # FIXME data model has changed: _compare_others
-        shared = wd_other.intersection(target_other).union(shared_dates)
-        extra = target_other.difference(wd_other).union(extra_dates)
-    else:
+    if criterion == keys.LINKS:
         shared = wd_data.intersection(target_data)
         extra = target_data.difference(wd_data)
+    # Biographical validation requires more complex comparisons
+    elif criterion == keys.BIODATA:
+        wd_dates, wd_other = _extract_dates(wd_data)
+        target_dates, target_other = _extract_dates(target_data)
+        shared_dates, extra_dates = _compare('dates', wd_dates, target_dates)
+        import ipdb; ipdb.set_trace()
+        shared_other, extra_other = _compare('other', wd_other, target_other)
+        shared = shared_dates | shared_other
+        extra = extra_dates | extra_other
+    else:
+        raise ValueError(
+            f"Invalid validation criterion: '{criterion}'. "
+            f"Please use either '{keys.LINKS}' or '{keys.BIODATA}'"
+        )
 
     return shared, extra
-
-def _compare_others(wd, target):
-    shared, extra = set(), set()
-    wd_matches, target_matches = [], []
-
-    for i, wd_elem in enumerate(wd):
-        for j, t_elem in enumerate(target):
-
 
 
 def _extract_dates(data):
@@ -706,14 +703,12 @@ def _extract_dates(data):
     return dates, data.difference(dates)
 
 
-def _compare_dates(wd, target):
 def _compare(what, wd, target):
-    # Ensure unique comparisons, regardless of different precisions.
-    # For instance:
-    # `wd` has '1986-01-01/9' and '1986-11-29/11'
-    # `target` has '1986-01-01/9'
-    # `shared_dates` will have one element
-    shared_dates, extra_dates = set(), set()
+    shared, extra = set(), set()
+    # Keep track of matches to avoid useless computation
+    # and incorrect comparisons:
+    # this happens when WD has multiple claims with
+    # the same property
     wd_matches, target_matches = [], []
 
     for i, wd_elem in enumerate(wd):
@@ -722,45 +717,68 @@ def _compare(what, wd, target):
             if i in wd_matches or j in target_matches:
                 continue
 
-            wd_pid, wd_val = wd_elem
-            t_pid, t_val = t_elem
-
-            # Don't compare birth with death dates
-            if wd_pid != t_pid:
+            # Don't compare different PIDs
+            if wd_elem[0] != t_elem[0]:
                 continue
 
             # Skip unexpected `None` values
-            if None in (wd_val, t_val):
+            if None in (wd_elem[1], t_elem[1]):
                 LOGGER.warning(
                     'Skipping unexpected %s pair with missing value(s)',
                     (wd_elem, t_elem),
                 )
                 continue
 
-            if what == 'dates':
-            # FIXME extract function
-            wd_timestamp, wd_precision = wd_val.split('/')
-            t_timestamp, t_precision = t_val.split('/')
-
-            shared_date, extra_date = _match_dates_by_precision(
-                min(int(wd_precision), int(t_precision)),
-                wd_elem,
-                wd_timestamp,
-                t_elem,
-                t_timestamp,
+            inputs = (
+                shared, extra, wd_matches, target_matches,
+                i, wd_elem, j, t_elem
             )
+            if what == 'dates':
+                _compare_dates(inputs)
+            elif what == 'other':
+                _compare_other(inputs)
+            else:
+                raise ValueError(
+                    f"Invalid argument: '{what}'. "
+                    "Please use either 'dates' or 'other'"
+                )
 
-            if shared_date is not None:
-                shared_dates.add(shared_date)
-                # Keep track of matches to avoid useless computation
-                # and incorrect comparisons:
-                # this happens when WD has multiple claims with
-                # the same property
-                wd_matches.append(i)
-                target_matches.append(j)
-            elif extra_date is not None:
-                extra_dates.add(extra_date)
-    return shared_dates, extra_dates
+    return shared, extra
+
+
+def _compare_other(inputs):
+    shared, extra, wd_matches, target_matches, i, wd_elem, j, t_elem = inputs
+    pid, qid, wd_values = wd_elem
+    _, t_value = t_elem
+
+    # TODO improve matching
+    if text_utils.normalize(t_value) in wd_values:
+        shared.add((pid, qid))
+        wd_matches.append(i)
+        target_matches.append(j)
+    else:
+        # TODO resolve target string into QID
+        extra.add((pid, t_value))
+
+
+def _compare_dates(inputs):
+    shared, extra, wd_matches, target_matches, i, wd_elem, j, t_elem = inputs
+
+    wd_timestamp, wd_precision = wd_elem[1].split('/')
+    t_timestamp, t_precision = t_elem[1].split('/')
+    shared_date, extra_date = _match_dates_by_precision(
+        min(int(wd_precision), int(t_precision)),
+        wd_elem,
+        wd_timestamp,
+        t_elem,
+        t_timestamp,
+    )
+    if shared_date is not None:
+        shared.add(shared_date)
+        wd_matches.append(i)
+        target_matches.append(j)
+    elif extra_date is not None:
+        extra.add(extra_date)
 
 
 def _match_dates_by_precision(
@@ -820,6 +838,7 @@ def _dump_csv_output(data, outpath, log_msg_subject):
         LOGGER.info("No %s to be added, won't dump to file", log_msg_subject)
 
 
+# FIXME adapt to new data model
 def _load_wd_cache(file_handle):
     raw_cache = json.load(file_handle)
     cache = {}
@@ -853,7 +872,7 @@ def _dump_wd_cache(cache, outpath):
         json.dump(
             {
                 qid: {
-                    data_type: list(values)
+                    data_type: values
                     for data_type, values in data.items()
                 }
                 for qid, data in cache.items()
