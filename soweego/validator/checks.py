@@ -703,9 +703,14 @@ def _compare_dates(wd, target):
     # `target` has '1986-01-01/9'
     # `shared_dates` will have one element
     shared_dates, extra_dates = set(), set()
+    wd_matches, target_matches = [], []
 
-    for wd_elem in wd:
-        for t_elem in target:
+    for i, wd_elem in enumerate(wd):
+        for j, t_elem in enumerate(target):
+            # Don't compare when already matched
+            if i in wd_matches or j in target_matches:
+                continue
+
             wd_pid, wd_val = wd_elem
             t_pid, t_val = t_elem
 
@@ -734,9 +739,14 @@ def _compare_dates(wd, target):
 
             if shared_date is not None:
                 shared_dates.add(shared_date)
-            if extra_date is not None:
+                # Keep track of matches to avoid useless computation
+                # and incorrect comparisons:
+                # this happens when WD has multiple claims with
+                # the same property
+                wd_matches.append(i)
+                target_matches.append(j)
+            elif extra_date is not None:
                 extra_dates.add(extra_date)
-
     return shared_dates, extra_dates
 
 
@@ -770,9 +780,7 @@ def _match_dates_by_precision(
         shared = wd_elem
     else:
         LOGGER.debug('Target has an extra date: %s', t_timestamp)
-        # Output dates in ISO format
-        # t_elem[0] is the PID
-        extra = (t_elem[0], t_timestamp)
+        extra = t_elem
     return shared, extra
 
 
