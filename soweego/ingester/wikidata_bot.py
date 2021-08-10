@@ -727,18 +727,14 @@ def _parse_value(value):
         return pywikibot.ItemPage(REPO, value_is_qid.group())
     # Try to build a date
     try:
-        date_value = date.fromisoformat(value)
-        # Precision hack: it's a year if both month and day are 1
-        precision = (
-            vocabulary.YEAR
-            if date_value.month == 1 and date_value.day == 1
-            else vocabulary.DAY
-        )
+        # A date should be in the form '1984-11-16/11'
+        date_str, precision = value.split('/')
+        date_obj = date.fromisoformat(date_str)
         return pywikibot.WbTime(
-            date_value.year,
-            date_value.month,
-            date_value.day,
-            precision=precision,
+            date_obj.year,
+            date_obj.month,
+            date_obj.day,
+            precision=int(precision),
         )
     # Otherwise return the value as is
     except ValueError:
