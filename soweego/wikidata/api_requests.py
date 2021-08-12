@@ -25,9 +25,9 @@ from soweego.wikidata import vocabulary
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
-__version__ = '1.0'
+__version__ = '2.0'
 __license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2018, Hjfocs'
+__copyright__ = 'Copyleft 2021, Hjfocs'
 
 
 LOGGER = logging.getLogger(__name__)
@@ -39,8 +39,45 @@ URL_BLACKLIST_PAGE = 'Wikidata:Primary_sources_tool/URL_blacklist'
 BUCKET_SIZE = 500
 
 
+def resolve_qid(term: str, language='en') -> str:
+    """Try to resolve a QID given a search term, in a *feeling lucky* way.
+
+    :param term: a search term
+    :param language: (optional) search in the given language code.
+      Default: ``en``.
+    :return: the QID of the first result
+    """
+    params = {
+        'action': 'wbsearchentities',
+        'format': 'json',
+        'search': term,
+        'language': language
+    }
+    response_body = _make_request(params)
+
+    # Failed API request
+    if response_body is None:
+        return None
+
+    try:
+        return response_body['search'][0]['id']
+    # Malformed JSON response
+    except KeyError as e:
+        LOGGER.error(
+            "Missing '%s' key from JSON response: %s", e, response_body
+        )
+        return None
+    # No search results
+    except IndexError:
+        LOGGER.info(
+            "No QIDs found for search term '%s' (language: %s)",
+            term, language
+        )
+        return None
+
+
 def get_url_blacklist() -> set:
-    """Retrieve a blacklist with URL domains of low-quality sources
+    """Retrieve a blacklist with URL domains of low-quality sources.
 
     :return: the set of blacklisted domains
     """
@@ -56,12 +93,12 @@ def get_url_blacklist() -> set:
     if response_body is None:
         return None
 
-    # Handle malformed JSON response
+    # Malformed JSON response
     try:
         star = response_body['parse']['text']['*']  # Interesting nonsense key
     except KeyError as e:
         LOGGER.error(
-            "Missing key %s from JSON response: %s", e, response_body,
+            "Missing '%s' key from JSON response: %s", e, response_body
         )
         return None
 
