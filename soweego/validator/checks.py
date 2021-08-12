@@ -23,7 +23,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from soweego.commons import constants, data_gathering, keys, target_database, text_utils
 from soweego.commons.db_manager import DBManager
 from soweego.ingester import wikidata_bot
-from soweego.wikidata import vocabulary
+from soweego.wikidata import vocabulary, api_requests
 from soweego.wikidata.api_requests import get_url_blacklist
 
 LOGGER = logging.getLogger(__name__)
@@ -36,8 +36,8 @@ SHARED_STATEMENTS_FNAME = '{catalog}_{entity}_{criterion}_shared_statements.csv'
 # For `dead_ids_cli`
 DEAD_IDS_FNAME = '{catalog}_{entity}_dead_ids.json'
 # For `links_cli`
-EXT_IDS_TO_BE_ADDED_FNAME = '{catalog}_{entity}_external_ids_to_be_added.csv'
-URLS_TO_BE_ADDED_FNAME = '{catalog}_{entity}_urls_to_be_added.csv'
+EXT_IDS_FNAME = '{catalog}_{entity}_external_ids_to_be_{task}.csv'
+URLS_FNAME = '{catalog}_{entity}_urls_to_be_{task}.csv'
 # For `bio_cli`
 BIO_STATEMENTS_TO_BE_ADDED_FNAME = '{catalog}_{entity}_bio_statements_to_be_added.csv'
 
@@ -159,13 +159,12 @@ def dead_ids_cli(catalog, entity, deprecate, sandbox, dump_wikidata, dir_io):
     default=constants.SHARED_FOLDER,
     help=f'Input/output directory, default: {constants.SHARED_FOLDER}.',
 )
-# TODO adapt to also dump shared links
 def links_cli(
     catalog, entity, blacklist, upload, sandbox, dump_wikidata, dir_io
 ):
     """Validate identifiers against links.
 
-    Dump 3 output files:
+    Dump 5 output files:
 
     1. catalog IDs to be deprecated. JSON format:
     {catalog_ID: [list of QIDs]}
@@ -174,11 +173,15 @@ def links_cli(
     QID,third-party_PID,third-party_ID,catalog_ID
 
     3. URLs to be added. CSV format:
-    QID,P973,URL,catalog_ID
+    QID,P2888,URL,catalog_ID
+
+    4. third-party IDs to be referenced. Same format as file #2
+
+    5. URLs to be referenced. Same format as file #3
 
     You can pass the '-u' flag to upload the output to Wikidata.
 
-    The '-b' flag applies a URL blacklist of low-quality Web domains.
+    The '-b' flag applies a URL blacklist of low-quality Web domains to file #3.
     """
     criterion = 'links'
     # Output paths
@@ -187,14 +190,24 @@ def links_cli(
             catalog=catalog, entity=entity, criterion=criterion
         )
     )
-    ids_path = os.path.join(
-        dir_io, EXT_IDS_TO_BE_ADDED_FNAME.format(
-            catalog=catalog, entity=entity
+    add_ext_ids_path = os.path.join(
+        dir_io, EXT_IDS_FNAME.format(
+            catalog=catalog, entity=entity, task='added'
         )
     )
-    urls_path = os.path.join(
-        dir_io, URLS_TO_BE_ADDED_FNAME.format(
-            catalog=catalog, entity=entity
+    add_urls_path = os.path.join(
+        dir_io, URLS_FNAME.format(
+            catalog=catalog, entity=entity, task='added'
+        )
+    )
+    ref_ext_ids_path = os.path.join(
+        dir_io, EXT_IDS_FNAME.format(
+            catalog=catalog, entity=entity, task='referenced'
+        )
+    )
+    ref_urls_path = os.path.join(
+        dir_io, URLS_FNAME.format(
+            catalog=catalog, entity=entity, task='referenced'
         )
     )
     wd_cache_path = os.path.join(
@@ -209,19 +222,16 @@ def links_cli(
             wd_cache = pickle.load(cin)
         LOGGER.info("Loaded Wikidata cache from '%s'", cin.name)
         # Discard the last return value: Wikidata cache
-        ids_to_be_deprecated, ext_ids_to_be_added, urls_to_be_added, _ = links(
+        deprecate, add_ext_ids, add_urls, ref_ext_ids, ref_urls, _ = links(
             catalog, entity, blacklist, wd_cache=wd_cache
         )
     else:
-        (
-            ids_to_be_deprecated,
-            ext_ids_to_be_added,
-            urls_to_be_added,
-            wd_cache,
-        ) = links(catalog, entity, blacklist)
+        deprecate, add_ext_ids, add_urls, ref_ext_ids, ref_urls, wd_cache = links(
+            catalog, entity, blacklist
+        )
 
     # Nothing to do: the catalog doesn't contain links
-    if ids_to_be_deprecated is None:
+    if deprecate is None:
         return
 
     # Dump Wikidata cache
@@ -231,9 +241,11 @@ def links_cli(
         LOGGER.info('URLs gathered from Wikidata dumped to %s', wd_cache_path)
 
     # Dump output files
-    _dump_deprecated(ids_to_be_deprecated, deprecate_path)
-    _dump_csv_output(ext_ids_to_be_added, ids_path, 'third-party IDs')
-    _dump_csv_output(urls_to_be_added, urls_path, 'URLs')
+    _dump_deprecated(deprecate, deprecate_path)
+    _dump_csv_output(add_ext_ids, add_ext_ids_path, 'third-party IDs to be added')
+    _dump_csv_output(add_urls, add_urls_path, 'URLs to be added')
+    _dump_csv_output(ref_ext_ids, ref_ext_ids_path, 'shared third-party IDs to be referenced')
+    _dump_csv_output(ref_urls, ref_urls_path, 'shared URLs to be referenced')
 
     # Upload the output to Wikidata
     if upload:
@@ -244,15 +256,23 @@ def links_cli(
             )
         LOGGER.info('Starting deprecation of %s IDs ...', catalog)
         wikidata_bot.delete_or_deprecate_identifiers(
-            'deprecate', catalog, entity, ids_to_be_deprecated, sandbox
+            'deprecate', catalog, entity, deprecate, sandbox
         )
         LOGGER.info('Starting addition of external IDs to Wikidata ...')
         wikidata_bot.add_people_statements(
-            catalog, ext_ids_to_be_added, criterion, sandbox
+            catalog, add_ext_ids, criterion, sandbox
         )
-        LOGGER.info('Starting addition of statements to Wikidata ...')
+        LOGGER.info('Starting addition of URLs to Wikidata ...')
         wikidata_bot.add_people_statements(
-            catalog, urls_to_be_added, criterion, sandbox
+            catalog, add_urls, criterion, sandbox
+        )
+        LOGGER.info('Starting referencing of shared external IDs in Wikidata ...')
+        wikidata_bot.add_people_statements(
+            catalog, add_ext_ids, criterion, sandbox
+        )
+        LOGGER.info('Starting referencing of shared URLs in Wikidata ...')
+        wikidata_bot.add_people_statements(
+            catalog, add_urls, criterion, sandbox
         )
 
 
@@ -293,11 +313,10 @@ def bio_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
     1. catalog IDs to be deprecated. JSON format:
     {catalog_ID: [list of QIDs]}
 
-    2. shared statements. CSV format:
+    2. statements to be added. CSV format:
     QID,PID,value,catalog_ID
 
-    3. statements to be added. CSV format:
-    QID,PID,value,catalog_ID
+    3. shared statements to be referenced. Same format as file #2
 
     You can pass the '-u' flag to upload the output to Wikidata.
     """
@@ -307,14 +326,14 @@ def bio_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
             catalog=catalog, entity=entity, criterion=criterion
         )
     )
-    shared_path = os.path.join(
-        dir_io, SHARED_STATEMENTS_FNAME.format(
-            catalog=catalog, entity=entity, criterion=criterion
-        )
-    )
-    extra_path = os.path.join(
+    add_path = os.path.join(
         dir_io, BIO_STATEMENTS_TO_BE_ADDED_FNAME.format(
             catalog=catalog, entity=entity
+        )
+    )
+    ref_path = os.path.join(
+        dir_io, SHARED_STATEMENTS_FNAME.format(
+            catalog=catalog, entity=entity, criterion=criterion
         )
     )
     wd_cache_path = os.path.join(
@@ -329,9 +348,9 @@ def bio_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
             wd_cache = pickle.load(cin)
         LOGGER.info("Loaded Wikidata cache from '%s'", cin.name)
         # Discard the last return value: Wikidata cache
-        deprecate, shared, extra, _ = bio(catalog, entity, wd_cache=wd_cache)
+        deprecate, add, reference, _ = bio(catalog, entity, wd_cache=wd_cache)
     else:
-        deprecate, shared, extra, wd_cache = bio(catalog, entity)
+        deprecate, add, reference, wd_cache = bio(catalog, entity)
 
     # Nothing to do: the catalog doesn't contain biographical data
     if deprecate is None:
@@ -348,10 +367,11 @@ def bio_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
 
     # Dump output files
     _dump_deprecated(deprecate, deprecate_path)
-    _dump_csv_output(shared, shared_path, 'shared statements')
-    _dump_csv_output(extra, extra_path, 'extra statements')
+    _dump_csv_output(add, add_path, 'statements to be added')
+    _dump_csv_output(reference, ref_path, 'shared statements to be referenced')
 
-    # Upload the output to Wikidata
+    # Upload the output to Wikidata:
+    # deprecate, add, reference
     if upload:
         if sandbox:
             LOGGER.info(
@@ -362,13 +382,13 @@ def bio_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
         wikidata_bot.delete_or_deprecate_identifiers(
             'deprecate', catalog, entity, deprecate, sandbox
         )
-        LOGGER.info('Starting referencing of shared statements in Wikidata ...')
-        wikidata_bot.add_people_statements(
-            catalog, to_be_added, criterion, sandbox
-        )
         LOGGER.info('Starting addition of extra statements to Wikidata ...')
         wikidata_bot.add_people_statements(
-            catalog, to_be_added, criterion, sandbox
+            catalog, add, criterion, sandbox
+        )
+        LOGGER.info('Starting referencing of shared statements in Wikidata ...')
+        wikidata_bot.add_people_statements(
+            catalog, reference, criterion, sandbox
         )
 
 
@@ -453,7 +473,7 @@ def dead_ids(
 
 def links(
     catalog: str, entity: str, url_blacklist=False, wd_cache=None
-) -> Union[Tuple[defaultdict, list, list, dict], Tuple[None, None, None, None]]:
+) -> Union[Tuple[defaultdict, list, list, list, list, dict], Tuple[None, None, None, None, None, None]]:
     """Validate identifiers against available links.
 
     Also generate statements based on additional links
@@ -482,21 +502,23 @@ def links(
       of URL domains. Default: ``False``
     :param wd_cache: (optional) a ``dict`` of links gathered from Wikidata
       in a previous run. Default: ``None``
-    :return: 4 objects
+    :return: ``tuple`` of 6 objects
 
       1. ``dict`` of identifiers that should be deprecated
       2. ``list`` of third-party identifiers that should be added
       3. ``list`` of URLs that should be added
-      4. ``dict`` of links gathered from Wikidata
+      4. ``list`` of third-party identifiers that should be referenced
+      5. ``list`` of URLs that should be referenced
+      6. ``dict`` of links gathered from Wikidata
 
     """
     # Target catalog side first:
     # enable early return in case of no target links
     target_links = data_gathering.gather_target_links(entity, catalog)
     if target_links is None:
-        return None, None, None, None
+        return None, None, None, None, None, None
 
-    deprecate, add = defaultdict(set), defaultdict(set)
+    deprecate, add, reference = defaultdict(set), defaultdict(set), defaultdict(set)
 
     # Wikidata side
     url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
@@ -515,31 +537,36 @@ def links(
         wd_links = wd_cache
 
     # Validation
-    _validate(keys.LINKS, wd_links, target_links, deprecate, add)
+    _validate(keys.LINKS, wd_links, target_links, deprecate, add, reference)
 
-    # Separate external IDs from URLs
-    (
-        ext_ids_to_be_added,
-        urls_to_be_added,
-    ) = data_gathering.extract_ids_from_urls(add, ext_id_pids_to_urls)
-
-    # Apply URL blacklist
+    # Links to be added:
+    # 1. Separate external IDs from URLs
+    add_ext_ids, add_urls = data_gathering.extract_ids_from_urls(
+        add, ext_id_pids_to_urls
+    )
+    # 2. Apply URL blacklist
     if url_blacklist:
-        urls_to_be_added = _apply_url_blacklist(urls_to_be_added)
+        add_urls = _apply_url_blacklist(add_urls)
+
+    # Links to be referenced: separate external IDs from URLs
+    ref_ext_ids, ref_urls = data_gathering.extract_ids_from_urls(
+        reference, ext_id_pids_to_urls
+    )
 
     LOGGER.info(
         'Validation completed. Target: %s %s. '
         'IDs to be deprecated: %d. '
         'Third-party IDs to be added: %d. '
         'URL statements to be added: %d',
-        catalog,
-        entity,
+        'Third-party IDs to be referenced: %d. '
+        'URL statements to be referenced: %d',
+        catalog, entity,
         len(deprecate),
-        len(ext_ids_to_be_added),
-        len(urls_to_be_added),
+        len(add_ext_ids), len(add_urls),
+        len(ref_ext_ids), len(ref_urls)
     )
 
-    return deprecate, ext_ids_to_be_added, urls_to_be_added, wd_links
+    return deprecate, add_ext_ids, add_urls, ref_ext_ids, ref_urls, wd_links
 
 
 def bio(
@@ -578,8 +605,8 @@ def bio(
     :return: a ``tuple`` of 4 objects
 
       1. ``dict`` of identifiers that should be deprecated
-      2. ``generator`` of shared statements that should be referenced
-      3. ``generator`` of statements that should be added
+      2. ``generator`` of statements that should be added
+      3. ``generator`` of shared statements that should be referenced
       4. ``dict`` of biographical data gathered from Wikidata
 
     """
@@ -589,7 +616,7 @@ def bio(
     if target_bio is None:
         return None, None, None, None
 
-    deprecate, reference, add = defaultdict(set), defaultdict(set), defaultdict(set)
+    deprecate, add, reference = defaultdict(set), defaultdict(set), defaultdict(set)
 
     # Wikidata side
     if wd_cache is None:
@@ -608,10 +635,10 @@ def bio(
     _validate(
         keys.BIODATA,
         wd_bio, target_bio,
-        deprecate, reference, add
+        deprecate, add, reference
     )
 
-    return deprecate, _bio_statements_generator(reference), _bio_statements_generator(add), wd_bio
+    return deprecate, _bio_statements_generator(add), _bio_statements_generator(reference), wd_bio
 
 
 def _apply_url_blacklist(url_statements):
@@ -641,7 +668,7 @@ def _bio_statements_generator(stmts_dict):
             yield qid, pid, value, tid
 
 
-def _validate(criterion, wd, target_generator, deprecate, reference, add):
+def _validate(criterion, wd, target_generator, deprecate, add, reference):
     LOGGER.info('Starting check against target %s ...', criterion)
     target = _consume_target_generator(target_generator)
 
@@ -713,12 +740,12 @@ def _validate(criterion, wd, target_generator, deprecate, reference, add):
 
     LOGGER.info(
         'Check against target %s completed: %d IDs to be deprecated, '
-        '%d Wikidata items with shared statements to be referenced, ',
         '%d Wikidata items with statements to be added',
+        '%d Wikidata items with shared statements to be referenced, ',
         criterion,
         len(deprecate),
-        len(reference),
         len(add),
+        len(reference),
     )
 
 
@@ -884,9 +911,9 @@ def _dump_csv_output(data, outpath, log_msg_subject):
         with open(outpath, 'w') as ids_out:
             writer = csv.writer(ids_out)
             writer.writerows(data)
-        LOGGER.info('%s to be added dumped to %s', log_msg_subject, outpath)
+        LOGGER.info('%s dumped to %s', log_msg_subject, outpath)
     else:
-        LOGGER.info("No %s to be added, won't dump to file", log_msg_subject)
+        LOGGER.info("No %s, won't dump to file", log_msg_subject)
 
 
 def _consume_target_generator(target_generator):
