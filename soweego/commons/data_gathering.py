@@ -527,7 +527,7 @@ def extract_ids_from_urls(to_be_added, ext_id_pids_to_urls):
                 ext_ids_to_add.append((qid, pid, ext_id, tid,))
             else:
                 urls_to_add.append(
-                    (qid, vocabulary.DESCRIBED_AT_URL, url, tid,)
+                    (qid, vocabulary.EXACT_MATCH, url, tid,)
                 )
     return (
         ext_ids_to_add,

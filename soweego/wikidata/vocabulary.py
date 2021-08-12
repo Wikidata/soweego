@@ -53,6 +53,9 @@ FACEBOOK_PID = 'P2013'
 # Widely used generic property to hold URLs
 DESCRIBED_AT_URL = 'P973'
 OFFICIAL_WEBSITE = 'P856'
+# See BrokenSegue's comment at
+# https://www.wikidata.org/wiki/Wikidata:Project_chat/Archive/2021/08#URLs_statistics_for_Discogs_(Q504063)_and_MusicBrainz_(Q14005)
+EXACT_MATCH = 'P2888'
 
 # Class QID of supported entities
 # People
