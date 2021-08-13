@@ -10,6 +10,7 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2021, Hjfocs'
 
 import csv
+import gzip
 import json
 import logging
 import os
@@ -38,8 +39,10 @@ DEAD_IDS_FNAME = '{catalog}_{entity}_dead_ids.json'
 # For `links_cli`
 EXT_IDS_FNAME = '{catalog}_{entity}_external_ids_to_be_{task}.csv'
 URLS_FNAME = '{catalog}_{entity}_urls_to_be_{task}.csv'
+WD_URLS_FNAME = 'wikidata_urls_for_{catalog}_{entity}.txt.gz'
 # For `bio_cli`
 BIO_STATEMENTS_TO_BE_ADDED_FNAME = '{catalog}_{entity}_bio_statements_to_be_added.csv'
+WD_STATEMENTS_FNAME = 'wikidata_statements_for_{catalog}_{entity}.csv.gz'
 
 
 @click.command()
@@ -168,7 +171,7 @@ def links_cli(
 ):
     """Validate identifiers against links.
 
-    Dump 5 output files:
+    Dump 6 output files:
 
     1. catalog IDs to be deprecated. JSON format:
     {catalog_ID: [list of QIDs]}
@@ -182,6 +185,9 @@ def links_cli(
     4. third-party IDs to be referenced. Same format as file #2
 
     5. URLs to be referenced. Same format as file #3
+
+    6. URLs found in Wikidata but not in the target catalog.
+    GZIP text format, one URL per line
 
     You can pass the '-u' flag to upload the output to Wikidata.
 
@@ -214,6 +220,11 @@ def links_cli(
             catalog=catalog, entity=entity, task='referenced'
         )
     )
+    wd_urls_path = os.path.join(
+        dir_io, WD_URLS_FNAME.format(
+            catalog=catalog, entity=entity
+        )
+    )
     wd_cache_path = os.path.join(
         dir_io, WD_CACHE_FNAME.format(
             catalog=catalog, entity=entity, criterion=criterion
@@ -230,6 +241,7 @@ def links_cli(
             catalog, entity, blacklist, wd_cache=wd_cache
         )
     else:
+        # FIXME add `wd_urls` arg
         deprecate, add_ext_ids, add_urls, ref_ext_ids, ref_urls, wd_cache = links(
             catalog, entity, blacklist
         )
@@ -244,6 +256,8 @@ def links_cli(
     _dump_csv_output(add_urls, add_urls_path, 'URLs to be added')
     _dump_csv_output(ref_ext_ids, ref_ext_ids_path, 'shared third-party IDs to be referenced')
     _dump_csv_output(ref_urls, ref_urls_path, 'shared URLs to be referenced')
+    with gzip.open(wd_urls_path, 'wt') as gzout:
+        gzout.writelines([url + '\n' for url in wd_urls])
 
     # Dump Wikidata cache
     if dump_wikidata:
