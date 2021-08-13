@@ -99,14 +99,6 @@ def dead_ids_cli(catalog, entity, deprecate, sandbox, dump_wikidata, dir_io):
     else:
         dead, wd_cache = dead_ids(catalog, entity)
 
-    # Dump Wikidata cache
-    if dump_wikidata:
-        with open(wd_cache_path, 'wb') as cout:
-            pickle.dump(wd_cache, cout)
-        LOGGER.info(
-            'Identifiers gathered from Wikidata dumped to %s', wd_cache_path
-        )
-
     # Dump dead ids
     with open(dead_ids_path, 'w') as fout:
         # Sets are not serializable to JSON, so cast them to lists
@@ -115,8 +107,20 @@ def dead_ids_cli(catalog, entity, deprecate, sandbox, dump_wikidata, dir_io):
             fout,
             indent=2,
         )
-
     LOGGER.info('Dead identifiers dumped to %s', dead_ids_path)
+
+    # Dump Wikidata cache
+    if dump_wikidata:
+        try:
+            with open(wd_cache_path, 'wb') as cout:
+                # Using the highest protocol available for the current Python
+                # version should be the most efficient solution
+                pickle.dump(wd_cache, cout, protocol=pickle.HIGHEST_PROTOCOL)
+            LOGGER.info(
+                'Identifiers gathered from Wikidata dumped to %s', wd_cache_path
+            )
+        except MemoryError:
+            LOGGER.warning('Could not pickle the Wikidata cache: memory error')
 
     # Deprecate dead ids in Wikidata
     if deprecate:
@@ -234,18 +238,25 @@ def links_cli(
     if deprecate is None:
         return
 
-    # Dump Wikidata cache
-    if dump_wikidata:
-        with open(wd_cache_path, 'wb') as cout:
-            pickle.dump(wd_cache, cout)
-        LOGGER.info('URLs gathered from Wikidata dumped to %s', wd_cache_path)
-
     # Dump output files
     _dump_deprecated(deprecate, deprecate_path)
     _dump_csv_output(add_ext_ids, add_ext_ids_path, 'third-party IDs to be added')
     _dump_csv_output(add_urls, add_urls_path, 'URLs to be added')
     _dump_csv_output(ref_ext_ids, ref_ext_ids_path, 'shared third-party IDs to be referenced')
     _dump_csv_output(ref_urls, ref_urls_path, 'shared URLs to be referenced')
+
+    # Dump Wikidata cache
+    if dump_wikidata:
+        try:
+            with open(wd_cache_path, 'wb') as cout:
+                # Using the highest protocol available for the current Python
+                # version should be the most efficient solution
+                pickle.dump(wd_cache, cout, protocol=pickle.HIGHEST_PROTOCOL)
+            LOGGER.info(
+                'URLs gathered from Wikidata dumped to %s', wd_cache_path
+            )
+        except MemoryError:
+            LOGGER.warning('Could not pickle the Wikidata cache: memory error')
 
     # Upload the output to Wikidata
     if upload:
@@ -356,19 +367,23 @@ def bio_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
     if deprecate is None:
         return
 
-    # Dump Wikidata cache
-    if dump_wikidata:
-        with open(wd_cache_path, 'wb') as cout:
-            pickle.dump(wd_cache, cout)
-        LOGGER.info(
-            'Biographical data gathered from Wikidata dumped to %s',
-            wd_cache_path
-        )
-
     # Dump output files
     _dump_deprecated(deprecate, deprecate_path)
     _dump_csv_output(add, add_path, 'statements to be added')
     _dump_csv_output(reference, ref_path, 'shared statements to be referenced')
+
+    # Dump Wikidata cache
+    if dump_wikidata:
+        try:
+            with open(wd_cache_path, 'wb') as cout:
+                # Using the highest protocol available for the current Python
+                # version should be the most efficient solution
+                pickle.dump(wd_cache, cout, protocol=pickle.HIGHEST_PROTOCOL)
+            LOGGER.info(
+                'Biographical data  gathered from Wikidata dumped to %s', wd_cache_path
+            )
+        except MemoryError:
+            LOGGER.warning('Could not pickle the Wikidata cache: memory error')
 
     # Upload the output to Wikidata:
     # deprecate, add, reference
@@ -740,8 +755,8 @@ def _validate(criterion, wd, target_generator, deprecate, add, reference):
 
     LOGGER.info(
         'Check against target %s completed: %d IDs to be deprecated, '
-        '%d Wikidata items with statements to be added',
-        '%d Wikidata items with shared statements to be referenced, ',
+        '%d Wikidata items with statements to be added, ',
+        '%d Wikidata items with shared statements to be referenced',
         criterion,
         len(deprecate),
         len(add),
