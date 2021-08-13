@@ -5,15 +5,15 @@
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
-__version__ = '1.0'
+__version__ = '2.0'
 __license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2018, Hjfocs'
+__copyright__ = 'Copyleft 2021, Hjfocs'
 
 import click
 
-from soweego.importer.importer import check_links_cli, import_cli
+from soweego.importer.importer import check_urls_cli, import_cli
 
-CLI_COMMANDS = {'import': import_cli, 'check_urls': check_links_cli}
+CLI_COMMANDS = {'import': import_cli, 'check_urls': check_urls_cli}
 
 
 @click.group(name='importer', commands=CLI_COMMANDS)
