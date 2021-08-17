@@ -830,7 +830,7 @@ def _compute_comparison_sets(criterion, wd_data, target_data):
     elif criterion == keys.BIODATA:
         # `wd_data` has either couples or triples: couples are dates
         wd_dates = set(filter(lambda x: len(x) == 2, wd_data))
-        # No cast to `set` because `wd_data` triples hold sets themselves
+        # Don't cast to set: `wd_data` triples hold sets themselves
         wd_other = list(filter(lambda x: len(x) == 3, wd_data))
         # In `target_data` we look for relevant date PIDs
         target_dates = set(filter(
@@ -865,6 +865,10 @@ def _compare(what, wd, target):
     # the same property
     wd_matches, target_matches = [], []
 
+    # Filter missing target values (doesn't apply to dates)
+    if what == 'other':
+        target = filter(lambda x: x[1] is not None, target)
+
     for i, wd_elem in enumerate(wd):
         for j, t_elem in enumerate(target):
             # Don't compare when already matched
@@ -875,19 +879,18 @@ def _compare(what, wd, target):
             if wd_elem[0] != t_elem[0]:
                 continue
 
-            # Skip unexpected `None` values
-            if None in (wd_elem[1], t_elem[1]):
-                LOGGER.warning(
-                    'Skipping unexpected %s pair with missing value(s)',
-                    (wd_elem, t_elem),
-                )
-                continue
-
             inputs = (
                 shared, extra, wd_matches, target_matches,
                 i, wd_elem, j, t_elem
             )
             if what == 'dates':
+                # Missing dates are unexpected: skip but warn
+                if None in (wd_elem[1], t_elem[1]):
+                    LOGGER.warning(
+                        'Skipping unexpected %s date pair with missing value(s)',
+                        (wd_elem, t_elem),
+                    )
+                    continue
                 _compare_dates(inputs)
             elif what == 'other':
                 _compare_other(inputs)
