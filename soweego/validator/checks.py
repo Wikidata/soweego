@@ -33,15 +33,14 @@ LOGGER = logging.getLogger(__name__)
 WD_CACHE_FNAME = '{catalog}_{entity}_{criterion}_wd_cache.pkl'
 IDS_TO_BE_DEPRECATED_FNAME = '{catalog}_{entity}_{criterion}_ids_to_be_deprecated.json'
 SHARED_STATEMENTS_FNAME = '{catalog}_{entity}_{criterion}_shared_statements.csv'
+WD_STATEMENTS_FNAME = 'wikidata_{criterion}_for_{catalog}_{entity}.csv'
 # For `dead_ids_cli`
 DEAD_IDS_FNAME = '{catalog}_{entity}_dead_ids.json'
 # For `links_cli`
 EXT_IDS_FNAME = '{catalog}_{entity}_external_ids_to_be_{task}.csv'
 URLS_FNAME = '{catalog}_{entity}_urls_to_be_{task}.csv'
-WD_URLS_FNAME = 'wikidata_urls_for_{catalog}_{entity}.txt.gz'
 # For `bio_cli`
 BIO_STATEMENTS_TO_BE_ADDED_FNAME = '{catalog}_{entity}_bio_statements_to_be_added.csv'
-WD_STATEMENTS_FNAME = 'wikidata_statements_for_{catalog}_{entity}.csv.gz'
 
 
 @click.command()
@@ -222,8 +221,8 @@ def links_cli(
         )
     )
     wd_urls_path = os.path.join(
-        dir_io, WD_URLS_FNAME.format(
-            catalog=catalog, entity=entity
+        dir_io, WD_STATEMENTS_FNAME.format(
+            criterion=criterion, catalog=catalog, entity=entity
         )
     )
     wd_cache_path = os.path.join(
@@ -366,7 +365,7 @@ def bio_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
     )
     wd_stmts_path = os.path.join(
         dir_io, WD_STATEMENTS_FNAME.format(
-            catalog=catalog, entity=entity
+            criterion=criterion, catalog=catalog, entity=entity
         )
     )
     wd_cache_path = os.path.join(
@@ -406,7 +405,7 @@ def bio_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
                 # version should be the most efficient solution
                 pickle.dump(wd_cache, cout, protocol=pickle.HIGHEST_PROTOCOL)
             LOGGER.info(
-                'Biographical data  gathered from Wikidata dumped to %s', wd_cache_path
+                'Biographical data gathered from Wikidata dumped to %s', wd_cache_path
             )
         except MemoryError:
             LOGGER.warning('Could not pickle the Wikidata cache: memory error')
