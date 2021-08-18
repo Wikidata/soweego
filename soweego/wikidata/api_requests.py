@@ -10,7 +10,7 @@ import pickle
 from collections import defaultdict
 from functools import lru_cache, partial
 from multiprocessing.pool import Pool
-from typing import Dict, Iterator, List, Set, TextIO, Tuple, Union
+from typing import Dict, Iterator, List, Optional, Set, TextIO, Tuple, Union
 from urllib.parse import urlunsplit
 
 import lxml.html
@@ -39,13 +39,13 @@ URL_BLACKLIST_PAGE = 'Wikidata:Primary_sources_tool/URL_blacklist'
 BUCKET_SIZE = 500
 
 
-def resolve_qid(term: str, language='en') -> str:
+def resolve_qid(term: str, language='en') -> Optional[str]:
     """Try to resolve a QID given a search term, in a *feeling lucky* way.
 
     :param term: a search term
     :param language: (optional) search in the given language code.
       Default: ``en``.
-    :return: the QID of the first result
+    :return: the QID of the first result, or ``None`` in case of no result
     """
     params = {
         'action': 'wbsearchentities',
