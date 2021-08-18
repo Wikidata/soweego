@@ -15,6 +15,7 @@ import logging
 import os
 import pickle
 from collections import defaultdict
+from re import match
 from typing import DefaultDict, Dict, Iterator, Tuple, Union
 
 import click
@@ -32,6 +33,7 @@ LOGGER = logging.getLogger(__name__)
 # For all CLIs
 WD_CACHE_FNAME = '{catalog}_{entity}_{criterion}_wd_cache.pkl'
 IDS_TO_BE_DEPRECATED_FNAME = '{catalog}_{entity}_{criterion}_ids_to_be_deprecated.json'
+# For `links_cli` and `bio_cli`
 SHARED_STATEMENTS_FNAME = '{catalog}_{entity}_{criterion}_shared_statements.csv'
 WD_STATEMENTS_FNAME = 'wikidata_{criterion}_for_{catalog}_{entity}.csv'
 # For `dead_ids_cli`
@@ -41,6 +43,10 @@ EXT_IDS_FNAME = '{catalog}_{entity}_external_ids_to_be_{task}.csv'
 URLS_FNAME = '{catalog}_{entity}_urls_to_be_{task}.csv'
 # For `bio_cli`
 BIO_STATEMENTS_TO_BE_ADDED_FNAME = '{catalog}_{entity}_bio_statements_to_be_added.csv'
+
+# URL prefixes for catalog providers
+QID_PREFIX = 'https://www.wikidata.org/wiki/'
+PID_PREFIX = QID_PREFIX + 'Property:'
 
 
 @click.command()
@@ -187,7 +193,7 @@ def links_cli(
     Same format as file #3
 
     6. URLs found in Wikidata but not in the target catalog.
-    CSV format: URL,QID
+    CSV format: catalog_ID,URL,QID_URL
 
     You can pass the '-u' flag to upload the output to Wikidata.
 
@@ -343,7 +349,7 @@ def bio_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
     Same format as file #2
 
     4. statements found in Wikidata but not in the target catalog.
-    CSV format: catalog_ID,PID,value,QID
+    CSV format: catalog_ID,PID_URL,value,QID_URL
 
     You can pass the '-u' flag to upload the output to Wikidata.
     """
@@ -599,10 +605,11 @@ def links(
     )
 
     # Wikidata-only URLs: convert into a list of statements
+    # with complete Wikidata item URLs
     wd_only_urls = []
     for (qid, tid), urls in wd_only.items():
         for url in urls:
-            wd_only_urls.append((tid, url, qid))
+            wd_only_urls.append((tid, url, QID_PREFIX + qid))
 
     LOGGER.info(
         'Validation completed. Target: %s %s. '
@@ -701,7 +708,7 @@ def bio(
         deprecate,
         _bio_statements_generator(add),
         _bio_statements_generator(reference),
-        _bio_statements_generator(wd_only, qid_first=False),
+        _bio_statements_generator(wd_only, for_catalogs=True),
         wd_bio
     )
 
@@ -727,13 +734,15 @@ def _apply_url_blacklist(url_statements):
     return url_statements
 
 
-def _bio_statements_generator(stmts_dict, qid_first=True):
+def _bio_statements_generator(stmts_dict, for_catalogs=False):
     for (qid, tid), values in stmts_dict.items():
         for pid, value in values:
-            if qid_first:
+            if not for_catalogs:
                 yield qid, pid, value, tid
             else:
-                yield tid, pid, value, qid
+                if match(constants.QID_REGEX, value):
+                    value = QID_PREFIX + value
+                yield tid, PID_PREFIX + pid, value, QID_PREFIX + qid
 
 
 def _validate(criterion, wd, target_generator, deprecate, add, reference, wd_only):
