@@ -2,17 +2,17 @@
 # -*- coding: utf-8 -*-
 
 """A `Wikidata bot <https://www.wikidata.org/wiki/Wikidata:Bots>`_ that adds, deletes, or deprecates referenced statements.
-Here are typical output examples.
+Here are typical output examples:
 
 :func:`add_identifiers`
   | *Claim:* `Joey Ramone <https://www.wikidata.org/wiki/Q312387>`_, `Discogs artist ID <https://www.wikidata.org/wiki/Property:P1953>`_, `264375 <https://www.discogs.com/artist/264375>`_
-  | *Reference:* `stated in <https://www.wikidata.org/wiki/Property:P248>`_, `Discogs <https://www.wikidata.org/wiki/Q504063>`_), (`retrieved <https://www.wikidata.org/wiki/Property:P813>`_, TIMESTAMP
+  | *Reference:* (`based on heuristic <https://www.wikidata.org/wiki/Property:P887>`_, `artificial intelligence <https://www.wikidata.org/wiki/Q11660>`_), (`retrieved <https://www.wikidata.org/wiki/Property:P813>`_, TIMESTAMP)
 :func:`add_people_statements`
   | *Claim:* `Joey Ramone <https://www.wikidata.org/wiki/Q312387>`_, `member of <https://www.wikidata.org/wiki/Property:P463>`_, `Ramones <https://www.wikidata.org/wiki/Q483407>`_
-  | *Reference:* `stated in <https://www.wikidata.org/wiki/Property:P248>`_, `Discogs <https://www.wikidata.org/wiki/Q504063>`_), (`retrieved <https://www.wikidata.org/wiki/Property:P813>`_, TIMESTAMP
+  | *Reference:* (`based on heuristic <https://www.wikidata.org/wiki/Property:P887>`_, `record linkage <https://www.wikidata.org/wiki/Q1266546>`_),`(stated in <https://www.wikidata.org/wiki/Property:P248>`_, `Discogs <https://www.wikidata.org/wiki/Q504063>`_), (`Discogs artist ID <https://www.wikidata.org/wiki/Property:P1953>`_, `264375 <https://www.discogs.com/artist/264375>`_), (`retrieved <https://www.wikidata.org/wiki/Property:P813>`_, TIMESTAMP)
 :func:`add_works_statements`
   | *Claim:* `Leave Home <https://www.wikidata.org/wiki/Q1346637>`_, `performer <https://www.wikidata.org/wiki/Property:P175>`_, `Ramones <https://www.wikidata.org/wiki/Q483407>`_
-  | *Reference:* `stated in <https://www.wikidata.org/wiki/Property:P248>`_, `Discogs <https://www.wikidata.org/wiki/Q504063>`_), (`Discogs artist ID <https://www.wikidata.org/wiki/Property:P1953>`_, `264375 <https://www.discogs.com/artist/264375>`_), (`retrieved <https://www.wikidata.org/wiki/Property:P813>`_, TIMESTAMP
+  | *Reference:* (`based on heuristic <https://www.wikidata.org/wiki/Property:P887>`_, `record linkage <https://www.wikidata.org/wiki/Q1266546>`_),`(stated in <https://www.wikidata.org/wiki/Property:P248>`_, `Discogs <https://www.wikidata.org/wiki/Q504063>`_), (`Discogs artist ID <https://www.wikidata.org/wiki/Property:P1953>`_, `264375 <https://www.discogs.com/artist/264375>`_), (`retrieved <https://www.wikidata.org/wiki/Property:P813>`_, TIMESTAMP)
 :func:`delete_or_deprecate_identifiers`
   deletes or deprecates identifier statements.
 
@@ -20,9 +20,9 @@ Here are typical output examples.
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
-__version__ = '1.0'
+__version__ = '2.0'
 __license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2018, Hjfocs'
+__copyright__ = 'Copyleft 2021, Hjfocs'
 
 import csv
 import json
@@ -46,6 +46,38 @@ LOGGER = logging.getLogger(__name__)
 SITE = pywikibot.Site('wikidata', 'wikidata')
 REPO = SITE.data_repository()
 
+#######################
+# BEGIN: Edit summaries
+#######################
+# Approved task 1: identifiers addition
+# https://www.wikidata.org/wiki/Wikidata:Requests_for_permissions/Bot/Soweego_bot
+IDENTIFIERS_SUMMARY = (
+    '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot|bot task 1]] '
+    'with P887 reference, '
+    'see [[Topic:V6cc1thgo09otfw5#flow-post-v7i05rpdja1b3wzk|discussion]]'
+)
+
+# Approved task 2: URLs validation, criterion 2
+# https://www.wikidata.org/wiki/Wikidata:Requests_for_permissions/Bot/Soweego_bot_2
+LINKS_VALIDATION_SUMMARY = (
+    '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot_2|bot task 2]] '
+    'with extra P887 and catalog ID reference'
+)
+
+# Approved task 3: works by people
+# https://www.wikidata.org/wiki/Wikidata:Requests_for_permissions/Bot/Soweego_bot_3
+WORKS_SUMMARY = (
+    '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot_3|bot task 3]] '
+    'with extra P887 reference'
+)
+
+# Biographical data validation, criterion 3
+# TODO add wikilink once the bot task gets approved
+BIO_VALIDATION_SUMMARY = 'bot task 4'
+#####################
+# END: Edit summaries
+#####################
+
 # Time stamp object for the (retrieved, TIMESTAMP) reference
 TODAY = date.today()
 TIMESTAMP = pywikibot.WbTime(
@@ -55,26 +87,6 @@ TIMESTAMP = pywikibot.WbTime(
     day=TODAY.day,
     precision='day',
 )
-
-###
-# BEGIN: Edit summaries
-###
-# Approved task 1: identifiers addition
-# https://www.wikidata.org/wiki/Wikidata:Requests_for_permissions/Bot/Soweego_bot
-IDENTIFIERS_SUMMARY = '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot|bot task 1]] with P887 reference, see [[Topic:V6cc1thgo09otfw5#flow-post-v7i05rpdja1b3wzk|discussion]]'
-
-# Approved task 2: URL-based validation, criterion 2
-# https://www.wikidata.org/wiki/Wikidata:Requests_for_permissions/Bot/Soweego_bot_2
-URL_VALIDATION_SUMMARY = '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot_2|bot task 2]] with extra P887 and catalog ID reference'
-
-# Approved task 3: works by people
-# https://www.wikidata.org/wiki/Wikidata:Requests_for_permissions/Bot/Soweego_bot_3
-WORKS_SUMMARY = (
-    '[[Wikidata:Requests_for_permissions/Bot/Soweego_bot_3|bot task 3]]'
-)
-###
-# END: Edit summaries
-###
 
 # We also support Twitter
 SUPPORTED_TARGETS = target_database.supported_targets() ^ {TWITTER}
@@ -90,7 +102,7 @@ SUPPORTED_TARGETS = target_database.supported_targets() ^ {TWITTER}
     '-s',
     '--sandbox',
     is_flag=True,
-    help='Perform all edits on the Wikidata sandbox item Q4115189.',
+    help=f'Perform all edits on the Wikidata sandbox item {vocabulary.SANDBOX_2}.',
 )
 def delete_cli(catalog, entity, invalid_identifiers, sandbox):
     """Delete invalid identifiers.
@@ -99,7 +111,10 @@ def delete_cli(catalog, entity, invalid_identifiers, sandbox):
     Format: { catalog_identifier: [ list of QIDs ] }
     """
     if sandbox:
-        LOGGER.info('Running on the Wikidata sandbox item ...')
+        LOGGER.info(
+            'Running on the Wikidata sandbox item %s ...',
+            vocabulary.SANDBOX_2
+        )
 
     delete_or_deprecate_identifiers(
         'delete', catalog, entity, json.load(invalid_identifiers), sandbox
@@ -116,7 +131,7 @@ def delete_cli(catalog, entity, invalid_identifiers, sandbox):
     '-s',
     '--sandbox',
     is_flag=True,
-    help='Perform all edits on the Wikidata sandbox item Q4115189.',
+    help=f'Perform all edits on the Wikidata sandbox item {vocabulary.SANDBOX_2}.',
 )
 def deprecate_cli(catalog, entity, invalid_identifiers, sandbox):
     """Deprecate invalid identifiers.
@@ -125,7 +140,10 @@ def deprecate_cli(catalog, entity, invalid_identifiers, sandbox):
     Format: { catalog_identifier: [ list of QIDs ] }
     """
     if sandbox:
-        LOGGER.info('Running on the Wikidata sandbox item ...')
+        LOGGER.info(
+            'Running on the Wikidata sandbox item %s ...',
+            vocabulary.SANDBOX_2
+        )
 
     delete_or_deprecate_identifiers(
         'deprecate', catalog, entity, json.load(invalid_identifiers), sandbox
@@ -142,7 +160,7 @@ def deprecate_cli(catalog, entity, invalid_identifiers, sandbox):
     '-s',
     '--sandbox',
     is_flag=True,
-    help='Perform all edits on the Wikidata sandbox item Q4115189.',
+    help=f'Perform all edits on the Wikidata sandbox item {vocabulary.SANDBOX_2}.',
 )
 def identifiers_cli(catalog, entity, identifiers, sandbox):
     """Add identifiers.
@@ -162,12 +180,8 @@ def identifiers_cli(catalog, entity, identifiers, sandbox):
 
     claim (Richard Hell, Discogs artist ID, 266995)
 
-    reference (based on heuristic, artificial intelligence),
-              (retrieved, today)
+    reference (based on heuristic, artificial intelligence), (retrieved, today)
     """
-    if sandbox:
-        LOGGER.info('Running on the Wikidata sandbox item ...')
-
     add_identifiers(json.load(identifiers), catalog, entity, sandbox)
 
 
@@ -175,12 +189,19 @@ def identifiers_cli(catalog, entity, identifiers, sandbox):
 @click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
 @click.argument('statements', type=click.File())
 @click.option(
+    '-c',
+    '--criterion',
+    type=click.Choice(('links', 'bio')),
+    help='Validation criterion used to generate STATEMENTS. '
+         'Same as the command passed to `python -m soweego sync`'
+)
+@click.option(
     '-s',
     '--sandbox',
     is_flag=True,
     help=f'Perform all edits on the Wikidata sandbox item {vocabulary.SANDBOX_2}.',
 )
-def people_cli(catalog, statements, sandbox):
+def people_cli(catalog, statements, criterion, sandbox):
     """Add statements to Wikidata people.
 
     STATEMENTS must be a CSV file.
@@ -198,42 +219,37 @@ def people_cli(catalog, statements, sandbox):
 
     claim (Joey Ramone, member of, Ramones)
 
-    reference (based on heuristic, artificial intelligence),
-              (stated in, Discogs),
-              (Discogs artist ID, 264375),
-              (retrieved, today)
+    reference (based on heuristic, record linkage), (stated in, Discogs), (Discogs artist ID, 264375), (retrieved, today)
     """
+    sandbox_item = vocabulary.SANDBOX_2
+    # See https://www.wikidata.org/wiki/Wikidata:Project_chat/Archive/2021/07#URLs_statistics_for_Discogs_(Q504063)_and_MusicBrainz_(Q14005)
+    heuristic = vocabulary.RECORD_LINKAGE
     catalog_qid = target_database.get_catalog_qid(catalog)
-    person_pid = target_database.get_person_pid(catalog)
+    catalog_pid = target_database.get_person_pid(catalog)
+
+    if criterion == 'links':
+        edit_summary = LINKS_VALIDATION_SUMMARY
+    elif criterion == 'bio':
+        edit_summary = BIO_VALIDATION_SUMMARY
+    else:
+        edit_summary = None
 
     if sandbox:
         LOGGER.info(
-            'Running on the Wikidata sandbox item %s ...', vocabulary.SANDBOX_2
+            'Running on the Wikidata sandbox item %s ...', sandbox_item
         )
 
     stmt_reader = csv.reader(statements)
-    for statement in stmt_reader:
-        person, predicate, value, person_tid = statement
-        if sandbox:
-            _add_or_reference(
-                vocabulary.SANDBOX_2,
-                predicate,
-                value,
-                catalog_qid,
-                person_pid,
-                person_tid,
-                summary=URL_VALIDATION_SUMMARY,
-            )
-        else:
-            _add_or_reference(
-                person,
-                predicate,
-                value,
-                catalog_qid,
-                person_pid,
-                person_tid,
-                summary=URL_VALIDATION_SUMMARY,
-            )
+    for person, predicate, value, catalog_id in stmt_reader:
+        subject = person if not sandbox else sandbox_item
+        _add_or_reference(
+            (subject, predicate, value),
+            heuristic,
+            catalog_qid=catalog_qid,
+            catalog_pid=catalog_pid,
+            catalog_id=catalog_id,
+            edit_summary=edit_summary
+        )
 
 
 @click.command()
@@ -243,7 +259,7 @@ def people_cli(catalog, statements, sandbox):
     '-s',
     '--sandbox',
     is_flag=True,
-    help='Perform all edits on the Wikidata sandbox item Q4115189.',
+    help=f'Perform all edits on the Wikidata sandbox item {vocabulary.SANDBOX_2}.',
 )
 def works_cli(catalog, statements, sandbox):
     """Add statements to Wikidata works.
@@ -263,37 +279,25 @@ def works_cli(catalog, statements, sandbox):
 
     claim (C'mon Everybody, performer, Eddie Cochran)
 
-    reference (based on heuristic, artificial intelligence),
-              (Discogs artist ID, 139984), (retrieved, today)
+    reference (based on heuristic, record linkage), (stated in, Discogs), (Discogs artist ID, 139984), (retrieved, today)
     """
+    sandbox_item = vocabulary.SANDBOX_2
+    catalog_qid = target_database.get_catalog_qid(catalog)
     is_imdb, person_pid = _get_works_args(catalog)
+    heuristic = vocabulary.RECORD_LINKAGE
 
     if sandbox:
-        LOGGER.info('Running on the Wikidata sandbox item ...')
+        LOGGER.info('Running on the Wikidata sandbox item %s ...', sandbox_item)
 
     stmt_reader = csv.reader(statements)
-    for statement in stmt_reader:
-        work, predicate, person, person_tid = statement
-        if sandbox:
-            _add_or_reference_works(
-                vocabulary.SANDBOX_1,
-                predicate,
-                person,
-                person_pid,
-                person_tid,
-                is_imdb=is_imdb,
-                summary=WORKS_SUMMARY,
-            )
-        else:
-            _add_or_reference_works(
-                work,
-                predicate,
-                person,
-                person_pid,
-                person_tid,
-                is_imdb=is_imdb,
-                summary=WORKS_SUMMARY,
-            )
+    for work, predicate, person, person_id in stmt_reader:
+        subject = work if not sandbox else sandbox_item
+        _add_or_reference_works(
+            (subject, predicate, person),
+            heuristic,
+            catalog_qid, person_pid, person_id,
+            is_imdb=is_imdb, edit_summary=WORKS_SUMMARY
+        )
 
 
 def add_identifiers(
@@ -308,31 +312,26 @@ def add_identifiers(
       'writer', 'audiovisual_work', 'musical_work'}``.
       A supported entity
     :param sandbox: whether to perform edits on the
-      `Wikidata sandbox <https://www.wikidata.org/wiki/Q4115189>`_ item
+      `Wikidata sandbox 2 <https://www.wikidata.org/wiki/Q13406268>`_ item
     """
+    sandbox_item = vocabulary.SANDBOX_2
     catalog_pid = target_database.get_catalog_pid(catalog, entity)
+    heuristic = vocabulary.ARTIFICIAL_INTELLIGENCE
+
+    if sandbox:
+        LOGGER.info('Running on the Wikidata sandbox item %s ...', sandbox_item)
+
     for qid, tid in identifiers.items():
         LOGGER.info('Processing %s match: %s -> %s', catalog, qid, tid)
-        if sandbox:
-            LOGGER.debug(
-                'Using Wikidata sandbox item %s as subject, instead of %s',
-                vocabulary.SANDBOX_1,
-                qid,
-            )
-            _add_or_reference(
-                vocabulary.SANDBOX_1,
-                catalog_pid,
-                tid,
-                summary=IDENTIFIERS_SUMMARY,
-            )
-        else:
-            _add_or_reference(
-                qid, catalog_pid, tid, summary=IDENTIFIERS_SUMMARY
-            )
+        subject = qid if not sandbox else sandbox_item
+        _add_or_reference(
+            (subject, catalog_pid, tid,),
+            heuristic,
+            edit_summary=IDENTIFIERS_SUMMARY)
 
 
 def add_people_statements(
-    catalog: str, statements: Iterable, sandbox: bool
+    catalog: str, statements: Iterable, criterion: str, sandbox: bool
 ) -> None:
     """Add statements to existing Wikidata people.
 
@@ -340,40 +339,46 @@ def add_people_statements(
     as per :func:`soweego.validator.checks.links` and
     :func:`soweego.validator.checks.bio`.
 
-    :param statements: iterable of
-      (subject, predicate, value, target ID) tuples
     :param catalog: ``{'discogs', 'imdb', 'musicbrainz', 'twitter'}``.
       A supported catalog
+    :param statements: iterable of
+      (subject, predicate, value, catalog ID) tuples
+    :param criterion: ``{'links', 'bio'}``. A supported validation criterion
     :param sandbox: whether to perform edits on the
       `Wikidata sandbox <https://www.wikidata.org/wiki/Q13406268>`_ item
     """
+    if criterion == 'links':
+        edit_summary = LINKS_VALIDATION_SUMMARY
+    elif criterion == 'bio':
+        edit_summary = BIO_VALIDATION_SUMMARY
+    else:
+        raise ValueError(
+            f"Invalid criterion: '{criterion}'. "
+            "Please use either 'links' or 'bio'"
+        )
+
+    sandbox_item = vocabulary.SANDBOX_2
     catalog_qid = target_database.get_catalog_qid(catalog)
     person_pid = target_database.get_person_pid(catalog)
+    heuristic = vocabulary.RECORD_LINKAGE
 
-    for subject, predicate, value, person_tid in statements:
+    if sandbox:
+        LOGGER.info('Running on the Wikidata sandbox item %s ...', sandbox_item)
+
+    for subject, predicate, value, catalog_id in statements:
         LOGGER.info(
-            'Processing (%s, %s, %s) statement', subject, predicate, value
+            'Processing (%s, %s, %s, %s) statement ...',
+            subject, predicate, value, catalog_id
         )
-        if sandbox:
-            _add_or_reference(
-                vocabulary.SANDBOX_2,
-                predicate,
-                value,
-                catalog_qid,
-                person_pid,
-                person_tid,
-                summary=URL_VALIDATION_SUMMARY,
-            )
-        else:
-            _add_or_reference(
-                subject,
-                predicate,
-                value,
-                catalog_qid,
-                person_pid,
-                person_tid,
-                summary=URL_VALIDATION_SUMMARY,
-            )
+        actual_subject = subject if not sandbox else sandbox_item
+        _add_or_reference(
+            (actual_subject, predicate, value),
+            heuristic,
+            catalog_qid=catalog_qid,
+            catalog_pid=person_pid,
+            catalog_id=catalog_id,
+            edit_summary=edit_summary
+        )
 
 
 def add_works_statements(
@@ -391,32 +396,29 @@ def add_works_statements(
     :param sandbox: whether to perform edits on the
       `Wikidata sandbox <https://www.wikidata.org/wiki/Q4115189>`_ item
     """
+    sandbox_item = vocabulary.SANDBOX_2
+    catalog_qid = target_database.get_catalog_qid(catalog)
     is_imdb, person_pid = _get_works_args(catalog)
+    heuristic = vocabulary.RECORD_LINKAGE
 
-    for work, predicate, person, person_tid in statements:
+    if sandbox:
+        LOGGER.info('Running on the Wikidata sandbox item %s ...', sandbox_item)
+
+    for work, predicate, person, person_id in statements:
         LOGGER.info(
-            'Processing (%s, %s, %s) statement', work, predicate, person
+            'Processing (%s, %s, %s, %s) statement',
+            work, predicate, person, person_id
         )
-        if sandbox:
-            _add_or_reference_works(
-                vocabulary.SANDBOX_1,
-                predicate,
-                person,
-                person_pid,
-                person_tid,
-                is_imdb=is_imdb,
-                summary=WORKS_SUMMARY,
-            )
-        else:
-            _add_or_reference_works(
-                work,
-                predicate,
-                person,
-                person_pid,
-                person_tid,
-                is_imdb=is_imdb,
-                summary=WORKS_SUMMARY,
-            )
+        subject = work if not sandbox else sandbox_item
+        _add_or_reference_works(
+            (subject, predicate, person),
+            heuristic,
+            catalog_qid,
+            person_pid,
+            person_id,
+            is_imdb=is_imdb,
+            edit_summary=WORKS_SUMMARY
+        )
 
 
 def delete_or_deprecate_identifiers(
@@ -440,52 +442,40 @@ def delete_or_deprecate_identifiers(
       A supported entity
     :param invalid: a ``{invalid_catalog_identifier: [list of QIDs]}`` dictionary
     :param sandbox: whether to perform edits on the
-      `Wikidata sandbox <https://www.wikidata.org/wiki/Q4115189>`_ item
+      `Wikidata sandbox 2 <https://www.wikidata.org/wiki/Q13406268>`_ item
     """
+    sandbox_item = vocabulary.SANDBOX_2
     catalog_pid = target_database.get_catalog_pid(catalog, entity)
 
     for tid, qids in invalid.items():
         for qid in qids:
+            actual_qid = qid if not sandbox else sandbox_item
             LOGGER.info(
                 'Will %s %s identifier: %s -> %s', action, catalog, tid, qid
             )
-            if sandbox:
-                _delete_or_deprecate(
-                    action, vocabulary.SANDBOX_1, tid, catalog, catalog_pid
-                )
-            else:
-                _delete_or_deprecate(action, qid, tid, catalog, catalog_pid)
+            _delete_or_deprecate(action, actual_qid, tid, catalog, catalog_pid)
 
 
-def _add_or_reference_works(
-    work: str,
-    predicate: str,
-    person: str,
-    person_pid: str,
-    person_tid: str,
-    is_imdb=False,
-    summary=None,
-) -> None:
+def _add_or_reference_works(statement: tuple, heuristic: str, catalog_qid: str, catalog_pid: str, catalog_id: str,
+                            is_imdb=False, edit_summary=None) -> None:
+    work, predicate, person = statement
     # Parse value into an item in case of QID
     qid = match(QID_REGEX, person)
     if not qid:
         LOGGER.warning(
-            "%s doesn't look like a QID, won't try to add the (%s, %s, %s) statement",
-            person,
-            work,
-            predicate,
-            person,
+            "%s doesn't look like a QID, won't try to add the %s statement",
+            person, statement
         )
         return
-    person = pywikibot.ItemPage(REPO, qid.group())
+    person_item = pywikibot.ItemPage(REPO, qid.group())
 
     subject_item, claims = _essential_checks(
-        work,
-        predicate,
-        person,
-        person_pid=person_pid,
-        person_tid=person_tid,
-        summary=summary,
+        (work, predicate, person_item),
+        heuristic,
+        catalog_qid=catalog_qid,
+        catalog_pid=catalog_pid,
+        catalog_id=catalog_id,
+        edit_summary=edit_summary,
     )
     if None in (subject_item, claims):
         return
@@ -495,12 +485,12 @@ def _add_or_reference_works(
         for pred in vocabulary.MOVIE_PIDS:
             if _check_for_same_value(
                 claims,
-                work,
-                pred,
-                person,
-                person_pid=person_pid,
-                person_tid=person_tid,
-                summary=summary,
+                (work, pred, person_item),
+                heuristic,
+                catalog_qid=catalog_qid,
+                catalog_pid=catalog_pid,
+                catalog_id=catalog_id,
+                edit_summary=edit_summary
             ):
                 return
 
@@ -508,30 +498,25 @@ def _add_or_reference_works(
         claims,
         subject_item,
         predicate,
-        person,
-        person_pid=person_pid,
-        person_tid=person_tid,
-        summary=summary,
+        person_item,
+        heuristic,
+        catalog_qid=catalog_qid,
+        catalog_pid=catalog_pid,
+        catalog_id=catalog_id,
+        edit_summary=edit_summary,
     )
 
 
 def _add_or_reference(
-    subject: str,
-    predicate: str,
-    value: str,
-    catalog_qid: str,
-    person_pid: str,
-    person_tid: str,
-    summary=None,
+        statement, heuristic,
+        catalog_qid=None, catalog_pid=None, catalog_id=None,
+        edit_summary=None
 ) -> None:
+    subject, predicate, value = statement
     subject_item, claims = _essential_checks(
-        subject,
-        predicate,
-        value,
-        catalog_qid,
-        person_pid=person_pid,
-        person_tid=person_tid,
-        summary=summary,
+        statement, heuristic,
+        catalog_qid=catalog_qid, catalog_pid=catalog_pid, catalog_id=catalog_id,
+        edit_summary=edit_summary
     )
 
     if None in (subject_item, claims):
@@ -543,11 +528,12 @@ def _add_or_reference(
     # See https://www.wikidata.org/wiki/User_talk:Jura1#Thanks_for_your_feedback_on_User:Soweego_bot_task_2
     if _check_for_same_value(
         claims,
-        subject,
-        vocabulary.OFFICIAL_WEBSITE,
-        value,
-        catalog_qid,
-        summary=summary,
+        (subject, vocabulary.OFFICIAL_WEBSITE, value,),
+        heuristic,
+        edit_summary=edit_summary,
+        catalog_qid=catalog_qid,
+        catalog_pid=catalog_pid,
+        catalog_id=catalog_id
     ):
         return
 
@@ -563,11 +549,12 @@ def _add_or_reference(
         subject_item,
         predicate,
         value,
-        catalog_qid,
+        heuristic,
         case_insensitive=case_insensitive,
-        person_pid=person_pid,
-        person_tid=person_tid,
-        summary=summary,
+        catalog_qid=catalog_qid,
+        catalog_pid=catalog_pid,
+        catalog_id=catalog_id,
+        edit_summary=edit_summary
     )
 
 
@@ -576,11 +563,12 @@ def _handle_addition(
     subject_item,
     predicate,
     value,
-    catalog_qid,
+    heuristic,
     case_insensitive=False,
-    person_pid=None,
-    person_tid=None,
-    summary=None,
+    catalog_qid=None,
+    catalog_pid=None,
+    catalog_id=None,
+    edit_summary=None,
 ):
     given_predicate_claims = claims.get(predicate)
     subject_qid = subject_item.getID()
@@ -589,13 +577,12 @@ def _handle_addition(
     if not given_predicate_claims:
         LOGGER.debug('%s has no %s claim', subject_qid, predicate)
         _add(
-            subject_item,
-            predicate,
-            value,
-            catalog_qid,
-            person_pid,
-            person_tid,
-            summary=summary,
+            subject_item, predicate, value,
+            heuristic,
+            catalog_qid=catalog_qid,
+            catalog_pid=catalog_pid,
+            catalog_id=catalog_id,
+            edit_summary=edit_summary
         )
         return
 
@@ -618,13 +605,12 @@ def _handle_addition(
             '%s has no %s claim with value %s', subject_qid, predicate, value
         )
         _add(
-            subject_item,
-            predicate,
-            value,
-            catalog_qid,
-            person_pid,
-            person_tid,
-            summary=summary,
+            subject_item, predicate, value,
+            heuristic,
+            catalog_qid=catalog_qid,
+            catalog_pid=catalog_pid,
+            catalog_id=catalog_id,
+            edit_summary=edit_summary
         )
         return
 
@@ -635,16 +621,12 @@ def _handle_addition(
     if case_insensitive:
         for claim in given_predicate_claims:
             if claim.getTarget().lower() == value:
-                _reference(
-                    claim, catalog_qid, person_pid, person_tid, summary=summary
-                )
+                _reference(claim, heuristic, catalog_qid, catalog_pid, catalog_id, edit_summary=edit_summary)
                 return
 
     for claim in given_predicate_claims:
         if claim.getTarget() == value:
-            _reference(
-                claim, catalog_qid, person_pid, person_tid, summary=summary
-            )
+            _reference(claim, heuristic, catalog_qid, catalog_pid, catalog_id, edit_summary=edit_summary)
 
 
 def _handle_redirect_and_dead(qid):
@@ -663,14 +645,14 @@ def _handle_redirect_and_dead(qid):
 
 
 def _essential_checks(
-    subject,
-    predicate,
-    value,
-    catalog_qid,
-    person_pid=None,
-    person_tid=None,
-    summary=None,
+    statement: tuple,
+    heuristic: str,
+    catalog_qid=None,
+    catalog_pid=None,
+    catalog_id=None,
+    edit_summary=None,
 ):
+    subject, predicate, value = statement
     item, data = _handle_redirect_and_dead(subject)
 
     if item is None and data is None:
@@ -680,13 +662,11 @@ def _essential_checks(
     if not data:
         LOGGER.warning('%s has no data at all', subject)
         _add(
-            item,
-            predicate,
-            value,
-            catalog_qid,
-            person_pid,
-            person_tid,
-            summary=summary,
+            item, predicate, value, heuristic,
+            catalog_qid=catalog_qid,
+            catalog_pid=catalog_pid,
+            catalog_id=catalog_id,
+            edit_summary=edit_summary
         )
         return None, None
 
@@ -695,13 +675,11 @@ def _essential_checks(
     if not claims:
         LOGGER.warning('%s has no claims', subject)
         _add(
-            item,
-            predicate,
-            value,
-            catalog_qid,
-            person_pid,
-            person_tid,
-            summary=summary,
+            item, predicate, value, heuristic,
+            catalog_qid=catalog_qid,
+            catalog_pid=catalog_pid,
+            catalog_id=catalog_id,
+            edit_summary=edit_summary
         )
         return None, None
 
@@ -710,14 +688,14 @@ def _essential_checks(
 
 def _check_for_same_value(
     subject_claims,
-    subject,
-    predicate,
-    value,
-    catalog_qid,
-    person_pid=None,
-    person_tid=None,
-    summary=None,
+    statement,
+    heuristic,
+    edit_summary=None,
+    catalog_qid=None,
+    catalog_pid=None,
+    catalog_id=None,
 ):
+    subject, predicate, value = statement
     given_predicate_claims = subject_claims.get(predicate)
     if given_predicate_claims:
         for claim in given_predicate_claims:
@@ -729,7 +707,11 @@ def _check_for_same_value(
                     value,
                 )
                 _reference(
-                    claim, catalog_qid, person_pid, person_tid, summary=summary
+                    claim, heuristic,
+                    catalog_qid=catalog_qid,
+                    catalog_pid=catalog_pid,
+                    catalog_id=catalog_id,
+                    edit_summary=edit_summary
                 )
                 return True
     return False
@@ -745,18 +727,14 @@ def _parse_value(value):
         return pywikibot.ItemPage(REPO, value_is_qid.group())
     # Try to build a date
     try:
-        date_value = date.fromisoformat(value)
-        # Precision hack: it's a year if both month and day are 1
-        precision = (
-            vocabulary.YEAR
-            if date_value.month == 1 and date_value.day == 1
-            else vocabulary.DAY
-        )
+        # A date should be in the form '1984-11-16/11'
+        date_str, precision = value.split('/')
+        date_obj = date.fromisoformat(date_str)
         return pywikibot.WbTime(
-            date_value.year,
-            date_value.month,
-            date_value.day,
-            precision=precision,
+            date_obj.year,
+            date_obj.month,
+            date_obj.day,
+            precision=int(precision),
         )
     # Otherwise return the value as is
     except ValueError:
@@ -774,94 +752,78 @@ def _add(
     subject_item,
     predicate,
     value,
-    catalog_qid,
-    person_pid,
-    person_tid,
-    summary=None,
+    heuristic,
+    catalog_qid=None,
+    catalog_pid=None,
+    catalog_id=None,
+    edit_summary=None,
 ):
     claim = pywikibot.Claim(REPO, predicate)
     claim.setTarget(value)
-    subject_item.addClaim(claim, summary=summary)
+    subject_item.addClaim(claim, summary=edit_summary)
     LOGGER.debug('Added claim: %s', claim.toJSON())
-    _reference(claim, catalog_qid, person_pid, person_tid, summary=summary)
+    _reference(claim, heuristic, catalog_qid, catalog_pid, catalog_id, edit_summary=edit_summary)
     LOGGER.info(
         'Added (%s, %s, %s) statement', subject_item.getID(), predicate, value
     )
 
 
-def _reference(claim, catalog_qid, person_pid, person_tid, summary=None):
-    # Reference node
-    # create `pywikibot.Claim` instances at runtime:
+def _reference(
+    claim: pywikibot.Claim, heuristic: str,
+    catalog_qid=None, catalog_pid=None, catalog_id=None, edit_summary=None
+):
+    reference_node, log_buffer = [], []
+
+    # Create `pywikibot.Claim` instances at runtime:
     # pywikibot would cry if the same instances get uploaded multiple times
     # over the same item
-    # (based on heuristic, artificial intelligence) reference claim
+
+    # Depends on the bot task
+    # (based on heuristic, `heuristic`) reference claim
     based_on_heuristic_reference = pywikibot.Claim(
         REPO, vocabulary.BASED_ON_HEURISTIC, is_reference=True
     )
     based_on_heuristic_reference.setTarget(
-        pywikibot.ItemPage(REPO, vocabulary.ARTIFICIAL_INTELLIGENCE)
+        pywikibot.ItemPage(REPO, heuristic)
     )
-    # (stated in, CATALOG) reference claim
-    stated_in_reference = pywikibot.Claim(
-        REPO, vocabulary.STATED_IN, is_reference=True
-    )
-    stated_in_reference.setTarget(pywikibot.ItemPage(REPO, catalog_qid))
+    reference_node.append(based_on_heuristic_reference)
+    log_buffer.append(f'({based_on_heuristic_reference.getID()}, {heuristic})')
+
+    # Validator tasks only
+    if catalog_qid is not None:
+        # (stated in, CATALOG) reference claim
+        stated_in_reference = pywikibot.Claim(
+            REPO, vocabulary.STATED_IN, is_reference=True
+        )
+        stated_in_reference.setTarget(pywikibot.ItemPage(REPO, catalog_qid))
+        reference_node.append(stated_in_reference)
+        log_buffer.append(f'({stated_in_reference.getID()}, {catalog_qid})')
+
+    if catalog_pid is not None and catalog_id is not None:
+        # (catalog property, catalog ID) reference claim
+        catalog_id_reference = pywikibot.Claim(REPO, catalog_pid, is_reference=True)
+        catalog_id_reference.setTarget(catalog_id)
+        reference_node.append(catalog_id_reference)
+        log_buffer.append(f'({catalog_pid}, {catalog_id})')
+
+    # All tasks
     # (retrieved, TODAY) reference claim
     retrieved_reference = pywikibot.Claim(
         REPO, vocabulary.RETRIEVED, is_reference=True
     )
     retrieved_reference.setTarget(TIMESTAMP)
+    reference_node.append(retrieved_reference)
+    log_buffer.append(f'({retrieved_reference.getID()}, {TODAY})')
 
-    if None in (person_pid, person_tid,):
-        reference_log = (
-            f'({based_on_heuristic_reference.getID()}, {vocabulary.ARTIFICIAL_INTELLIGENCE}), '
-            f'({stated_in_reference.getID()}, {catalog_qid}), '
-            f'({retrieved_reference.getID()}, {TODAY})'
+    log_msg = ', '.join(log_buffer)
+
+    try:
+        claim.addSources(reference_node, summary=edit_summary)
+        LOGGER.info('Added %s reference node', log_msg)
+    except (APIError, Error,) as error:
+        LOGGER.warning(
+            'Could not add %s reference node: %s', log_msg, error
         )
-
-        try:
-            claim.addSources(
-                [
-                    based_on_heuristic_reference,
-                    stated_in_reference,
-                    retrieved_reference,
-                ],
-                summary=summary,
-            )
-
-            LOGGER.info('Added %s reference node', reference_log)
-        except (APIError, Error,) as error:
-            LOGGER.warning(
-                'Could not add %s reference node: %s', reference_log, error
-            )
-    else:
-        # (catalog property, catalog_ID) reference claim
-        tid_reference = pywikibot.Claim(REPO, person_pid, is_reference=True)
-        tid_reference.setTarget(person_tid)
-
-        reference_log = (
-            f'({based_on_heuristic_reference.getID()}, {vocabulary.ARTIFICIAL_INTELLIGENCE}), '
-            f'({stated_in_reference.getID()}, {catalog_qid}), '
-            f'({person_pid}, {person_tid}), '
-            f'({retrieved_reference.getID()}, {TODAY})'
-        )
-
-        try:
-            claim.addSources(
-                [
-                    based_on_heuristic_reference,
-                    stated_in_reference,
-                    tid_reference,
-                    retrieved_reference,
-                ],
-                summary=summary,
-            )
-
-            LOGGER.info('Added %s reference node', reference_log)
-        except (APIError, Error,) as error:
-            LOGGER.warning(
-                'Could not add %s reference node: %s', reference_log, error
-            )
 
 
 def _delete_or_deprecate(action, qid, tid, catalog, catalog_pid) -> None:

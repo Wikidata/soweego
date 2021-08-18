@@ -23,11 +23,15 @@ SANDBOX_3 = 'Q15397819'
 INSTANCE_OF = 'P31'
 OCCUPATION = 'P106'
 
-# References nodes terms
+# References node terms
 # 'based on heuristic' was introduced upon community discussion
 # See https://github.com/Wikidata/soweego/issues/373
 BASED_ON_HEURISTIC = 'P887'
+# Main task: the linker uses machine learning
 ARTIFICIAL_INTELLIGENCE = 'Q11660'
+# Validator tasks: no machine learning
+# See https://www.wikidata.org/wiki/Wikidata:Project_chat/Archive/2021/07#URLs_statistics_for_Discogs_(Q504063)_and_MusicBrainz_(Q14005)
+RECORD_LINKAGE = 'Q1266546'
 STATED_IN = 'P248'
 RETRIEVED = 'P813'
 
@@ -49,6 +53,9 @@ FACEBOOK_PID = 'P2013'
 # Widely used generic property to hold URLs
 DESCRIBED_AT_URL = 'P973'
 OFFICIAL_WEBSITE = 'P856'
+# See BrokenSegue's comment at
+# https://www.wikidata.org/wiki/Wikidata:Project_chat/Archive/2021/08#URLs_statistics_for_Discogs_(Q504063)_and_MusicBrainz_(Q14005)
+EXACT_MATCH = 'P2888'
 
 # Class QID of supported entities
 # People
