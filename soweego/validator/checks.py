@@ -20,10 +20,16 @@ from typing import DefaultDict, Dict, Iterator, Tuple, Union
 import click
 from sqlalchemy.exc import SQLAlchemyError
 
-from soweego.commons import constants, data_gathering, keys, target_database, text_utils
+from soweego.commons import (
+    constants,
+    data_gathering,
+    keys,
+    target_database,
+    text_utils,
+)
 from soweego.commons.db_manager import DBManager
 from soweego.ingester import wikidata_bot
-from soweego.wikidata import vocabulary, api_requests
+from soweego.wikidata import api_requests, vocabulary
 from soweego.wikidata.api_requests import get_url_blacklist
 
 LOGGER = logging.getLogger(__name__)
@@ -31,7 +37,9 @@ LOGGER = logging.getLogger(__name__)
 # File name templates
 # For all CLIs
 WD_CACHE_FNAME = '{catalog}_{entity}_{criterion}_wd_cache.pkl'
-IDS_TO_BE_DEPRECATED_FNAME = '{catalog}_{entity}_{criterion}_ids_to_be_deprecated.json'
+IDS_TO_BE_DEPRECATED_FNAME = (
+    '{catalog}_{entity}_{criterion}_ids_to_be_deprecated.json'
+)
 SHARED_STATEMENTS_FNAME = '{catalog}_{entity}_{criterion}_shared_statements.csv'
 # For `dead_ids_cli`
 DEAD_IDS_FNAME = '{catalog}_{entity}_dead_ids.json'
@@ -39,7 +47,9 @@ DEAD_IDS_FNAME = '{catalog}_{entity}_dead_ids.json'
 EXT_IDS_FNAME = '{catalog}_{entity}_external_ids_to_be_{task}.csv'
 URLS_FNAME = '{catalog}_{entity}_urls_to_be_{task}.csv'
 # For `bio_cli`
-BIO_STATEMENTS_TO_BE_ADDED_FNAME = '{catalog}_{entity}_bio_statements_to_be_added.csv'
+BIO_STATEMENTS_TO_BE_ADDED_FNAME = (
+    '{catalog}_{entity}_bio_statements_to_be_added.csv'
+)
 
 
 @click.command()
@@ -84,9 +94,10 @@ def dead_ids_cli(catalog, entity, deprecate, sandbox, dump_wikidata, dir_io):
         dir_io, DEAD_IDS_FNAME.format(catalog=catalog, entity=entity)
     )
     wd_cache_path = os.path.join(
-        dir_io, WD_CACHE_FNAME.format(
+        dir_io,
+        WD_CACHE_FNAME.format(
             catalog=catalog, entity=entity, criterion='dead_ids'
-        )
+        ),
     )
 
     # Handle Wikidata cache
@@ -190,34 +201,31 @@ def links_cli(
     criterion = 'links'
     # Output paths
     deprecate_path = os.path.join(
-        dir_io, IDS_TO_BE_DEPRECATED_FNAME.format(
+        dir_io,
+        IDS_TO_BE_DEPRECATED_FNAME.format(
             catalog=catalog, entity=entity, criterion=criterion
-        )
+        ),
     )
     add_ext_ids_path = os.path.join(
-        dir_io, EXT_IDS_FNAME.format(
-            catalog=catalog, entity=entity, task='added'
-        )
+        dir_io,
+        EXT_IDS_FNAME.format(catalog=catalog, entity=entity, task='added'),
     )
     add_urls_path = os.path.join(
-        dir_io, URLS_FNAME.format(
-            catalog=catalog, entity=entity, task='added'
-        )
+        dir_io, URLS_FNAME.format(catalog=catalog, entity=entity, task='added')
     )
     ref_ext_ids_path = os.path.join(
-        dir_io, EXT_IDS_FNAME.format(
-            catalog=catalog, entity=entity, task='referenced'
-        )
+        dir_io,
+        EXT_IDS_FNAME.format(catalog=catalog, entity=entity, task='referenced'),
     )
     ref_urls_path = os.path.join(
-        dir_io, URLS_FNAME.format(
-            catalog=catalog, entity=entity, task='referenced'
-        )
+        dir_io,
+        URLS_FNAME.format(catalog=catalog, entity=entity, task='referenced'),
     )
     wd_cache_path = os.path.join(
-        dir_io, WD_CACHE_FNAME.format(
+        dir_io,
+        WD_CACHE_FNAME.format(
             catalog=catalog, entity=entity, criterion=criterion
-        )
+        ),
     )
 
     # Handle Wikidata cache
@@ -230,9 +238,14 @@ def links_cli(
             catalog, entity, blacklist, wd_cache=wd_cache
         )
     else:
-        deprecate, add_ext_ids, add_urls, ref_ext_ids, ref_urls, wd_cache = links(
-            catalog, entity, blacklist
-        )
+        (
+            deprecate,
+            add_ext_ids,
+            add_urls,
+            ref_ext_ids,
+            ref_urls,
+            wd_cache,
+        ) = links(catalog, entity, blacklist)
 
     # Nothing to do: the catalog doesn't contain links
     if deprecate is None:
@@ -240,9 +253,13 @@ def links_cli(
 
     # Dump output files
     _dump_deprecated(deprecate, deprecate_path)
-    _dump_csv_output(add_ext_ids, add_ext_ids_path, 'third-party IDs to be added')
+    _dump_csv_output(
+        add_ext_ids, add_ext_ids_path, 'third-party IDs to be added'
+    )
     _dump_csv_output(add_urls, add_urls_path, 'URLs to be added')
-    _dump_csv_output(ref_ext_ids, ref_ext_ids_path, 'shared third-party IDs to be referenced')
+    _dump_csv_output(
+        ref_ext_ids, ref_ext_ids_path, 'shared third-party IDs to be referenced'
+    )
     _dump_csv_output(ref_urls, ref_urls_path, 'shared URLs to be referenced')
 
     # Dump Wikidata cache
@@ -263,7 +280,7 @@ def links_cli(
         if sandbox:
             LOGGER.info(
                 'Running on the Wikidata sandbox item %s ...',
-                vocabulary.SANDBOX_2
+                vocabulary.SANDBOX_2,
             )
         LOGGER.info('Starting deprecation of %s IDs ...', catalog)
         wikidata_bot.delete_or_deprecate_identifiers(
@@ -277,7 +294,9 @@ def links_cli(
         wikidata_bot.add_people_statements(
             catalog, add_urls, criterion, sandbox
         )
-        LOGGER.info('Starting referencing of shared external IDs in Wikidata ...')
+        LOGGER.info(
+            'Starting referencing of shared external IDs in Wikidata ...'
+        )
         wikidata_bot.add_people_statements(
             catalog, add_ext_ids, criterion, sandbox
         )
@@ -333,24 +352,26 @@ def bio_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
     """
     criterion = 'bio'
     deprecate_path = os.path.join(
-        dir_io, IDS_TO_BE_DEPRECATED_FNAME.format(
+        dir_io,
+        IDS_TO_BE_DEPRECATED_FNAME.format(
             catalog=catalog, entity=entity, criterion=criterion
-        )
+        ),
     )
     add_path = os.path.join(
-        dir_io, BIO_STATEMENTS_TO_BE_ADDED_FNAME.format(
-            catalog=catalog, entity=entity
-        )
+        dir_io,
+        BIO_STATEMENTS_TO_BE_ADDED_FNAME.format(catalog=catalog, entity=entity),
     )
     ref_path = os.path.join(
-        dir_io, SHARED_STATEMENTS_FNAME.format(
+        dir_io,
+        SHARED_STATEMENTS_FNAME.format(
             catalog=catalog, entity=entity, criterion=criterion
-        )
+        ),
     )
     wd_cache_path = os.path.join(
-        dir_io, WD_CACHE_FNAME.format(
+        dir_io,
+        WD_CACHE_FNAME.format(
             catalog=catalog, entity=entity, criterion=criterion
-        )
+        ),
     )
 
     # Handle Wikidata cache
@@ -380,7 +401,8 @@ def bio_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
                 # version should be the most efficient solution
                 pickle.dump(wd_cache, cout, protocol=pickle.HIGHEST_PROTOCOL)
             LOGGER.info(
-                'Biographical data  gathered from Wikidata dumped to %s', wd_cache_path
+                'Biographical data  gathered from Wikidata dumped to %s',
+                wd_cache_path,
             )
         except MemoryError:
             LOGGER.warning('Could not pickle the Wikidata cache: memory error')
@@ -391,16 +413,14 @@ def bio_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
         if sandbox:
             LOGGER.info(
                 'Running on the Wikidata sandbox item %s ...',
-                vocabulary.SANDBOX_2
+                vocabulary.SANDBOX_2,
             )
         LOGGER.info('Starting deprecation of %s IDs ...', catalog)
         wikidata_bot.delete_or_deprecate_identifiers(
             'deprecate', catalog, entity, deprecate, sandbox
         )
         LOGGER.info('Starting addition of extra statements to Wikidata ...')
-        wikidata_bot.add_people_statements(
-            catalog, add, criterion, sandbox
-        )
+        wikidata_bot.add_people_statements(catalog, add, criterion, sandbox)
         LOGGER.info('Starting referencing of shared statements in Wikidata ...')
         wikidata_bot.add_people_statements(
             catalog, reference, criterion, sandbox
@@ -488,7 +508,10 @@ def dead_ids(
 
 def links(
     catalog: str, entity: str, url_blacklist=False, wd_cache=None
-) -> Union[Tuple[defaultdict, list, list, list, list, dict], Tuple[None, None, None, None, None, None]]:
+) -> Union[
+    Tuple[defaultdict, list, list, list, list, dict],
+    Tuple[None, None, None, None, None, None],
+]:
     """Validate identifiers against available links.
 
     Also generate statements based on additional links
@@ -533,7 +556,11 @@ def links(
     if target_links is None:
         return None, None, None, None, None, None
 
-    deprecate, add, reference = defaultdict(set), defaultdict(set), defaultdict(set)
+    deprecate, add, reference = (
+        defaultdict(set),
+        defaultdict(set),
+        defaultdict(set),
+    )
 
     # Wikidata side
     url_pids, ext_id_pids_to_urls = data_gathering.gather_relevant_pids()
@@ -575,10 +602,13 @@ def links(
         'URL statements to be added: %d',
         'Third-party IDs to be referenced: %d. '
         'URL statements to be referenced: %d',
-        catalog, entity,
+        catalog,
+        entity,
         len(deprecate),
-        len(add_ext_ids), len(add_urls),
-        len(ref_ext_ids), len(ref_urls)
+        len(add_ext_ids),
+        len(add_urls),
+        len(ref_ext_ids),
+        len(ref_urls),
     )
 
     return deprecate, add_ext_ids, add_urls, ref_ext_ids, ref_urls, wd_links
@@ -586,7 +616,9 @@ def links(
 
 def bio(
     catalog: str, entity: str, wd_cache=None
-) -> Union[Tuple[defaultdict, Iterator, Iterator, dict], Tuple[None, None, None, None]]:
+) -> Union[
+    Tuple[defaultdict, Iterator, Iterator, dict], Tuple[None, None, None, None]
+]:
     """Validate identifiers against available biographical data.
 
     Look for:
@@ -631,7 +663,11 @@ def bio(
     if target_bio is None:
         return None, None, None, None
 
-    deprecate, add, reference = defaultdict(set), defaultdict(set), defaultdict(set)
+    deprecate, add, reference = (
+        defaultdict(set),
+        defaultdict(set),
+        defaultdict(set),
+    )
 
     # Wikidata side
     if wd_cache is None:
@@ -647,13 +683,14 @@ def bio(
         wd_bio = wd_cache
 
     # Validation
-    _validate(
-        keys.BIODATA,
-        wd_bio, target_bio,
-        deprecate, add, reference
-    )
+    _validate(keys.BIODATA, wd_bio, target_bio, deprecate, add, reference)
 
-    return deprecate, _bio_statements_generator(add), _bio_statements_generator(reference), wd_bio
+    return (
+        deprecate,
+        _bio_statements_generator(add),
+        _bio_statements_generator(reference),
+        wd_bio,
+    )
 
 
 def _apply_url_blacklist(url_statements):
@@ -665,9 +702,7 @@ def _apply_url_blacklist(url_statements):
     # Expected order of magnitude: n = 10^2; m = 10^5
     for domain in blacklist:  # 10^2
         url_statements = list(  # Slurp the filter or it won't work
-            filter(
-                lambda stmt: domain not in stmt[2], url_statements  # 10^5
-            )
+            filter(lambda stmt: domain not in stmt[2], url_statements)  # 10^5
         )
 
     LOGGER.info(
@@ -775,10 +810,13 @@ def _compute_shared_and_extra(criterion, wd_data, target_data):
         # No cast to `set` because `wd_data` triples hold sets themselves
         wd_other = list(filter(lambda x: len(x) == 3, wd_data))
         # In `target_data` we look for relevant date PIDs
-        target_dates = set(filter(
-            lambda x: x[0] in (vocabulary.DATE_OF_BIRTH, vocabulary.DATE_OF_DEATH),
-            target_data
-        ))
+        target_dates = set(
+            filter(
+                lambda x: x[0]
+                in (vocabulary.DATE_OF_BIRTH, vocabulary.DATE_OF_DEATH),
+                target_data,
+            )
+        )
         target_other = target_data.difference(target_dates)
         shared_dates, extra_dates = _compare('dates', wd_dates, target_dates)
         shared_other, extra_other = _compare('other', wd_other, target_other)
@@ -820,8 +858,14 @@ def _compare(what, wd, target):
                 continue
 
             inputs = (
-                shared, extra, wd_matches, target_matches,
-                i, wd_elem, j, t_elem
+                shared,
+                extra,
+                wd_matches,
+                target_matches,
+                i,
+                wd_elem,
+                j,
+                t_elem,
             )
             if what == 'dates':
                 _compare_dates(inputs)

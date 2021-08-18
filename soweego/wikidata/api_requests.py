@@ -51,7 +51,7 @@ def resolve_qid(term: str, language='en') -> Optional[str]:
         'action': 'wbsearchentities',
         'format': 'json',
         'search': term,
-        'language': language
+        'language': language,
     }
     response_body = _make_request(params)
 
@@ -70,8 +70,7 @@ def resolve_qid(term: str, language='en') -> Optional[str]:
     # No search results
     except IndexError:
         LOGGER.info(
-            "No QIDs found for search term '%s' (language: %s)",
-            term, language
+            "No QIDs found for search term '%s' (language: %s)", term, language
         )
         return None
 

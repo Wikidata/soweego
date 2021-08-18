@@ -20,7 +20,13 @@ import regex
 from sqlalchemy import or_
 from tqdm import tqdm
 
-from soweego.commons import constants, keys, target_database, text_utils, url_utils
+from soweego.commons import (
+    constants,
+    keys,
+    target_database,
+    text_utils,
+    url_utils,
+)
 from soweego.commons.db_manager import DBManager
 from soweego.importer import models
 from soweego.wikidata import api_requests, sparql_queries, vocabulary
@@ -395,15 +401,15 @@ def gather_wikidata_biodata(wikidata):
             # (non-lower, lower): take the lowercased one
             labels = {text_utils.normalize(label)[1] for label in parsed}
             # e.g., (P19, Q641, {'venezia', 'venice', ...})
-            wikidata[qid][keys.BIODATA].append(
-                (pid, v_qid, labels)
-            )
+            wikidata[qid][keys.BIODATA].append((pid, v_qid, labels))
         # If `parsed` is a tuple, we have a (timestamp, precision) date
         elif isinstance(parsed, tuple):
             timestamp, precision = parsed[0], parsed[1]
             # Get rid of time, useless
             timestamp = timestamp.split('T')[0]
-            wikidata[qid][keys.BIODATA].append((pid, f'{timestamp}/{precision}'))
+            wikidata[qid][keys.BIODATA].append(
+                (pid, f'{timestamp}/{precision}')
+            )
         else:
             wikidata[qid][keys.BIODATA].append((pid, parsed))
         total += 1
@@ -526,9 +532,7 @@ def extract_ids_from_urls(to_be_added, ext_id_pids_to_urls):
             if ext_id is not None:
                 ext_ids_to_add.append((qid, pid, ext_id, tid,))
             else:
-                urls_to_add.append(
-                    (qid, vocabulary.EXACT_MATCH, url, tid,)
-                )
+                urls_to_add.append((qid, vocabulary.EXACT_MATCH, url, tid,))
     return (
         ext_ids_to_add,
         urls_to_add,
