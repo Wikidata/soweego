@@ -76,10 +76,11 @@ def resolve_qid(term: str, language='en') -> Optional[str]:
         return None
 
 
-def get_url_blacklist() -> set:
+def get_url_blacklist() -> Optional[set]:
     """Retrieve a blacklist with URL domains of low-quality sources.
 
-    :return: the set of blacklisted domains
+    :return: the set of blacklisted domains,
+      or ``None`` in case of issues with the Wikidata Web API
     """
     params = {
         'action': 'parse',
