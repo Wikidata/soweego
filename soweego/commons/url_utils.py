@@ -5,14 +5,14 @@
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
-__version__ = '1.0'
+__version__ = '2.0'
 __license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2018, Hjfocs'
+__copyright__ = 'Copyleft 2021, Hjfocs'
 
 import logging
 import re
 from functools import lru_cache
-from typing import Union
+from typing import Optional
 from urllib.parse import unquote, urlsplit
 
 import regex
@@ -101,7 +101,7 @@ def validate(url):
 
 
 @lru_cache()
-def resolve(url: str) -> Union[str, None]:
+def resolve(url: str) -> Optional[str]:
     """Try to resolve an URL via a set of strategies.
 
     :param url: an URL
