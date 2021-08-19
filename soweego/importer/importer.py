@@ -3,11 +3,11 @@
 
 """Download, extract, and import a supported catalog."""
 
-__author__ = 'Massimo Frasson'
-__email__ = 'maxfrax@gmail.com'
-__version__ = '1.0'
+__author__ = 'Massimo Frasson, Marco Fossati'
+__email__ = 'maxfrax@gmail.com, fossati@spaziodati.eu'
+__version__ = '2.0'
 __license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2018, MaxFrax96'
+__copyright__ = 'Copyleft 2018-2021, MaxFrax96, Hjfocs'
 
 import datetime
 import logging
@@ -33,7 +33,7 @@ DUMP_EXTRACTOR = {
     keys.IMDB: IMDbDumpExtractor,
     keys.MUSICBRAINZ: MusicBrainzDumpExtractor,
 }
-
+ROTTEN_URLS_FNAME = '{catalog}_{entity}_rotten_urls.txt'
 
 @click.command()
 @click.argument(
@@ -48,7 +48,6 @@ DUMP_EXTRACTOR = {
     ),
 )
 @click.option(
-    '-d',
     '--dir-io',
     type=click.Path(file_okay=False),
     default=constants.SHARED_FOLDER,
@@ -70,47 +69,82 @@ def _resolve_url(res):
 @click.argument(
     'catalog', type=click.Choice(target_database.supported_targets())
 )
-def check_links_cli(catalog: str):
-    """Check for rotten URLs of an imported catalog."""
-    for entity_type in target_database.supported_entities_for_target(catalog):
+@click.option(
+    '-d',
+    '--drop',
+    is_flag=True,
+    help=f'Drop rotten URLs from the DB.',
+)
+@click.option(
+    '--dir-io',
+    type=click.Path(file_okay=False),
+    default=constants.SHARED_FOLDER,
+    help=f'Input/output directory, default: {constants.SHARED_FOLDER}.',
+)
+def check_urls_cli(catalog, drop, dir_io):
+    """Check for rotten URLs of an imported catalog.
+    For every catalog entity, dump a text file with rotten URLs, one per line.
 
-        LOGGER.info("Validating %s %s links...", catalog, entity_type)
-        entity = target_database.get_link_entity(catalog, entity_type)
-        if not entity:
+    Use '-d' to drop rotten URLs from the DB on the fly.
+    """
+    for entity in target_database.supported_entities_for_target(catalog):
+        out_path = os.path.join(
+            dir_io, ROTTEN_URLS_FNAME.format(catalog=catalog, entity=entity)
+        )
+
+        LOGGER.info('Starting check of %s %s URLs ...', catalog, entity)
+        link_entity = target_database.get_link_entity(catalog, entity)
+        if not link_entity:
             LOGGER.info(
-                "%s %s does not have a links table. Skipping...",
-                catalog,
-                entity_type,
+                '%s %s does not have a links table. Skipping ...',
+                catalog, entity
             )
             continue
 
-        session = DBManager.connect_to_db()
-        total = session.query(entity).count()
-        removed = 0
+        query_session = DBManager.connect_to_db()
+        total = query_session.query(link_entity).count()
 
-        with Pool() as pool:
-            # Validate each link
+        rotten = 0
+        if drop:
+            removed = 0
+
+        # Parallel operation
+        with Pool() as pool, open(out_path, 'w', buffering=1) as fout:
+            # Try to resolve every URL
             for resolved, res_entity in tqdm(
-                pool.imap_unordered(_resolve_url, session.query(entity)),
+                pool.imap_unordered(
+                    _resolve_url, query_session.query(link_entity)
+                ),
                 total=total,
             ):
                 if not resolved:
-                    session_delete = DBManager.connect_to_db()
-                    # if not valid delete
-                    session_delete.delete(res_entity)
-                    try:
-                        session_delete.commit()
-                        removed += 1
-                    except:
-                        session.rollback()
-                        raise
-                    finally:
-                        session_delete.close()
+                    # Dump
+                    fout.write(res_entity.url + '\n')
+                    rotten += 1
 
-        session.close()
+                    # Drop from DB
+                    if drop:
+                        delete_session = DBManager.connect_to_db()
+                        delete_session.delete(res_entity)
+                        try:
+                            delete_session.commit()
+                            removed += 1
+                        except:
+                            delete_session.rollback()
+                            raise
+                        finally:
+                            delete_session.close()
+        query_session.close()
+
         LOGGER.info(
-            "Removed %s/%s from %s %s", removed, total, catalog, entity_type
+            "Total %s %s rotten URLs dumped to '%s': %d / %d",
+            catalog, entity, out_path, rotten, total
         )
+        if drop:
+            LOGGER.info(
+                'Total %s %s rotten URLs dropped from the DB: %d / %d',
+                catalog, entity, rotten, removed
+            )
 
 
 class Importer:
