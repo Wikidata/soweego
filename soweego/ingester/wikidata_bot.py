@@ -112,8 +112,7 @@ def delete_cli(catalog, entity, invalid_identifiers, sandbox):
     """
     if sandbox:
         LOGGER.info(
-            'Running on the Wikidata sandbox item %s ...',
-            vocabulary.SANDBOX_2
+            'Running on the Wikidata sandbox item %s ...', vocabulary.SANDBOX_2
         )
 
     delete_or_deprecate_identifiers(
@@ -141,8 +140,7 @@ def deprecate_cli(catalog, entity, invalid_identifiers, sandbox):
     """
     if sandbox:
         LOGGER.info(
-            'Running on the Wikidata sandbox item %s ...',
-            vocabulary.SANDBOX_2
+            'Running on the Wikidata sandbox item %s ...', vocabulary.SANDBOX_2
         )
 
     delete_or_deprecate_identifiers(
@@ -193,7 +191,7 @@ def identifiers_cli(catalog, entity, identifiers, sandbox):
     '--criterion',
     type=click.Choice(('links', 'bio')),
     help='Validation criterion used to generate STATEMENTS. '
-         'Same as the command passed to `python -m soweego sync`'
+    'Same as the command passed to `python -m soweego sync`',
 )
 @click.option(
     '-s',
@@ -235,9 +233,7 @@ def people_cli(catalog, statements, criterion, sandbox):
         edit_summary = None
 
     if sandbox:
-        LOGGER.info(
-            'Running on the Wikidata sandbox item %s ...', sandbox_item
-        )
+        LOGGER.info('Running on the Wikidata sandbox item %s ...', sandbox_item)
 
     stmt_reader = csv.reader(statements)
     for person, predicate, value, catalog_id in stmt_reader:
@@ -248,7 +244,7 @@ def people_cli(catalog, statements, criterion, sandbox):
             catalog_qid=catalog_qid,
             catalog_pid=catalog_pid,
             catalog_id=catalog_id,
-            edit_summary=edit_summary
+            edit_summary=edit_summary,
         )
 
 
@@ -295,8 +291,11 @@ def works_cli(catalog, statements, sandbox):
         _add_or_reference_works(
             (subject, predicate, person),
             heuristic,
-            catalog_qid, person_pid, person_id,
-            is_imdb=is_imdb, edit_summary=WORKS_SUMMARY
+            catalog_qid,
+            person_pid,
+            person_id,
+            is_imdb=is_imdb,
+            edit_summary=WORKS_SUMMARY,
         )
 
 
@@ -327,7 +326,8 @@ def add_identifiers(
         _add_or_reference(
             (subject, catalog_pid, tid,),
             heuristic,
-            edit_summary=IDENTIFIERS_SUMMARY)
+            edit_summary=IDENTIFIERS_SUMMARY,
+        )
 
 
 def add_people_statements(
@@ -368,7 +368,10 @@ def add_people_statements(
     for subject, predicate, value, catalog_id in statements:
         LOGGER.info(
             'Processing (%s, %s, %s, %s) statement ...',
-            subject, predicate, value, catalog_id
+            subject,
+            predicate,
+            value,
+            catalog_id,
         )
         actual_subject = subject if not sandbox else sandbox_item
         _add_or_reference(
@@ -377,7 +380,7 @@ def add_people_statements(
             catalog_qid=catalog_qid,
             catalog_pid=person_pid,
             catalog_id=catalog_id,
-            edit_summary=edit_summary
+            edit_summary=edit_summary,
         )
 
 
@@ -407,7 +410,10 @@ def add_works_statements(
     for work, predicate, person, person_id in statements:
         LOGGER.info(
             'Processing (%s, %s, %s, %s) statement',
-            work, predicate, person, person_id
+            work,
+            predicate,
+            person,
+            person_id,
         )
         subject = work if not sandbox else sandbox_item
         _add_or_reference_works(
@@ -417,7 +423,7 @@ def add_works_statements(
             person_pid,
             person_id,
             is_imdb=is_imdb,
-            edit_summary=WORKS_SUMMARY
+            edit_summary=WORKS_SUMMARY,
         )
 
 
@@ -456,15 +462,23 @@ def delete_or_deprecate_identifiers(
             _delete_or_deprecate(action, actual_qid, tid, catalog, catalog_pid)
 
 
-def _add_or_reference_works(statement: tuple, heuristic: str, catalog_qid: str, catalog_pid: str, catalog_id: str,
-                            is_imdb=False, edit_summary=None) -> None:
+def _add_or_reference_works(
+    statement: tuple,
+    heuristic: str,
+    catalog_qid: str,
+    catalog_pid: str,
+    catalog_id: str,
+    is_imdb=False,
+    edit_summary=None,
+) -> None:
     work, predicate, person = statement
     # Parse value into an item in case of QID
     qid = match(QID_REGEX, person)
     if not qid:
         LOGGER.warning(
             "%s doesn't look like a QID, won't try to add the %s statement",
-            person, statement
+            person,
+            statement,
         )
         return
     person_item = pywikibot.ItemPage(REPO, qid.group())
@@ -490,7 +504,7 @@ def _add_or_reference_works(statement: tuple, heuristic: str, catalog_qid: str, 
                 catalog_qid=catalog_qid,
                 catalog_pid=catalog_pid,
                 catalog_id=catalog_id,
-                edit_summary=edit_summary
+                edit_summary=edit_summary,
             ):
                 return
 
@@ -508,15 +522,21 @@ def _add_or_reference_works(statement: tuple, heuristic: str, catalog_qid: str, 
 
 
 def _add_or_reference(
-        statement, heuristic,
-        catalog_qid=None, catalog_pid=None, catalog_id=None,
-        edit_summary=None
+    statement,
+    heuristic,
+    catalog_qid=None,
+    catalog_pid=None,
+    catalog_id=None,
+    edit_summary=None,
 ) -> None:
     subject, predicate, value = statement
     subject_item, claims = _essential_checks(
-        statement, heuristic,
-        catalog_qid=catalog_qid, catalog_pid=catalog_pid, catalog_id=catalog_id,
-        edit_summary=edit_summary
+        statement,
+        heuristic,
+        catalog_qid=catalog_qid,
+        catalog_pid=catalog_pid,
+        catalog_id=catalog_id,
+        edit_summary=edit_summary,
     )
 
     if None in (subject_item, claims):
@@ -533,7 +553,7 @@ def _add_or_reference(
         edit_summary=edit_summary,
         catalog_qid=catalog_qid,
         catalog_pid=catalog_pid,
-        catalog_id=catalog_id
+        catalog_id=catalog_id,
     ):
         return
 
@@ -554,7 +574,7 @@ def _add_or_reference(
         catalog_qid=catalog_qid,
         catalog_pid=catalog_pid,
         catalog_id=catalog_id,
-        edit_summary=edit_summary
+        edit_summary=edit_summary,
     )
 
 
@@ -577,12 +597,14 @@ def _handle_addition(
     if not given_predicate_claims:
         LOGGER.debug('%s has no %s claim', subject_qid, predicate)
         _add(
-            subject_item, predicate, value,
+            subject_item,
+            predicate,
+            value,
             heuristic,
             catalog_qid=catalog_qid,
             catalog_pid=catalog_pid,
             catalog_id=catalog_id,
-            edit_summary=edit_summary
+            edit_summary=edit_summary,
         )
         return
 
@@ -605,12 +627,14 @@ def _handle_addition(
             '%s has no %s claim with value %s', subject_qid, predicate, value
         )
         _add(
-            subject_item, predicate, value,
+            subject_item,
+            predicate,
+            value,
             heuristic,
             catalog_qid=catalog_qid,
             catalog_pid=catalog_pid,
             catalog_id=catalog_id,
-            edit_summary=edit_summary
+            edit_summary=edit_summary,
         )
         return
 
@@ -621,12 +645,26 @@ def _handle_addition(
     if case_insensitive:
         for claim in given_predicate_claims:
             if claim.getTarget().lower() == value:
-                _reference(claim, heuristic, catalog_qid, catalog_pid, catalog_id, edit_summary=edit_summary)
+                _reference(
+                    claim,
+                    heuristic,
+                    catalog_qid,
+                    catalog_pid,
+                    catalog_id,
+                    edit_summary=edit_summary,
+                )
                 return
 
     for claim in given_predicate_claims:
         if claim.getTarget() == value:
-            _reference(claim, heuristic, catalog_qid, catalog_pid, catalog_id, edit_summary=edit_summary)
+            _reference(
+                claim,
+                heuristic,
+                catalog_qid,
+                catalog_pid,
+                catalog_id,
+                edit_summary=edit_summary,
+            )
 
 
 def _handle_redirect_and_dead(qid):
@@ -662,11 +700,14 @@ def _essential_checks(
     if not data:
         LOGGER.warning('%s has no data at all', subject)
         _add(
-            item, predicate, value, heuristic,
+            item,
+            predicate,
+            value,
+            heuristic,
             catalog_qid=catalog_qid,
             catalog_pid=catalog_pid,
             catalog_id=catalog_id,
-            edit_summary=edit_summary
+            edit_summary=edit_summary,
         )
         return None, None
 
@@ -675,11 +716,14 @@ def _essential_checks(
     if not claims:
         LOGGER.warning('%s has no claims', subject)
         _add(
-            item, predicate, value, heuristic,
+            item,
+            predicate,
+            value,
+            heuristic,
             catalog_qid=catalog_qid,
             catalog_pid=catalog_pid,
             catalog_id=catalog_id,
-            edit_summary=edit_summary
+            edit_summary=edit_summary,
         )
         return None, None
 
@@ -707,11 +751,12 @@ def _check_for_same_value(
                     value,
                 )
                 _reference(
-                    claim, heuristic,
+                    claim,
+                    heuristic,
                     catalog_qid=catalog_qid,
                     catalog_pid=catalog_pid,
                     catalog_id=catalog_id,
-                    edit_summary=edit_summary
+                    edit_summary=edit_summary,
                 )
                 return True
     return False
@@ -762,15 +807,26 @@ def _add(
     claim.setTarget(value)
     subject_item.addClaim(claim, summary=edit_summary)
     LOGGER.debug('Added claim: %s', claim.toJSON())
-    _reference(claim, heuristic, catalog_qid, catalog_pid, catalog_id, edit_summary=edit_summary)
+    _reference(
+        claim,
+        heuristic,
+        catalog_qid,
+        catalog_pid,
+        catalog_id,
+        edit_summary=edit_summary,
+    )
     LOGGER.info(
         'Added (%s, %s, %s) statement', subject_item.getID(), predicate, value
     )
 
 
 def _reference(
-    claim: pywikibot.Claim, heuristic: str,
-    catalog_qid=None, catalog_pid=None, catalog_id=None, edit_summary=None
+    claim: pywikibot.Claim,
+    heuristic: str,
+    catalog_qid=None,
+    catalog_pid=None,
+    catalog_id=None,
+    edit_summary=None,
 ):
     reference_node, log_buffer = [], []
 
@@ -783,9 +839,7 @@ def _reference(
     based_on_heuristic_reference = pywikibot.Claim(
         REPO, vocabulary.BASED_ON_HEURISTIC, is_reference=True
     )
-    based_on_heuristic_reference.setTarget(
-        pywikibot.ItemPage(REPO, heuristic)
-    )
+    based_on_heuristic_reference.setTarget(pywikibot.ItemPage(REPO, heuristic))
     reference_node.append(based_on_heuristic_reference)
     log_buffer.append(f'({based_on_heuristic_reference.getID()}, {heuristic})')
 
@@ -801,7 +855,9 @@ def _reference(
 
     if catalog_pid is not None and catalog_id is not None:
         # (catalog property, catalog ID) reference claim
-        catalog_id_reference = pywikibot.Claim(REPO, catalog_pid, is_reference=True)
+        catalog_id_reference = pywikibot.Claim(
+            REPO, catalog_pid, is_reference=True
+        )
         catalog_id_reference.setTarget(catalog_id)
         reference_node.append(catalog_id_reference)
         log_buffer.append(f'({catalog_pid}, {catalog_id})')
@@ -821,9 +877,7 @@ def _reference(
         claim.addSources(reference_node, summary=edit_summary)
         LOGGER.info('Added %s reference node', log_msg)
     except (APIError, Error,) as error:
-        LOGGER.warning(
-            'Could not add %s reference node: %s', log_msg, error
-        )
+        LOGGER.warning('Could not add %s reference node: %s', log_msg, error)
 
 
 def _delete_or_deprecate(action, qid, tid, catalog, catalog_pid) -> None:
