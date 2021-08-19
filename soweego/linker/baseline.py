@@ -272,7 +272,7 @@ def _handle_result(
                 to_upload.add(statement)
 
     if upload:
-        wikidata_bot.add_people_statements(to_upload, sandbox)
+        wikidata_bot.add_people_statements(catalog, to_upload, 'links', sandbox)
 
     LOGGER.info('%s %s dumped to %s', catalog, origin, path_out)
 
