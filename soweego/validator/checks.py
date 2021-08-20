@@ -255,14 +255,9 @@ def links_cli(
             catalog, entity, blacklist, wd_cache=wd_cache
         )
     else:
-        (
-            deprecate,
-            add_ext_ids,
-            add_urls,
-            ref_ext_ids,
-            ref_urls,
-            wd_cache,
-        ) = links(catalog, entity, blacklist)
+        deprecate, add_ext_ids, add_urls, ref_ext_ids, ref_urls, wd_urls, wd_cache = links(
+            catalog, entity, blacklist
+        )
 
     # Nothing to do: the catalog doesn't contain links
     if deprecate is None:
