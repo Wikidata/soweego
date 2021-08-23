@@ -234,9 +234,10 @@ def links_cli(
         URLS_FNAME.format(catalog=catalog, entity=entity, task='referenced'),
     )
     wd_urls_path = os.path.join(
-        dir_io, WD_STATEMENTS_FNAME.format(
+        dir_io,
+        WD_STATEMENTS_FNAME.format(
             criterion=criterion, catalog=catalog, entity=entity
-        )
+        ),
     )
     wd_cache_path = os.path.join(
         dir_io,
@@ -251,13 +252,25 @@ def links_cli(
             wd_cache = pickle.load(cin)
         LOGGER.info("Loaded Wikidata cache from '%s'", cin.name)
         # Discard the last return value: Wikidata cache
-        deprecate, add_ext_ids, add_urls, ref_ext_ids, ref_urls, wd_urls, _ = links(
-            catalog, entity, blacklist, wd_cache=wd_cache
-        )
+        (
+            deprecate,
+            add_ext_ids,
+            add_urls,
+            ref_ext_ids,
+            ref_urls,
+            wd_urls,
+            _,
+        ) = links(catalog, entity, blacklist, wd_cache=wd_cache)
     else:
-        deprecate, add_ext_ids, add_urls, ref_ext_ids, ref_urls, wd_urls, wd_cache = links(
-            catalog, entity, blacklist
-        )
+        (
+            deprecate,
+            add_ext_ids,
+            add_urls,
+            ref_ext_ids,
+            ref_urls,
+            wd_urls,
+            wd_cache,
+        ) = links(catalog, entity, blacklist)
 
     # Nothing to do: the catalog doesn't contain links
     if deprecate is None:
@@ -273,7 +286,9 @@ def links_cli(
         ref_ext_ids, ref_ext_ids_path, 'shared third-party IDs to be referenced'
     )
     _dump_csv_output(ref_urls, ref_urls_path, 'shared URLs to be referenced')
-    _dump_csv_output(wd_urls, wd_urls_path, f'Wikidata URLs not in {catalog} {entity}')
+    _dump_csv_output(
+        wd_urls, wd_urls_path, f'Wikidata URLs not in {catalog} {entity}'
+    )
 
     # Dump Wikidata cache
     if dump_wikidata:
@@ -385,9 +400,10 @@ def bio_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
         ),
     )
     wd_stmts_path = os.path.join(
-        dir_io, WD_STATEMENTS_FNAME.format(
+        dir_io,
+        WD_STATEMENTS_FNAME.format(
             criterion=criterion, catalog=catalog, entity=entity
-        )
+        ),
     )
     wd_cache_path = os.path.join(
         dir_io,
@@ -402,7 +418,9 @@ def bio_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
             wd_cache = pickle.load(cin)
         LOGGER.info("Loaded Wikidata cache from '%s'", cin.name)
         # Discard the last return value: Wikidata cache
-        deprecate, add, reference, wd_stmts, _ = bio(catalog, entity, wd_cache=wd_cache)
+        deprecate, add, reference, wd_stmts, _ = bio(
+            catalog, entity, wd_cache=wd_cache
+        )
     else:
         deprecate, add, reference, wd_stmts, wd_cache = bio(catalog, entity)
 
@@ -415,8 +433,9 @@ def bio_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
     _dump_csv_output(add, add_path, 'statements to be added')
     _dump_csv_output(reference, ref_path, 'shared statements to be referenced')
     _dump_csv_output(
-        wd_stmts, wd_stmts_path,
-        f'statements in Wikidata but not in {catalog} {entity}'
+        wd_stmts,
+        wd_stmts_path,
+        f'statements in Wikidata but not in {catalog} {entity}',
     )
 
     # Dump Wikidata cache
@@ -428,7 +447,7 @@ def bio_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
                 pickle.dump(wd_cache, cout, protocol=pickle.HIGHEST_PROTOCOL)
             LOGGER.info(
                 'Biographical data gathered from Wikidata dumped to %s',
-                wd_cache_path
+                wd_cache_path,
             )
         except MemoryError:
             LOGGER.warning('Could not pickle the Wikidata cache: memory error')
@@ -601,8 +620,7 @@ def links(
 
     # Validation
     _validate(
-        keys.LINKS, wd_links, target_links,
-        deprecate, add, reference, wd_only
+        keys.LINKS, wd_links, target_links, deprecate, add, reference, wd_only
     )
 
     # URLs to be added:
@@ -634,21 +652,24 @@ def links(
         'Third-party IDs to be referenced: %d. '
         'URL statements to be referenced: %d. '
         'URL in Wikidata but not in the target: %d',
-        catalog, entity,
+        catalog,
+        entity,
         len(deprecate),
         len(add_ext_ids),
         len(add_urls),
         len(ref_ext_ids),
         len(ref_urls),
-        len(wd_only_urls)
+        len(wd_only_urls),
     )
 
     return (
         deprecate,
-        add_ext_ids, add_urls,
-        ref_ext_ids, ref_urls,
+        add_ext_ids,
+        add_urls,
+        ref_ext_ids,
+        ref_urls,
         wd_only_urls,
-        wd_links
+        wd_links,
     )
 
 
@@ -717,14 +738,16 @@ def bio(
         wd_bio = wd_cache
 
     # Validation
-    _validate(keys.BIODATA, wd_bio, target_bio, deprecate, add, reference, wd_only)
+    _validate(
+        keys.BIODATA, wd_bio, target_bio, deprecate, add, reference, wd_only
+    )
 
     return (
         deprecate,
         _bio_statements_generator(add),
         _bio_statements_generator(reference),
         _bio_statements_generator(wd_only, for_catalogs=True),
-        wd_bio
+        wd_bio,
     )
 
 
@@ -758,7 +781,9 @@ def _bio_statements_generator(stmts_dict, for_catalogs=False):
                 yield tid, PID_PREFIX + pid, value, QID_PREFIX + qid
 
 
-def _validate(criterion, wd, target_generator, deprecate, add, reference, wd_only):
+def _validate(
+    criterion, wd, target_generator, deprecate, add, reference, wd_only
+):
     LOGGER.info('Starting check against target %s ...', criterion)
     target = _consume_target_generator(target_generator)
 
@@ -819,14 +844,23 @@ def _validate(criterion, wd, target_generator, deprecate, add, reference, wd_onl
                 if extra_set:
                     LOGGER.debug(
                         '%s has extra %s that should be added to %s: %s',
-                        tid, criterion, qid, extra_set
+                        tid,
+                        criterion,
+                        qid,
+                        extra_set,
                     )
                     add[(qid, tid)].update(extra_set)
                 else:
                     LOGGER.debug('%s has no extra %s', tid, criterion)
 
                 if wd_only_set:
-                    LOGGER.debug('%s has %s not in %s: %s', qid, criterion, tid, wd_only_set)
+                    LOGGER.debug(
+                        '%s has %s not in %s: %s',
+                        qid,
+                        criterion,
+                        tid,
+                        wd_only_set,
+                    )
                     wd_only[(qid, tid)].update(wd_only_set)
                 else:
                     LOGGER.debug('%s has no extra %s', qid, criterion)
@@ -836,10 +870,11 @@ def _validate(criterion, wd, target_generator, deprecate, add, reference, wd_onl
         '%d Wikidata items with statements to be added, '
         '%d Wikidata items with shared statements to be referenced, '
         '%d values in Wikidata but not in the target catalog',
-        criterion, len(deprecate),
+        criterion,
+        len(deprecate),
         len(add),
         len(reference),
-        len(wd_only)
+        len(wd_only),
     )
 
 
