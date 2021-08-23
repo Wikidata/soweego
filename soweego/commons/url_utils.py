@@ -5,14 +5,14 @@
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
-__version__ = '1.0'
+__version__ = '2.0'
 __license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2018, Hjfocs'
+__copyright__ = 'Copyleft 2021, Hjfocs'
 
 import logging
 import re
 from functools import lru_cache
-from typing import Union
+from typing import Optional
 from urllib.parse import unquote, urlsplit
 
 import regex
@@ -101,7 +101,7 @@ def validate(url):
 
 
 @lru_cache()
-def resolve(url: str) -> Union[str, None]:
+def resolve(url: str) -> Optional[str]:
     """Try to resolve an URL via a set of strategies.
 
     :param url: an URL
@@ -129,37 +129,27 @@ def resolve(url: str) -> Union[str, None]:
             response = get(url, headers=browser_ua, stream=True, verify=False)
         except Exception as unexpected_error:
             LOGGER.warning(
-                'Unexpected error: <%s> - Reason: %s',
-                url,
-                unexpected_error,
+                'Unexpected error: <%s> - Reason: %s', url, unexpected_error,
             )
             return None
     except requests.exceptions.Timeout as timeout:
         LOGGER.info(
-            'Request timeout: <%s> - Reason: %s',
-            url,
-            timeout,
+            'Request timeout: <%s> - Reason: %s', url, timeout,
         )
         return None
     except requests.exceptions.TooManyRedirects as too_many_redirects:
         LOGGER.info(
-            'Too many redirects: <%s> - %s',
-            url,
-            too_many_redirects,
+            'Too many redirects: <%s> - %s', url, too_many_redirects,
         )
         return None
     except requests.exceptions.ConnectionError as connection_error:
         LOGGER.info(
-            'Aborted connection: <%s> - Reason: %s',
-            url,
-            connection_error,
+            'Aborted connection: <%s> - Reason: %s', url, connection_error,
         )
         return None
     except Exception as unexpected_error:
         LOGGER.warning(
-            'Unexpected error: <%s> - Reason: %s',
-            url,
-            unexpected_error,
+            'Unexpected error: <%s> - Reason: %s', url, unexpected_error,
         )
         return None
     if not response.ok:

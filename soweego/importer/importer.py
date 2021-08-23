@@ -35,6 +35,7 @@ DUMP_EXTRACTOR = {
 }
 ROTTEN_URLS_FNAME = '{catalog}_{entity}_rotten_urls.txt'
 
+
 @click.command()
 @click.argument(
     'catalog', type=click.Choice(target_database.supported_targets())
@@ -70,10 +71,7 @@ def _resolve_url(res):
     'catalog', type=click.Choice(target_database.supported_targets())
 )
 @click.option(
-    '-d',
-    '--drop',
-    is_flag=True,
-    help=f'Drop rotten URLs from the DB.',
+    '-d', '--drop', is_flag=True, help=f'Drop rotten URLs from the DB.',
 )
 @click.option(
     '--dir-io',
@@ -97,7 +95,8 @@ def check_urls_cli(catalog, drop, dir_io):
         if not link_entity:
             LOGGER.info(
                 '%s %s does not have a links table. Skipping ...',
-                catalog, entity
+                catalog,
+                entity,
             )
             continue
 
@@ -138,12 +137,19 @@ def check_urls_cli(catalog, drop, dir_io):
 
         LOGGER.info(
             "Total %s %s rotten URLs dumped to '%s': %d / %d",
-            catalog, entity, out_path, rotten, total
+            catalog,
+            entity,
+            out_path,
+            rotten,
+            total,
         )
         if drop:
             LOGGER.info(
                 'Total %s %s rotten URLs dropped from the DB: %d / %d',
-                catalog, entity, rotten, removed
+                catalog,
+                entity,
+                rotten,
+                removed,
             )
 
 
