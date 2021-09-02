@@ -261,7 +261,15 @@ def links_cli(
         return
 
     # Unpack the result tuple
-    deprecate, add_ext_ids, add_urls, ref_ext_ids, ref_urls, wd_urls, wd_cache = result
+    (
+        deprecate,
+        add_ext_ids,
+        add_urls,
+        ref_ext_ids,
+        ref_urls,
+        wd_urls,
+        wd_cache,
+    ) = result
     # Dump output files
     _dump_deprecated(deprecate, deprecate_path)
     _dump_csv_output(
