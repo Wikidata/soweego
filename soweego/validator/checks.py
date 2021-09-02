@@ -246,36 +246,30 @@ def links_cli(
         ),
     )
 
-    # Handle Wikidata cache
+    # Wikidata cache
+    wd_cache = None
     if os.path.isfile(wd_cache_path):
         with open(wd_cache_path, 'rb') as cin:
             wd_cache = pickle.load(cin)
         LOGGER.info("Loaded Wikidata cache from '%s'", cin.name)
-        # Discard the last return value: Wikidata cache
-        (
-            deprecate,
-            add_ext_ids,
-            add_urls,
-            ref_ext_ids,
-            ref_urls,
-            wd_urls,
-            _,
-        ) = links(catalog, entity, blacklist, wd_cache=wd_cache)
-    else:
-        (
-            deprecate,
-            add_ext_ids,
-            add_urls,
-            ref_ext_ids,
-            ref_urls,
-            wd_urls,
-            wd_cache,
-        ) = links(catalog, entity, blacklist)
+
+    # Run validation
+    result = links(catalog, entity, url_blacklist=blacklist, wd_cache=wd_cache)
 
     # Nothing to do: the catalog doesn't contain links
-    if deprecate is None:
+    if result is None:
         return
 
+    # Unpack the result tuple
+    (
+        deprecate,
+        add_ext_ids,
+        add_urls,
+        ref_ext_ids,
+        ref_urls,
+        wd_urls,
+        wd_cache,
+    ) = result
     # Dump output files
     _dump_deprecated(deprecate, deprecate_path)
     _dump_csv_output(
@@ -383,6 +377,7 @@ def bio_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
     You can pass the '-u' flag to upload the output to Wikidata.
     """
     criterion = 'bio'
+    # Output paths
     deprecate_path = os.path.join(
         dir_io,
         IDS_TO_BE_DEPRECATED_FNAME.format(
@@ -412,22 +407,22 @@ def bio_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
         ),
     )
 
-    # Handle Wikidata cache
+    # Wikidata cache
+    wd_cache = None
     if os.path.isfile(wd_cache_path):
         with open(wd_cache_path, 'rb') as cin:
             wd_cache = pickle.load(cin)
         LOGGER.info("Loaded Wikidata cache from '%s'", cin.name)
-        # Discard the last return value: Wikidata cache
-        deprecate, add, reference, wd_stmts, _ = bio(
-            catalog, entity, wd_cache=wd_cache
-        )
-    else:
-        deprecate, add, reference, wd_stmts, wd_cache = bio(catalog, entity)
+
+    # Run validation
+    result = bio(catalog, entity, wd_cache=wd_cache)
 
     # Nothing to do: the catalog doesn't contain biographical data
-    if deprecate is None:
+    if result is None:
         return
 
+    # Unpack the result tuple
+    deprecate, add, reference, wd_stmts, wd_cache = result
     # Dump output files
     _dump_deprecated(deprecate, deprecate_path)
     _dump_csv_output(add, add_path, 'statements to be added')
@@ -557,12 +552,12 @@ def links(
     """Validate identifiers against available links.
 
     Also generate statements based on additional links
-    found in the given catalog.
+    found in the target catalog.
     They can be used to enrich Wikidata items.
 
     **How it works:**
 
-    1. gather links from the given catalog
+    1. gather links from the target catalog
     2. gather links from relevant Wikidata items
     3. look for shared links between pairs of Wikidata and catalog items:
 
@@ -592,12 +587,14 @@ def links(
       6. ``list`` of URLs found in Wikidata but not in the target catalog
       7. ``dict`` of links gathered from Wikidata
 
+      or ``None`` if the target catalog has no links.
+
     """
     # Target catalog side first:
     # enable early return in case of no target links
     target_links = data_gathering.gather_target_links(entity, catalog)
     if target_links is None:
-        return None, None, None, None, None, None, None
+        return None
 
     deprecate, add = defaultdict(set), defaultdict(set)
     reference, wd_only = defaultdict(set), defaultdict(set)
@@ -685,7 +682,7 @@ def bio(
     - gender
 
     Also generate statements based on additional data
-    found in the given catalog.
+    found in the target catalog.
     They can be used to enrich Wikidata items.
 
     **How it works:**
@@ -714,12 +711,14 @@ def bio(
       4. ``generator`` of statements found in Wikidata but not in the target catalog
       5. ``dict`` of biographical data gathered from Wikidata
 
+      or ``None`` if the target catalog has no biographical data.
+
     """
     # Target catalog side first:
     # enable early return in case of no target data
     target_bio = data_gathering.gather_target_biodata(entity, catalog)
     if target_bio is None:
-        return None, None, None, None, None
+        return None
 
     deprecate, add = defaultdict(set), defaultdict(set)
     reference, wd_only = defaultdict(set), defaultdict(set)
