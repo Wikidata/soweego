@@ -13,12 +13,11 @@ import csv
 import datetime
 import logging
 import os
-import pickle
 from multiprocessing import Pool
 
 import click
-from tqdm import tqdm
 from sqlalchemy.exc import SQLAlchemyError
+from tqdm import tqdm
 
 from soweego.commons import constants
 from soweego.commons import http_client as client
@@ -134,7 +133,8 @@ def check_urls_cli(catalog, drop, dir_io):
                             except SQLAlchemyError as error:
                                 LOGGER.error(
                                     'Failed deletion of %s: %s',
-                                    result, error.__class__.__name__
+                                    result,
+                                    error.__class__.__name__,
                                 )
                                 LOGGER.debug(error)
                                 delete_session.rollback()
@@ -143,7 +143,9 @@ def check_urls_cli(catalog, drop, dir_io):
             except SQLAlchemyError as error:
                 LOGGER.error(
                     '%s while querying %s %s URLs',
-                    error.__class__.__name__, catalog, entity
+                    error.__class__.__name__,
+                    catalog,
+                    entity,
                 )
                 LOGGER.debug(error)
                 session.rollback()
