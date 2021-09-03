@@ -24,8 +24,6 @@ import recordlinkage as rl
 from numpy import nan
 from pandas import read_sql
 from pandas.io.json._json import JsonReader
-from sqlalchemy.orm import Query
-
 from soweego.commons import (
     constants,
     data_gathering,
@@ -39,6 +37,7 @@ from soweego.commons.db_manager import DBManager
 from soweego.commons.logging import log_dataframe_info
 from soweego.linker import features
 from soweego.wikidata import api_requests, vocabulary
+from sqlalchemy.orm import Query
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
