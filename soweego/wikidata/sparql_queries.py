@@ -18,7 +18,6 @@ from typing import Dict, Iterator, Set, Tuple, Union
 
 import requests
 from requests import get
-
 from soweego.commons import constants, keys
 from soweego.commons.logging import log_request_data
 from soweego.wikidata import vocabulary
