@@ -54,6 +54,7 @@ import pandas as pd
 from recordlinkage.base import BaseCompareFeature
 from recordlinkage.utils import fillna
 from sklearn.feature_extraction.text import CountVectorizer
+
 from soweego.commons import constants, text_utils
 from soweego.wikidata import sparql_queries
 

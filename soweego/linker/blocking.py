@@ -27,9 +27,10 @@ from multiprocessing import Pool
 from typing import Iterable, Tuple
 
 import pandas as pd
+from tqdm import tqdm
+
 from soweego.commons import constants, keys, utils
 from soweego.commons.data_gathering import tokens_fulltext_search
-from tqdm import tqdm
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
