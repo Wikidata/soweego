@@ -20,7 +20,6 @@ import pandas as pd
 from keras import backend as K
 from recordlinkage.base import BaseClassifier
 from sklearn.model_selection import GridSearchCV
-
 from soweego.commons import constants, keys, target_database, utils
 from soweego.linker import blocking, workflow
 
