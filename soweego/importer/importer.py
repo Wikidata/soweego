@@ -16,6 +16,9 @@ import os
 from multiprocessing import Pool
 
 import click
+from sqlalchemy.exc import SQLAlchemyError
+from tqdm import tqdm
+
 from soweego.commons import constants
 from soweego.commons import http_client as client
 from soweego.commons import keys, target_database, url_utils
@@ -24,8 +27,6 @@ from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.discogs_dump_extractor import DiscogsDumpExtractor
 from soweego.importer.imdb_dump_extractor import IMDbDumpExtractor
 from soweego.importer.musicbrainz_dump_extractor import MusicBrainzDumpExtractor
-from sqlalchemy.exc import SQLAlchemyError
-from tqdm import tqdm
 
 LOGGER = logging.getLogger(__name__)
 
