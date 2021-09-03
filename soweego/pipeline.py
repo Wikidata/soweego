@@ -5,6 +5,7 @@ import logging
 from typing import Callable
 
 import click
+
 from soweego.commons import target_database
 from soweego.importer.importer import import_cli
 from soweego.linker import baseline, evaluate, link, train
