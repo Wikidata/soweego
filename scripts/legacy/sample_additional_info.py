@@ -5,10 +5,7 @@ from collections import defaultdict
 
 import click
 import iso8601
-
-from soweego.wikidata.sparql_queries import (
-    _make_request,
-)
+from soweego.wikidata.sparql_queries import _make_request
 
 
 def get_wikidata_id_from_uri(uri):
