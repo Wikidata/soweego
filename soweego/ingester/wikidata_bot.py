@@ -35,6 +35,7 @@ import click
 import pywikibot
 from pywikibot.data.api import APIError
 from pywikibot.exceptions import Error, NoPage
+
 from soweego.commons import target_database
 from soweego.commons.constants import QID_REGEX
 from soweego.commons.keys import IMDB, TWITTER
