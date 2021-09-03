@@ -17,6 +17,10 @@ from itertools import product
 from typing import Iterator, Tuple
 
 import click
+from sqlalchemy import and_
+from sqlalchemy.exc import SQLAlchemyError
+from tqdm import tqdm
+
 from soweego.commons import (
     constants,
     data_gathering,
@@ -27,9 +31,6 @@ from soweego.commons import (
 from soweego.commons.db_manager import DBManager
 from soweego.ingester import wikidata_bot
 from soweego.wikidata import vocabulary
-from sqlalchemy import and_
-from sqlalchemy.exc import SQLAlchemyError
-from tqdm import tqdm
 
 LOGGER = logging.getLogger(__name__)
 
