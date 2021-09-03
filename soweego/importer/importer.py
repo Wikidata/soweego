@@ -7,14 +7,16 @@ __author__ = 'Massimo Frasson, Marco Fossati'
 __email__ = 'maxfrax@gmail.com, fossati@spaziodati.eu'
 __version__ = '2.0'
 __license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2018-2021, MaxFrax96, Hjfocs'
+__copyright__ = 'Copyleft 2021, MaxFrax96, Hjfocs'
 
+import csv
 import datetime
 import logging
 import os
 from multiprocessing import Pool
 
 import click
+from sqlalchemy.exc import SQLAlchemyError
 from tqdm import tqdm
 
 from soweego.commons import constants
@@ -33,7 +35,7 @@ DUMP_EXTRACTOR = {
     keys.IMDB: IMDbDumpExtractor,
     keys.MUSICBRAINZ: MusicBrainzDumpExtractor,
 }
-ROTTEN_URLS_FNAME = '{catalog}_{entity}_rotten_urls.txt'
+ROTTEN_URLS_FNAME = '{catalog}_{entity}_rotten_urls.csv'
 
 
 @click.command()
@@ -62,10 +64,6 @@ def import_cli(catalog: str, url_check: bool, dir_io: str) -> None:
     Importer().refresh_dump(dir_io, extractor, url_check)
 
 
-def _resolve_url(res):
-    return url_utils.resolve(res.url), res
-
-
 @click.command()
 @click.argument(
     'catalog', type=click.Choice(target_database.supported_targets())
@@ -81,7 +79,9 @@ def _resolve_url(res):
 )
 def check_urls_cli(catalog, drop, dir_io):
     """Check for rotten URLs of an imported catalog.
-    For every catalog entity, dump a text file with rotten URLs, one per line.
+
+    For every catalog entity, dump rotten URLs to a file.
+    CSV format: URL,catalog_ID
 
     Use '-d' to drop rotten URLs from the DB on the fly.
     """
@@ -109,32 +109,50 @@ def check_urls_cli(catalog, drop, dir_io):
 
         # Parallel operation
         with Pool() as pool, open(out_path, 'w', buffering=1) as fout:
-            # Try to resolve every URL
-            for resolved, res_entity in tqdm(
-                pool.imap_unordered(
-                    _resolve_url, query_session.query(link_entity)
-                ),
-                total=total,
-            ):
-                if not resolved:
-                    # Dump
-                    fout.write(res_entity.url + '\n')
-                    rotten += 1
+            writer = csv.writer(fout)
+            try:
+                # Resolve every URL
+                for resolved, result in tqdm(
+                    pool.imap_unordered(
+                        _resolve, query_session.query(link_entity)
+                    ),
+                    total=total,
+                ):
+                    if not resolved:
+                        # Dump
+                        writer.writerow((result.url, result.catalog_id))
+                        rotten += 1
 
-                    # Drop from DB
-                    if drop:
-                        delete_session = DBManager.connect_to_db()
-                        delete_session.delete(res_entity)
-                        try:
-                            delete_session.commit()
-                            removed += 1
-                        except:
-                            delete_session.rollback()
-                            raise
-                        finally:
-                            delete_session.close()
-        query_session.close()
+                        # Drop from DB
+                        if drop:
+                            delete_session = DBManager.connect_to_db()
+                            delete_session.delete(result)
+                            try:
+                                delete_session.commit()
+                                removed += 1
+                            except SQLAlchemyError as error:
+                                LOGGER.error(
+                                    'Failed deletion of %s: %s',
+                                    result,
+                                    error.__class__.__name__,
+                                )
+                                LOGGER.debug(error)
+                                delete_session.rollback()
+                            finally:
+                                delete_session.close()
+            except SQLAlchemyError as error:
+                LOGGER.error(
+                    '%s while querying %s %s URLs',
+                    error.__class__.__name__,
+                    catalog,
+                    entity,
+                )
+                LOGGER.debug(error)
+                session.rollback()
+            finally:
+                query_session.close()
 
+        LOGGER.debug('Cache information: %s', url_utils.resolve.cache_info())
         LOGGER.info(
             "Total %s %s rotten URLs dumped to '%s': %d / %d",
             catalog,
@@ -143,6 +161,7 @@ def check_urls_cli(catalog, drop, dir_io):
             rotten,
             total,
         )
+
         if drop:
             LOGGER.info(
                 'Total %s %s rotten URLs dropped from the DB: %d / %d',
@@ -151,6 +170,10 @@ def check_urls_cli(catalog, drop, dir_io):
                 rotten,
                 removed,
             )
+
+
+def _resolve(link_entity):
+    return url_utils.resolve(link_entity.url), link_entity
 
 
 class Importer:
