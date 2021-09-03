@@ -19,6 +19,9 @@ from datetime import date, datetime
 from typing import List, Tuple
 
 import requests
+from sqlalchemy.exc import IntegrityError
+from tqdm import tqdm
+
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.commons.utils import count_num_lines_in_file
@@ -35,8 +38,6 @@ from soweego.importer.models.musicbrainz_entity import (
     MusicBrainzReleaseGroupLinkEntity,
 )
 from soweego.wikidata.sparql_queries import external_id_pids_and_urls
-from sqlalchemy.exc import IntegrityError
-from tqdm import tqdm
 
 LOGGER = logging.getLogger(__name__)
 

@@ -31,6 +31,7 @@ from recordlinkage.base import BaseClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import VotingClassifier as SKVotingClassifier
 from sklearn.svm import SVC
+
 from soweego.commons import constants, utils
 
 with redirect_stderr(open(os.devnull, 'w')):

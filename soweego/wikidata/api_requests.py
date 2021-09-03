@@ -16,11 +16,12 @@ from urllib.parse import urlunsplit
 import lxml.html
 import requests
 from requests.exceptions import RequestException
+from tqdm import tqdm
+
 from soweego.commons import constants, keys
 from soweego.commons.db_manager import DBManager
 from soweego.commons.logging import log_request_data
 from soweego.wikidata import vocabulary
-from tqdm import tqdm
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
