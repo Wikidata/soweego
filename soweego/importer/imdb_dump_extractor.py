@@ -16,13 +16,12 @@ import gzip
 import logging
 from typing import Dict, Generator, List, Tuple
 
-from tqdm import tqdm
-
 from soweego.commons import text_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models import imdb_entity
 from soweego.wikidata import vocabulary as vocab
+from tqdm import tqdm
 
 LOGGER = logging.getLogger(__name__)
 

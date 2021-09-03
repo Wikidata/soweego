@@ -19,8 +19,6 @@ from typing import Iterable, List, Optional, Tuple
 
 from lxml import etree
 from requests import get
-from tqdm import tqdm
-
 from soweego.commons import text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
@@ -36,6 +34,7 @@ from soweego.importer.models.discogs_entity import (
     DiscogsMusicianLinkEntity,
     DiscogsMusicianNlpEntity,
 )
+from tqdm import tqdm
 
 LOGGER = logging.getLogger(__name__)
 
