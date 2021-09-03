@@ -23,14 +23,13 @@ from typing import Tuple
 import click
 import requests
 from pandas import read_csv
-from sqlalchemy.exc import SQLAlchemyError
-from tqdm import tqdm
-
 from soweego.commons import keys, target_database
 from soweego.commons.constants import SUPPORTED_ENTITIES
 from soweego.commons.db_manager import DBManager
 from soweego.importer.models import mix_n_match
 from soweego.wikidata.vocabulary import HUMAN_QID
+from sqlalchemy.exc import SQLAlchemyError
+from tqdm import tqdm
 
 LOGGER = logging.getLogger(__name__)
 
