@@ -21,6 +21,7 @@ from keras import backend as K
 from numpy import mean, std
 from pandas import concat
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
+
 from soweego.commons import constants, target_database, utils
 from soweego.linker import train
 
