@@ -10,7 +10,6 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import click
-
 from soweego.validator import checks, enrichment
 
 CLI_COMMANDS = {
