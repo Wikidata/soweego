@@ -19,8 +19,6 @@ from re import match
 from typing import DefaultDict, Dict, Iterator, Optional, Tuple
 
 import click
-from sqlalchemy.exc import SQLAlchemyError
-
 from soweego.commons import (
     constants,
     data_gathering,
@@ -32,6 +30,7 @@ from soweego.commons.db_manager import DBManager
 from soweego.ingester import wikidata_bot
 from soweego.wikidata import api_requests, vocabulary
 from soweego.wikidata.api_requests import get_url_blacklist
+from sqlalchemy.exc import SQLAlchemyError
 
 LOGGER = logging.getLogger(__name__)
 
