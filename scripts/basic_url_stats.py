@@ -41,9 +41,9 @@ def main(args):
     rank = OrderedDict(sorted(freq.items(), key=lambda x: x[1], reverse=True))
 
     with open(rank_out, 'w') as fout:
-        json.dump(rank, fout)
+        json.dump(rank, fout, indent=2)
     with open(urls_out, 'w') as fout:
-        json.dump(urls, fout)
+        json.dump(urls, fout, indent=2)
 
     return 0
 
