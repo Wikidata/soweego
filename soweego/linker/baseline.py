@@ -20,9 +20,6 @@ from datetime import datetime
 from typing import Callable, Dict, Iterable, List, Set, TextIO, Tuple, Union
 
 import click
-from sqlalchemy.exc import SQLAlchemyError
-from tqdm import tqdm
-
 from soweego.commons import (
     constants,
     data_gathering,
@@ -36,6 +33,8 @@ from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.base_link_entity import BaseLinkEntity
 from soweego.ingester import wikidata_bot
 from soweego.linker.workflow import build_wikidata
+from sqlalchemy.exc import SQLAlchemyError
+from tqdm import tqdm
 
 LOGGER = logging.getLogger(__name__)
 
