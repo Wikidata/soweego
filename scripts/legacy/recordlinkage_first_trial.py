@@ -1,12 +1,14 @@
 # coding: utf-8
 import csv
 import json
+from collections import defaultdict
 
 import pandas
 import recordlinkage
+from recordlinkage.datasets import load_febrl4
+from recordlinkage.preprocessing import clean, phonetic
 
 get_ipython().run_line_magic('cd', '~/discogs/')
-from collections import defaultdict
 r = csv.DictReader(open('discogs_sample_for_recordlinkage'), delimiter='\t')
 discogs = defaultdict(list)
 get_ipython().run_line_magic('cpaste', '')
@@ -30,12 +32,15 @@ compare = recordlinkage.Compare()
 compare.string('name', 'name', method='levenshtein', threshold=0.7)
 vectors = compare.compute(candidates, discogs_df, wikidata_df)
 vectors
-get_ipython().set_next_input('ecm = recordlinkage.ECM');get_ipython().run_line_magic('pinfo', 'recordlinkage.ECM')
-get_ipython().set_next_input('ecm = recordlinkage.ECMClassifier');get_ipython().run_line_magic('pinfo', 'recordlinkage.ECMClassifier')
+get_ipython().set_next_input('ecm = recordlinkage.ECM')
+get_ipython().run_line_magic('pinfo', 'recordlinkage.ECM')
+get_ipython().set_next_input('ecm = recordlinkage.ECMClassifier')
+get_ipython().run_line_magic('pinfo', 'recordlinkage.ECMClassifier')
 ecm = recordlinkage.ECMClassifier()
 ecm.fit_predict(vectors)
 vectors
-get_ipython().set_next_input('nb = recordlinkage.NaiveBayesClassifier');get_ipython().run_line_magic('pinfo', 'recordlinkage.NaiveBayesClassifier')
+get_ipython().set_next_input('nb = recordlinkage.NaiveBayesClassifier')
+get_ipython().run_line_magic('pinfo', 'recordlinkage.NaiveBayesClassifier')
 idx
 type(idx)
 type(candidates)
@@ -59,7 +64,9 @@ compare.string('name', 'name', method='levenshtein', threshold=0.7)
 features = compare.compute(candidate_pairs, discogs_df, wikidata_df)
 features
 compare = recordlinkage.Compare()
-compare.string('name', 'name', method='levenshtein', threshold=0.7, label='stocazzo')
+compare.string(
+    'name', 'name', method='levenshtein', threshold=0.7, label='stocazzo'
+)
 features = compare.compute(candidate_pairs, discogs_df, wikidata_df)
 features
 discogs_df[304]
@@ -71,13 +78,12 @@ features[features.sum(axis=1) > 3]
 features.sum(axis=1)
 features[features.sum(axis=1) > 1]
 features[features.sum(axis=1) > 0]
-from recordlinkage.datasets import load_febrl4
-a,b = load_febrl4()
+a, b = load_febrl4()
 a
 b
 idx = recordlinkage.Index()
 idx.block('given_name')
-candidates = idx.index(a,b)
+candidates = idx.index(a, b)
 compare = recordlinkage.Compare()
 get_ipython().run_line_magic('cpaste', '')
 compare_cl = recordlinkage.Compare()
@@ -93,10 +99,11 @@ matches = features[features.sum(axis=1) > 3]
 len(matches)
 matches
 get_ipython().run_line_magic('pinfo', 'pandas.Series')
-from recordlinkage.preprocessing import clean
 
 wikidata
-etichette = json.load(open('/Users/focs/wikidata/label2qid_1_percent_sample.json'))
+etichette = json.load(
+    open('/Users/focs/wikidata/label2qid_1_percent_sample.json')
+)
 etichette
 get_ipython().run_line_magic('pinfo', 'pandas.Series')
 serie = pandas.Series(etichette)
@@ -112,7 +119,6 @@ clean(serie, replace_by_none=None, strip_accents='ascii')
 clean(serie, replace_by_none=None, strip_accents='unicode')
 discogs
 discogs_df
-from recordlinkage.preprocessing import phonetic
 get_ipython().run_line_magic('pinfo', 'phonetic')
 serie[66]
 giappa = pandas.Series([serie[66]])
@@ -128,7 +134,7 @@ clean(cosa, replace_by_none=None)
 clean(cosa, replace_by_none=None, strip_accents='ascii')
 clean(cosa, replace_by_none=None, strip_accents='unicode')
 etichette
-#names = []
+# names = []
 '''
 хартшорн, чарльзcharles hartshorne,
  'チャールズ・ハートショーン': 'Q1064777',
@@ -136,12 +142,35 @@ etichette
  'چارلز هارتسهورن': 'Q1064777',
  '찰스 하츠혼': 'Q1064777',
 '''
-names = ["хартшорн, чарльз", "charles hartshorne", 'チャールズ・ハートショーン', 'تشارلز هارتشورن', '찰스 하츠혼']
+names = [
+    "хартшорн, чарльз",
+    "charles hartshorne",
+    'チャールズ・ハートショーン',
+    'تشارلز هارتشورن',
+    '찰스 하츠혼',
+]
 names
 clean(names)
-names = pandas.Series(["хартшорн, чарльз", "charles hartshorne", 'チャールズ・ハートショーン', 'تشارلز هارتشورن', '찰스 하츠혼'])
+names = pandas.Series(
+    [
+        "хартшорн, чарльз",
+        "charles hartshorne",
+        'チャールズ・ハートショーン',
+        'تشارلز هارتشورن',
+        '찰스 하츠혼',
+    ]
+)
 clean(names)
 clean(names, replace_by_none=None, strip_accents='ascii')
-names = pandas.Series(["хартшорн, чарльз", "charles hartshorne", 'チャールズ・ハートショーン', 'تشارلز هارتشورن', '찰스 하츠혼', 'àáâäæãåāèéêëēėęîïíīįìôöòóœøōõûüùúū'])
+names = pandas.Series(
+    [
+        "хартшорн, чарльз",
+        "charles hartshorne",
+        'チャールズ・ハートショーン',
+        'تشارلز هارتشورن',
+        '찰스 하츠혼',
+        'àáâäæãåāèéêëēėęîïíīįìôöòóœøōõûüùúū',
+    ]
+)
 clean(names)
 clean(names, replace_by_none=None, strip_accents='ascii')
