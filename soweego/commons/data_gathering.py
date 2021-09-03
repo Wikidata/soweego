@@ -17,6 +17,9 @@ from collections import defaultdict
 from typing import Iterable
 
 import regex
+from sqlalchemy import or_
+from tqdm import tqdm
+
 from soweego.commons import (
     constants,
     keys,
@@ -27,8 +30,6 @@ from soweego.commons import (
 from soweego.commons.db_manager import DBManager
 from soweego.importer import models
 from soweego.wikidata import api_requests, sparql_queries, vocabulary
-from sqlalchemy import or_
-from tqdm import tqdm
 
 LOGGER = logging.getLogger(__name__)
 
