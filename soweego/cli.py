@@ -12,6 +12,14 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 import logging
 import os
 
+import click
+from soweego import commons
+from soweego import pipeline as pipeline_cli
+from soweego.importer import cli as importer_cli
+from soweego.ingester import cli as ingester_cli
+from soweego.linker import cli as linker_cli
+from soweego.validator import cli as validator_cli
+
 # Silence requests log up to INFO
 logging.getLogger('requests').setLevel(logging.WARNING)
 
@@ -23,15 +31,6 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 # Silence ML-Ensemble, see http://ml-ensemble.com/docs/config.html
 os.environ['MLENS_VERBOSE'] = '0'
-
-import click
-
-from soweego import commons
-from soweego import pipeline as pipeline_cli
-from soweego.importer import cli as importer_cli
-from soweego.ingester import cli as ingester_cli
-from soweego.linker import cli as linker_cli
-from soweego.validator import cli as validator_cli
 
 
 CLI_COMMANDS = {
