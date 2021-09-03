@@ -10,6 +10,7 @@ __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2018, Hjfocs'
 
 import click
+
 from soweego.ingester import mix_n_match_client, wikidata_bot
 
 CLI_COMMANDS = {
