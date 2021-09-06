@@ -781,10 +781,10 @@ def _bio_statements_generator(stmts_dict, for_catalogs=False):
 
 
 def _validate(
-    criterion, wd, target_generator, deprecate, add, reference, wd_only
+    criterion, wd, target_data, deprecate, add, reference, wd_only
 ):
     LOGGER.info('Starting check against target %s ...', criterion)
-    target = _consume_target_generator(target_generator)
+    target = _prepare_target(target_data)
 
     # Large loop size: total Wikidata class instances with identifiers,
     # e.g., 80k musicians
@@ -1063,9 +1063,9 @@ def _dump_csv_output(data, out_path, log_msg_subject):
         LOGGER.info("No %s, won't dump to file", log_msg_subject)
 
 
-def _consume_target_generator(target_generator):
+def _prepare_target(dataset):
     target = defaultdict(set)
-    for identifier, *data in target_generator:
+    for identifier, *data in dataset:
         if len(data) == 1:  # Links
             target[identifier].add(data.pop())
         else:  # Biographical data
