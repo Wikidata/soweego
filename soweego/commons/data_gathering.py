@@ -34,7 +34,9 @@ from soweego.wikidata import api_requests, sparql_queries, vocabulary
 LOGGER = logging.getLogger(__name__)
 
 
-def gather_target_biodata(entity: str, catalog: str) -> Optional[Iterator[tuple]]:
+def gather_target_biodata(
+    entity: str, catalog: str
+) -> Optional[Iterator[tuple]]:
     LOGGER.info(
         'Gathering %s birth/death dates/places and gender metadata ...', catalog
     )

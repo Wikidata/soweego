@@ -780,9 +780,7 @@ def _bio_statements_generator(stmts_dict, for_catalogs=False):
                 yield tid, PID_PREFIX + pid, value, QID_PREFIX + qid
 
 
-def _validate(
-    criterion, wd, target_data, deprecate, add, reference, wd_only
-):
+def _validate(criterion, wd, target_data, deprecate, add, reference, wd_only):
     LOGGER.info('Starting check against target %s ...', criterion)
     target = _prepare_target(target_data)
 
