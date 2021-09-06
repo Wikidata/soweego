@@ -14,7 +14,7 @@ import json
 import logging
 import re
 from collections import defaultdict
-from typing import Iterable
+from typing import Iterable, Iterator, Optional
 
 import regex
 from sqlalchemy import or_
@@ -34,7 +34,7 @@ from soweego.wikidata import api_requests, sparql_queries, vocabulary
 LOGGER = logging.getLogger(__name__)
 
 
-def gather_target_biodata(entity, catalog):
+def gather_target_biodata(entity: str, catalog: str) -> Optional[Iterator[tuple]]:
     LOGGER.info(
         'Gathering %s birth/death dates/places and gender metadata ...', catalog
     )
@@ -51,6 +51,7 @@ def gather_target_biodata(entity, catalog):
         raw_result = _run_query(query, catalog, entity)
         if raw_result is None:
             return None
+        # Here is the generator
         result = _parse_target_biodata_query_result(raw_result)
         session.commit()
     except:
@@ -307,7 +308,7 @@ def _parse_target_biodata_query_result(result_set):
             LOGGER.debug('%s: no death place available', identifier)
 
 
-def gather_target_links(entity, catalog):
+def gather_target_links(entity: str, catalog: str) -> Optional[list]:
     LOGGER.info('Gathering %s %s links ...', catalog, entity)
     link_entity = target_database.get_link_entity(catalog, entity)
 
@@ -335,6 +336,8 @@ def gather_target_links(entity, catalog):
             )
             return None
         LOGGER.info('Got %d links from %s %s', count, catalog, entity)
+        # Slurp query result into a list:
+        # a generator here may break the DB connection
         result = query.all()
         session.commit()
     except:
@@ -343,10 +346,7 @@ def gather_target_links(entity, catalog):
     finally:
         session.close()
 
-    if result is None:
-        return None
-    for row in result:
-        yield row.catalog_id, row.url
+    return result
 
 
 def _get_catalog_entity(entity_type, catalog_constants):
