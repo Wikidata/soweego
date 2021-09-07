@@ -5,9 +5,9 @@
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
-__version__ = '1.0'
+__version__ = '2.0'
 __license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2018, Hjfocs'
+__copyright__ = 'Copyleft 2021, Hjfocs'
 
 import os
 from typing import TypeVar
@@ -52,9 +52,9 @@ DEFAULT_CREDENTIALS_LOCATION = (
     DEFAULT_CREDENTIALS_MODULE,
     DEFAULT_CREDENTIALS_FILENAME,
 )
-CREDENTIALS_LOCATION = '/app/shared/credentials.json'
+CREDENTIALS_LOCATION = 'credentials.json'
 
-# As per https://meta.wikimedia.org/wiki/User-Agent_policy
+# Comply with https://meta.wikimedia.org/wiki/User-Agent_policy
 HTTP_USER_AGENT = (
     'soweego/2.0 ([[:m:Grants:Project/Hjfocs/soweego_2]]; [[:m:User:Hjfocs]])'
 )
@@ -220,7 +220,7 @@ NAME_FIELDS = (
 )
 
 # Folders
-SHARED_FOLDER = '/app/shared/'
+SHARED_FOLDER = 'work'
 WD_FOLDER = 'wikidata'
 SAMPLES_FOLDER = 'samples'
 FEATURES_FOLDERS = 'features'
@@ -262,7 +262,6 @@ LINKER_EVALUATION_PREDICTIONS = os.path.join(
 LINKER_PERFORMANCE = os.path.join(
     RESULTS_FOLDER, EVALUATION_PERFORMANCE_FILENAME
 )
-
 NEURAL_NETWORK_CHECKPOINT_MODEL = os.path.join(
     NN_CHECKPOINT_FOLDER, NN_CHECKPOINT_FILENAME
 )
@@ -294,7 +293,7 @@ CLASSIFIERS = {
     'sc': keys.STACKED_CLASSIFIER,  # Shorthand
 }
 
-# holds mention of 'classifier ensemble'
+# Holds mention of 'classifier ensemble'
 CLASSIFIERS_FOR_ENSEMBLE = [
     keys.NAIVE_BAYES,
     keys.LOGISTIC_REGRESSION,
@@ -305,6 +304,7 @@ CLASSIFIERS_FOR_ENSEMBLE = [
 
 PERFORMANCE_METRICS = ['precision', 'recall', 'f1']
 
+# Grid search settings
 PARAMETER_GRIDS = {
     keys.NAIVE_BAYES: {
         'alpha': [0.0001, 0.001, 0.01, 0.1, 1],
@@ -358,15 +358,13 @@ CLASSIFICATION_RETURN_INDEX = ('classification.return_type', 'index')
 CONFIDENCE_THRESHOLD = 0.5
 FEATURE_MISSING_VALUE = 0.0
 
-### Hyperparameters for classifiers
-# General Neural Networks parameters
+# Neural Networks general settings
 LOSS = 'binary_crossentropy'
 METRICS = ['accuracy']
 VALIDATION_SPLIT = 0.33
 
-# Hyperparameters for specific models
+# Per-model hyperparameters
 NAIVE_BAYES_PARAMS = {'alpha': 0.0001, 'binarize': 0.2}
-
 LOGISTIC_REGRESSION_PARAMS = {
     'tol': 0.001,
     'C': 1.0,
@@ -374,23 +372,19 @@ LOGISTIC_REGRESSION_PARAMS = {
     'solver': 'liblinear',
     'max_iter': 100,
 }
-
 LINEAR_SVM_PARAMS = {'dual': True, 'tol': 0.001, 'max_iter': 1000, 'C': 1.0}
-
 RANDOM_FOREST_PARAMS = {
     'n_estimators': 500,
     'criterion': 'entropy',
     'max_features': None,
     'bootstrap': True,
 }
-
 SINGLE_LAYER_PERCEPTRON_PARAMS = {
     'epochs': 1000,
     'batch_size': 256,
     'activation': 'sigmoid',
     'optimizer': 'Nadam',
 }
-
 MULTI_LAYER_PERCEPTRON_PARAMS = {
     'epochs': 1000,
     'batch_size': 512,
@@ -406,17 +400,15 @@ MULTI_LAYER_PERCEPTRON_PARAMS = {
     ),
 }
 
-# Parameters for ensemble
-VOTING_CLASSIFIER_PARAMS = {"voting": "soft"}
-
+# Ensemble hyperparameters
+VOTING_CLASSIFIER_PARAMS = {'voting': 'soft'}
 GATED_ENSEMBLE_PARAMS = {'folds': 2, 'meta_layer': keys.SINGLE_LAYER_PERCEPTRON}
-
 STACKED_ENSEMBLE_PARAMS = {
     'folds': 2,
     'meta_layer': keys.SINGLE_LAYER_PERCEPTRON,
 }
 
-# precisions for the `pandas.Period` class.
+# Precisions for the `pandas.Period` class.
 # Listed from least to most precise, as defined here:
 # http://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#dateoffset-objects
 PD_PERIOD_PRECISIONS = [
