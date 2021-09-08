@@ -117,3 +117,5 @@ throttle.ctrl
 # User credentials
 credentials.json
 
+# Default work dir
+work
