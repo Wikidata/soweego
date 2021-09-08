@@ -33,8 +33,7 @@ from typing import Iterable
 
 import click
 import pywikibot
-from pywikibot.data.api import APIError
-from pywikibot.exceptions import Error, NoPage
+from pywikibot.exceptions import APIError, Error, NoPageError
 
 from soweego.commons import target_database
 from soweego.commons.constants import QID_REGEX
@@ -675,7 +674,7 @@ def _handle_redirect_and_dead(qid):
 
     try:
         data = item.get()
-    except NoPage:
+    except NoPageError:
         LOGGER.warning("%s doesn't exist anymore", qid)
         return None, None
 
