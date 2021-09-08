@@ -113,3 +113,7 @@ replica.my.cnf
 apicache-py3/
 pywikibot.lwp
 throttle.ctrl
+
+# User credentials
+credentials.json
+
