@@ -86,8 +86,8 @@ PID_PREFIX = QID_PREFIX + 'Property:'
 @click.option(
     '--dir-io',
     type=click.Path(file_okay=False),
-    default=constants.SHARED_FOLDER,
-    help=f'Input/output directory, default: {constants.SHARED_FOLDER}.',
+    default=constants.WORK_DIR,
+    help=f'Input/output directory, default: {constants.WORK_DIR}.',
 )
 def dead_ids_cli(catalog, entity, deprecate, sandbox, dump_wikidata, dir_io):
     """Check if identifiers are still alive.
@@ -178,8 +178,8 @@ def dead_ids_cli(catalog, entity, deprecate, sandbox, dump_wikidata, dir_io):
 @click.option(
     '--dir-io',
     type=click.Path(file_okay=False),
-    default=constants.SHARED_FOLDER,
-    help=f'Input/output directory, default: {constants.SHARED_FOLDER}.',
+    default=constants.WORK_DIR,
+    help=f'Input/output directory, default: {constants.WORK_DIR}.',
 )
 def links_cli(
     catalog, entity, blacklist, upload, sandbox, dump_wikidata, dir_io
@@ -352,8 +352,8 @@ def links_cli(
 @click.option(
     '--dir-io',
     type=click.Path(file_okay=False),
-    default=constants.SHARED_FOLDER,
-    help=f'Input/output directory, default: {constants.SHARED_FOLDER}.',
+    default=constants.WORK_DIR,
+    help=f'Input/output directory, default: {constants.WORK_DIR}.',
 )
 def bio_cli(catalog, entity, upload, sandbox, dump_wikidata, dir_io):
     """Validate identifiers against biographical data.
