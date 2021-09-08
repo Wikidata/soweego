@@ -67,8 +67,8 @@ LOGGER = logging.getLogger(__name__)
     '-d',
     '--dir-io',
     type=click.Path(file_okay=False),
-    default=constants.SHARED_FOLDER,
-    help=f'Input/output directory, default: {constants.SHARED_FOLDER}.',
+    default=constants.WORK_DIR,
+    help=f'Input/output directory, default: {constants.WORK_DIR}.',
 )
 @click.pass_context
 def cli(

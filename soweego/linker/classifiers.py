@@ -102,7 +102,7 @@ class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
             epochs = self.epochs
 
         model_path = os.path.join(
-            constants.SHARED_FOLDER,
+            constants.WORK_DIR,
             constants.NEURAL_NETWORK_CHECKPOINT_MODEL.format(
                 self.__class__.__name__
             ),

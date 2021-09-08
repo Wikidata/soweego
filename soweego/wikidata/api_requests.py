@@ -309,7 +309,7 @@ def build_session() -> requests.Session:
     :return: the HTTP session to interact with the Wikidata API
     """
     session_dump_path = os.path.join(
-        constants.SHARED_FOLDER, constants.WIKIDATA_API_SESSION
+        constants.WORK_DIR, constants.WIKIDATA_API_SESSION
     )
 
     try:
@@ -333,7 +333,7 @@ def build_session() -> requests.Session:
                     "won't log into the Wikidata API. "
                     "Please put '%s' in the '%s' module "
                     "if you want to log in next time",
-                    constants.DEFAULT_CREDENTIALS_FILENAME,
+                    constants.CREDENTIALS_FILENAME,
                     constants.DEFAULT_CREDENTIALS_MODULE,
                 )
             elif isinstance(error, KeyError):
@@ -343,7 +343,7 @@ def build_session() -> requests.Session:
                     "Please add it to '%s' in the '%s' module "
                     "if you want to log in next time",
                     error,
-                    constants.DEFAULT_CREDENTIALS_FILENAME,
+                    constants.CREDENTIALS_FILENAME,
                     constants.DEFAULT_CREDENTIALS_MODULE,
                 )
 
