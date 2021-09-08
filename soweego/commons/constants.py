@@ -5,11 +5,12 @@
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
-__version__ = '1.0'
+__version__ = '2.0'
 __license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2018, Hjfocs'
+__copyright__ = 'Copyleft 2021, Hjfocs'
 
 import os
+from pathlib import Path
 from typing import TypeVar
 
 from soweego.commons import keys
@@ -46,15 +47,10 @@ from soweego.importer.models.musicbrainz_entity import (
 )
 from soweego.wikidata import vocabulary
 
-DEFAULT_CREDENTIALS_MODULE = 'soweego.importer.resources'
-DEFAULT_CREDENTIALS_FILENAME = 'credentials.json'
-DEFAULT_CREDENTIALS_LOCATION = (
-    DEFAULT_CREDENTIALS_MODULE,
-    DEFAULT_CREDENTIALS_FILENAME,
-)
-CREDENTIALS_LOCATION = '/app/shared/credentials.json'
-
-# As per https://meta.wikimedia.org/wiki/User-Agent_policy
+##########
+# Wikidata
+##########
+# Comply with https://meta.wikimedia.org/wiki/User-Agent_policy
 HTTP_USER_AGENT = (
     'soweego/2.0 ([[:m:Grants:Project/Hjfocs/soweego_2]]; [[:m:User:Hjfocs]])'
 )
@@ -63,7 +59,77 @@ HTTP_USER_AGENT = (
 QID_REGEX = r'Q\d+'
 PID_REGEX = r'P\d+'
 
-# Entities and corresponding Wikidata query
+#############
+# Directories
+#############
+# The root is 3 parents up from the current file 'soweego/commons/constants.py'
+# NOTE: it must be changed if this file is moved
+ROOT_DIR = Path(__file__).parent.parent.parent
+WORK_DIR = 'work'
+WD_DIR = 'wikidata'
+SAMPLES_DIR = 'samples'
+FEATURES_DIR = 'features'
+MODELS_DIR = 'models'
+RESULTS_DIR = 'results'
+NN_CHECKPOINT_DIR = 'best_model_checkpoint'
+
+############
+# File names
+############
+CREDENTIALS_FILENAME = 'credentials.json'
+NN_CHECKPOINT_FILENAME = '{}_best_checkpoint_model.hdf5'
+EVALUATION_PERFORMANCE_FILENAME = '{}_{}_{}_performance.txt'
+EVALUATION_PREDICTIONS_FILENAME = '{}_{}_{}_evaluation_links.csv.gz'
+RESULT_FILENAME = '{}_{}_{}_links.csv.gz'
+NESTED_CV_BEST_MODEL_FILENAME = '{}_{}_{}_best_model_k{:02}.pkl'
+MODEL_FILENAME = '{}_{}_{}_model.pkl'
+FEATURES_FILENAME = '{}_{}_{}_features{:02}.pkl.gz'
+SAMPLES_FILENAME = '{}_{}_{}_samples{:02}.pkl.gz'
+WD_CLASSIFICATION_SET_FILENAME = 'wikidata_{}_{}_classification_set.jsonl.gz'
+WD_TRAINING_SET_FILENAME = 'wikidata_{}_{}_training_set.jsonl.gz'
+EXTRACTED_LINKS_FILENAME = '{}_{}_extracted_links.csv'
+BASELINE_PERFECT_FILENAME = '{}_{}_baseline_perfect_names.csv'
+BASELINE_LINKS_FILENAME = '{}_{}_baseline_similar_links.csv'
+BASELINE_NAMES_FILENAME = '{}_{}_baseline_similar_names.csv'
+WIKIDATA_API_SESSION = 'wd_api_session.pkl'
+WORKS_BY_PEOPLE_STATEMENTS = '%s_works_by_%s_statements.csv'
+
+#######
+# Paths
+#######
+# Default credentials are included in 'soweego/importer/resources':
+# they should be loaded via `pkgutil.get_data(*DEFAULT_CREDENTIALS)`
+DEFAULT_CREDENTIALS_MODULE = 'soweego.importer.resources'
+DEFAULT_CREDENTIALS = (DEFAULT_CREDENTIALS_MODULE, CREDENTIALS_FILENAME)
+# The user must put their 'credentials.json' file in the project root directory
+USER_CREDENTIALS = os.path.join(ROOT_DIR, CREDENTIALS_FILENAME)
+
+WD_TRAINING_SET = os.path.join(WD_DIR, WD_TRAINING_SET_FILENAME)
+WD_CLASSIFICATION_SET = os.path.join(WD_DIR, WD_CLASSIFICATION_SET_FILENAME)
+SAMPLES = os.path.join(SAMPLES_DIR, SAMPLES_FILENAME)
+FEATURES = os.path.join(FEATURES_DIR, FEATURES_FILENAME)
+LINKER_MODEL = os.path.join(MODELS_DIR, MODEL_FILENAME)
+LINKER_NESTED_CV_BEST_MODEL = os.path.join(
+    MODELS_DIR, NESTED_CV_BEST_MODEL_FILENAME
+)
+LINKER_RESULT = os.path.join(RESULTS_DIR, RESULT_FILENAME)
+LINKER_EVALUATION_PREDICTIONS = os.path.join(
+    RESULTS_DIR, EVALUATION_PREDICTIONS_FILENAME
+)
+LINKER_PERFORMANCE = os.path.join(
+    RESULTS_DIR, EVALUATION_PERFORMANCE_FILENAME
+)
+NEURAL_NETWORK_CHECKPOINT_MODEL = os.path.join(
+    NN_CHECKPOINT_DIR, NN_CHECKPOINT_FILENAME
+)
+EXTRACTED_LINKS = os.path.join(RESULTS_DIR, EXTRACTED_LINKS_FILENAME)
+BASELINE_PERFECT = os.path.join(RESULTS_DIR, BASELINE_PERFECT_FILENAME)
+BASELINE_LINKS = os.path.join(RESULTS_DIR, BASELINE_LINKS_FILENAME)
+BASELINE_NAMES = os.path.join(RESULTS_DIR, BASELINE_NAMES_FILENAME)
+
+#############################
+# Catalogs & entities support
+#############################
 SUPPORTED_QUERY_TYPES = (keys.CLASS_QUERY, keys.OCCUPATION_QUERY)
 SUPPORTED_QUERY_SELECTORS = (
     keys.IDENTIFIER,
@@ -72,6 +138,7 @@ SUPPORTED_QUERY_SELECTORS = (
     keys.BIODATA,
 )
 
+# Entities and corresponding Wikidata query
 SUPPORTED_ENTITIES = {
     keys.ACTOR: keys.OCCUPATION_QUERY,
     keys.BAND: keys.CLASS_QUERY,
@@ -83,8 +150,7 @@ SUPPORTED_ENTITIES = {
     keys.AUDIOVISUAL_WORK: keys.CLASS_QUERY,
 }
 
-# Target catalogs imported into the internal DB
-# DB entity Python types for typed function signatures
+# Make Python types for DB entity objects: useful for type hints
 DB_ENTITY = TypeVar('DB_ENTITY', BaseEntity, BaseLinkEntity, BaseNlpEntity)
 
 # DB entities and their Wikidata class QID
@@ -193,9 +259,7 @@ TARGET_CATALOGS = {
     },
 }
 
-# When building the wikidata dump for catalogs in this array
-# also the QIDs of a person's occupations will be included
-# as part of the dump
+# IMDb-specific
 REQUIRE_OCCUPATION = {
     keys.IMDB: (
         keys.ACTOR,
@@ -205,10 +269,12 @@ REQUIRE_OCCUPATION = {
         keys.WRITER,
     )
 }
+
+# Entity-specific
 REQUIRE_GENRE = (keys.AUDIOVISUAL_WORK, keys.MUSICAL_WORK)
 REQUIRE_PUBLICATION_DATE = (keys.AUDIOVISUAL_WORK, keys.MUSICAL_WORK)
 
-# Cluster of fields with names
+# Fields holding name values
 NAME_FIELDS = (
     keys.NAME,
     keys.ALIAS,
@@ -219,58 +285,9 @@ NAME_FIELDS = (
     keys.REAL_NAME,
 )
 
-# Folders
-SHARED_FOLDER = '/app/shared/'
-WD_FOLDER = 'wikidata'
-SAMPLES_FOLDER = 'samples'
-FEATURES_FOLDERS = 'features'
-MODELS_FOLDER = 'models'
-RESULTS_FOLDER = 'results'
-NN_CHECKPOINT_FOLDER = 'best_model_checkpoint'
-
-# File names
-NN_CHECKPOINT_FILENAME = '{}_best_checkpoint_model.hdf5'
-EVALUATION_PERFORMANCE_FILENAME = '{}_{}_{}_performance.txt'
-EVALUATION_PREDICTIONS_FILENAME = '{}_{}_{}_evaluation_links.csv.gz'
-RESULT_FILENAME = '{}_{}_{}_links.csv.gz'
-NESTED_CV_BEST_MODEL_FILENAME = '{}_{}_{}_best_model_k{:02}.pkl'
-MODEL_FILENAME = '{}_{}_{}_model.pkl'
-FEATURES_FILENAME = '{}_{}_{}_features{:02}.pkl.gz'
-SAMPLES_FILENAME = '{}_{}_{}_samples{:02}.pkl.gz'
-WD_CLASSIFICATION_SET_FILENAME = 'wikidata_{}_{}_classification_set.jsonl.gz'
-WD_TRAINING_SET_FILENAME = 'wikidata_{}_{}_training_set.jsonl.gz'
-EXTRACTED_LINKS_FILENAME = '{}_{}_extracted_links.csv'
-BASELINE_PERFECT_FILENAME = '{}_{}_baseline_perfect_names.csv'
-BASELINE_LINKS_FILENAME = '{}_{}_baseline_similar_links.csv'
-BASELINE_NAMES_FILENAME = '{}_{}_baseline_similar_names.csv'
-WIKIDATA_API_SESSION = 'wd_api_session.pkl'
-WORKS_BY_PEOPLE_STATEMENTS = '%s_works_by_%s_statements.csv'
-
-# Paths
-WD_TRAINING_SET = os.path.join(WD_FOLDER, WD_TRAINING_SET_FILENAME)
-WD_CLASSIFICATION_SET = os.path.join(WD_FOLDER, WD_CLASSIFICATION_SET_FILENAME)
-SAMPLES = os.path.join(SAMPLES_FOLDER, SAMPLES_FILENAME)
-FEATURES = os.path.join(FEATURES_FOLDERS, FEATURES_FILENAME)
-LINKER_MODEL = os.path.join(MODELS_FOLDER, MODEL_FILENAME)
-LINKER_NESTED_CV_BEST_MODEL = os.path.join(
-    MODELS_FOLDER, NESTED_CV_BEST_MODEL_FILENAME
-)
-LINKER_RESULT = os.path.join(RESULTS_FOLDER, RESULT_FILENAME)
-LINKER_EVALUATION_PREDICTIONS = os.path.join(
-    RESULTS_FOLDER, EVALUATION_PREDICTIONS_FILENAME
-)
-LINKER_PERFORMANCE = os.path.join(
-    RESULTS_FOLDER, EVALUATION_PERFORMANCE_FILENAME
-)
-
-NEURAL_NETWORK_CHECKPOINT_MODEL = os.path.join(
-    NN_CHECKPOINT_FOLDER, NN_CHECKPOINT_FILENAME
-)
-EXTRACTED_LINKS = os.path.join(RESULTS_FOLDER, EXTRACTED_LINKS_FILENAME)
-BASELINE_PERFECT = os.path.join(RESULTS_FOLDER, BASELINE_PERFECT_FILENAME)
-BASELINE_LINKS = os.path.join(RESULTS_FOLDER, BASELINE_LINKS_FILENAME)
-BASELINE_NAMES = os.path.join(RESULTS_FOLDER, BASELINE_NAMES_FILENAME)
-
+##################
+# Machine learning
+##################
 CLASSIFIERS = {
     'naive_bayes': keys.NAIVE_BAYES,
     'logistic_regression': keys.LOGISTIC_REGRESSION,
@@ -294,7 +311,7 @@ CLASSIFIERS = {
     'sc': keys.STACKED_CLASSIFIER,  # Shorthand
 }
 
-# holds mention of 'classifier ensemble'
+# Holds mention of 'classifier ensemble'
 CLASSIFIERS_FOR_ENSEMBLE = [
     keys.NAIVE_BAYES,
     keys.LOGISTIC_REGRESSION,
@@ -305,6 +322,7 @@ CLASSIFIERS_FOR_ENSEMBLE = [
 
 PERFORMANCE_METRICS = ['precision', 'recall', 'f1']
 
+# Grid search settings
 PARAMETER_GRIDS = {
     keys.NAIVE_BAYES: {
         'alpha': [0.0001, 0.001, 0.01, 0.1, 1],
@@ -358,15 +376,13 @@ CLASSIFICATION_RETURN_INDEX = ('classification.return_type', 'index')
 CONFIDENCE_THRESHOLD = 0.5
 FEATURE_MISSING_VALUE = 0.0
 
-### Hyperparameters for classifiers
-# General Neural Networks parameters
+# Neural Networks general settings
 LOSS = 'binary_crossentropy'
 METRICS = ['accuracy']
 VALIDATION_SPLIT = 0.33
 
-# Hyperparameters for specific models
+# Per-model hyperparameters
 NAIVE_BAYES_PARAMS = {'alpha': 0.0001, 'binarize': 0.2}
-
 LOGISTIC_REGRESSION_PARAMS = {
     'tol': 0.001,
     'C': 1.0,
@@ -374,23 +390,19 @@ LOGISTIC_REGRESSION_PARAMS = {
     'solver': 'liblinear',
     'max_iter': 100,
 }
-
 LINEAR_SVM_PARAMS = {'dual': True, 'tol': 0.001, 'max_iter': 1000, 'C': 1.0}
-
 RANDOM_FOREST_PARAMS = {
     'n_estimators': 500,
     'criterion': 'entropy',
     'max_features': None,
     'bootstrap': True,
 }
-
 SINGLE_LAYER_PERCEPTRON_PARAMS = {
     'epochs': 1000,
     'batch_size': 256,
     'activation': 'sigmoid',
     'optimizer': 'Nadam',
 }
-
 MULTI_LAYER_PERCEPTRON_PARAMS = {
     'epochs': 1000,
     'batch_size': 512,
@@ -406,17 +418,15 @@ MULTI_LAYER_PERCEPTRON_PARAMS = {
     ),
 }
 
-# Parameters for ensemble
-VOTING_CLASSIFIER_PARAMS = {"voting": "soft"}
-
+# Ensemble hyperparameters
+VOTING_CLASSIFIER_PARAMS = {'voting': 'soft'}
 GATED_ENSEMBLE_PARAMS = {'folds': 2, 'meta_layer': keys.SINGLE_LAYER_PERCEPTRON}
-
 STACKED_ENSEMBLE_PARAMS = {
     'folds': 2,
     'meta_layer': keys.SINGLE_LAYER_PERCEPTRON,
 }
 
-# precisions for the `pandas.Period` class.
+# Precisions for the `pandas.Period` class.
 # Listed from least to most precise, as defined here:
 # http://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#dateoffset-objects
 PD_PERIOD_PRECISIONS = [

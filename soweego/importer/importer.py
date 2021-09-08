@@ -53,8 +53,8 @@ ROTTEN_URLS_FNAME = '{catalog}_{entity}_rotten_urls.csv'
 @click.option(
     '--dir-io',
     type=click.Path(file_okay=False),
-    default=constants.SHARED_FOLDER,
-    help=f'Input/output directory, default: {constants.SHARED_FOLDER}.',
+    default=constants.WORK_DIR,
+    help=f'Input/output directory, default: {constants.WORK_DIR}.',
 )
 def import_cli(catalog: str, url_check: bool, dir_io: str) -> None:
     """Download, extract, and import a supported catalog."""
@@ -74,8 +74,8 @@ def import_cli(catalog: str, url_check: bool, dir_io: str) -> None:
 @click.option(
     '--dir-io',
     type=click.Path(file_okay=False),
-    default=constants.SHARED_FOLDER,
-    help=f'Input/output directory, default: {constants.SHARED_FOLDER}.',
+    default=constants.WORK_DIR,
+    help=f'Input/output directory, default: {constants.WORK_DIR}.',
 )
 def check_urls_cli(catalog, drop, dir_io):
     """Check for rotten URLs of an imported catalog.

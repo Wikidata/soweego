@@ -23,8 +23,8 @@ from sqlalchemy.pool import NullPool
 from soweego.commons import keys
 from soweego.commons import localizations as loc
 from soweego.commons.constants import (
-    CREDENTIALS_LOCATION,
-    DEFAULT_CREDENTIALS_LOCATION,
+    USER_CREDENTIALS,
+    DEFAULT_CREDENTIALS,
 )
 
 BASE = declarative_base()
@@ -86,7 +86,7 @@ class DBManager:
 
     @staticmethod
     def get_credentials():
-        if os.path.isfile(CREDENTIALS_LOCATION):
-            return json.load(open(CREDENTIALS_LOCATION))
+        if os.path.isfile(USER_CREDENTIALS):
+            return json.load(open(USER_CREDENTIALS))
         else:
-            return json.loads(get_data(*DEFAULT_CREDENTIALS_LOCATION))
+            return json.loads(get_data(*DEFAULT_CREDENTIALS))

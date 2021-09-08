@@ -65,8 +65,8 @@ LOGGER = logging.getLogger(__name__)
     '-d',
     '--dir-io',
     type=click.Path(file_okay=False),
-    default=constants.SHARED_FOLDER,
-    help=f'Input/output directory, default: {constants.SHARED_FOLDER}.',
+    default=constants.WORK_DIR,
+    help=f'Input/output directory, default: {constants.WORK_DIR}.',
 )
 @click.option(
     '--dates/--no-dates',
@@ -197,8 +197,8 @@ def _run(catalog, entity, rule, check_dates, upload, sandbox, dir_io):
     '-d',
     '--dir-io',
     type=click.Path(file_okay=False),
-    default=constants.SHARED_FOLDER,
-    help=f'Input/output directory, default: {constants.SHARED_FOLDER}.',
+    default=constants.WORK_DIR,
+    help=f'Input/output directory, default: {constants.WORK_DIR}.',
 )
 def extract_cli(catalog, entity, upload, sandbox, dir_io):
     """Extract Wikidata links from a target catalog dump."""
