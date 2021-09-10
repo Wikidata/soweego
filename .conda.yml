@@ -5,7 +5,7 @@ channels:
 dependencies:
   - _libgcc_mutex=0.1=conda_forge
   - _openmp_mutex=4.5=1_gnu
-  - abseil-cpp=20210324.0=h9c3ff4c_0
+  - abseil-cpp=20210324.2=h9c3ff4c_0
   - absl-py=0.13.0=pyhd8ed1ab_0
   - aiohttp=3.7.4.post0=py39h3811e60_0
   - alabaster=0.7.12=py_0
@@ -28,6 +28,7 @@ dependencies:
   - certifi=2021.5.30=py39hf3d152e_0
   - cffi=1.14.6=py39he32792d_0
   - chardet=4.0.0=py39hf3d152e_1
+  - charset-normalizer=2.0.0=pyhd8ed1ab_0
   - click=8.0.1=py39hf3d152e_0
   - colorama=0.4.4=pyh9f0ad1d_0
   - cryptography=3.4.7=py39hbca0aa6_0
@@ -41,12 +42,12 @@ dependencies:
   - google-auth-oauthlib=0.4.6=pyhd8ed1ab_0
   - google-pasta=0.2.0=pyh8c360ce_0
   - greenlet=1.1.1=py39he80948d_0
-  - grpc-cpp=1.37.1=h36de60a_0
+  - grpc-cpp=1.37.1=hfc4d69e_3
   - grpcio=1.37.1=py39hff7568b_0
   - h5py=2.10.0=nompi_py39h98ba4bc_106
   - hdf5=1.10.6=nompi_h6a2412b_1114
   - icu=68.1=h58526e2_0
-  - idna=2.10=pyh9f0ad1d_0
+  - idna=3.1=pyhd3deb0d_0
   - imagesize=1.2.0=py_0
   - importlib-metadata=4.8.1=py39hf3d152e_0
   - ipdb=0.13.9=pyhd8ed1ab_0
@@ -78,7 +79,7 @@ dependencies:
   - libnghttp2=1.43.0=h812cca2_0
   - libopenblas=0.3.17=pthreads_h8fe5266_1
   - libpng=1.6.37=h21135ba_2
-  - libprotobuf=3.15.8=h780b84a_0
+  - libprotobuf=3.15.8=h780b84a_1
   - libssh2=1.10.0=ha56f1ee_0
   - libstdcxx-ng=11.1.0=h56837e0_8
   - libxml2=2.9.12=h72842e0_0
@@ -86,7 +87,7 @@ dependencies:
   - lxml=4.6.3=py39h107f48f_0
   - markdown=3.3.4=pyhd8ed1ab_0
   - markupsafe=2.0.1=py39h3811e60_0
-  - matplotlib-inline=0.1.2=pyhd8ed1ab_2
+  - matplotlib-inline=0.1.3=pyhd8ed1ab_0
   - mccabe=0.6.1=py_1
   - multidict=5.1.0=py39h3811e60_1
   - mypy=0.910=py39h3811e60_0
@@ -128,16 +129,16 @@ dependencies:
   - pytz=2021.1=pyhd8ed1ab_0
   - pyu2f=0.1.5=pyhd8ed1ab_0
   - pyyaml=5.4.1=py39h3811e60_1
-  - re2=2021.04.01=h9c3ff4c_0
+  - re2=2021.08.01=h9c3ff4c_0
   - readline=8.1=h46c0cb4_0
   - recordlinkage=0.14=pyhd8ed1ab_0
   - regex=2021.8.28=py39h3811e60_0
-  - requests=2.25.1=pyhd3deb0d_0
+  - requests=2.26.0=pyhd8ed1ab_0
   - requests-oauthlib=1.3.0=pyh9f0ad1d_0
   - rsa=4.7.2=pyh44b312d_0
   - scikit-learn=0.24.2=py39h7c5d8c9_1
   - scipy=1.7.1=py39hee8e79c_0
-  - setuptools=57.4.0=py39hf3d152e_0
+  - setuptools=58.0.4=py39hf3d152e_0
   - six=1.16.0=pyh6c4a22f_0
   - snappy=1.1.8=he1b5a44_3
   - snowballstemmer=2.1.0=pyhd8ed1ab_0
@@ -151,7 +152,7 @@ dependencies:
   - sphinxcontrib-qthelp=1.0.3=py_0
   - sphinxcontrib-serializinghtml=1.1.5=pyhd8ed1ab_0
   - sqlalchemy=1.4.23=py39h3811e60_0
-  - sqlite=3.36.0=h9cd32fc_0
+  - sqlite=3.36.0=h9cd32fc_1
   - tensorboard=2.4.1=pyhd8ed1ab_1
   - tensorboard-plugin-wit=1.8.0=pyh44b312d_0
   - tensorflow=2.4.1=py39hf3d152e_0
@@ -182,4 +183,4 @@ dependencies:
     - mlens==0.2.3
     - mwparserfromhell==0.6.3
     - pywikibot==6.5.0
-prefix: /home/focs/.conda/envs/soweego
+prefix: /srv/miniconda3/envs/soweego
