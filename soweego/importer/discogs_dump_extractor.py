@@ -312,13 +312,18 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             if infos is None:
                 continue
 
-            if 'groups' in infos:
+            # NOTE Heuristic to distinguish between musicians and bands:
+            #      <groups> tag = musician
+            #      <members> tag = band
+            # TODO populate another table if no tags
+            if 'groups' in infos:  # Musician
                 entity = DiscogsMusicianEntity()
                 self._populate_musician(entity_array, entity, infos)
-            # Band
-            elif 'members' in infos:
+            elif 'members' in infos:  # Band
                 entity = DiscogsGroupEntity()
                 self._populate_band(entity_array, entity, infos)
+            else:
+                #FIXME
 
             # commit in batches of `self._sqlalchemy_commit_every`
             if len(entity_array) >= self._sqlalchemy_commit_every:
