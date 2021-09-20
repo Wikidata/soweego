@@ -6,9 +6,9 @@
 
 __author__ = 'Marco Fossati'
 __email__ = 'fossati@spaziodati.eu'
-__version__ = '1.0'
+__version__ = '2.0'
 __license__ = 'GPL-3.0'
-__copyright__ = 'Copyleft 2018, Hjfocs'
+__copyright__ = 'Copyleft 2021, Hjfocs'
 
 from sqlalchemy import Column, String, Text
 from sqlalchemy.ext.declarative import declarative_base
@@ -19,8 +19,9 @@ from soweego.importer.models.base_nlp_entity import BaseNlpEntity
 
 BASE = declarative_base()
 
-ARTIST_TABLE = 'discogs_artist'  # Abstract table
+BASE_TABLE = 'discogs_base'  # Abstract table
 
+ARTIST_TABLE = 'discogs_artist'
 MASTER_TABLE = 'discogs_master'
 MUSICIAN_TABLE = 'discogs_musician'
 MUSICIAN_LINK_TABLE = 'discogs_musician_link'
@@ -32,12 +33,19 @@ GROUP_NLP_TABLE = 'discogs_group_nlp'
 MASTER_ARTIST_RELATIONSHIP_TABLE = 'discogs_master_artist_relationship'
 
 
+# TODO rename to DiscogsBaseEntity
 class DiscogsArtistEntity(BaseEntity):
     """A Discogs *artist*: either a musician or a band.
     It comes from the ``_artists.xml.gz`` dataset.
     See the `download page <https://data.discogs.com/>`_.
 
     All ORM entities describing Discogs people should inherit this class.
+
+    .. note::
+        the heuristic to distinguish between a musician and a band
+        is based on the ``<groups>`` and  ``<members>`` XML tags respectively.
+        In case of no such tags, you should use :class:`DiscogsArtistEntity`
+        to represent a generic artist.
 
     **Attributes:**
 
@@ -46,7 +54,7 @@ class DiscogsArtistEntity(BaseEntity):
 
     """
 
-    __tablename__ = ARTIST_TABLE
+    __tablename__ = BASE_TABLE
 
     # Name in real life
     real_name = Column(Text)
@@ -78,6 +86,14 @@ class DiscogsMasterEntity(BaseEntity):
 
     # Discogs-specific indicator of data quality
     data_quality = Column(String(20))
+
+
+# TODO rename to DiscogsArtistEntity
+class DiscogsGenericEntity(DiscogsArtistEntity):
+    """A Discogs generic artist."""
+
+    __tablename__ = ARTIST_TABLE
+    __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
 class DiscogsMusicianEntity(DiscogsArtistEntity):

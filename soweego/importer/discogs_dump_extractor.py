@@ -27,6 +27,7 @@ from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models.base_link_entity import BaseLinkEntity
 from soweego.importer.models.discogs_entity import (
     DiscogsArtistEntity,
+    DiscogsGenericEntity,
     DiscogsGroupEntity,
     DiscogsGroupLinkEntity,
     DiscogsGroupNlpEntity,
@@ -55,6 +56,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
     bands = 0
     band_links = 0
     band_nlp = 0
+    artists = 0
     valid_links = 0
     dead_links = 0
 
@@ -276,6 +278,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             DiscogsGroupEntity,
             DiscogsGroupNlpEntity,
             DiscogsGroupLinkEntity,
+            DiscogsGenericEntity,
         ]
         db_manager = DBManager()
         LOGGER.info('Connected to database: %s', db_manager.get_engine().url)
@@ -315,15 +318,20 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             # NOTE Heuristic to distinguish between musicians and bands:
             #      <groups> tag = musician
             #      <members> tag = band
-            # TODO populate another table if no tags
-            if 'groups' in infos:  # Musician
+            #      Otherwise a generic artist
+            if 'groups' in infos:                                   # Musician
                 entity = DiscogsMusicianEntity()
                 self._populate_musician(entity_array, entity, infos)
-            elif 'members' in infos:  # Band
+            elif 'members' in infos:                                # Band
                 entity = DiscogsGroupEntity()
                 self._populate_band(entity_array, entity, infos)
-            else:
-                #FIXME
+            else:                                                   # Generic
+            # TODO log msg
+                entity = DiscogsGenericEntity()
+                self._fill_entity(entity, infos)
+                self.artists += 1
+                self.total_entities += 1
+                entity_array.append(entity)
 
             # commit in batches of `self._sqlalchemy_commit_every`
             if len(entity_array) >= self._sqlalchemy_commit_every:
@@ -389,7 +397,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         #      get member.attrib['id']
 
     def _populate_musician(
-        self, entity_array, entity: DiscogsArtistEntity, infos: dict
+        self, entity_array, entity: DiscogsMusicianEntity, infos: dict
     ):
         # Main entity
         self._fill_entity(entity, infos)
