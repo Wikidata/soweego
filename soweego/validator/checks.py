@@ -29,6 +29,7 @@ from soweego.commons import (
     text_utils,
 )
 from soweego.commons.db_manager import DBManager
+from soweego.importer.models.discogs_entity import DiscogsArtistEntity
 from soweego.ingester import wikidata_bot
 from soweego.wikidata import api_requests, vocabulary
 from soweego.wikidata.api_requests import get_url_blacklist
@@ -510,6 +511,10 @@ def dead_ids(
 
     # Target catalog side
     session = DBManager.connect_to_db()
+
+    # Discogs musicians/bands: query generic artists too
+    if catalog == keys.DISCOGS and entity in (keys.MUSICIAN, keys.BAND):
+        db_entity = (db_entity, DiscogsArtistEntity)
 
     try:
         for qid in wd_ids:
