@@ -33,8 +33,7 @@ GROUP_NLP_TABLE = 'discogs_group_nlp'
 MASTER_ARTIST_RELATIONSHIP_TABLE = 'discogs_master_artist_relationship'
 
 
-# TODO rename to DiscogsBaseEntity
-class DiscogsArtistEntity(BaseEntity):
+class DiscogsBaseEntity(BaseEntity):
     """A Discogs *artist*: either a musician or a band.
     It comes from the ``_artists.xml.gz`` dataset.
     See the `download page <https://data.discogs.com/>`_.
@@ -88,15 +87,14 @@ class DiscogsMasterEntity(BaseEntity):
     data_quality = Column(String(20))
 
 
-# TODO rename to DiscogsArtistEntity
-class DiscogsGenericEntity(DiscogsArtistEntity):
+class DiscogsArtistEntity(DiscogsBaseEntity):
     """A Discogs generic artist."""
 
     __tablename__ = ARTIST_TABLE
     __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
-class DiscogsMusicianEntity(DiscogsArtistEntity):
+class DiscogsMusicianEntity(DiscogsBaseEntity):
     """A Discogs musician."""
 
     __tablename__ = MUSICIAN_TABLE
@@ -117,7 +115,7 @@ class DiscogsMusicianNlpEntity(BaseNlpEntity, BASE):
     __mapper_args__ = {'polymorphic_identity': __tablename__, 'concrete': True}
 
 
-class DiscogsGroupEntity(DiscogsArtistEntity):
+class DiscogsGroupEntity(DiscogsBaseEntity):
     """A Discogs *group*, namely a band."""
 
     __tablename__ = GROUP_TABLE

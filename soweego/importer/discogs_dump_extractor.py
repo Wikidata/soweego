@@ -26,8 +26,8 @@ from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models.base_link_entity import BaseLinkEntity
 from soweego.importer.models.discogs_entity import (
+    DiscogsBaseEntity,
     DiscogsArtistEntity,
-    DiscogsGenericEntity,
     DiscogsGroupEntity,
     DiscogsGroupLinkEntity,
     DiscogsGroupNlpEntity,
@@ -278,7 +278,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             DiscogsGroupEntity,
             DiscogsGroupNlpEntity,
             DiscogsGroupLinkEntity,
-            DiscogsGenericEntity,
+            DiscogsArtistEntity,
         ]
         db_manager = DBManager()
         LOGGER.info('Connected to database: %s', db_manager.get_engine().url)
@@ -291,7 +291,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         extracted_path = '.'.join(dump_file_path.split('.')[:-1])
         # Extract dump file if it has not yet been extracted
         if not os.path.exists(extracted_path):
-            LOGGER.info('Extracting dump file')
+            LOGGER.info('Extracting dump file ...')
 
             with gzip.open(dump_file_path, 'rb') as f_in:
                 with open(extracted_path, 'wb') as f_out:
@@ -326,8 +326,8 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                 entity = DiscogsGroupEntity()
                 self._populate_band(entity_array, entity, infos)
             else:                                                   # Generic
-            # TODO log msg
-                entity = DiscogsGenericEntity()
+                LOGGER.debug('Generic artist: %s', infos['identifier'])
+                entity = DiscogsArtistEntity()
                 self._fill_entity(entity, infos)
                 self.artists += 1
                 self.total_entities += 1
@@ -460,7 +460,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             )
 
     @staticmethod
-    def _fill_entity(entity: DiscogsArtistEntity, infos):
+    def _fill_entity(entity: DiscogsBaseEntity, infos):
         # Base fields
         entity.catalog_id = infos['identifier']
         entity.name = infos['name']
@@ -486,7 +486,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             )
 
     def _denormalize_name_variation_entities(
-        self, main_entity: DiscogsArtistEntity, name_variation_nodes
+        self, main_entity: DiscogsBaseEntity, name_variation_nodes
     ):
         entity_class = type(main_entity)
         for node in name_variation_nodes:
