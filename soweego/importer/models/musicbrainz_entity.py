@@ -4,7 +4,7 @@
 """`MusicBrainz <https://musicbrainz.org/>`_
 `SQLAlchemy <https://www.sqlalchemy.org/>`_ ORM entities,
 based on the database
-`specifications <https://musicbrainz.org/doc/MusicBrainz_Database>`_."""
+`specifications <https://musicbrainz.org/doc/MusicBrainz_Database>`__."""
 
 __author__ = 'Massimo Frasson'
 __email__ = 'maxfrax@gmail.com'

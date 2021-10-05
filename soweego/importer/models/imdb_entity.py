@@ -3,7 +3,10 @@
 
 """`IMDb <https://www.imdb.com/>`_
 `SQLAlchemy <https://www.sqlalchemy.org/>`_ ORM entities, based on
-the datasets `specifications <https://www.imdb.com/interfaces/>`_."""
+the datasets `specifications <https://www.imdb.com/interfaces/>`__.
+
+_download page: https://datasets.imdbws.com/
+"""
 
 __author__ = 'Marco Fossati, Andrea Tupini'
 __email__ = 'fossati@spaziodati.eu, tupini07@gmail.com'
@@ -34,7 +37,7 @@ TITLE_NAME_RELATIONSHIP_TABLE = 'imdb_title_name_relationship'
 class IMDbNameEntity(BaseEntity):
     """An IMDb *name*: a person like an actor, director, producer, etc.
     It comes from the ``name.basics.tsv.gz`` dataset.
-    See the `download page <https://datasets.imdbws.com/>`_
+    See the `download page`_
 
     All ORM entities describing IMDb people should inherit this class.
 
@@ -66,7 +69,7 @@ class IMDbTitleEntity(BaseEntity):
     """An IMDb *title*: an audiovisual work like a movie, short,
     TV series episode, etc.
     It comes from the ``title.basics.tsv.gz`` dataset.
-    See the `download page <https://datasets.imdbws.com/>`_
+    See the `download page`_
 
     All ORM entities describing IMDb works should inherit this class.
 

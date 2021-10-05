@@ -16,6 +16,7 @@ Here are typical output examples:
 :func:`delete_or_deprecate_identifiers`
   deletes or deprecates identifier statements.
 
+.. _sandbox 2: https://www.wikidata.org/wiki/Q13406268
 """
 
 __author__ = 'Marco Fossati'
@@ -299,8 +300,7 @@ def add_identifiers(
     :param entity: ``{'actor', 'band', 'director', 'musician', 'producer',
       'writer', 'audiovisual_work', 'musical_work'}``.
       A supported entity
-    :param sandbox: whether to perform edits on the
-      `Wikidata sandbox 2 <https://www.wikidata.org/wiki/Q13406268>`_ item
+    :param sandbox: whether to perform edits on the Wikidata `sandbox 2`_ item
     """
     sandbox_item = vocabulary.SANDBOX_2
     catalog_pid = target_database.get_catalog_pid(catalog, entity)
@@ -337,8 +337,7 @@ def add_people_statements(
     :param statements: iterable of
       (subject, predicate, value, catalog ID) tuples
     :param criterion: ``{'links', 'bio'}``. A supported validation criterion
-    :param sandbox: whether to perform edits on the
-      `Wikidata sandbox <https://www.wikidata.org/wiki/Q13406268>`_ item
+    :param sandbox: whether to perform edits on the Wikidata `sandbox 2`_ item
     """
     if criterion == 'links':
         edit_summary = LINKS_VALIDATION_SUMMARY
@@ -386,8 +385,7 @@ def add_works_statements(statements: Iterable, catalog: str, sandbox: bool) -> N
       (work QID, predicate, person QID, person target ID) tuples
     :param catalog: ``{'discogs', 'imdb', 'musicbrainz', 'twitter'}``.
       A supported catalog
-    :param sandbox: whether to perform edits on the
-      `Wikidata sandbox <https://www.wikidata.org/wiki/Q4115189>`_ item
+    :param sandbox: whether to perform edits on the Wikidata `sandbox 2`_ item
     """
     sandbox_item = vocabulary.SANDBOX_2
     catalog_qid = target_database.get_catalog_qid(catalog)
@@ -437,8 +435,7 @@ def delete_or_deprecate_identifiers(
       'writer', 'audiovisual_work', 'musical_work'}``.
       A supported entity
     :param invalid: a ``{invalid_catalog_identifier: [list of QIDs]}`` dictionary
-    :param sandbox: whether to perform edits on the
-      `Wikidata sandbox 2 <https://www.wikidata.org/wiki/Q13406268>`_ item
+    :param sandbox: whether to perform edits on the Wikidata `sandbox 2`_ item
     """
     sandbox_item = vocabulary.SANDBOX_2
     catalog_pid = target_database.get_catalog_pid(catalog, entity)
