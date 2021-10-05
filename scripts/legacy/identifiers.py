@@ -3,8 +3,7 @@ import requests
 
 entities = [l.rstrip() for l in open('1_percent_sample').readlines()]
 buckets = [
-    entities[i * 100 : (i + 1) * 100]
-    for i in range(0, int((len(entities) / 100 + 1)))
+    entities[i * 100 : (i + 1) * 100] for i in range(0, int((len(entities) / 100 + 1)))
 ]
 with open('linked_1_percent_sample.tsv', 'w') as o:
     for b in buckets:

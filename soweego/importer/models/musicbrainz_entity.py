@@ -28,9 +28,7 @@ RELEASE_GROUP_TABLE = 'musicbrainz_release_group'
 RELEASE_GROUP_LINK_TABLE = 'musicbrainz_release_group_link'
 
 ARTIST_BAND_RELATIONSHIP_TABLE = 'musicbrainz_artist_band_relationship'
-RELEASE_ARTIST_RELATIONSHIP_TABLE = (
-    'musicbrainz_release_group_artist_relationship'
-)
+RELEASE_ARTIST_RELATIONSHIP_TABLE = 'musicbrainz_release_group_artist_relationship'
 
 
 class MusicBrainzArtistEntity(BaseEntity):

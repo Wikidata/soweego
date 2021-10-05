@@ -49,9 +49,7 @@ __copyright__ = 'Copyleft 2018, Hjfocs'
 LOGGER = logging.getLogger(__name__)
 
 
-def build_wikidata(
-    goal: str, catalog: str, entity: str, dir_io: str
-) -> JsonReader:
+def build_wikidata(goal: str, catalog: str, entity: str, dir_io: str) -> JsonReader:
     """Build a Wikidata dataset for training or classification purposes:
     workflow step 1.
 
@@ -122,9 +120,7 @@ def build_wikidata(
 
     # Cached dataset, for development purposes
     else:
-        LOGGER.info(
-            "Will reuse existing Wikidata %s set: '%s'", goal, wd_io_path
-        )
+        LOGGER.info("Will reuse existing Wikidata %s set: '%s'", goal, wd_io_path)
         if goal == 'training':
             _reconstruct_qids_and_tids(wd_io_path, qids_and_tids)
 
@@ -178,9 +174,7 @@ def build_target(
     for table in tables:
         query = query.outerjoin(table, base.catalog_id == table.catalog_id)
     # Condition
-    query = query.filter(base.catalog_id.in_(identifiers)).enable_eagerloads(
-        False
-    )
+    query = query.filter(base.catalog_id.in_(identifiers)).enable_eagerloads(False)
 
     sql = query.statement
     LOGGER.debug('SQL query to be fired: %s', sql)
@@ -222,9 +216,7 @@ def preprocess_wikidata(
     for i, chunk in enumerate(wikidata_reader, 1):
         # 1. QID as index
         chunk.set_index(keys.QID, inplace=True)
-        log_dataframe_info(
-            LOGGER, chunk, f"Built index from '{keys.QID}' column"
-        )
+        log_dataframe_info(LOGGER, chunk, f"Built index from '{keys.QID}' column")
 
         # 2. Drop columns with null values only
         _drop_null_columns(chunk)
@@ -267,9 +259,7 @@ def preprocess_wikidata(
         yield chunk
 
 
-def preprocess_target(
-    goal: str, target_reader: Iterator[pd.DataFrame]
-) -> pd.DataFrame:
+def preprocess_target(goal: str, target_reader: Iterator[pd.DataFrame]) -> pd.DataFrame:
     """Preprocess a target catalog dataset: workflow step 2.
 
     This function consumes :class:`pandas.DataFrame` chunks and
@@ -386,9 +376,7 @@ def extract_features(
     name_column = keys.NAME
     if in_both_datasets(name_column):
         feature_extractor.add(
-            features.ExactMatch(
-                name_column, name_column, label=f'{name_column}_exact'
-            )
+            features.ExactMatch(name_column, name_column, label=f'{name_column}_exact')
         )
 
     # URL features
@@ -437,9 +425,7 @@ def extract_features(
             )
         )
 
-    feature_vectors = feature_extractor.compute(
-        candidate_pairs, wikidata, target
-    )
+    feature_vectors = feature_extractor.compute(candidate_pairs, wikidata, target)
     feature_vectors = feature_vectors[
         ~feature_vectors.index.duplicated()  # Drop duplicates
     ]
@@ -569,9 +555,7 @@ def _rename_or_drop_tid_columns(target):
         # in this case, they must be identical,
         # so take the first one
         target[keys.TID] = (
-            no_nulls.iloc[:, 0]
-            if isinstance(no_nulls, pd.DataFrame)
-            else no_nulls
+            no_nulls.iloc[:, 0] if isinstance(no_nulls, pd.DataFrame) else no_nulls
         )
 
     target.drop(columns=keys.CATALOG_ID, inplace=True)
@@ -738,9 +722,7 @@ def _build_date_object(value, slice_index, to_dates_list):
     try:
         to_dates_list.append(pd.Period(value[:slice_index]))
     except ValueError as ve:
-        LOGGER.warning(
-            "Skipping date that can't be parsed: %s. Reason: %s", value, ve
-        )
+        LOGGER.warning("Skipping date that can't be parsed: %s. Reason: %s", value, ve)
 
 
 def _occupations_to_set(df):

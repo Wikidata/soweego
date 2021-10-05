@@ -97,9 +97,7 @@ CATALOG_ENTITY_URLS = {
 
 @click.command()
 @click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
-@click.argument(
-    'entity', type=click.Choice(target_database.supported_entities())
-)
+@click.argument('entity', type=click.Choice(target_database.supported_entities()))
 @click.argument('confidence_range', type=(float, float))
 @click.argument('matches', type=click.Path(exists=True, dir_okay=False))
 def cli(catalog, entity, confidence_range, matches):
@@ -145,9 +143,7 @@ def add_catalog(catalog: str, entity: str) -> int:
     session = DBManager(MNM_DB).new_session()
     try:
         existing = (
-            session.query(mix_n_match.MnMCatalog)
-            .filter_by(name=name_field)
-            .first()
+            session.query(mix_n_match.MnMCatalog).filter_by(name=name_field).first()
         )
         if existing is None:
             LOGGER.info(
@@ -179,9 +175,7 @@ def add_catalog(catalog: str, entity: str) -> int:
     finally:
         session.close()
 
-    LOGGER.info(
-        'Catalog addition/update went fine. Internal ID: %d', catalog_id
-    )
+    LOGGER.info('Catalog addition/update went fine. Internal ID: %d', catalog_id)
     return catalog_id
 
 
@@ -297,9 +291,7 @@ def _import_matches(
         url = '' if url_prefix is None else f'{url_prefix}{tid}'
 
         db_entity = mix_n_match.MnMEntry()
-        _set_entry_fields(
-            db_entity, catalog_id, qid, tid, url, class_qid, score
-        )
+        _set_entry_fields(db_entity, catalog_id, qid, tid, url, class_qid, score)
         batch.append(db_entity)
 
         if len(batch) >= COMMIT_EVERY:
@@ -452,9 +444,7 @@ def _set_catalog_fields(db_entity, name_field, catalog, entity):
     db_entity.active = 1
     db_entity.note = NOTE_FIELD
     db_entity.type = CATALOG_TYPES.get(catalog, '')
-    db_entity.source_item = int(
-        target_database.get_catalog_qid(catalog).lstrip('Q')
-    )
+    db_entity.source_item = int(target_database.get_catalog_qid(catalog).lstrip('Q'))
     wd_prop = target_database.get_catalog_pid(catalog, entity)
     db_entity.wd_prop = int(wd_prop.lstrip('P'))
     db_entity.search_wp = SEARCH_WP_FIELD

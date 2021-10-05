@@ -21,13 +21,7 @@ from sqlalchemy import and_
 from sqlalchemy.exc import SQLAlchemyError
 from tqdm import tqdm
 
-from soweego.commons import (
-    constants,
-    data_gathering,
-    keys,
-    target_database,
-    utils,
-)
+from soweego.commons import constants, data_gathering, keys, target_database, utils
 from soweego.commons.db_manager import DBManager
 from soweego.ingester import wikidata_bot
 from soweego.wikidata import vocabulary
@@ -36,15 +30,9 @@ LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
-@click.argument(
-    'catalog', type=click.Choice(target_database.supported_targets())
-)
-@click.argument(
-    'entity', type=click.Choice(target_database.supported_entities())
-)
-@click.option(
-    '-u', '--upload', is_flag=True, help='Upload statements to Wikidata.'
-)
+@click.argument('catalog', type=click.Choice(target_database.supported_targets()))
+@click.argument('entity', type=click.Choice(target_database.supported_entities()))
+@click.option('-u', '--upload', is_flag=True, help='Upload statements to Wikidata.')
 @click.option(
     '-s',
     '--sandbox',
@@ -74,9 +62,7 @@ def works_people_cli(catalog, entity, upload, sandbox, dir_io):
         sys.exit(1)
 
     with open(
-        os.path.join(
-            dir_io, constants.WORKS_BY_PEOPLE_STATEMENTS % (catalog, entity)
-        ),
+        os.path.join(dir_io, constants.WORKS_BY_PEOPLE_STATEMENTS % (catalog, entity)),
         'w',
         1,
     ) as fout:

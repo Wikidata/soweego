@@ -63,9 +63,7 @@ compare.string('name', 'name', method='levenshtein', threshold=0.7)
 features = compare.compute(candidate_pairs, discogs_df, wikidata_df)
 features
 compare = recordlinkage.Compare()
-compare.string(
-    'name', 'name', method='levenshtein', threshold=0.7, label='stocazzo'
-)
+compare.string('name', 'name', method='levenshtein', threshold=0.7, label='stocazzo')
 features = compare.compute(candidate_pairs, discogs_df, wikidata_df)
 features
 discogs_df[304]
@@ -103,9 +101,7 @@ get_ipython().run_line_magic('pinfo', 'pandas.Series')
 from recordlinkage.preprocessing import clean
 
 wikidata
-etichette = json.load(
-    open('/Users/focs/wikidata/label2qid_1_percent_sample.json')
-)
+etichette = json.load(open('/Users/focs/wikidata/label2qid_1_percent_sample.json'))
 etichette
 get_ipython().run_line_magic('pinfo', 'pandas.Series')
 serie = pandas.Series(etichette)

@@ -33,12 +33,8 @@ LOGGER = logging.getLogger(__name__)
     context_settings={'ignore_unknown_options': True, 'allow_extra_args': True}
 )
 @click.argument('classifier', type=click.Choice(constants.CLASSIFIERS))
-@click.argument(
-    'catalog', type=click.Choice(target_database.supported_targets())
-)
-@click.argument(
-    'entity', type=click.Choice(target_database.supported_entities())
-)
+@click.argument('catalog', type=click.Choice(target_database.supported_targets()))
+@click.argument('entity', type=click.Choice(target_database.supported_entities()))
 @click.option(
     '-t',
     '--tune',
@@ -72,9 +68,7 @@ def cli(ctx, classifier, catalog, entity, tune, k_folds, dir_io):
 
     actual_classifier = constants.CLASSIFIERS[classifier]
 
-    model = execute(
-        actual_classifier, catalog, entity, tune, k_folds, dir_io, **kwargs
-    )
+    model = execute(actual_classifier, catalog, entity, tune, k_folds, dir_io, **kwargs)
 
     outfile = os.path.join(
         dir_io,

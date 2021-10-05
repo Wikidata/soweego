@@ -21,9 +21,7 @@ people = {
         'total_entries': int(mnm[db]['total']),
         'in_wikidata': float(int(mnm[db]['manual']) / int(mnm[db]['total'])),
         'unable_to_match': float(int(mnm[db]['noq']) / int(mnm[db]['total'])),
-        'matched_to_be_curated': float(
-            int(mnm[db]['autoq']) / int(mnm[db]['total'])
-        ),
+        'matched_to_be_curated': float(int(mnm[db]['autoq']) / int(mnm[db]['total'])),
         'url': mnm[db]['url'],
     }
     for db in mnm.keys()
@@ -59,9 +57,7 @@ json.dump(
 )
 
 # All SQID Wikidata properties
-sqid = requests.get(
-    'https://tools.wmflabs.org/sqid/data/properties.json'
-).json()
+sqid = requests.get('https://tools.wmflabs.org/sqid/data/properties.json').json()
 # SQID properties having external IDs as values
 sqid_all = {
     pid: {
@@ -78,12 +74,8 @@ sqid_all = {
 mnm_people_with_pid = {
     mnm[db]['wd_prop']: {
         'mnm_total_db_entries': int(mnm[db]['total']),
-        'mnm_in_wikidata': float(
-            int(mnm[db]['manual']) / int(mnm[db]['total'])
-        ),
-        'mnm_unable_to_match': float(
-            int(mnm[db]['noq']) / int(mnm[db]['total'])
-        ),
+        'mnm_in_wikidata': float(int(mnm[db]['manual']) / int(mnm[db]['total'])),
+        'mnm_unable_to_match': float(int(mnm[db]['noq']) / int(mnm[db]['total'])),
         'mnm_matched_to_be_curated': float(
             int(mnm[db]['autoq']) / int(mnm[db]['total'])
         ),
@@ -109,9 +101,7 @@ by_sqid_usage = OrderedDict(
     )
 )
 by_mnm_entries = OrderedDict(
-    sorted(
-        final.items(), key=lambda x: x[1]['mnm_total_db_entries'], reverse=True
-    )
+    sorted(final.items(), key=lambda x: x[1]['mnm_total_db_entries'], reverse=True)
 )
 json.dump(
     by_sqid_usage,

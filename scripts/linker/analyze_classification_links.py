@@ -112,9 +112,7 @@ for _, gg in df.groupby('Model'):
         }
     )
 
-summaries = pd.DataFrame(summaries).sort_values(
-    by="Average Mean", ascending=False
-)
+summaries = pd.DataFrame(summaries).sort_values(by="Average Mean", ascending=False)
 
 print(summaries.to_csv(index=False))
 
@@ -184,9 +182,7 @@ for axi in itertools.product([0, 1, 2], [0, 1, 2]):
             d["Prediction"].value_counts(normalize=True).reset_index()
         )
 
-        dcounts = dcounts.rename(
-            columns={"index": "Value", "Prediction": "Counts"}
-        )
+        dcounts = dcounts.rename(columns={"index": "Value", "Prediction": "Counts"})
         dcounts["Model"] = m
         dcounts["Catalog/Entity"] = ce
 
@@ -195,6 +191,4 @@ for axi in itertools.product([0, 1, 2], [0, 1, 2]):
         else:
             data = data.append(dcounts, ignore_index=True)
 
-    sns.barplot(
-        x="Value", y="Counts", data=data, hue="Model", ax=axes_binary[axi]
-    )
+    sns.barplot(x="Value", y="Counts", data=data, hue="Model", ax=axes_binary[axi])

@@ -63,15 +63,11 @@ def resolve_qid(term: str, language='en') -> Optional[str]:
         return response_body['search'][0]['id']
     # Malformed JSON response
     except KeyError as e:
-        LOGGER.error(
-            "Missing '%s' key from JSON response: %s", e, response_body
-        )
+        LOGGER.error("Missing '%s' key from JSON response: %s", e, response_body)
         return None
     # No search results
     except IndexError:
-        LOGGER.info(
-            "No QIDs found for search term '%s' (language: %s)", term, language
-        )
+        LOGGER.info("No QIDs found for search term '%s' (language: %s)", term, language)
         return None
 
 
@@ -97,9 +93,7 @@ def get_url_blacklist() -> Optional[set]:
     try:
         star = response_body['parse']['text']['*']  # Interesting nonsense key
     except KeyError as e:
-        LOGGER.error(
-            "Missing '%s' key from JSON response: %s", e, response_body
-        )
+        LOGGER.error("Missing '%s' key from JSON response: %s", e, response_body)
         return None
 
     # The parsed page should be a <div> element
@@ -181,9 +175,7 @@ def get_links(
             claims = entity.get('claims')
             if claims:
                 # Third-party links
-                yield _yield_expected_values(
-                    qid, claims, url_pids, no_links_count
-                )
+                yield _yield_expected_values(qid, claims, url_pids, no_links_count)
 
                 # External ID links
                 yield _yield_ext_id_links(
@@ -308,9 +300,7 @@ def build_session() -> requests.Session:
     :rtype: :py:class:`requests.Session`
     :return: the HTTP session to interact with the Wikidata API
     """
-    session_dump_path = os.path.join(
-        constants.WORK_DIR, constants.WIKIDATA_API_SESSION
-    )
+    session_dump_path = os.path.join(constants.WORK_DIR, constants.WIKIDATA_API_SESSION)
 
     try:
         return _load_cached_session(session_dump_path)
@@ -360,9 +350,7 @@ def build_session() -> requests.Session:
         return session
 
 
-def parse_value(
-    value: Union[str, Dict]
-) -> Union[str, Tuple[str, str], Set[str], None]:
+def parse_value(value: Union[str, Dict]) -> Union[str, Tuple[str, str], Set[str], None]:
     """Parse a value returned by the Wikidata API into standard Python objects.
 
     The parser supports the following Wikidata
@@ -439,8 +427,7 @@ def _lookup_label(item_value):
     entity = entities.get(item_value)
     if entity is None:
         LOGGER.warning(
-            "Skipping unexpected JSON response with no %s "
-            "in the 'entities' key",
+            "Skipping unexpected JSON response with no %s " "in the 'entities' key",
             item_value,
         )
         return None
@@ -544,9 +531,7 @@ def _process_bucket(
         processed[keys.URL] = list(processed[keys.URL])
 
         # Expected claims
-        processed.update(
-            _return_claims_for_linker(qid, claims, needs, counters)
-        )
+        processed.update(_return_claims_for_linker(qid, claims, needs, counters))
 
         result.append(processed)
 
@@ -612,9 +597,7 @@ def _return_third_party_urls(qid, claims, url_pids, counters):
     available = url_pids.intersection(claims.keys())
 
     if available:
-        LOGGER.debug(
-            'Available third-party URL PIDs for %s: %s', qid, available
-        )
+        LOGGER.debug('Available third-party URL PIDs for %s: %s', qid, available)
         for pid in available:
             for pid_claim in claims[pid]:
                 value = _extract_value_from_claim(pid_claim, pid, qid)
@@ -747,9 +730,7 @@ def _yield_sitelinks(entity, qid, no_sitelinks_count):
 
 
 def _yield_ext_id_links(ext_id_pids_to_urls, claims, qid, no_ext_ids_count):
-    available_ext_id_pids = set(ext_id_pids_to_urls.keys()).intersection(
-        claims.keys()
-    )
+    available_ext_id_pids = set(ext_id_pids_to_urls.keys()).intersection(claims.keys())
 
     if not available_ext_id_pids:
         LOGGER.debug('No external identifier links for %s', qid)
@@ -771,9 +752,7 @@ def _yield_ext_id_links(ext_id_pids_to_urls, claims, qid, no_ext_ids_count):
                     yield qid, formatter_url.replace('$1', ext_id)
 
 
-def _yield_expected_values(
-    qid, claims, expected_pids, count, include_pid=False
-):
+def _yield_expected_values(qid, claims, expected_pids, count, include_pid=False):
     available = expected_pids.intersection(claims.keys())
 
     if not available:
@@ -947,16 +926,12 @@ def _extract_value_from_claim(pid_claim, pid, qid):
     LOGGER.debug('Processing (%s, %s) claim: %s', qid, pid, pid_claim)
     main_snak = pid_claim.get('mainsnak')
     if not main_snak:
-        LOGGER.warning(
-            'Skipping malformed (%s, %s) claim with no main snak', qid, pid
-        )
+        LOGGER.warning('Skipping malformed (%s, %s) claim with no main snak', qid, pid)
         LOGGER.debug('Malformed claim: %s', pid_claim)
         return None
     snak_type = main_snak.get('snaktype')
     if not snak_type:
-        LOGGER.warning(
-            'Skipping malformed (%s, %s) claim with no snak type', qid, pid
-        )
+        LOGGER.warning('Skipping malformed (%s, %s) claim with no snak type', qid, pid)
         LOGGER.debug('Malformed claim: %s', pid_claim)
         return None
     if snak_type == 'novalue':
@@ -976,9 +951,7 @@ def _extract_value_from_claim(pid_claim, pid, qid):
         return None
     value = data_value.get('value')
     if not value:
-        LOGGER.warning(
-            'Skipping malformed (%s, %s) claim with no value', qid, pid
-        )
+        LOGGER.warning('Skipping malformed (%s, %s) claim with no value', qid, pid)
         LOGGER.debug('Malformed claim: %s', pid_claim)
         return None
     LOGGER.debug('QID: %s - PID: %s - Value: %s', qid, pid, value)

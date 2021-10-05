@@ -77,9 +77,7 @@ class ExactMatch(BaseCompareFeature):
     """Compare pairs of lists through exact match on each pair of elements."""
 
     name = 'exact_match'
-    description = (
-        'Compare pairs of lists through exact match on each pair of elements.'
-    )
+    description = 'Compare pairs of lists through exact match on each pair of elements.'
 
     def __init__(
         self,
@@ -112,9 +110,7 @@ class ExactMatch(BaseCompareFeature):
 
         def exact_apply(pair):
             if _pair_has_any_null(pair):
-                LOGGER.debug(
-                    "Can't compare, the pair contains null values: %s", pair
-                )
+                LOGGER.debug("Can't compare, the pair contains null values: %s", pair)
                 return np.nan
 
             scores = []
@@ -367,12 +363,8 @@ class SimilarDates(BaseCompareFeature):
 
             for source, target in itertools.product(source_list, target_list):
                 # Get precision number for both dates
-                s_precision = constants.PD_PERIOD_PRECISIONS.index(
-                    source.freq.name
-                )
-                t_precision = constants.PD_PERIOD_PRECISIONS.index(
-                    target.freq.name
-                )
+                s_precision = constants.PD_PERIOD_PRECISIONS.index(source.freq.name)
+                t_precision = constants.PD_PERIOD_PRECISIONS.index(target.freq.name)
 
                 # Minimum pair precision = maximum shared precision
                 lowest_prec = min(s_precision, t_precision)
@@ -408,9 +400,7 @@ class SimilarDates(BaseCompareFeature):
 
             return best
 
-        return fillna(
-            concatenated.apply(check_date_equality), self.missing_value
-        )
+        return fillna(concatenated.apply(check_date_equality), self.missing_value)
 
 
 class SharedTokens(BaseCompareFeature):
@@ -420,8 +410,7 @@ class SharedTokens(BaseCompareFeature):
 
     name = 'shared_tokens'
     description = (
-        'Compare pairs of lists holding string tokens '
-        'through weighted intersection'
+        'Compare pairs of lists holding string tokens ' 'through weighted intersection'
     )
 
     def __init__(
@@ -548,9 +537,7 @@ class SharedOccupations(BaseCompareFeature):
 
         return expanded_set
 
-    def _compute_vectorized(
-        self, source_column: pd.Series, target_column: pd.Series
-    ):
+    def _compute_vectorized(self, source_column: pd.Series, target_column: pd.Series):
 
         # add the superclasses and subclasses of each occupation to
         # the target column
@@ -563,8 +550,7 @@ class SharedOccupations(BaseCompareFeature):
         def check_occupation_equality(pair: Tuple[Set[str], Set[str]]):
             if _pair_has_any_null(pair):
                 LOGGER.debug(
-                    "Can't compare occupations, "
-                    "the pair contains null values: %s",
+                    "Can't compare occupations, " "the pair contains null values: %s",
                     pair,
                 )
                 return np.nan
@@ -576,9 +562,7 @@ class SharedOccupations(BaseCompareFeature):
 
             return n_shared_items / min_length
 
-        return fillna(
-            concatenated.apply(check_occupation_equality), self.missing_value
-        )
+        return fillna(concatenated.apply(check_occupation_equality), self.missing_value)
 
 
 class SharedTokensPlus(BaseCompareFeature):
@@ -596,8 +580,7 @@ class SharedTokensPlus(BaseCompareFeature):
 
     name = 'shared_tokens_plus'
     description = (
-        'Compare pairs of lists holding string tokens '
-        'through weighted intersection'
+        'Compare pairs of lists holding string tokens ' 'through weighted intersection'
     )
 
     def __init__(
@@ -652,17 +635,13 @@ class SharedTokensPlus(BaseCompareFeature):
         # Compute shared tokens after filtering stop words
         def compare_apply(pair: Tuple[List[str], List[str]]) -> float:
             if _pair_has_any_null(pair):
-                LOGGER.debug(
-                    "Can't compare, the pair contains null values: %s", pair
-                )
+                LOGGER.debug("Can't compare, the pair contains null values: %s", pair)
                 return np.nan
 
             # first we clean a bit the pair
             # make all lowercase and split on possible spaces
             # also reshape result into a list (flatten)
-            pair = [
-                self._flatten([el.lower().split() for el in p]) for p in pair
-            ]
+            pair = [self._flatten([el.lower().split() for el in p]) for p in pair]
 
             s_item, t_item = pair
 

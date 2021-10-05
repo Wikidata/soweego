@@ -33,9 +33,6 @@ def main(items_path, sparql_condition, output_path):
 
 if __name__ == '__main__':
     if len(argv) != 4:
-        print(
-            'Usage: python %s ITEMS_PATH SPARQL_CONSTRAINT OUTPUT_PATH'
-            % __file__
-        )
+        print('Usage: python %s ITEMS_PATH SPARQL_CONSTRAINT OUTPUT_PATH' % __file__)
         exit(1)
     exit(main(argv[1], argv[2], argv[3]))

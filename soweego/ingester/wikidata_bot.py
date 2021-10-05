@@ -93,9 +93,7 @@ SUPPORTED_TARGETS = target_database.supported_targets() ^ {TWITTER}
 
 @click.command()
 @click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
-@click.argument(
-    'entity', type=click.Choice(target_database.supported_entities())
-)
+@click.argument('entity', type=click.Choice(target_database.supported_entities()))
 @click.argument('invalid_identifiers', type=click.File())
 @click.option(
     '-s',
@@ -110,9 +108,7 @@ def delete_cli(catalog, entity, invalid_identifiers, sandbox):
     Format: { catalog_identifier: [ list of QIDs ] }
     """
     if sandbox:
-        LOGGER.info(
-            'Running on the Wikidata sandbox item %s ...', vocabulary.SANDBOX_2
-        )
+        LOGGER.info('Running on the Wikidata sandbox item %s ...', vocabulary.SANDBOX_2)
 
     delete_or_deprecate_identifiers(
         'delete', catalog, entity, json.load(invalid_identifiers), sandbox
@@ -121,9 +117,7 @@ def delete_cli(catalog, entity, invalid_identifiers, sandbox):
 
 @click.command()
 @click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
-@click.argument(
-    'entity', type=click.Choice(target_database.supported_entities())
-)
+@click.argument('entity', type=click.Choice(target_database.supported_entities()))
 @click.argument('invalid_identifiers', type=click.File())
 @click.option(
     '-s',
@@ -138,9 +132,7 @@ def deprecate_cli(catalog, entity, invalid_identifiers, sandbox):
     Format: { catalog_identifier: [ list of QIDs ] }
     """
     if sandbox:
-        LOGGER.info(
-            'Running on the Wikidata sandbox item %s ...', vocabulary.SANDBOX_2
-        )
+        LOGGER.info('Running on the Wikidata sandbox item %s ...', vocabulary.SANDBOX_2)
 
     delete_or_deprecate_identifiers(
         'deprecate', catalog, entity, json.load(invalid_identifiers), sandbox
@@ -149,9 +141,7 @@ def deprecate_cli(catalog, entity, invalid_identifiers, sandbox):
 
 @click.command()
 @click.argument('catalog', type=click.Choice(SUPPORTED_TARGETS))
-@click.argument(
-    'entity', type=click.Choice(target_database.supported_entities())
-)
+@click.argument('entity', type=click.Choice(target_database.supported_entities()))
 @click.argument('identifiers', type=click.File())
 @click.option(
     '-s',
@@ -356,8 +346,7 @@ def add_people_statements(
         edit_summary = BIO_VALIDATION_SUMMARY
     else:
         raise ValueError(
-            f"Invalid criterion: '{criterion}'. "
-            "Please use either 'links' or 'bio'"
+            f"Invalid criterion: '{criterion}'. " "Please use either 'links' or 'bio'"
         )
 
     sandbox_item = vocabulary.SANDBOX_2
@@ -387,9 +376,7 @@ def add_people_statements(
         )
 
 
-def add_works_statements(
-    statements: Iterable, catalog: str, sandbox: bool
-) -> None:
+def add_works_statements(statements: Iterable, catalog: str, sandbox: bool) -> None:
     """Add statements to existing Wikidata works.
 
     Statements typically come from
@@ -459,9 +446,7 @@ def delete_or_deprecate_identifiers(
     for tid, qids in invalid.items():
         for qid in qids:
             actual_qid = qid if not sandbox else sandbox_item
-            LOGGER.info(
-                'Will %s %s identifier: %s -> %s', action, catalog, tid, qid
-            )
+            LOGGER.info('Will %s %s identifier: %s -> %s', action, catalog, tid, qid)
             _delete_or_deprecate(action, actual_qid, tid, catalog, catalog_pid)
 
 
@@ -630,9 +615,7 @@ def _handle_addition(
 
     # No given value -> add statement
     if value not in existing_values:
-        LOGGER.debug(
-            '%s has no %s claim with value %s', subject_qid, predicate, value
-        )
+        LOGGER.debug('%s has no %s claim with value %s', subject_qid, predicate, value)
         _add(
             subject_item,
             predicate,
@@ -646,9 +629,7 @@ def _handle_addition(
         return
 
     # Claim with the given predicate and value -> add reference
-    LOGGER.debug(
-        "%s has a %s claim with value '%s'", subject_qid, predicate, value
-    )
+    LOGGER.debug("%s has a %s claim with value '%s'", subject_qid, predicate, value)
     if case_insensitive:
         for claim in given_predicate_claims:
             if claim.getTarget().lower() == value:
@@ -822,9 +803,7 @@ def _add(
         catalog_id,
         edit_summary=edit_summary,
     )
-    LOGGER.info(
-        'Added (%s, %s, %s) statement', subject_item.getID(), predicate, value
-    )
+    LOGGER.info('Added (%s, %s, %s) statement', subject_item.getID(), predicate, value)
 
 
 def _reference(
@@ -862,18 +841,14 @@ def _reference(
 
     if catalog_pid is not None and catalog_id is not None:
         # (catalog property, catalog ID) reference claim
-        catalog_id_reference = pywikibot.Claim(
-            REPO, catalog_pid, is_reference=True
-        )
+        catalog_id_reference = pywikibot.Claim(REPO, catalog_pid, is_reference=True)
         catalog_id_reference.setTarget(catalog_id)
         reference_node.append(catalog_id_reference)
         log_buffer.append(f'({catalog_pid}, {catalog_id})')
 
     # All tasks
     # (retrieved, TODAY) reference claim
-    retrieved_reference = pywikibot.Claim(
-        REPO, vocabulary.RETRIEVED, is_reference=True
-    )
+    retrieved_reference = pywikibot.Claim(REPO, vocabulary.RETRIEVED, is_reference=True)
     retrieved_reference.setTarget(TIMESTAMP)
     reference_node.append(retrieved_reference)
     log_buffer.append(f'({retrieved_reference.getID()}, {TODAY})')
@@ -929,9 +904,7 @@ def _delete_or_deprecate(action, qid, tid, catalog, catalog_pid) -> None:
             if action == 'delete':
                 item.removeClaims([claim], summary='Invalid identifier')
             elif action == 'deprecate':
-                claim.changeRank(
-                    'deprecated', summary='Deprecate arguable claim'
-                )
+                claim.changeRank('deprecated', summary='Deprecate arguable claim')
             LOGGER.debug('%s claim: %s', action.title() + 'd', claim.toJSON())
     LOGGER.info(
         '%s %s identifier statement from %s', action.title() + 'd', catalog, qid

@@ -35,9 +35,7 @@ class BaseNlpEntity(AbstractConcreteBase, BASE):
     """
 
     __tablename__ = None
-    internal_id = Column(
-        Integer, unique=True, primary_key=True, autoincrement=True
-    )
+    internal_id = Column(Integer, unique=True, primary_key=True, autoincrement=True)
     # Catalog identifier of the entity with textual data, indexed
     catalog_id = Column(String(50), nullable=False, index=True)
     # Original text
