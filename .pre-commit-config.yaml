@@ -14,3 +14,6 @@ repos:
     hooks:
       - id: black
         args: [-S, -l 80]
+ci:
+  autofix_commit_msg: pre-commit automatic fixes
+  autoupdate_commit_msg: pre-commit hooks automatic update
