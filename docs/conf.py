@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = 'soweego'
-copyright = 'MMXIX, <a href="https://meta.wikimedia.org/wiki/User:Hjfocs">Marco Fossati</a>. A <a href="https://wikimediafoundation.org/">Wikimedia Foundation</a> project'
+copyright = 'MMXIX-present, <a href="https://meta.wikimedia.org/wiki/User:Hjfocs">Marco Fossati</a>. A <a href="https://wikimediafoundation.org/">Wikimedia Foundation</a> project'
 author = 'Marco Fossati, Massimo Frasson, Edoardo Lenzi, Andrea Tupini'
 
 # The full version, including alpha/beta/rc tags
@@ -78,7 +78,7 @@ html_theme_options = {
     'github_banner': True,
     'github_button': True,
     'github_type': 'star',
-    'github_count': False,
+    'github_count': True,
     # Header & footer
     'show_powered_by': False,
 }
@@ -90,7 +90,7 @@ intersphinx_mapping = {
     'pandas': ('https://pandas.pydata.org/pandas-docs/stable/', None),
     'recordlinkage': ('https://recordlinkage.readthedocs.io/en/latest/', None),
     'requests': ('https://requests.readthedocs.io/en/stable/', None),
-    'sqlalchemy': ('https://docs.sqlalchemy.org/en/13/', None),
+    'sqlalchemy': ('https://docs.sqlalchemy.org/en/stable/', None),
     'sklearn': ('https://scikit-learn.org/stable/', None),
-    'mlens': ('https://mlens.readthedocs.io/en/0.1.x/', None),
+    'mlens': ('http://ml-ensemble.com/docs/', None),
 }
