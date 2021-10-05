@@ -21,13 +21,7 @@ import regex
 from sqlalchemy import or_
 from tqdm import tqdm
 
-from soweego.commons import (
-    constants,
-    keys,
-    target_database,
-    text_utils,
-    url_utils,
-)
+from soweego.commons import constants, keys, target_database, text_utils, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer import models
 from soweego.wikidata import api_requests, sparql_queries, vocabulary
@@ -35,9 +29,7 @@ from soweego.wikidata import api_requests, sparql_queries, vocabulary
 LOGGER = logging.getLogger(__name__)
 
 
-def gather_target_biodata(
-    entity: str, catalog: str
-) -> Optional[Iterator[tuple]]:
+def gather_target_biodata(entity: str, catalog: str) -> Optional[Iterator[tuple]]:
     LOGGER.info(
         'Gathering %s birth/death dates/places and gender metadata ...', catalog
     )
@@ -83,11 +75,7 @@ def tokens_fulltext_search(
         raise ValueError('Bad target entity class: %s' % target_entity)
 
     tokens = filter(None, tokens)
-    terms = (
-        ' '.join(map('+{0}'.format, tokens))
-        if boolean_mode
-        else ' '.join(tokens)
-    )
+    terms = ' '.join(map('+{0}'.format, tokens)) if boolean_mode else ' '.join(tokens)
     ft_search = column.match(terms)
 
     session = DBManager.connect_to_db()
@@ -144,9 +132,7 @@ def perfect_name_search(
     session = DBManager.connect_to_db()
     try:
         for r in (
-            session.query(target_entity)
-            .filter(target_entity.name == to_search)
-            .all()
+            session.query(target_entity).filter(target_entity.name == to_search).all()
         ):
             yield r
 
@@ -163,9 +149,7 @@ def perfect_name_search_bucket(
     session = DBManager.connect_to_db()
     try:
         for r in (
-            session.query(target_entity)
-            .filter(target_entity.name.in_(to_search))
-            .all()
+            session.query(target_entity).filter(target_entity.name.in_(to_search)).all()
         ):
             yield r
 
@@ -246,9 +230,7 @@ def _run_query(query, catalog, entity_type, page=1000):
             "No data available for %s %s. Stopping here", catalog, entity_type
         )
         return None
-    LOGGER.info(
-        'Got %d internal IDs with data from %s %s', count, catalog, entity_type
-    )
+    LOGGER.info('Got %d internal IDs with data from %s %s', count, catalog, entity_type)
     return query.yield_per(page).enable_eagerloads(False)
 
 
@@ -269,15 +251,11 @@ def _build_biodata_query_fields(entity, entity_type, catalog):
     if hasattr(entity, 'birth_place'):
         query_fields.append(entity.birth_place)
     else:
-        LOGGER.info(
-            '%s %s has no birth place information', catalog, entity_type
-        )
+        LOGGER.info('%s %s has no birth place information', catalog, entity_type)
     if hasattr(entity, 'death_place'):
         query_fields.append(entity.death_place)
     else:
-        LOGGER.info(
-            '%s %s has no death place information', catalog, entity_type
-        )
+        LOGGER.info('%s %s has no death place information', catalog, entity_type)
     return query_fields
 
 
@@ -410,9 +388,7 @@ def gather_wikidata_biodata(wikidata):
             timestamp, precision = parsed[0], parsed[1]
             # Get rid of time, useless
             timestamp = timestamp.split('T')[0]
-            wikidata[qid][keys.BIODATA].append(
-                (pid, f'{timestamp}/{precision}')
-            )
+            wikidata[qid][keys.BIODATA].append((pid, f'{timestamp}/{precision}'))
         else:
             wikidata[qid][keys.BIODATA].append((pid, parsed))
         total += 1
@@ -485,9 +461,7 @@ def _compile(regexp, id_or_url):
 
 
 def gather_target_ids(entity, catalog, catalog_pid, aggregated):
-    LOGGER.info(
-        'Gathering Wikidata %s items with %s identifiers ...', entity, catalog
-    )
+    LOGGER.info('Gathering Wikidata %s items with %s identifiers ...', entity, catalog)
 
     query_type = keys.IDENTIFIER, constants.SUPPORTED_ENTITIES.get(entity)
 
@@ -527,11 +501,15 @@ def extract_ids_from_urls(to_be_added, ext_id_pids_to_urls):
     LOGGER.info('Starting extraction of IDs from target links to be added ...')
     ext_ids_to_add = []
     urls_to_add = []
-    for (qid, tid,), urls in tqdm(to_be_added.items(), total=len(to_be_added)):
+    for (
+        qid,
+        tid,
+    ), urls in tqdm(to_be_added.items(), total=len(to_be_added)):
         for url in urls:
-            (ext_id, pid,) = url_utils.get_external_id_from_url(
-                url, ext_id_pids_to_urls
-            )
+            (
+                ext_id,
+                pid,
+            ) = url_utils.get_external_id_from_url(url, ext_id_pids_to_urls)
             if ext_id is not None:
                 # Percent-decode IDs
                 if '%' in ext_id:
@@ -542,9 +520,23 @@ def extract_ids_from_urls(to_be_added, ext_id_pids_to_urls):
                             'Skipping invalid percent-encoded ID: %s', ext_id
                         )
                         continue
-                ext_ids_to_add.append((qid, pid, ext_id, tid,))
+                ext_ids_to_add.append(
+                    (
+                        qid,
+                        pid,
+                        ext_id,
+                        tid,
+                    )
+                )
             else:
-                urls_to_add.append((qid, vocabulary.EXACT_MATCH, url, tid,))
+                urls_to_add.append(
+                    (
+                        qid,
+                        vocabulary.EXACT_MATCH,
+                        url,
+                        tid,
+                    )
+                )
     return (
         ext_ids_to_add,
         urls_to_add,

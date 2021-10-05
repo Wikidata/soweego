@@ -12,20 +12,26 @@ import seaborn as sns
 
 sns.set(rc={"lines.linewidth": 0.5})
 
-df = pd.DataFrame(columns=[
-    "Catalog", "Entity", "Model", "Count", "Mean", "STD",
-    "Min", "25%", "50%", "75%", "Max"
-])
+df = pd.DataFrame(
+    columns=[
+        "Catalog",
+        "Entity",
+        "Model",
+        "Count",
+        "Mean",
+        "STD",
+        "Min",
+        "25%",
+        "50%",
+        "75%",
+        "Max",
+    ]
+)
 
 files = [x for x in glob("*_links.csv.gz") if "evaluation" not in x]
-all_links = pd.DataFrame(columns=[
-    "Catalog",
-    "Entity",
-    "Model",
-    "QID",
-    "TID",
-    "Prediction"
-])
+all_links = pd.DataFrame(
+    columns=["Catalog", "Entity", "Model", "QID", "TID", "Prediction"]
+)
 
 continuous_classifiers = [
     "voting_classifier_soft",
@@ -40,17 +46,19 @@ continuous_classifiers = [
 
 # For every "links" file
 for f in files:
-    catalog = f[:f.index("_")]
+    catalog = f[: f.index("_")]
 
-    et = f[f.index("_") + 1:]
-    entity = et[:et.index("_")]
+    et = f[f.index("_") + 1 :]
+    entity = et[: et.index("_")]
 
     model = "_".join(et.split("_")[1:-1])
     print(f)
-    current_preds = pd.read_csv(f,
-                                header=None,
-                                names=['QID', 'TID', 'Prediction'],
-                                index_col=['QID', 'TID'])
+    current_preds = pd.read_csv(
+        f,
+        header=None,
+        names=['QID', 'TID', 'Prediction'],
+        index_col=['QID', 'TID'],
+    )
 
     current_preds["Catalog"] = catalog
     current_preds["Entity"] = entity
@@ -58,29 +66,30 @@ for f in files:
 
     all_links = all_links.append(current_preds.reset_index(), sort=False)
 
-    classfs = (current_preds['Prediction']
-               .describe()
-               .to_dict())
+    classfs = current_preds['Prediction'].describe().to_dict()
 
     for k in classfs.keys():
         classfs[k] = "%.6f" % classfs[k]
 
-    classfs['count'] = classfs['count'][:classfs['count'].index(".")]
+    classfs['count'] = classfs['count'][: classfs['count'].index(".")]
 
     # add the files statistics to the dataframe
-    df = df.append({
-        "Catalog": catalog,
-        "Entity": entity,
-        "Model": model,
-        "Count": classfs['count'],
-        "Mean": classfs['mean'],
-        "STD": classfs['std'],
-        "Min": classfs['min'],
-        "25%": classfs['25%'],
-        "50%": classfs['50%'],
-        "75%": classfs['75%'],
-        "Max": classfs['max']
-    }, ignore_index=True)
+    df = df.append(
+        {
+            "Catalog": catalog,
+            "Entity": entity,
+            "Model": model,
+            "Count": classfs['count'],
+            "Mean": classfs['mean'],
+            "STD": classfs['std'],
+            "Min": classfs['min'],
+            "25%": classfs['25%'],
+            "50%": classfs['50%'],
+            "75%": classfs['75%'],
+            "Max": classfs['max'],
+        },
+        ignore_index=True,
+    )
 
 # print all files' statistics
 df = df.sort_values(by=['Model', 'Catalog'])
@@ -91,15 +100,17 @@ print(df.to_csv(index=False))
 summaries = []
 for _, gg in df.groupby('Model'):
     # F1.Mean    F1.STD Prec.Mean  Prec.STD Recall.Mean Recall.STD
-    summaries.append({
-        "Model": gg["Model"].values[0],
-        "Average Mean": "%.6f" % gg['Mean'].astype(float).mean(),
-        "Average STD": "%.6f" % gg['STD'].astype(float).mean(),
-        "Average 25%": "%.6f" % gg['25%'].astype(float).mean(),
-        "Average 50%": "%.6f" % gg['50%'].astype(float).mean(),
-        "Average 75%": "%.6f" % gg['75%'].astype(float).mean(),
-        "Average Max": "%.6f" % gg['Max'].astype(float).mean(),
-    })
+    summaries.append(
+        {
+            "Model": gg["Model"].values[0],
+            "Average Mean": "%.6f" % gg['Mean'].astype(float).mean(),
+            "Average STD": "%.6f" % gg['STD'].astype(float).mean(),
+            "Average 25%": "%.6f" % gg['25%'].astype(float).mean(),
+            "Average 50%": "%.6f" % gg['50%'].astype(float).mean(),
+            "Average 75%": "%.6f" % gg['75%'].astype(float).mean(),
+            "Average Max": "%.6f" % gg['Max'].astype(float).mean(),
+        }
+    )
 
 summaries = pd.DataFrame(summaries).sort_values(by="Average Mean", ascending=False)
 
@@ -131,12 +142,13 @@ for cent in for_graph["Catalog/Entity"].unique():
         print(f"Drawing cent {cent} , model {mod}, i{i} j{j}")
 
         if mod in continuous_classifiers:
-            sns.kdeplot(capl["Prediction"],
-                        bw=.009,
-                        shade=False,
-                        label=mod,
-                        ax=axes[i, j]
-                        )
+            sns.kdeplot(
+                capl["Prediction"],
+                bw=0.009,
+                shade=False,
+                label=mod,
+                ax=axes[i, j],
+            )
 
         axes[i, j].set(yscale="log")
         c += 1
@@ -166,7 +178,9 @@ for axi in itertools.product([0, 1, 2], [0, 1, 2]):
         print(m)
         d = only_ent_catalog[only_ent_catalog["Model"] == m]
 
-        dcounts: pd.DataFrame = d["Prediction"].value_counts(normalize=True).reset_index()
+        dcounts: pd.DataFrame = (
+            d["Prediction"].value_counts(normalize=True).reset_index()
+        )
 
         dcounts = dcounts.rename(columns={"index": "Value", "Prediction": "Counts"})
         dcounts["Model"] = m
@@ -177,7 +191,4 @@ for axi in itertools.product([0, 1, 2], [0, 1, 2]):
         else:
             data = data.append(dcounts, ignore_index=True)
 
-    sns.barplot(x="Value", y="Counts",
-                data=data,
-                hue="Model",
-                ax=axes_binary[axi])
+    sns.barplot(x="Value", y="Counts", data=data, hue="Model", ax=axes_binary[axi])

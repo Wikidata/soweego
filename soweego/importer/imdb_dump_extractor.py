@@ -67,9 +67,7 @@ class IMDbDumpExtractor(BaseDumpExtractor):
             if value == '\\N':
                 entity[key] = None
 
-    def extract_and_populate(
-        self, dump_file_paths: List[str], resolve: bool
-    ) -> None:
+    def extract_and_populate(self, dump_file_paths: List[str], resolve: bool) -> None:
         """Extract relevant data from the *name* (people) and *title* (works)
         IMDb dumps, preprocess them, populate
         `SQLAlchemy <https://www.sqlalchemy.org/>`_ ORM entities, and persist
@@ -115,9 +113,7 @@ class IMDbDumpExtractor(BaseDumpExtractor):
         LOGGER.info('Starting import of movies ...')
 
         # Here we open the movie dump file, and add everything to the DB
-        for movie_info, entity_array in self._loop_through_entities(
-            movies_file_path
-        ):
+        for movie_info, entity_array in self._loop_through_entities(movies_file_path):
 
             # create the movie SQLAlchemy entity and populate it
             movie_entity = imdb_entity.IMDbTitleEntity()
@@ -128,9 +124,7 @@ class IMDbDumpExtractor(BaseDumpExtractor):
                 movie_entity.name_tokens = ' '.join(
                     text_utils.tokenize(movie_info.get('primaryTitle'))
                 )
-            movie_entity.is_adult = (
-                True if movie_info.get('isAdult') == '1' else False
-            )
+            movie_entity.is_adult = True if movie_info.get('isAdult') == '1' else False
             try:
                 movie_entity.born = datetime.date(
                     year=int(movie_info.get('startYear')), month=1, day=1
@@ -177,9 +171,7 @@ class IMDbDumpExtractor(BaseDumpExtractor):
         # reset timer for persons import
         start = datetime.datetime.now()
 
-        for person_info, entity_array in self._loop_through_entities(
-            person_file_path
-        ):
+        for person_info, entity_array in self._loop_through_entities(person_file_path):
 
             # IMDb saves the list of professions as a comma separated
             # string
@@ -187,9 +179,7 @@ class IMDbDumpExtractor(BaseDumpExtractor):
 
             # if person has no professions then ignore it
             if not professions:
-                LOGGER.debug(
-                    'Person %s has no professions', person_info.get('nconst')
-                )
+                LOGGER.debug('Person %s has no professions', person_info.get('nconst'))
                 continue
 
             professions = professions.split(',')
@@ -359,9 +349,7 @@ class IMDbDumpExtractor(BaseDumpExtractor):
 
         person_entity.catalog_id = person_info.get('nconst')
         person_entity.name = person_info.get('primaryName')
-        person_entity.name_tokens = ' '.join(
-            text_utils.tokenize(person_entity.name)
-        )
+        person_entity.name_tokens = ' '.join(text_utils.tokenize(person_entity.name))
 
         # If either `actor` or `actress` in primary profession
         # (which is a comma separated string of professions)
@@ -371,9 +359,7 @@ class IMDbDumpExtractor(BaseDumpExtractor):
             for prof in ['actor', 'actress']
         ):
             person_entity.gender = (
-                'male'
-                if 'actor' in person_info.get('primaryProfession')
-                else 'female'
+                'male' if 'actor' in person_info.get('primaryProfession') else 'female'
             )
 
         # IMDb only provides us with the birth and death year of

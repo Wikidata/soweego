@@ -37,9 +37,7 @@ def download_file(url, filePath):
     """Downloads a web content and saves it in a custom filePath"""
     try:
         file_size = int(requests.head(url).headers["Content-Length"])
-        pbar = tqdm(
-            total=file_size, unit='B', unit_scale=True, desc=url.split('/')[-1]
-        )
+        pbar = tqdm(total=file_size, unit='B', unit_scale=True, desc=url.split('/')[-1])
 
         stream = requests.get(url, stream=True, verify=False)
         with open(filePath, 'wb') as f:

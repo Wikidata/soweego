@@ -6,9 +6,7 @@ from collections import defaultdict
 import click
 import iso8601
 
-from soweego.wikidata.sparql_queries import (
-    _make_request,
-)
+from soweego.wikidata.sparql_queries import _make_request
 
 
 def get_wikidata_id_from_uri(uri):
@@ -87,10 +85,7 @@ def get_links_for_sample(sample_path, url_formatters, output):
                             formatters_dict[prop_id].replace('$1', id_row[col])
                         ] = entity_id
                     else:
-                        print(
-                            '%s does not have an entry in the formatters file'
-                            % col
-                        )
+                        print('%s does not have an entry in the formatters file' % col)
 
     json.dump(url_id, open(filepath, 'w'), indent=2, ensure_ascii=False)
 
@@ -136,22 +131,16 @@ def get_birth_death_dates_for_sample(sample_path, output):
             qid = get_wikidata_id_from_uri(date_row['?id'])
             # creates the combination of all birth dates strings and all death dates strings
             if date_row['?birth']:
-                for b in get_date_strings(
-                    date_row['?birth'], date_row['?b_precision']
-                ):
+                for b in get_date_strings(date_row['?birth'], date_row['?b_precision']):
                     if date_row['?death']:
                         for d in get_date_strings(
                             date_row['?death'], date_row['?d_precision']
                         ):
-                            labeldate_qid[
-                                '%s|%s-%s' % (qid_labels[qid], b, d)
-                            ] = qid
+                            labeldate_qid['%s|%s-%s' % (qid_labels[qid], b, d)] = qid
                     else:
                         labeldate_qid['%s|%s' % (qid_labels[qid], b)] = qid
             else:
-                for d in get_date_strings(
-                    date_row['?death'], date_row['?d_precision']
-                ):
+                for d in get_date_strings(date_row['?death'], date_row['?d_precision']):
                     labeldate_qid['%s|-%s' % (qid_labels[qid], d)] = qid
 
     json.dump(labeldate_qid, open(filepath, 'w'), indent=2, ensure_ascii=False)
@@ -168,9 +157,7 @@ def get_url_formatters_for_properties(property_mapping_path, output):
 
     formatters = {}
     for _, prop_id in properties.items():
-        query = (
-            """SELECT * WHERE { wd:%s wdt:P1630 ?formatterUrl . }""" % prop_id
-        )
+        query = """SELECT * WHERE { wd:%s wdt:P1630 ?formatterUrl . }""" % prop_id
         for r in _make_request(query):
             formatters[prop_id] = r['?formatterUrl']
 

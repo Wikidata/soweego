@@ -34,19 +34,14 @@ LOGGER = logging.getLogger(__name__)
     context_settings={'ignore_unknown_options': True, 'allow_extra_args': True}
 )
 @click.argument('classifier', type=click.Choice(constants.CLASSIFIERS))
-@click.argument(
-    'catalog', type=click.Choice(target_database.supported_targets())
-)
-@click.argument(
-    'entity', type=click.Choice(target_database.supported_entities())
-)
+@click.argument('catalog', type=click.Choice(target_database.supported_targets()))
+@click.argument('entity', type=click.Choice(target_database.supported_entities()))
 @click.option('-k', '--k-folds', default=5, help="Number of folds, default: 5.")
 @click.option(
     '-s',
     '--single',
     is_flag=True,
-    help='Compute a single evaluation over all k folds, instead of k '
-    'evaluations.',
+    help='Compute a single evaluation over all k folds, instead of k ' 'evaluations.',
 )
 @click.option(
     '-n',
@@ -71,9 +66,7 @@ LOGGER = logging.getLogger(__name__)
     help=f'Input/output directory, default: {constants.WORK_DIR}.',
 )
 @click.pass_context
-def cli(
-    ctx, classifier, catalog, entity, k_folds, single, nested, metric, dir_io
-):
+def cli(ctx, classifier, catalog, entity, k_folds, single, nested, metric, dir_io):
     """Evaluate the performance of a supervised linker.
 
     By default, run 5-fold cross-validation and
@@ -132,9 +125,7 @@ def cli(
 def _build_output_paths(catalog, entity, classifier, dir_io):
     classifier = constants.CLASSIFIERS.get(classifier)
 
-    performance = constants.LINKER_PERFORMANCE.format(
-        catalog, entity, classifier
-    )
+    performance = constants.LINKER_PERFORMANCE.format(catalog, entity, classifier)
     predictions = constants.LINKER_EVALUATION_PREDICTIONS.format(
         catalog, entity, classifier
     )
@@ -259,8 +250,7 @@ def _run_nested(
     dir_io,
 ):
     LOGGER.warning(
-        'You have opted for the slowest evaluation option, '
-        'please be patient ...'
+        'You have opted for the slowest evaluation option, ' 'please be patient ...'
     )
     LOGGER.info(
         'Starting nested %d-fold cross-validation with '
@@ -272,9 +262,7 @@ def _run_nested(
     param_grid = constants.PARAMETER_GRIDS.get(clf)
 
     if param_grid is None:
-        err_msg = (
-            f'Hyperparameter tuning for classifier "{clf}" is not supported'
-        )
+        err_msg = f'Hyperparameter tuning for classifier "{clf}" is not supported'
         LOGGER.critical(err_msg)
         raise NotImplementedError(err_msg)
 
@@ -301,9 +289,7 @@ def _compute_performance(test_index, predictions, test_vectors_size):
     recall = rl.recall(test_index, predictions)
     f_score = rl.fscore(confusion_matrix)
 
-    LOGGER.info(
-        'Precision: %f - Recall: %f - F-score: %f', precision, recall, f_score
-    )
+    LOGGER.info('Precision: %f - Recall: %f - F-score: %f', precision, recall, f_score)
     LOGGER.info('Confusion matrix: %s', confusion_matrix)
 
     return precision, recall, f_score, confusion_matrix
@@ -312,9 +298,7 @@ def _compute_performance(test_index, predictions, test_vectors_size):
 def _nested_k_fold_with_grid_search(
     classifier, param_grid, catalog, entity, k, scoring, dir_io, **kwargs
 ):
-    dataset, positive_samples_index = train.build_training_set(
-        catalog, entity, dir_io
-    )
+    dataset, positive_samples_index = train.build_training_set(catalog, entity, dir_io)
     model = utils.init_model(classifier, dataset.shape[1], **kwargs).kernel
 
     inner_k_fold, target = utils.prepare_stratified_k_fold(
@@ -372,16 +356,12 @@ def _nested_k_fold_with_grid_search(
 
 def _average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
     predictions, precisions, recalls, f_scores = None, [], [], []
-    dataset, positive_samples_index = train.build_training_set(
-        catalog, entity, dir_io
-    )
+    dataset, positive_samples_index = train.build_training_set(catalog, entity, dir_io)
     k_fold, binary_target_variables = utils.prepare_stratified_k_fold(
         k, dataset, positive_samples_index
     )
 
-    for train_index, test_index in k_fold.split(
-        dataset, binary_target_variables
-    ):
+    for train_index, test_index in k_fold.split(dataset, binary_target_variables):
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
 
         model = utils.init_model(classifier, dataset.shape[1], **kwargs)
@@ -418,16 +398,12 @@ def _average_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
 
 def _single_k_fold(classifier, catalog, entity, k, dir_io, **kwargs):
     predictions, test_set = None, []
-    dataset, positive_samples_index = train.build_training_set(
-        catalog, entity, dir_io
-    )
+    dataset, positive_samples_index = train.build_training_set(catalog, entity, dir_io)
     k_fold, binary_target_variables = utils.prepare_stratified_k_fold(
         k, dataset, positive_samples_index
     )
 
-    for train_index, test_index in k_fold.split(
-        dataset, binary_target_variables
-    ):
+    for train_index, test_index in k_fold.split(dataset, binary_target_variables):
         training, test = dataset.iloc[train_index], dataset.iloc[test_index]
         test_set.append(test)
 

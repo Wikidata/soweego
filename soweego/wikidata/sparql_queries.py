@@ -142,8 +142,7 @@ def external_id_pids_and_urls() -> Iterator[Dict]:
         formatter_url_dict = result.get(FORMATTER_URL_BINDING.lstrip('?'))
         if not formatter_url_dict:
             LOGGER.warning(
-                'Skipping malformed query result: '
-                'no formatter URL binding in %s',
+                'Skipping malformed query result: ' 'no formatter URL binding in %s',
                 result,
             )
             continue
@@ -252,11 +251,9 @@ def run_query(
     # Items & identifiers
     if what == keys.IDENTIFIER:
         query = (
-            IDENTIFIER_TEMPLATE
-            % (vocabulary.INSTANCE_OF, class_qid, catalog_pid)
+            IDENTIFIER_TEMPLATE % (vocabulary.INSTANCE_OF, class_qid, catalog_pid)
             if how == keys.CLASS_QUERY
-            else IDENTIFIER_TEMPLATE
-            % (vocabulary.OCCUPATION, class_qid, catalog_pid)
+            else IDENTIFIER_TEMPLATE % (vocabulary.OCCUPATION, class_qid, catalog_pid)
         )
         return _parse_query_result(
             keys.IDENTIFIER, _run_paged_query(result_per_page, query)
@@ -267,12 +264,9 @@ def run_query(
         query = (
             LINKS_TEMPLATE % (vocabulary.INSTANCE_OF, class_qid, catalog_pid)
             if how == keys.CLASS_QUERY
-            else LINKS_TEMPLATE
-            % (vocabulary.OCCUPATION, class_qid, catalog_pid)
+            else LINKS_TEMPLATE % (vocabulary.OCCUPATION, class_qid, catalog_pid)
         )
-        return _parse_query_result(
-            keys.LINKS, _run_paged_query(result_per_page, query)
-        )
+        return _parse_query_result(keys.LINKS, _run_paged_query(result_per_page, query))
 
     # Items without identifiers (for classification purposes)
     if what == keys.DATASET:
@@ -437,8 +431,7 @@ def _make_request(query, response_format=DEFAULT_RESPONSE_FORMAT):
         # Random value between 0 and 1
         wait_time = random()
         LOGGER.warning(
-            'Exceeded concurrent queries limit, '
-            'will retry after %f seconds ...',
+            'Exceeded concurrent queries limit, ' 'will retry after %f seconds ...',
             wait_time,
         )
 
@@ -521,9 +514,7 @@ def _run_paged_query(result_per_page, query):
             result_set = _make_request(' '.join(query_builder))
 
             if not result_set:
-                LOGGER.error(
-                    'Skipping page %d because the query went wrong', pages
-                )
+                LOGGER.error('Skipping page %d because the query went wrong', pages)
                 pages += 1
                 continue
 

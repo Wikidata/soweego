@@ -15,9 +15,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
-@click.argument(
-    'catalog', type=click.Choice(target_database.supported_targets())
-)
+@click.argument('catalog', type=click.Choice(target_database.supported_targets()))
 @click.option(
     '--validator/--no-validator',
     default=False,
@@ -38,9 +36,7 @@ LOGGER = logging.getLogger(__name__)
     default=True,
     help='Upload results to Wikidata. Default: yes.',
 )
-def cli(
-    catalog: str, validator: bool, importer: bool, linker: bool, upload: bool
-):
+def cli(catalog: str, validator: bool, importer: bool, linker: bool, upload: bool):
     """Launch the whole pipeline."""
 
     if importer:
@@ -61,9 +57,7 @@ def cli(
 
 def _importer(target: str):
     """Contains all the command the importer has to do"""
-    LOGGER.info(
-        "Running importer for target: %s without resolving the URLs", target
-    )
+    LOGGER.info("Running importer for target: %s without resolving the URLs", target)
     _invoke_no_exit(import_cli, [target])
 
 
@@ -75,9 +69,7 @@ def _linker(target: str, upload: bool):
         if not target_type:
             continue
         arguments = (
-            [target, target_type, '--upload']
-            if upload
-            else [target, target_type]
+            [target, target_type, '--upload'] if upload else [target, target_type]
         )
 
         _invoke_no_exit(baseline.extract_cli, arguments)

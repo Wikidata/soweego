@@ -39,9 +39,9 @@ with redirect_stderr(open(os.devnull, 'w')):
     # saying which backend it's using. To avoid this, we
     # redirect stderr to `devnull` for the statements in this block.
     from keras.callbacks import EarlyStopping, ModelCheckpoint
-    from keras.wrappers.scikit_learn import KerasClassifier
-    from keras.layers import Dense, BatchNormalization
+    from keras.layers import BatchNormalization, Dense
     from keras.models import Sequential
+    from keras.wrappers.scikit_learn import KerasClassifier
 
 LOGGER = logging.getLogger(__name__)
 
@@ -103,9 +103,7 @@ class _BaseNeuralNetwork(KerasAdapter, BaseClassifier):
 
         model_path = os.path.join(
             constants.WORK_DIR,
-            constants.NEURAL_NETWORK_CHECKPOINT_MODEL.format(
-                self.__class__.__name__
-            ),
+            constants.NEURAL_NETWORK_CHECKPOINT_MODEL.format(self.__class__.__name__),
         )
         os.makedirs(os.path.dirname(model_path), exist_ok=True)
 
@@ -577,9 +575,7 @@ class GatedEnsembleClassifier(_MLensAdapter):
 
         estimators = []
         for clf in constants.CLASSIFIERS_FOR_ENSEMBLE:
-            model = utils.init_model(
-                clf, num_features=self.num_features, **kwargs
-            )
+            model = utils.init_model(clf, num_features=self.num_features, **kwargs)
 
             estimators.append((clf, model.kernel))
 
@@ -644,9 +640,7 @@ class StackedEnsembleClassifier(_MLensAdapter):
         def init_estimators(num_features):
             estimators = []
             for clf in constants.CLASSIFIERS_FOR_ENSEMBLE:
-                model = utils.init_model(
-                    clf, num_features=num_features, **kwargs
-                )
+                model = utils.init_model(clf, num_features=num_features, **kwargs)
 
                 estimators.append((clf, model.kernel))
             return estimators

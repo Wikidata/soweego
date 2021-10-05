@@ -26,9 +26,7 @@ class BaseDumpExtractor:
     populate a database instance.
     """
 
-    def extract_and_populate(
-        self, dump_file_paths: List[str], resolve: bool
-    ) -> None:
+    def extract_and_populate(self, dump_file_paths: List[str], resolve: bool) -> None:
         """Extract relevant data and populate
         `SQLAlchemy <https://www.sqlalchemy.org/>`_ ORM entities accordingly.
         Entities will be then persisted to a database instance.

@@ -41,9 +41,7 @@ class BaseEntity(AbstractConcreteBase, BASE):
 
     __tablename__ = None
 
-    internal_id = Column(
-        Integer, unique=True, primary_key=True, autoincrement=True
-    )
+    internal_id = Column(Integer, unique=True, primary_key=True, autoincrement=True)
     # Catalog identifier, indexed
     catalog_id = Column(String(50), nullable=False, index=True)
     # Full name
@@ -72,10 +70,7 @@ class BaseEntity(AbstractConcreteBase, BASE):
         )
 
     def __repr__(self) -> str:
-        return (
-            f'<BaseEntity(catalog_id="{self.catalog_id}", '
-            f'name="{self.name}")>'
-        )
+        return f'<BaseEntity(catalog_id="{self.catalog_id}", ' f'name="{self.name}")>'
 
 
 class BaseRelationship(AbstractConcreteBase, BASE):
@@ -94,9 +89,7 @@ class BaseRelationship(AbstractConcreteBase, BASE):
     """
 
     __tablename__ = None
-    internal_id = Column(
-        Integer, unique=True, primary_key=True, autoincrement=True
-    )
+    internal_id = Column(Integer, unique=True, primary_key=True, autoincrement=True)
 
     from_catalog_id = Column(String(50), nullable=False, index=False)
     to_catalog_id = Column(String(50), nullable=False, index=False)

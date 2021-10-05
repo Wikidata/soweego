@@ -39,9 +39,7 @@ ROTTEN_URLS_FNAME = '{catalog}_{entity}_rotten_urls.csv'
 
 
 @click.command()
-@click.argument(
-    'catalog', type=click.Choice(target_database.supported_targets())
-)
+@click.argument('catalog', type=click.Choice(target_database.supported_targets()))
 @click.option(
     '--url-check',
     is_flag=True,
@@ -65,11 +63,12 @@ def import_cli(catalog: str, url_check: bool, dir_io: str) -> None:
 
 
 @click.command()
-@click.argument(
-    'catalog', type=click.Choice(target_database.supported_targets())
-)
+@click.argument('catalog', type=click.Choice(target_database.supported_targets()))
 @click.option(
-    '-d', '--drop', is_flag=True, help=f'Drop rotten URLs from the DB.',
+    '-d',
+    '--drop',
+    is_flag=True,
+    help=f'Drop rotten URLs from the DB.',
 )
 @click.option(
     '--dir-io',
@@ -113,9 +112,7 @@ def check_urls_cli(catalog, drop, dir_io):
             try:
                 # Resolve every URL
                 for resolved, result in tqdm(
-                    pool.imap_unordered(
-                        _resolve, query_session.query(link_entity)
-                    ),
+                    pool.imap_unordered(_resolve, query_session.query(link_entity)),
                     total=total,
                 ):
                     if not resolved:
@@ -206,12 +203,8 @@ class Importer:
                     last_modified, '%a, %d %b %Y %H:%M:%S GMT'
                 ).strftime('%Y%m%d_%H%M%S')
             except TypeError:
-                LOGGER.info(
-                    "Last modified not available, using now as replacement"
-                )
-                last_modified = datetime.datetime.now().strftime(
-                    '%Y%m%d_%H%M%S'
-                )
+                LOGGER.info("Last modified not available, using now as replacement")
+                last_modified = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
             extensions = download_url.split('/')[-1].split('.')[1:]
 
