@@ -5,4 +5,6 @@ conda:
 sphinx:
   configuration: docs/conf.py
   fail_on_warning: true
-formats: all
+formats:
+  - epub
+  - htmlzip
