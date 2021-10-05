@@ -15,6 +15,7 @@ import logging
 import re
 from collections import defaultdict
 from typing import Iterable, Iterator, Optional
+from urllib.parse import unquote
 
 import regex
 from sqlalchemy import or_
@@ -532,6 +533,15 @@ def extract_ids_from_urls(to_be_added, ext_id_pids_to_urls):
                 url, ext_id_pids_to_urls
             )
             if ext_id is not None:
+                # Percent-decode IDs
+                if '%' in ext_id:
+                    try:
+                        ext_id = unquote(ext_id, errors='strict')
+                    except UnicodeDecodeError:
+                        LOGGER.warning(
+                            'Skipping invalid percent-encoded ID: %s', ext_id
+                        )
+                        continue
                 ext_ids_to_add.append((qid, pid, ext_id, tid,))
             else:
                 urls_to_add.append((qid, vocabulary.EXACT_MATCH, url, tid,))
