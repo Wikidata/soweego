@@ -1,9 +1,6 @@
 language: python
-python:
-  # Conda doesn't use Travis Python, just make the version explicit
-  - 3.9
 install:
-  - wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+  - wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
   #- export CONDA_HOME="$HOME/miniconda"
   - bash Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda
   - source "$HOME/miniconda/etc/profile.d/conda.sh"
