@@ -6,13 +6,21 @@
 soweego: link Wikidata to large catalogs
 ========================================
 
-.. image:: https://travis-ci.com/Wikidata/soweego.svg?branch=master
-   :target: https://travis-ci.com/Wikidata/soweego
-   :alt: Build Status
+.. image:: https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white
+   :target: https://github.com/pre-commit/pre-commit
+   :alt: pre-commit enabled
 
 .. image:: https://readthedocs.org/projects/soweego/badge/?version=latest 
    :target: https://soweego.readthedocs.io/en/latest/?badge=latest
-   :alt: Documentation Status
+   :alt: Documentation status
+
+.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+   :target: https://github.com/psf/black
+   :alt: Black code style
+
+.. image:: https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336
+   :target: https://pycqa.github.io/isort/
+   :alt: isort imports
 
 .. image:: https://img.shields.io/github/license/Wikidata/soweego.svg
    :target: https://www.gnu.org/licenses/gpl-3.0.html
