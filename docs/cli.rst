@@ -36,7 +36,7 @@ Importer
      check_urls  Check for rotten URLs of an imported catalog.
      import      Download, extract, and import a supported catalog.
 
-.. click:: soweego.importer.importer:check_links_cli
+.. click:: soweego.importer.importer:check_urls_cli
    :prog: check_urls
 
 .. click:: soweego.importer.importer:import_cli
