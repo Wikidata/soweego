@@ -129,27 +129,37 @@ def resolve(url: str) -> Optional[str]:
             response = get(url, headers=browser_ua, stream=True, verify=False)
         except Exception as unexpected_error:
             LOGGER.warning(
-                'Unexpected error: <%s> - Reason: %s', url, unexpected_error,
+                'Unexpected error: <%s> - Reason: %s',
+                url,
+                unexpected_error,
             )
             return None
     except requests.exceptions.Timeout as timeout:
         LOGGER.info(
-            'Request timeout: <%s> - Reason: %s', url, timeout,
+            'Request timeout: <%s> - Reason: %s',
+            url,
+            timeout,
         )
         return None
     except requests.exceptions.TooManyRedirects as too_many_redirects:
         LOGGER.info(
-            'Too many redirects: <%s> - %s', url, too_many_redirects,
+            'Too many redirects: <%s> - %s',
+            url,
+            too_many_redirects,
         )
         return None
     except requests.exceptions.ConnectionError as connection_error:
         LOGGER.info(
-            'Aborted connection: <%s> - Reason: %s', url, connection_error,
+            'Aborted connection: <%s> - Reason: %s',
+            url,
+            connection_error,
         )
         return None
     except Exception as unexpected_error:
         LOGGER.warning(
-            'Unexpected error: <%s> - Reason: %s', url, unexpected_error,
+            'Unexpected error: <%s> - Reason: %s',
+            url,
+            unexpected_error,
         )
         return None
     if not response.ok:
@@ -174,7 +184,7 @@ def resolve(url: str) -> Optional[str]:
 
 def tokenize(url, domain_only=False) -> set:
     """Tokenize a URL, removing stopwords.
-        Return `None` if the URL is invalid.
+    Return `None` if the URL is invalid.
     """
     try:
         split = urlsplit(url)
@@ -215,7 +225,10 @@ def get_external_id_from_url(url, ext_id_pids_to_urls):
 
     # Start extraction
     for pid, formatters in ext_id_pids_to_urls.items():
-        for formatter_url, (id_regex, url_regex,) in formatters.items():
+        for formatter_url, (
+            id_regex,
+            url_regex,
+        ) in formatters.items():
 
             # Optimal case: match the original input URL against a full URL regex
             if url_regex is not None:

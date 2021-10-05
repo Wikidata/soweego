@@ -24,8 +24,9 @@ __version__ = '2.0'
 __license__ = 'GPL-3.0'
 __copyright__ = 'Copyleft 2021, Hjfocs'
 
-import requests
 import sys
+
+import requests
 
 WIKIDATA_API_URL = 'https://www.wikidata.org/w/api.php'
 STMT_PREFIX = 'http://www.wikidata.org/entity/statement/'
@@ -57,8 +58,12 @@ def main(args):
     # Fire a POST for each GUID
     for guid in guids:
         data = {
-            'action': 'wbremoveclaims', 'format': 'json', 'token': token,
-            'bot': True, 'claim': guid, 'summary': summary
+            'action': 'wbremoveclaims',
+            'format': 'json',
+            'token': token,
+            'bot': True,
+            'claim': guid,
+            'summary': summary,
         }
         r = session.post(WIKIDATA_API_URL, data=data)
 
@@ -70,4 +75,3 @@ def main(args):
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
-

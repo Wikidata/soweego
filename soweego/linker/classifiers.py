@@ -39,9 +39,9 @@ with redirect_stderr(open(os.devnull, 'w')):
     # saying which backend it's using. To avoid this, we
     # redirect stderr to `devnull` for the statements in this block.
     from keras.callbacks import EarlyStopping, ModelCheckpoint
-    from keras.wrappers.scikit_learn import KerasClassifier
-    from keras.layers import Dense, BatchNormalization
+    from keras.layers import BatchNormalization, Dense
     from keras.models import Sequential
+    from keras.wrappers.scikit_learn import KerasClassifier
 
 LOGGER = logging.getLogger(__name__)
 

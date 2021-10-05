@@ -33,5 +33,5 @@ with gzip.open('name.basics.tsv.gz', 'rt') as i:
         else:
             no_morte += 1
         dates[''.join(sb)] = ide
-        
+
 json.dump(dates, open('dates_id.json', 'w'), indent=2, ensure_ascii=False)

@@ -33,7 +33,6 @@ from soweego.ingester import cli as ingester_cli
 from soweego.linker import cli as linker_cli
 from soweego.validator import cli as validator_cli
 
-
 CLI_COMMANDS = {
     'importer': importer_cli.cli,
     'ingester': ingester_cli.cli,

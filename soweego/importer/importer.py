@@ -69,7 +69,10 @@ def import_cli(catalog: str, url_check: bool, dir_io: str) -> None:
     'catalog', type=click.Choice(target_database.supported_targets())
 )
 @click.option(
-    '-d', '--drop', is_flag=True, help=f'Drop rotten URLs from the DB.',
+    '-d',
+    '--drop',
+    is_flag=True,
+    help=f'Drop rotten URLs from the DB.',
 )
 @click.option(
     '--dir-io',

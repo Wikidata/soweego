@@ -17,7 +17,7 @@ import csv
 import json
 import os
 import sys
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict, defaultdict
 from random import sample
 from urllib.parse import urlsplit
 
@@ -38,7 +38,7 @@ CATALOG_URL_PREFIXES = {
     'discogs_musical_work': 'https://www.discogs.com/master/',
     'musicbrainz_band': 'https://musicbrainz.org/artist/',
     'musicbrainz_musician': 'https://musicbrainz.org/artist/',
-    'musicbrainz_musical_work': 'https://musicbrainz.org/release-group/'
+    'musicbrainz_musical_work': 'https://musicbrainz.org/release-group/',
 }
 WIKI_PROJECTS = (
     'wikipedia',
@@ -59,8 +59,8 @@ def main(args):
     if len(args) != 2:
         print(
             f"Usage: python {__file__} URLS_CSV\n"
-             "URLS_CSV file name must start with 'CATALOG_ENTITY_urls', "
-             "e.g., 'discogs_band_urls'"
+            "URLS_CSV file name must start with 'CATALOG_ENTITY_urls', "
+            "e.g., 'discogs_band_urls'"
         )
         return 1
 
@@ -68,7 +68,9 @@ def main(args):
     catalog_and_entity = os.path.split(file_in)[1].partition('_urls')[0]
     file_out = f'{catalog_and_entity}_web_domains_table.mediawiki'
     json_out = f'{catalog_and_entity}.json'
-    header = HEADER.replace('TARGET', catalog_and_entity.replace('_', ' ').title())
+    header = HEADER.replace(
+        'TARGET', catalog_and_entity.replace('_', ' ').title()
+    )
     prefix = CATALOG_URL_PREFIXES.get(catalog_and_entity)
 
     if prefix is None:
@@ -81,13 +83,23 @@ def main(args):
 
     with open(file_in) as fin:
         r = csv.reader(fin)
-        for (_, _, url, tid,) in r:
+        for (
+            _,
+            _,
+            url,
+            tid,
+        ) in r:
             domain = urlsplit(url).netloc
             if any(wiki_project in domain for wiki_project in WIKI_PROJECTS):
                 wiki_urls += 1
                 continue
             freq[domain] += 1
-            urls[domain].append((url, tid,))
+            urls[domain].append(
+                (
+                    url,
+                    tid,
+                )
+            )
 
     print(f'Total wiki URLs found: {wiki_urls}')
 
@@ -105,12 +117,15 @@ def main(args):
 
             examples = sample(urls[domain], N_EXAMPLES)
             buffer = []
-            for i, (url, tid,) in enumerate(examples, 1):
+            for i, (
+                url,
+                tid,
+            ) in enumerate(examples, 1):
                 buffer.append(f'{i}. [{url} URL], [{prefix}{tid} record]; ')
 
-            fout.write(ROW.format(
-                domain=domain, freq=freq, examples=''.join(buffer)
-            ))
+            fout.write(
+                ROW.format(domain=domain, freq=freq, examples=''.join(buffer))
+            )
         fout.write(FOOTER)
 
     return 0
@@ -118,4 +133,3 @@ def main(args):
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
-

@@ -16,7 +16,7 @@ __copyright__ = 'Copyleft 2021, Hjfocs'
 import csv
 import json
 import sys
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict, defaultdict
 from urllib.parse import urlsplit
 
 
@@ -50,4 +50,3 @@ def main(args):
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
-

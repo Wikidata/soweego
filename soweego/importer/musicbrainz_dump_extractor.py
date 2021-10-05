@@ -101,7 +101,7 @@ class MusicBrainzDumpExtractor(BaseDumpExtractor):
 
         def release_artist_relationships_uniqueness_filter():
             """Remove duplicates from
-            _release_group_artist_relationship_generator """
+            _release_group_artist_relationship_generator"""
             yield from [
                 MusicBrainzReleaseGroupArtistRelationship(item[0], item[1])
                 for item in set(
