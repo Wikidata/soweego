@@ -1,6 +1,7 @@
 # soweego: link Wikidata to large catalogs
-[![Build Status](https://travis-ci.com/Wikidata/soweego.svg?branch=master)](https://travis-ci.com/Wikidata/soweego)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![Documentation Status](https://readthedocs.org/projects/soweego/badge/?version=latest)](https://soweego.readthedocs.io/en/latest/?badge=latest)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![License](https://img.shields.io/github/license/Wikidata/soweego.svg)](https://www.gnu.org/licenses/gpl-3.0.html)
 
 *soweego* is a pipeline that connects [Wikidata](https://wikidata.org/) to large-scale third-party catalogs.
