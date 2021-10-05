@@ -31,12 +31,8 @@ LOGGER = logging.getLogger(__name__)
 
 @click.command()
 @click.argument('classifier', type=click.Choice(constants.CLASSIFIERS))
-@click.argument(
-    'catalog', type=click.Choice(target_database.supported_targets())
-)
-@click.argument(
-    'entity', type=click.Choice(target_database.supported_entities())
-)
+@click.argument('catalog', type=click.Choice(target_database.supported_targets()))
+@click.argument('entity', type=click.Choice(target_database.supported_entities()))
 @click.option(
     '-t',
     '--threshold',
@@ -63,9 +59,7 @@ LOGGER = logging.getLogger(__name__)
     default=constants.WORK_DIR,
     help=f'Input/output directory, default: {constants.WORK_DIR}.',
 )
-def cli(
-    classifier, catalog, entity, threshold, name_rule, upload, sandbox, dir_io
-):
+def cli(classifier, catalog, entity, threshold, name_rule, upload, sandbox, dir_io):
     """Run a supervised linker.
 
     Build the classification set relevant to the given catalog and entity,
@@ -82,9 +76,7 @@ def cli(
     """
     actual_classifier = constants.CLASSIFIERS[classifier]
 
-    model_path, result_path = _handle_io(
-        actual_classifier, catalog, entity, dir_io
-    )
+    model_path, result_path = _handle_io(actual_classifier, catalog, entity, dir_io)
     # Exit if the model file doesn't exist
     if model_path is None:
         sys.exit(1)
@@ -223,9 +215,7 @@ def _apply_linking_rules(name_rule, predictions, target_chunk, wd_chunk):
     return predictions
 
 
-def _get_unique_predictions_above_threshold(
-    predictions, threshold
-) -> pd.DataFrame:
+def _get_unique_predictions_above_threshold(predictions, threshold) -> pd.DataFrame:
     # Filter by threshold
     above_threshold = predictions[predictions >= threshold]
 
@@ -256,9 +246,7 @@ def _handle_io(classifier, catalog, entity, dir_io):
     # Delete existing result file,
     # otherwise the current output would be appended to it
     if os.path.isfile(result_path):
-        LOGGER.warning(
-            "Will delete old output file found at '%s' ...", result_path
-        )
+        LOGGER.warning("Will delete old output file found at '%s' ...", result_path)
         os.remove(result_path)
 
     os.makedirs(os.path.dirname(result_path), exist_ok=True)
@@ -269,9 +257,7 @@ def _handle_io(classifier, catalog, entity, dir_io):
 def _upload(chunk, chunk_number, catalog, entity, sandbox):
     links = dict(chunk.to_dict().keys())
 
-    LOGGER.info(
-        'Starting upload of links to Wikidata, chunk %d ...', chunk_number
-    )
+    LOGGER.info('Starting upload of links to Wikidata, chunk %d ...', chunk_number)
 
     wikidata_bot.add_identifiers(links, catalog, entity, sandbox)
 

@@ -83,9 +83,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             return None
         return urls
 
-    def extract_and_populate(
-        self, dump_file_paths: List[str], resolve: bool
-    ) -> None:
+    def extract_and_populate(self, dump_file_paths: List[str], resolve: bool) -> None:
         """Extract relevant data from the *artists* (people)
         and *masters* (works) Discogs dumps, preprocess them, populate
         `SQLAlchemy <https://www.sqlalchemy.org/>`_ ORM entities, and persist
@@ -101,9 +99,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         self._process_masters_dump(dump_file_paths[1])
 
     def _process_masters_dump(self, dump_file_path):
-        LOGGER.info(
-            "Starting import of masters from Discogs dump '%s'", dump_file_path
-        )
+        LOGGER.info("Starting import of masters from Discogs dump '%s'", dump_file_path)
         start = datetime.now()
         tables = [DiscogsMasterEntity, DiscogsMasterArtistRelationship]
         db_manager = DBManager()
@@ -124,9 +120,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                     shutil.copyfileobj(f_in, f_out)
 
         # count number of entries
-        n_rows = sum(
-            1 for _ in self._g_process_et_items(extracted_path, 'master')
-        )
+        n_rows = sum(1 for _ in self._g_process_et_items(extracted_path, 'master'))
         session = db_manager.new_session()
         entity_array = []  # array to which we'll add the entities
         relationships_set = set()
@@ -176,8 +170,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
 
         end = datetime.now()
         LOGGER.info(
-            'Import completed in %s. Total entities: %d. '
-            'Total relationships %s.',
+            'Import completed in %s. Total entities: %d. ' 'Total relationships %s.',
             end - start,
             self.total_entities,
             len(relationships_set),
@@ -217,9 +210,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                     )
             elif child.tag == 'artists':
                 for artist in child:
-                    relationships_set.add(
-                        (entity.catalog_id, artist.find('id').text)
-                    )
+                    relationships_set.add((entity.catalog_id, artist.find('id').text))
         entity.genres = ' '.join(genres)
         return entity
 
@@ -257,9 +248,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         infos['profile'] = node.findtext('profile')
         infos['namevariations'] = node.find('namevariations')
 
-        infos['living_links'] = self._extract_living_links(
-            identifier, node, resolve
-        )
+        infos['living_links'] = self._extract_living_links(identifier, node, resolve)
 
         return infos
 
@@ -295,9 +284,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                     shutil.copyfileobj(f_in, f_out)
 
         # count number of entries
-        n_rows = sum(
-            1 for _ in self._g_process_et_items(extracted_path, 'artist')
-        )
+        n_rows = sum(1 for _ in self._g_process_et_items(extracted_path, 'artist'))
         session = db_manager.new_session()
         entity_array = []  # array to which we'll add the entities
         for _, node in tqdm(
@@ -363,9 +350,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         # we can safely delete the extracted discogs dump
         os.remove(extracted_path)
 
-    def _populate_band(
-        self, entity_array, entity: DiscogsGroupEntity, infos: dict
-    ):
+    def _populate_band(self, entity_array, entity: DiscogsGroupEntity, infos: dict):
         # Main entity
         self._fill_entity(entity, infos)
         self.bands += 1
@@ -409,9 +394,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             self._fill_link_entity(link_entity, infos['identifier'], link)
             entity_array.append(link_entity)
 
-    def _populate_name_variations(
-        self, entity_array, infos: dict, current_entity
-    ):
+    def _populate_name_variations(self, entity_array, infos: dict, current_entity):
         identifier = infos['identifier']
         if infos.get('namevariations') is not None:
             children = list(infos['namevariations'])
@@ -421,9 +404,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
                 ):
                     entity_array.append(entity)
             else:
-                LOGGER.debug(
-                    'Artist %s has an empty <namevariations/> tag', identifier
-                )
+                LOGGER.debug('Artist %s has an empty <namevariations/> tag', identifier)
         else:
             LOGGER.debug('Artist %s has no <namevariations> tag', identifier)
 
@@ -442,9 +423,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             else:
                 self.band_nlp += 1
         else:
-            LOGGER.debug(
-                'Artist %s has an empty <profile/> tag', infos['identifier']
-            )
+            LOGGER.debug('Artist %s has an empty <profile/> tag', infos['identifier'])
 
     @staticmethod
     def _fill_entity(entity: DiscogsArtistEntity, infos):
@@ -459,9 +438,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         if real_name:
             entity.real_name = real_name
         else:
-            LOGGER.debug(
-                'Artist %s has an empty <realname/> tag', infos['identifier']
-            )
+            LOGGER.debug('Artist %s has an empty <realname/> tag', infos['identifier'])
         # Data quality
         data_quality = infos['data_quality']
         if data_quality:
@@ -506,9 +483,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
             for url_element in urls.iterfind('url'):
                 url = url_element.text
                 if not url:
-                    LOGGER.debug(
-                        'Artist %s: skipping empty <url> tag', identifier
-                    )
+                    LOGGER.debug('Artist %s: skipping empty <url> tag', identifier)
                     continue
                 for alive_link in self._check_link(url, resolve):
                     yield alive_link
@@ -551,9 +526,7 @@ class DiscogsDumpExtractor(BaseDumpExtractor):
         efficient way
         """
 
-        context: etree.ElementTree = etree.iterparse(
-            path, events=('end',), tag=tag
-        )
+        context: etree.ElementTree = etree.iterparse(path, events=('end',), tag=tag)
 
         for event, elem in context:
             yield event, elem

@@ -144,14 +144,11 @@ for _, gg in df.groupby('Model'):
             "Average Prec": "%.6f" % gg['Prec.Mean'].astype(float).mean(),
             "Average Prec.STD": "%.6f" % gg['Prec.STD'].astype(float).mean(),
             "Average Recall": "%.6f" % gg['Recall.Mean'].astype(float).mean(),
-            "Average Recall.STD": "%.6f"
-            % gg['Recall.STD'].astype(float).mean(),
+            "Average Recall.STD": "%.6f" % gg['Recall.STD'].astype(float).mean(),
         }
     )
 
-summaries = pd.DataFrame(summaries).sort_values(
-    by="Average F1", ascending=False
-)
+summaries = pd.DataFrame(summaries).sort_values(by="Average F1", ascending=False)
 
 print(summaries.to_csv(index=False))
 
@@ -168,12 +165,9 @@ for cla, cat in df.groupby("Catalog"):
                 "Average F1": "%.6f" % gg['F1.Mean'].astype(float).mean(),
                 "Average F1.STD": "%.6f" % gg['F1.STD'].astype(float).mean(),
                 "Average Prec": "%.6f" % gg['Prec.Mean'].astype(float).mean(),
-                "Average Prec.STD": "%.6f"
-                % gg['Prec.STD'].astype(float).mean(),
-                "Average Recall": "%.6f"
-                % gg['Recall.Mean'].astype(float).mean(),
-                "Average Recall.STD": "%.6f"
-                % gg['Recall.STD'].astype(float).mean(),
+                "Average Prec.STD": "%.6f" % gg['Prec.STD'].astype(float).mean(),
+                "Average Recall": "%.6f" % gg['Recall.Mean'].astype(float).mean(),
+                "Average Recall.STD": "%.6f" % gg['Recall.STD'].astype(float).mean(),
             }
         )
 

@@ -68,9 +68,7 @@ def main(args):
     catalog_and_entity = os.path.split(file_in)[1].partition('_urls')[0]
     file_out = f'{catalog_and_entity}_web_domains_table.mediawiki'
     json_out = f'{catalog_and_entity}.json'
-    header = HEADER.replace(
-        'TARGET', catalog_and_entity.replace('_', ' ').title()
-    )
+    header = HEADER.replace('TARGET', catalog_and_entity.replace('_', ' ').title())
     prefix = CATALOG_URL_PREFIXES.get(catalog_and_entity)
 
     if prefix is None:
@@ -123,9 +121,7 @@ def main(args):
             ) in enumerate(examples, 1):
                 buffer.append(f'{i}. [{url} URL], [{prefix}{tid} record]; ')
 
-            fout.write(
-                ROW.format(domain=domain, freq=freq, examples=''.join(buffer))
-            )
+            fout.write(ROW.format(domain=domain, freq=freq, examples=''.join(buffer)))
         fout.write(FOOTER)
 
     return 0

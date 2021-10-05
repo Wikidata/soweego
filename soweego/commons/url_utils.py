@@ -61,7 +61,9 @@ def clean(url):
 def validate(url):
     ul = '\u00a1-\uffff'  # Unicode letters range (must not be a raw string)
     # IP patterns
-    ipv4_re = r'(?:25[0-5]|2[0-4]\d|[0-1]?\d?\d)(?:\.(?:25[0-5]|2[0-4]\d|[0-1]?\d?\d)){3}'
+    ipv4_re = (
+        r'(?:25[0-5]|2[0-4]\d|[0-1]?\d?\d)(?:\.(?:25[0-5]|2[0-4]\d|[0-1]?\d?\d)){3}'
+    )
     ipv6_re = r'\[[0-9a-f:\.]+\]'
     # Host patterns
     hostname_re = (
@@ -93,9 +95,7 @@ def validate(url):
         LOGGER.debug('Dropping invalid URL: <%s>', url)
         return None
     if not valid_url.group(1):
-        LOGGER.debug(
-            "Adding 'https' to potential URL with missing scheme: <%s>", url
-        )
+        LOGGER.debug("Adding 'https' to potential URL with missing scheme: <%s>", url)
         return 'https://' + valid_url.group()
     return valid_url.group()
 
@@ -116,9 +116,7 @@ def resolve(url: str) -> Optional[str]:
     }
     try:
         # Some Web sites do not accept the HEAD method: fire a GET, but don't download anything
-        response = get(
-            url, headers=browser_ua, stream=True, timeout=READ_TIMEOUT
-        )
+        response = get(url, headers=browser_ua, stream=True, timeout=READ_TIMEOUT)
     except requests.exceptions.SSLError as ssl_error:
         LOGGER.debug(
             'SSL certificate verification failed, will retry without verification. Original URL: <%s> - Reason: %s',
@@ -189,9 +187,7 @@ def tokenize(url, domain_only=False) -> set:
     try:
         split = urlsplit(url)
     except ValueError as value_error:
-        LOGGER.warning(
-            'Invalid URL: %s. Reason: %s', url, value_error, exc_info=1
-        )
+        LOGGER.warning('Invalid URL: %s. Reason: %s', url, value_error, exc_info=1)
         return None
     domain_tokens = set(re.split(r'\W+', split.netloc))
     domain_tokens.difference_update(TOP_LEVEL_DOMAINS, DOMAIN_PREFIXES)
@@ -335,7 +331,5 @@ def get_external_id_from_url(url, ext_id_pids_to_urls):
 def is_wiki_link(url):
     domain = urlsplit(url).netloc
     return (
-        True
-        if any(wiki_project in domain for wiki_project in WIKI_PROJECTS)
-        else False
+        True if any(wiki_project in domain for wiki_project in WIKI_PROJECTS) else False
     )

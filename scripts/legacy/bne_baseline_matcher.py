@@ -97,9 +97,7 @@ def temporary_wrapper():
     bne_linked = csv.DictReader(open(HOME + 'bne/linked_people'))
     linked_bne = {}
     for row in bne_linked:
-        linked_bne[row['link']] = row['id'].replace(
-            'http://datos.bne.es/resource/', ''
-        )
+        linked_bne[row['link']] = row['id'].replace('http://datos.bne.es/resource/', '')
 
     ### Baseline matcher 2: cross-catalogs links
     matched = defaultdict(list)
@@ -115,10 +113,7 @@ def temporary_wrapper():
     ### Baseline matcher 3: Wikipedia links
     # BNE, DBpedia links
     bbdb = filter(lambda x: 'dbpedia.org' in x, linked_bne)
-    dbp = {
-        x.replace('http://dbpedia.org/resource/', ''): linked_bne[x]
-        for x in bbdb
-    }
+    dbp = {x.replace('http://dbpedia.org/resource/', ''): linked_bne[x] for x in bbdb}
 
     # Wikidata sample, site links
     site_qid = json.load(open(HOME + 'wikidata/site2qid_1_percent_sample.json'))
@@ -136,9 +131,7 @@ def temporary_wrapper():
     ### Baseline matcher 4: name AND dates
     # Wikidata sample, dates
     dates_wd = {}
-    wd_dates = csv.DictReader(
-        open('dates_1_percent_sample.tsv'), delimiter='\t'
-    )
+    wd_dates = csv.DictReader(open('dates_1_percent_sample.tsv'), delimiter='\t')
     for row in wd_dates:
         qid = (
             row['?person']
@@ -156,9 +149,9 @@ def temporary_wrapper():
     dates_bne = {}
     bne_labels = defaultdict(list)
     for row in bne_names:
-        bne_labels[
-            row['id'].replace('http://datos.bne.es/resource/', '')
-        ].append(row['name'].lower())
+        bne_labels[row['id'].replace('http://datos.bne.es/resource/', '')].append(
+            row['name'].lower()
+        )
     for row in bne_dates:
         ident = row['id'].replace('http://datos.bne.es/resource/', '')
         for name in bne_labels[ident]:

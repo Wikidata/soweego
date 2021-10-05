@@ -41,12 +41,8 @@ LOGGER = logging.getLogger(__name__)
 
 
 @click.command()
-@click.argument(
-    'catalog', type=click.Choice(target_database.supported_targets())
-)
-@click.argument(
-    'entity', type=click.Choice(target_database.supported_entities())
-)
+@click.argument('catalog', type=click.Choice(target_database.supported_targets()))
+@click.argument('entity', type=click.Choice(target_database.supported_entities()))
 @click.option(
     '-r',
     '--rule',
@@ -86,18 +82,14 @@ def cli(catalog, entity, rule, upload, sandbox, dir_io, dates):
 
     Run all of them by default.
     """
-    LOGGER.info(
-        "Running baseline '%s' rule over %s %s ...", rule, catalog, entity
-    )
+    LOGGER.info("Running baseline '%s' rule over %s %s ...", rule, catalog, entity)
 
     # No need for the return value: only the output file will be consumed
     build_wikidata('classification', catalog, entity, dir_io)
 
     _run(catalog, entity, rule, dates, upload, sandbox, dir_io)
 
-    LOGGER.info(
-        "Baseline '%s' rule over %s %s completed", rule, catalog, entity
-    )
+    LOGGER.info("Baseline '%s' rule over %s %s completed", rule, catalog, entity)
 
 
 def _run(catalog, entity, rule, check_dates, upload, sandbox, dir_io):
@@ -180,12 +172,8 @@ def _run(catalog, entity, rule, check_dates, upload, sandbox, dir_io):
 
 
 @click.command()
-@click.argument(
-    'catalog', type=click.Choice(target_database.supported_targets())
-)
-@click.argument(
-    'entity', type=click.Choice(target_database.supported_entities())
-)
+@click.argument('catalog', type=click.Choice(target_database.supported_targets()))
+@click.argument('entity', type=click.Choice(target_database.supported_entities()))
 @click.option('-u', '--upload', is_flag=True, help='Upload links to Wikidata.')
 @click.option(
     '-s',
@@ -309,12 +297,8 @@ def _perfect_names_linker(
                             continue
 
                         if wd_name.lower() == target.name.lower():
-                            if not compare_dates or _birth_death_date_match(
-                                wd, target
-                            ):
-                                yield wd[
-                                    keys.QID
-                                ], catalog_pid, target.catalog_id
+                            if not compare_dates or _birth_death_date_match(wd, target):
+                                yield wd[keys.QID], catalog_pid, target.catalog_id
 
             bucket.clear()
             bucket_names.clear()
@@ -354,9 +338,7 @@ def _similar_tokens_linker(
                 for target in data_gathering.tokens_fulltext_search(
                     target_db_entity, True, wd_tokens
                 ):
-                    if not compare_dates or _birth_death_date_match(
-                        wd_item, target
-                    ):
+                    if not compare_dates or _birth_death_date_match(wd_item, target):
                         yield qid, catalog_pid, target.catalog_id
                         to_exclude.add(target.catalog_id)
 
@@ -370,9 +352,7 @@ def _similar_tokens_linker(
                 ):
                     target_tokens = set(getattr(target, target_field).split())
 
-                    if len(target_tokens) > 1 and target_tokens.issubset(
-                        wd_tokens
-                    ):
+                    if len(target_tokens) > 1 and target_tokens.issubset(wd_tokens):
                         if not compare_dates or _birth_death_date_match(
                             wd_item, target
                         ):

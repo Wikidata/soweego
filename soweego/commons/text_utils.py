@@ -17,9 +17,7 @@ LOGGER = logging.getLogger(__name__)
 
 # Adapted from http://snowball.tartarus.org/algorithms/english/stop.txt
 STOPWORDS_ENG = frozenset(
-    str(
-        get_data('soweego.commons.resources', 'stopwords_eng.txt'), 'utf8'
-    ).splitlines()
+    str(get_data('soweego.commons.resources', 'stopwords_eng.txt'), 'utf8').splitlines()
 )
 COMMON_WORDS_ENG = frozenset(
     str(
@@ -34,9 +32,7 @@ NAME_STOPWORDS = frozenset(
 )
 
 BAND_NAME_LOW_SCORE_WORDS = frozenset(
-    str(
-        get_data('soweego.commons.resources', 'band_low_score_words.txt')
-    ).splitlines()
+    str(get_data('soweego.commons.resources', 'band_low_score_words.txt')).splitlines()
 )
 
 STOPWORDS_URL_TOKENS = frozenset(

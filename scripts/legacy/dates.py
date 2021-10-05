@@ -5,12 +5,9 @@ import requests
 
 WD = '/Users/focs/wikidata/'
 
-entities = [
-    l.rstrip() for l in open(WD + 'humans_1_percent_sample').readlines()
-]
+entities = [l.rstrip() for l in open(WD + 'humans_1_percent_sample').readlines()]
 buckets = [
-    entities[i * 100 : (i + 1) * 100]
-    for i in range(0, int((len(entities) / 100 + 1)))
+    entities[i * 100 : (i + 1) * 100] for i in range(0, int((len(entities) / 100 + 1)))
 ]
 with open(WD + 'dates_1_percent_sample.tsv', 'w') as o:
     for b in buckets:

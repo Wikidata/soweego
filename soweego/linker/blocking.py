@@ -102,9 +102,7 @@ def find_samples(
     wikidata_column.dropna(inplace=True)
 
     samples = _fire_queries(wikidata_column, target_db_entity)
-    samples_index = pd.MultiIndex.from_tuples(
-        samples, names=[keys.QID, keys.TID]
-    )
+    samples_index = pd.MultiIndex.from_tuples(samples, names=[keys.QID, keys.TID])
 
     LOGGER.debug(
         '%s %s samples index chunk %d random example:\n%s',
@@ -151,16 +149,12 @@ def _full_text_search(
             ),
         )
     )
-    LOGGER.debug(
-        'Target ID candidates: %s - Query terms: %s', tids, query_terms
-    )
+    LOGGER.debug('Target ID candidates: %s - Query terms: %s', tids, query_terms)
 
     return [(qid, tid) for tid in tids]
 
 
-def _fire_queries(
-    wikidata_column: pd.Series, target_db_entity: constants.DB_ENTITY
-):
+def _fire_queries(wikidata_column: pd.Series, target_db_entity: constants.DB_ENTITY):
     with Pool() as pool:
         for result in tqdm(
             pool.imap_unordered(
