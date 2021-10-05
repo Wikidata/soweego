@@ -323,7 +323,11 @@ def add_identifiers(
         LOGGER.info('Processing %s match: %s -> %s', catalog, qid, tid)
         subject = qid if not sandbox else sandbox_item
         _add_or_reference(
-            (subject, catalog_pid, tid,),
+            (
+                subject,
+                catalog_pid,
+                tid,
+            ),
             heuristic,
             edit_summary=IDENTIFIERS_SUMMARY,
         )
@@ -547,7 +551,11 @@ def _add_or_reference(
     # See https://www.wikidata.org/wiki/User_talk:Jura1#Thanks_for_your_feedback_on_User:Soweego_bot_task_2
     if _check_for_same_value(
         claims,
-        (subject, vocabulary.OFFICIAL_WEBSITE, value,),
+        (
+            subject,
+            vocabulary.OFFICIAL_WEBSITE,
+            value,
+        ),
         heuristic,
         edit_summary=edit_summary,
         catalog_qid=catalog_qid,
@@ -875,7 +883,10 @@ def _reference(
     try:
         claim.addSources(reference_node, summary=edit_summary)
         LOGGER.info('Added %s reference node', log_msg)
-    except (APIError, Error,) as error:
+    except (
+        APIError,
+        Error,
+    ) as error:
         LOGGER.warning('Could not add %s reference node: %s', log_msg, error)
 
 

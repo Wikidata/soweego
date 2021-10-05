@@ -11,6 +11,7 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 import os
 import sys
+
 sys.path.insert(0, os.path.abspath('..'))
 
 
@@ -34,7 +35,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.viewcode',
     'sphinx_autodoc_typehints',
-    'sphinx_click.ext'
+    'sphinx_click.ext',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -80,7 +81,6 @@ html_theme_options = {
     'github_count': False,
     # Header & footer
     'show_powered_by': False,
-
 }
 
 # -- Extension configuration -------------------------------------------------
@@ -89,7 +89,7 @@ intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
     'pandas': ('https://pandas.pydata.org/pandas-docs/stable/', None),
     'recordlinkage': ('https://recordlinkage.readthedocs.io/en/latest/', None),
-     'requests': ('https://requests.readthedocs.io/en/stable/', None),
+    'requests': ('https://requests.readthedocs.io/en/stable/', None),
     'sqlalchemy': ('https://docs.sqlalchemy.org/en/13/', None),
     'sklearn': ('https://scikit-learn.org/stable/', None),
     'mlens': ('https://mlens.readthedocs.io/en/0.1.x/', None),

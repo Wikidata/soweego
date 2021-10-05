@@ -527,11 +527,15 @@ def extract_ids_from_urls(to_be_added, ext_id_pids_to_urls):
     LOGGER.info('Starting extraction of IDs from target links to be added ...')
     ext_ids_to_add = []
     urls_to_add = []
-    for (qid, tid,), urls in tqdm(to_be_added.items(), total=len(to_be_added)):
+    for (
+        qid,
+        tid,
+    ), urls in tqdm(to_be_added.items(), total=len(to_be_added)):
         for url in urls:
-            (ext_id, pid,) = url_utils.get_external_id_from_url(
-                url, ext_id_pids_to_urls
-            )
+            (
+                ext_id,
+                pid,
+            ) = url_utils.get_external_id_from_url(url, ext_id_pids_to_urls)
             if ext_id is not None:
                 # Percent-decode IDs
                 if '%' in ext_id:
@@ -542,9 +546,23 @@ def extract_ids_from_urls(to_be_added, ext_id_pids_to_urls):
                             'Skipping invalid percent-encoded ID: %s', ext_id
                         )
                         continue
-                ext_ids_to_add.append((qid, pid, ext_id, tid,))
+                ext_ids_to_add.append(
+                    (
+                        qid,
+                        pid,
+                        ext_id,
+                        tid,
+                    )
+                )
             else:
-                urls_to_add.append((qid, vocabulary.EXACT_MATCH, url, tid,))
+                urls_to_add.append(
+                    (
+                        qid,
+                        vocabulary.EXACT_MATCH,
+                        url,
+                        tid,
+                    )
+                )
     return (
         ext_ids_to_add,
         urls_to_add,
