@@ -185,5 +185,5 @@ dependencies:
   - pip:
     - mlens==0.2.3
     - mwparserfromhell==0.6.3
-    - pywikibot==6.5.0
+    - pywikibot==6.6.1
 prefix: /srv/miniconda3/envs/soweego
