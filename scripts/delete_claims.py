@@ -5,14 +5,18 @@
 The required input comes from a SPARQL query like:
 
 SELECT DISTINCT ?stmt WHERE {
-  ?item p:P6262 ?stmt .
-  ?stmt prov:wasDerivedFrom ?ref .
+  ?item p:P3192 ?stmt .
+  ?stmt ps:P3192 ?val ;
+        prov:wasDerivedFrom ?ref .
   ?ref pr:P887 wd:Q1266546 ;
        pr:P248 wd:Q14005 .
+  FILTER (CONTAINS(?val, " ")) .
 }
 
-Just replace the PID in `p:P6262` (Fandom article ID) with the relevant one,
-and the QID in `wd:Q14005` (MusicBrainz) with the target catalog.
+Just replace the ``P3192`` (Last FM ID) PID with the relevant one,
+and the QID in ``wd:Q14005`` (MusicBrainz) with the target catalog.
+The ``FILTER`` clause is optional: you can use it to look for specific values,
+see https://www.wikidata.org/wiki/Wikidata:SPARQL_tutorial#FILTER
 
 N.B.: we look for (based on heuristic, record linkage), (stated in, catalog)
   references
@@ -26,6 +30,7 @@ __copyright__ = 'Copyleft 2021, Hjfocs'
 
 import json
 import sys
+from time import sleep
 
 import requests
 
@@ -74,20 +79,24 @@ def main(args):
     for guid in guids:
         data = {
             'action': 'wbremoveclaims',
-            'format': 'json',
             'token': edit_token,
             'bot': True,
             'claim': guid,
             'summary': summary,
+            'format': 'json'
         }
         resp = session.post(WIKIDATA_API_URL, data=data)
-
         if resp.ok:
             print(resp.json())
+
+        sleep(9)
+
+    # Log out
+    data = {'action': 'logout', 'token': edit_token, 'format': 'json'}
+    resp = session.post(WIKIDATA_API_URL, data=data)
 
     return 0
 
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
-
