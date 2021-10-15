@@ -29,9 +29,10 @@ from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.musicbrainz_entity import (
     MusicBrainzArtistBandRelationship, MusicBrainzArtistEntity,
-    MusicBrainzArtistLinkEntity, MusicBrainzBandEntity,
-    MusicBrainzBandLinkEntity, MusicBrainzReleaseGroupArtistRelationship,
-    MusicBrainzReleaseGroupEntity, MusicBrainzReleaseGroupLinkEntity)
+    MusicBrainzArtistLinkEntity, MusicBrainzBandEntity, MusicBrainzBandLinkEntity,
+    MusicBrainzReleaseGroupArtistRelationship, MusicBrainzReleaseGroupEntity,
+    MusicBrainzReleaseGroupLinkEntity
+)
 from soweego.wikidata.sparql_queries import external_id_pids_and_urls
 
 LOGGER = logging.getLogger(__name__)

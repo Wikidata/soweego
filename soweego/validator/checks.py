@@ -21,8 +21,7 @@ from typing import DefaultDict, Dict, Iterator, Optional, Tuple
 import click
 from sqlalchemy.exc import SQLAlchemyError
 
-from soweego.commons import (constants, data_gathering, keys, target_database,
-                             text_utils)
+from soweego.commons import constants, data_gathering, keys, target_database, text_utils
 from soweego.commons.db_manager import DBManager
 from soweego.ingester import wikidata_bot
 from soweego.wikidata import api_requests, vocabulary
