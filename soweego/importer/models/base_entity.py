@@ -11,9 +11,7 @@ __copyright__ = 'Copyleft 2018, lenzi.edoardo'
 
 from sqlalchemy import Column, Date, Index, Integer, String, Text
 from sqlalchemy.ext.declarative import (
-    AbstractConcreteBase,
-    declarative_base,
-    declared_attr,
+    AbstractConcreteBase, declarative_base, declared_attr
 )
 
 BASE = declarative_base()

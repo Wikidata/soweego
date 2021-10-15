@@ -24,12 +24,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from tqdm import tqdm
 
 from soweego.commons import (
-    constants,
-    data_gathering,
-    keys,
-    target_database,
-    text_utils,
-    url_utils,
+    constants, data_gathering, keys, target_database, text_utils, url_utils
 )
 from soweego.commons.utils import count_num_lines_in_file
 from soweego.importer.models.base_entity import BaseEntity

@@ -26,15 +26,9 @@ from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.models.base_link_entity import BaseLinkEntity
 from soweego.importer.models.discogs_entity import (
-    DiscogsArtistEntity,
-    DiscogsGroupEntity,
-    DiscogsGroupLinkEntity,
-    DiscogsGroupNlpEntity,
-    DiscogsMasterArtistRelationship,
-    DiscogsMasterEntity,
-    DiscogsMusicianEntity,
-    DiscogsMusicianLinkEntity,
-    DiscogsMusicianNlpEntity,
+    DiscogsArtistEntity, DiscogsGroupEntity, DiscogsGroupLinkEntity,
+    DiscogsGroupNlpEntity, DiscogsMasterArtistRelationship, DiscogsMasterEntity,
+    DiscogsMusicianEntity, DiscogsMusicianLinkEntity, DiscogsMusicianNlpEntity
 )
 
 LOGGER = logging.getLogger(__name__)
