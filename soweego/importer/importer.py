@@ -26,8 +26,7 @@ from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.discogs_dump_extractor import DiscogsDumpExtractor
 from soweego.importer.imdb_dump_extractor import IMDbDumpExtractor
-from soweego.importer.musicbrainz_dump_extractor import \
-    MusicBrainzDumpExtractor
+from soweego.importer.musicbrainz_dump_extractor import MusicBrainzDumpExtractor
 
 LOGGER = logging.getLogger(__name__)
 
