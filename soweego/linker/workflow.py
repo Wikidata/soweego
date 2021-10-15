@@ -26,15 +26,8 @@ from pandas import read_sql
 from pandas.io.json._json import JsonReader
 from sqlalchemy.orm import Query
 
-from soweego.commons import (
-    constants,
-    data_gathering,
-    keys,
-    target_database,
-    text_utils,
-    url_utils,
-    utils,
-)
+from soweego.commons import (constants, data_gathering, keys, target_database,
+                             text_utils, url_utils, utils)
 from soweego.commons.db_manager import DBManager
 from soweego.commons.logging import log_dataframe_info
 from soweego.linker import features
