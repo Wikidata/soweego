@@ -4,7 +4,8 @@ repos:
     rev: 5.9.3
     hooks:
       - id: isort
-        args: [--skip=soweego/cli.py]
+        # See https://pycqa.github.io/isort/docs/configuration/multi_line_output_modes.html
+        args: [--skip=soweego/cli.py, --multi-line=5, --line-length=88]
   - repo: https://github.com/myint/autoflake
     rev: v1.4
     hooks:
