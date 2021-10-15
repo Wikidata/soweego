@@ -6,9 +6,9 @@
 soweego: link Wikidata to large catalogs
 ========================================
 
-.. image:: https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white
-   :target: https://github.com/pre-commit/pre-commit
-   :alt: pre-commit enabled
+.. image:: https://results.pre-commit.ci/badge/github/Wikidata/soweego/master.svg
+   :target: https://results.pre-commit.ci/latest/github/Wikidata/soweego/master
+   :alt: pre-commit CI status
 
 .. image:: https://readthedocs.org/projects/soweego/badge/?version=latest 
    :target: https://soweego.readthedocs.io/en/latest/?badge=latest

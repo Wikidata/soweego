@@ -1,5 +1,5 @@
 # soweego: link Wikidata to large catalogs
-[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/Wikidata/soweego/master.svg)](https://results.pre-commit.ci/latest/github/Wikidata/soweego/master)
 [![Documentation Status](https://readthedocs.org/projects/soweego/badge/?version=latest)](https://soweego.readthedocs.io/en/latest/?badge=latest)
 [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
 [![License](https://img.shields.io/github/license/Wikidata/soweego.svg)](https://www.gnu.org/licenses/gpl-3.0.html)
