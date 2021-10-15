@@ -18,33 +18,21 @@ from soweego.importer.models.base_entity import BaseEntity
 from soweego.importer.models.base_link_entity import BaseLinkEntity
 from soweego.importer.models.base_nlp_entity import BaseNlpEntity
 from soweego.importer.models.discogs_entity import (
-    DiscogsGroupEntity,
-    DiscogsGroupLinkEntity,
-    DiscogsGroupNlpEntity,
-    DiscogsMasterArtistRelationship,
-    DiscogsMasterEntity,
-    DiscogsMusicianEntity,
-    DiscogsMusicianLinkEntity,
-    DiscogsMusicianNlpEntity,
-)
-from soweego.importer.models.imdb_entity import (
-    IMDbActorEntity,
-    IMDbDirectorEntity,
-    IMDbMusicianEntity,
-    IMDbProducerEntity,
-    IMDbTitleEntity,
-    IMDbTitleNameRelationship,
-    IMDbWriterEntity,
-)
+    DiscogsGroupEntity, DiscogsGroupLinkEntity, DiscogsGroupNlpEntity,
+    DiscogsMasterArtistRelationship, DiscogsMasterEntity,
+    DiscogsMusicianEntity, DiscogsMusicianLinkEntity, DiscogsMusicianNlpEntity)
+from soweego.importer.models.imdb_entity import (IMDbActorEntity,
+                                                 IMDbDirectorEntity,
+                                                 IMDbMusicianEntity,
+                                                 IMDbProducerEntity,
+                                                 IMDbTitleEntity,
+                                                 IMDbTitleNameRelationship,
+                                                 IMDbWriterEntity)
 from soweego.importer.models.musicbrainz_entity import (
-    MusicBrainzArtistEntity,
-    MusicBrainzArtistLinkEntity,
-    MusicBrainzBandEntity,
-    MusicBrainzBandLinkEntity,
-    MusicBrainzReleaseGroupArtistRelationship,
-    MusicBrainzReleaseGroupEntity,
-    MusicBrainzReleaseGroupLinkEntity,
-)
+    MusicBrainzArtistEntity, MusicBrainzArtistLinkEntity,
+    MusicBrainzBandEntity, MusicBrainzBandLinkEntity,
+    MusicBrainzReleaseGroupArtistRelationship, MusicBrainzReleaseGroupEntity,
+    MusicBrainzReleaseGroupLinkEntity)
 from soweego.wikidata import vocabulary
 
 ##########

@@ -21,7 +21,8 @@ from sqlalchemy import and_
 from sqlalchemy.exc import SQLAlchemyError
 from tqdm import tqdm
 
-from soweego.commons import constants, data_gathering, keys, target_database, utils
+from soweego.commons import (constants, data_gathering, keys, target_database,
+                             utils)
 from soweego.commons.db_manager import DBManager
 from soweego.ingester import wikidata_bot
 from soweego.wikidata import vocabulary
