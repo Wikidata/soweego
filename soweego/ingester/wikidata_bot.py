@@ -29,7 +29,7 @@ import csv
 import json
 import logging
 from datetime import date
-from re import match
+from re import fullmatch
 from typing import Iterable
 
 import click
@@ -458,7 +458,7 @@ def _add_or_reference_works(
 ) -> None:
     work, predicate, person = statement
     # Parse value into an item in case of QID
-    qid = match(QID_REGEX, person)
+    qid = fullmatch(QID_REGEX, person)
     if not qid:
         LOGGER.warning(
             "%s doesn't look like a QID, won't try to add the %s statement",
@@ -752,7 +752,7 @@ def _parse_value(value):
     if not isinstance(value, str):
         value = str(value)
     # Build an item in case of QID
-    value_is_qid = match(QID_REGEX, value)
+    value_is_qid = fullmatch(QID_REGEX, value)
     if value_is_qid:
         return pywikibot.ItemPage(REPO, value_is_qid.group())
     # Try to build a date
