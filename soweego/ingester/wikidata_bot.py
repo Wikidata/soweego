@@ -30,11 +30,12 @@ import json
 import logging
 from datetime import date
 from re import fullmatch
+from time import sleep
 from typing import Iterable
 
 import click
 import pywikibot
-from pywikibot.exceptions import APIError, Error, NoPageError
+from pywikibot.exceptions import APIError, Error, MaxlagTimeoutError, NoPageError
 
 from soweego.commons import target_database
 from soweego.commons.constants import QID_REGEX
@@ -45,6 +46,15 @@ LOGGER = logging.getLogger(__name__)
 
 SITE = pywikibot.Site('wikidata', 'wikidata')
 REPO = SITE.data_repository()
+
+# Sleep for 10 minutes when the Wikimedia servers lag too much
+MAXLAG_SLEEP = 600
+MAXLAG_LOG_MSG = (
+    'Some Wikimedia servers are lagging too much. '
+    'It may be the Wikidata query service, try to check it: '
+    'https://grafana.wikimedia.org/goto/FCN-LwInz . '
+    f'Sleeping for {MAXLAG_SLEEP} seconds ...'
+)
 
 #######################
 # BEGIN: Edit summaries
@@ -655,14 +665,23 @@ def _handle_addition(
 def _handle_redirect_and_dead(qid):
     item = pywikibot.ItemPage(REPO, qid)
 
-    while item.isRedirectPage():
-        item = item.getRedirectTarget()
+    try:
+        while item.isRedirectPage():
+            item = item.getRedirectTarget()
+    except MaxlagTimeoutError:
+        LOGGER.warning(MAXLAG_LOG_MSG)
+        sleep(MAXLAG_SLEEP)
+    # Give up in case of generic errors or another `MaxlagTimeoutError`
+    # (a subclass of `Error`)
+    except (APIError, Error,) as error:
+        LOGGER.error('Could not resolve redirects for %s: %s', qid, error)
+        return None
 
     try:
         data = item.get()
     except NoPageError:
         LOGGER.warning("%s doesn't exist anymore", qid)
-        return None, None
+        return None
 
     return item, data
 
@@ -676,10 +695,11 @@ def _essential_checks(
     edit_summary=None,
 ):
     subject, predicate, value = statement
-    item, data = _handle_redirect_and_dead(subject)
+    handled = _handle_redirect_and_dead(subject)
 
-    if item is None and data is None:
+    if handled is None:
         return None, None
+    item, data = handled
 
     # No data at all
     if not data:
@@ -790,8 +810,22 @@ def _add(
 ):
     claim = pywikibot.Claim(REPO, predicate)
     claim.setTarget(value)
-    subject_item.addClaim(claim, summary=edit_summary)
-    LOGGER.debug('Added claim: %s', claim.toJSON())
+    claim_str = f'({subject_item.getID()}, {predicate}, {value})'
+
+    try:
+        subject_item.addClaim(claim, summary=edit_summary)
+        LOGGER.debug('JSON object of added claim: %s', claim.toJSON())
+    except MaxlagTimeoutError:
+        LOGGER.warning(MAXLAG_LOG_MSG)
+        sleep(MAXLAG_SLEEP)
+    # Give up in case of generic errors or another `MaxlagTimeoutError`
+    # (a subclass of `Error`)
+    except (APIError, Error,) as error:
+        LOGGER.error('Could not add %s claim: %s', claim_str, error)
+        return
+
+    LOGGER.info('Added %s claim', claim_str)
+
     _reference(
         claim,
         heuristic,
@@ -800,7 +834,6 @@ def _add(
         catalog_id,
         edit_summary=edit_summary,
     )
-    LOGGER.info('Added (%s, %s, %s) statement', subject_item.getID(), predicate, value)
 
 
 def _reference(
@@ -812,13 +845,12 @@ def _reference(
     edit_summary=None,
 ):
     reference_node, log_buffer = [], []
-
     # Create `pywikibot.Claim` instances at runtime:
     # pywikibot would cry if the same instances get uploaded multiple times
     # over the same item
 
-    # Depends on the bot task
-    # (based on heuristic, `heuristic`) reference claim
+    # (based on heuristic, `heuristic`) reference claim:
+    # depends on the bot task
     based_on_heuristic_reference = pywikibot.Claim(
         REPO, vocabulary.BASED_ON_HEURISTIC, is_reference=True
     )
@@ -855,20 +887,24 @@ def _reference(
     try:
         claim.addSources(reference_node, summary=edit_summary)
         LOGGER.info('Added %s reference node', log_msg)
-    except (
-        APIError,
-        Error,
-    ) as error:
-        LOGGER.warning('Could not add %s reference node: %s', log_msg, error)
+    except MaxlagTimeoutError:
+        LOGGER.warning(MAXLAG_LOG_MSG)
+        sleep(MAXLAG_SLEEP)
+    # Give up in case of generic errors or another `MaxlagTimeoutError`
+    # (a subclass of `Error`)
+    except (APIError, Error,) as error:
+        LOGGER.error('Could not add %s reference node: %s', log_msg, error)
+        return
 
 
 def _delete_or_deprecate(action, qid, tid, catalog, catalog_pid) -> None:
-    item, data = _handle_redirect_and_dead(qid)
+    handled = _handle_redirect_and_dead(qid)
 
-    if item is None and data is None:
+    if handled is None:
         LOGGER.error('Cannot %s %s identifier %s', action, catalog, tid)
         return
 
+    item, data = handled
     item_claims = data.get('claims')
     # This should not happen:
     # the input item is supposed to have at least an identifier claim.
