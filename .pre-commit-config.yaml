@@ -1,7 +1,7 @@
 # See https://pre-commit.com/#plugins
 repos:
   - repo: https://github.com/pycqa/isort
-    rev: 5.9.3
+    rev: 5.10.1
     hooks:
       - id: isort
         # See https://pycqa.github.io/isort/docs/configuration/multi_line_output_modes.html
