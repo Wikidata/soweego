@@ -32,12 +32,13 @@ Too easy, they all seem to be `synonyms <https://en.wikipedia.org/wiki/Record_li
 Oh, *soweego* also embeds `Machine Learning <https://en.wikipedia.org/wiki/Machine_learning>`_ and advocates for `Linked Data <https://en.wikipedia.org/wiki/Linked_data>`_.
 
 
-Official Project Page
----------------------
+Official Project Pages
+----------------------
 
 *soweego* is made possible thanks to the `Wikimedia Foundation <https://wikimediafoundation.org/>`_:
 
-https://meta.wikimedia.org/wiki/Grants:Project/Hjfocs/soweego
+- https://meta.wikimedia.org/wiki/Grants:Project/Hjfocs/soweego
+- https://meta.wikimedia.org/wiki/Grants:Project/Hjfocs/soweego_2
 
 
 Highlights
