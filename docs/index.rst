@@ -60,7 +60,7 @@ Install `Docker <https://docs.docker.com/install/>`_
 and `Compose <https://docs.docker.com/compose/install/>`_,
 then enter *soweego*::
 
-   $ git clone https://github.com/Wikidata/soweego.git
+   $ git clone -b v1.1 https://github.com/Wikidata/soweego.git
    $ cd soweego
    $ ./docker/run.sh
    Building soweego
