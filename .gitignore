@@ -45,6 +45,9 @@ nosetests.xml
 coverage.xml
 *.cover
 .hypothesis/
+.pytest_cache/
+*.pytest_cache
+.pytest_cache/*
 
 # Translations
 *.mo
@@ -119,3 +122,13 @@ credentials.json
 
 # Default work dir
 work
+
+# Poetry
+poetry.lock
+
+# Claude settings
+.claude/*
+
+# Testing artifacts
+test-results/
+.benchmarks/
