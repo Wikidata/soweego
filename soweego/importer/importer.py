@@ -19,9 +19,8 @@ import click
 from sqlalchemy.exc import SQLAlchemyError
 from tqdm import tqdm
 
-from soweego.commons import constants
+from soweego.commons import constants, keys, target_database, url_utils
 from soweego.commons import http_client as client
-from soweego.commons import keys, target_database, url_utils
 from soweego.commons.db_manager import DBManager
 from soweego.importer.base_dump_extractor import BaseDumpExtractor
 from soweego.importer.discogs_dump_extractor import DiscogsDumpExtractor
